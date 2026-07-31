@@ -12,13 +12,15 @@ Dateien entstehen und wie man sie ersetzt.
 
 | | |
 |---|---|
-| Szenen | 10 (5 Bereiche × Tag/Nacht) — alle erzeugt |
-| Dateien | 40 (je Szene: Desktop + Mobil × MP4 + WebM + AVIF + WebP) |
+| Szenen | 10 (5 Bereiche × Tag/Nacht) — alle erzeugt, alle **scharf geschaltet** |
+| Dateien | 80 (je Szene: Desktop + Mobil × MP4 + WebM + AVIF + WebP) |
+| Ausgeliefert je Seitenaufruf | **eine** Datei — Bereich, Tageszeit und Viewport bestimmen welche (160–690 KB WebM) |
 | Quelle | Artlist AI Suite — eigene Generierung, kein Fremdmaterial |
 | Bildmodell | Seedream 5.0 T2I (2K), 200 Credits je 2 Bilder |
 | Videomodell | Kling 1.6 Standard I2V, 600 Credits je 10-Sekunden-Clip |
 | Ton | keiner — die Clips werden ohne Audiospur erzeugt und eingebunden |
-| Ablage (Quelle) | `assets/scenes-motion/` |
+| Ablage (Rohclips) | `assets/scenes-motion-raw/` — versioniert, die reproduzierbare Quelle |
+| Ablage (fertig) | `assets/scenes-motion/` |
 | Ablage (ausgeliefert) | `apps/<app>/public/scenes/motion/` (gitignored, erzeugt) |
 
 ## Dateinamen
@@ -57,8 +59,12 @@ der gemalten Standbild-Bühne allein.
 
 Eine Szene wird also in zwei Schritten scharf geschaltet:
 
-1. Die vier Dateien nach `assets/scenes-motion/` legen.
-2. `available: true` im passenden Eintrag setzen.
+1. `node scripts/build-scene-motion.mjs` erzeugt die vier Dateien aus dem
+   Rohclip in `assets/scenes-motion-raw/`.
+2. `available: true` im passenden Eintrag setzen, dann
+   `node --import tsx scripts/copy-scenes.mjs`.
+
+**Stand: alle zwanzig stehen auf `true`.**
 
 Fehlt danach eine Datei, bricht `copy-scenes.mjs` mit einer Fehlermeldung ab —
 absichtlich, denn ein toter `<source>` wäre ein Netzwerkfehler im Browser des
@@ -198,63 +204,67 @@ Bewegungsanweisung im Prompt, für alle Szenen gleich gehalten:
 > shifts very gradually. Locked-off static camera: no camera movement, no zoom,
 > no pan, no cuts, no transitions.
 
-### 3 · Nachbearbeitung (ffmpeg)
+### 3 · Nachbearbeitung — `scripts/build-scene-motion.mjs`
 
-Der Rohclip ist 10 Sekunden lang. Auf die geforderten 12–30 Sekunden kommt er
-nicht durch Verlängern, sondern durch **Verlangsamen** — was die Bewegung
-zugleich ruhiger macht, also genau in die gewünschte Richtung:
+Die Handarbeit von früher ist ein Skript. Drei Dinge daran weichen von dem ab,
+was hier ursprünglich stand, und alle drei kommen daher, dass die tatsächlich
+gelieferten Rohclips anders aussahen als geplant.
+
+**Die Clips sind 5,1 s lang, nicht 10 s.** Und wichtiger: sie **laufen nicht
+rund**. Die Kamera fährt langsam ins Bild; Anfangs- und Endbild unterscheiden
+sich deutlich (SSIM 0,30 bei der Landing-Tagszene). Ein `loop`-Video springt an
+dieser Naht sichtbar zurück — bei einem Hintergrund, den man minutenlang
+ansieht, der auffälligste denkbare Fehler.
+
+Die Antwort ist ein **Pendelschnitt**: vorwärts, dann rückwärts. Die Naht
+verschwindet konstruktionsbedingt (SSIM danach **0,95**), und die Länge
+verdoppelt sich auf die gewünschten 16,2 s. Die an Wende und Rücksprung
+doppelten Einzelbilder werden abgeschnitten, sonst stockt die Bewegung dort je
+um ein Bild.
+
+**Keine Zwischenbildberechnung.** `minterpolate` stand hier einmal als Rezept;
+es ist bei diesen Motiven falsch. Die Bilder bestehen aus fein gezeichneten,
+sich kreuzenden Wurzelsträngen, und bewegungskompensierte Interpolation
+verwischt genau solche Linien. Bei 1,6-facher Verlangsamung bleiben 20 echte
+Bilder je Sekunde — für driftende Wolken und eine kaum merkliche Kamerafahrt
+flüssig, und jedes Bild ist gemalt statt gerechnet.
+
+**1280 × 720 statt 1920 × 1080.** Die Rohclips kommen in 720p (hochkant
+720 × 1280). Hochskaliert entstünde keine Zeichnung, nur weichere Kanten und
+doppelte Bytes. Hinter dem Verdunkelungs-Veil ist die Quellauflösung reichlich.
+
+**VP9 mit CRF 44, nicht 36.** Bei 36 war das WebM kaum kleiner als das MP4 und
+lohnte den zweiten Codec nicht. Bei 44 liegt es rund zwei Drittel darunter
+(570 statt 1619 KB bei der Landing-Tagszene), und die feinen Stränge bleiben
+erhalten — SSIM 0,96 gegen die H.264-Fassung.
 
 ```bash
-IN=roh/landing-hell-desktop.mp4
-OUT=assets/scenes-motion/landing-hell-desktop
-
-# 10 s -> 24 s, Bewegung entsprechend ruhiger; 24 fps reichen für Nebel und Wolken
-ffmpeg -y -i "$IN" -an -vf "setpts=2.4*PTS,fps=24" \
-  -c:v libx264 -profile:v high -pix_fmt yuv420p -crf 27 \
-  -movflags +faststart "$OUT.mp4"
-
-# WebM/VP9 — deutlich kleiner bei gleicher Ruhe im Bild
-ffmpeg -y -i "$IN" -an -vf "setpts=2.4*PTS,fps=24" \
-  -c:v libvpx-vp9 -b:v 0 -crf 36 -row-mt 1 "$OUT.webm"
-
-# Poster: erster Frame, damit der Übergang Poster -> Video unsichtbar ist
-ffmpeg -y -i "$IN" -frames:v 1 -f image2 "$OUT.png"
+node scripts/build-scene-motion.mjs                 # alles Vorhandene
+node scripts/build-scene-motion.mjs --only=landing  # ein Bereich
+node scripts/build-scene-motion.mjs --force         # auch Aktuelles neu
 ```
 
-Poster nach AVIF und WebP (sharp ist im Repo vorhanden, keine neue
-Abhängigkeit):
-
-```bash
-node -e "
-const sharp = require('sharp');
-const b = process.argv[1];
-sharp(b + '.png').avif({ quality: 55 }).toFile(b + '.avif');
-sharp(b + '.png').webp({ quality: 72 }).toFile(b + '.webp');
-" "$OUT"
-```
-
-`-an` ist nicht optional: die Clips werden ohne Ton erzeugt **und** ohne
-Tonspur ausgeliefert. Eine stumme Spur wäre unnötige Bytes und auf manchen
-Browsern ein Grund, Autoplay zu verweigern.
+Das Skript ist idempotent und meldet je Datei die Größe gegen das Budget.
 
 ### 4 · Zielgrößen
 
-| Fassung | Auflösung | Ziel |
-|---|---|---|
-| Desktop MP4 | 1920 × 1080 | ≤ 1,8 MB |
-| Desktop WebM | 1920 × 1080 | ≤ 1,1 MB |
-| Mobil MP4 | 1080 × 1920 | ≤ 1,2 MB |
-| Mobil WebM | 1080 × 1920 | ≤ 0,8 MB |
-| Poster AVIF | wie Video | ≤ 90 KB |
-| Poster WebP | wie Video | ≤ 140 KB |
+| Fassung | Auflösung | Budget | Tatsächlich |
+|---|---|---|---|
+| Desktop MP4 | 1280 × 720 | ≤ 1,8 MB | 506–1629 KB |
+| Desktop WebM | 1280 × 720 | ≤ 1,1 MB | 160–689 KB |
+| Mobil MP4 | 720 × 1280 | ≤ 1,2 MB | 544–1122 KB |
+| Mobil WebM | 720 × 1280 | ≤ 0,8 MB | 161–533 KB |
+| Poster AVIF | wie Video | ≤ 90 KB | 39–78 KB |
+| Poster WebP | wie Video | ≤ 140 KB | 43–124 KB |
 
-Die Werte sind erreichbar, weil die Szenen kaum Bewegung enthalten — ein
-Codec komprimiert ruhige Bilder sehr gut. Wird eine Datei deutlich größer, ist
-meist zu viel Bewegung im Clip, und das ist ohnehin ein inhaltlicher Fehler.
+Alle 80 Dateien liegen unter Budget; zusammen 26,7 MB. Ausgeliefert wird davon
+nie mehr als **eine** Datei je Seitenaufruf — `SceneStage` lädt den Clip des
+aktuellen Bereichs, der aktuellen Tageszeit und des aktuellen Viewports, und
+auch den erst, wenn die Bühne im Viewport steht.
 
-Ausgeliefert wird trotzdem nie alles: `SceneStage` lädt **einen** Clip —
-den des aktuellen Bereichs, der aktuellen Tageszeit und des aktuellen
-Viewports — und auch den erst, wenn die Bühne im Viewport steht.
+Geprüft wird das in `e2e/portal-motion.spec.ts`: dass wirklich Bilddaten
+ankommen (`readyState`), und dass unter `prefers-reduced-motion` **gar kein**
+`<video>` entsteht.
 
 ## Erzeugte Assets
 
@@ -400,11 +410,10 @@ derselben Lizenz wie das übrige Repository — siehe [LICENSE](../../LICENSE),
 analog zum Standbild-Bestand in `assets/scenes/`
 (siehe [THIRD-PARTY-NOTICES.md](../../THIRD-PARTY-NOTICES.md), Abschnitt 4).
 
-## Offene Einschränkung: Egress
+## Egress: erledigt, anders als gedacht
 
-Die Artlist-Auslieferungshosts sind aus der Agenten-Umgebung heraus nicht
-erreichbar — die Egress-Policy dieser Sitzung beantwortet den Verbindungsaufbau
-mit 403:
+Die Artlist-Auslieferungshosts sind aus der Agenten-Umgebung heraus weiterhin
+nicht erreichbar (403 auf CONNECT):
 
 ```
 mcp.artlist.io
@@ -413,29 +422,11 @@ cms-toolkit-public-artifacts.artlist.io
 ai-toolkit-generations.imgix.net
 ```
 
-Generieren funktioniert (das läuft über den MCP-Server), Herunterladen nicht.
-Solange das so ist, müssen die Rohdateien manuell aus dem Artlist-Konto geholt
-und nach `assets/scenes-motion/` gelegt werden; Schritt 3 und 4 laufen dann
-lokal. Werden die vier Hosts in der Netzwerk-Policy der Umgebung freigegeben,
-läuft die Kette vollständig automatisch.
+Der Weg drumherum war einfacher als gedacht: `list_generations` liefert zu
+jeder Generierung eine **signierte Datei-URL** mit langer Gültigkeit gleich mit.
+Damit ließ sich die Zuordnung Zieldatei → Download als Liste erzeugen; das
+Herunterladen selbst geschah außerhalb der Umgebung, die Rohclips liegen seither
+in `assets/scenes-motion-raw/` und alles Weitere lief wieder hier.
 
-## Standbilder: die beruhigte Fassung
-
-Unabhängig von den Clips wurde der vorhandene Standbild-Bestand überarbeitet.
-`scripts/regrade-scenes.mjs` liest `assets/scenes/` und schreibt nach
-`assets/scenes-graded/`:
-
-1. Sättigung auf 82 %, Kontrast auf 88 % mit angehobenem Schwarzpunkt — kein
-   Bildbereich konkurriert mehr mit dem Text darüber.
-2. Ein Tiefenschärfe-Verlauf ab 46 % Bildhöhe nach unten, in sechs Stufen bis
-   Sigma 14. Oben bleibt die Landschaft scharf, unten wird sie Atmosphäre —
-   genau dort, wo Karten, Tabellen und Fließtext sitzen.
-3. Ausgabe als AVIF (Qualität 52) und WebP (Qualität 74).
-
-Ergebnis: dieselben 33 Motive wiegen **4,3 MB statt 74 MB**. Die PNG-Vorlagen
-bleiben unangetastet im Repo.
-
-`sceneCssUrl` liefert seither ein `image-set()` über beide Formate; wo AVIF
-fehlt, greift WebP ohne Zutun. Ausgeliefert wird je App nur die Teilmenge, die
-ihre Bereiche brauchen — zwischen 1,4 MB (Brain) und 2,8 MB (Studio, das die
-Landing mitführt).
+Die signierten URLs gehören **nicht** ins Repository — sie tragen
+Zugriffssignaturen.

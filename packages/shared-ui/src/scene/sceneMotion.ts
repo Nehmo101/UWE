@@ -46,6 +46,15 @@ export interface SceneMotionEntry {
 
 type MotionTable = Record<SceneArea, Record<SceneMode, Record<SceneVariant, SceneMotionEntry>>>;
 
+/**
+ * Alle zwanzig Clips sind gleich lang: 5,1 s Rohmaterial, 1,6-fach verlangsamt
+ * und als Pendelschnitt (vorwärts, dann rückwärts) zusammengesetzt — siehe
+ * `scripts/build-scene-motion.mjs`. Der Pendelschnitt ist kein Effekt, sondern
+ * die Reparatur einer sichtbaren Naht: Anfangs- und Endbild der Rohclips
+ * unterscheiden sich deutlich, ein einfacher `loop` würde zurückspringen.
+ */
+const D = 16.2;
+
 const entry = (
   objectPosition: string,
   durationSeconds: number,
@@ -61,52 +70,52 @@ const entry = (
 export const SCENE_MOTION: MotionTable = {
   landing: {
     hell: {
-      desktop: entry("center 42%", 10, "Weites Hochtal am Vormittag; zwei kolossale Elfenbein-Wurzeln spannen sich in der Ferne über den Himmel."),
-      mobil: entry("center 38%", 10, "Dasselbe Tal hochkant; die Wurzelbögen sitzen im oberen Drittel, die untere Hälfte bleibt offene Wiese."),
+      desktop: entry("center 42%", D, "Hochtal am Vormittag; vier Wurzeln als verdrehte Strangbündel, unten vielbeinige Wurzelfüße über Fels und Fluss, oben vom Bildrand abgeschnitten. Blattplattformen mit winzigen Bauten und ein Wasserfall geben den Maßstab.", true),
+      mobil: entry("center 38%", D, "Dasselbe Tal hochkant; ein Wurzelbündel trägt das Bild, die untere Hälfte bleibt Wiese und Fluss.", true),
     },
     dunkel: {
-      desktop: entry("center 42%", 10, "Dasselbe Hochtal nach Sonnenuntergang; die Wurzeln glimmen von innen, Nebel steht im Tal."),
-      mobil: entry("center 38%", 10, "Nachtfassung hochkant; Sternenband über den Wurzelbögen, ruhige dunkle Wiese unten."),
+      desktop: entry("center 42%", D, "Dasselbe Hochtal nach Sonnenuntergang; das Licht kommt aus den Rillen zwischen den Strängen, nicht durch die Oberfläche. Nebel steht im Tal.", true),
+      mobil: entry("center 38%", D, "Nachtfassung hochkant; glimmende Rillen im Wurzelbündel, ruhige dunkle Wiese unten.", true),
     },
   },
   family: {
     hell: {
-      desktop: entry("center 48%", 10, "Bewohnter Garten zwischen zwei Wurzelstämmen; warmes Nachmittagslicht, bewegte Blätter."),
-      mobil: entry("center 45%", 10, "Gartenausschnitt hochkant; Wurzelstamm links, offener Himmel und Wiese in der Bildmitte."),
+      desktop: entry("center 48%", D, "Bewohnter Garten zwischen aufsteigenden Wurzelsäulen; Nachmittagslicht, bewegte Blätter, untere Bildhälfte offene Wiese.", true),
+      mobil: entry("center 45%", D, "Gartenausschnitt hochkant; Wurzelsäule seitlich, offener Himmel und Wiese in der Mitte.", true),
     },
     dunkel: {
-      desktop: entry("center 48%", 10, "Derselbe Garten am Abend; Fensterlichter, vereinzelte Glühwürmchen, ruhige Luft."),
-      mobil: entry("center 45%", 10, "Abendgarten hochkant; Laternenlicht unten links, dunkler Himmel oben."),
+      desktop: entry("center 48%", D, "Derselbe Garten am Abend; Fensterlichter, vereinzelte Glühwürmchen, ruhige Luft.", true),
+      mobil: entry("center 45%", D, "Abendgarten hochkant; Laternenlicht unten, dunkler Himmel oben.", true),
     },
   },
   portal: {
     hell: {
-      desktop: entry("center 44%", 10, "Weiter Blick über eine Küstenebene; eine Wurzelbrücke führt zu einem fernen Tor."),
-      mobil: entry("center 40%", 10, "Küstenblick hochkant; die Brücke zieht diagonal nach oben, Wasserfläche unten ruhig."),
+      desktop: entry("center 44%", D, "Küstenflachwasser mit drei Wurzelbündeln, die in ihren eigenen Spiegelungen stehen; Wurzelfüße greifen über halb versunkenen Fels, ein Wasserfall fällt ins Meer. Fernes Tor am Horizont.", true),
+      mobil: entry("center 40%", D, "Küste hochkant; ein Wurzelbündel mit seiner Spiegelung, Wasserfläche unten ruhig.", true),
     },
     dunkel: {
-      desktop: entry("center 44%", 10, "Dieselbe Küste bei Nacht; warme Lichter am fernen Tor, Mondbahn auf dem Wasser."),
-      mobil: entry("center 40%", 10, "Nachtküste hochkant; Lichterkette am Horizont, dunkles ruhiges Wasser."),
+      desktop: entry("center 44%", D, "Dieselbe Küste bei Nacht; Mondsichel und Mondbahn auf dem Wasser, warme Fensterlichter in den Blattplattformen.", true),
+      mobil: entry("center 40%", D, "Nachtküste hochkant; Mondbahn im Wasser, dunkle ruhige Fläche unten.", true),
     },
   },
   studio: {
     hell: {
-      desktop: entry("center 52%", 10, "Werkstattterrasse an einem Wurzelstamm; Papier und Laternen dezent, viel freie Fläche."),
-      mobil: entry("center 50%", 10, "Werkstatt hochkant; Stamm rechts, Arbeitsfläche und Himmel offen."),
+      desktop: entry("center 52%", D, "Werkstattterrasse in der Astgabel eines Wurzelbündels; die Wurzel spreizt sich und trägt die Diele. Tisch, Papierrollen, Laterne. Untere Bildhälfte und linke Seite bleiben blanke Diele — die ruhigste der zehn Kompositionen.", true),
+      mobil: entry("center 50%", D, "Werkstatt hochkant; Wurzelbündel rechts, Diele unten, offener Himmel links.", true),
     },
     dunkel: {
-      desktop: entry("center 52%", 10, "Dieselbe Werkstatt bei Nacht; Laternenlicht warm, Umgebung in ruhigem Blau."),
-      mobil: entry("center 50%", 10, "Nachtwerkstatt hochkant; ein Lichtkegel unten, dunkler Stamm und Himmel oben."),
+      desktop: entry("center 52%", D, "Dieselbe Werkstatt bei Nacht; die Laterne brennt, die Umgebung liegt in ruhigem Blau.", true),
+      mobil: entry("center 50%", D, "Nachtwerkstatt hochkant; ein Lichtkegel unten, dunkles Wurzelbündel und Himmel oben.", true),
     },
   },
   brain: {
     hell: {
-      desktop: entry("center 46%", 10, "Stiller Hain aus hellen Wurzeln über einer Wasserfläche; Dunst, schwebende Partikel."),
-      mobil: entry("center 44%", 10, "Hain hochkant; Wurzeln rahmen links und rechts, Wasserfläche in der unteren Hälfte."),
+      desktop: entry("center 46%", D, "Stiller Hain aus Wurzelsäulen in spiegelglattem Wasser; dazwischen schwebende Lichtpunkte an dünnen Fäden — ein angedeutetes Wissensnetz, keine Gehirngrafik. Dämmerung.", true),
+      mobil: entry("center 44%", D, "Hain hochkant; Wurzeln rahmen seitlich, Spiegelfläche in der unteren Hälfte.", true),
     },
     dunkel: {
-      desktop: entry("center 46%", 10, "Derselbe Hain bei Nacht; Lichtpunkte in den Wurzeln, Spiegelung im Wasser."),
-      mobil: entry("center 44%", 10, "Nachthain hochkant; Lichtpunkte oben, ruhige dunkle Spiegelfläche unten."),
+      desktop: entry("center 46%", D, "Derselbe Hain in tiefer Nacht; Lichtpunkte und ihre Spiegelung im Wasser.", true),
+      mobil: entry("center 44%", D, "Nachthain hochkant; Lichtpunkte oben, ruhige dunkle Spiegelfläche unten.", true),
     },
   },
 };

@@ -1,13 +1,13 @@
 # Rohclips der bewegten Bühne
 
-**Hier kommen die heruntergeladenen Artlist-Clips hinein — unverändert, so wie
-sie aus dem Konto kommen.**
+**Hier liegen die heruntergeladenen Artlist-Clips — unverändert, so wie sie aus
+dem Konto kommen.**
 
-Die MP4s in diesem Ordner sind von Git ausgenommen (`.gitignore`). Das ist
-Absicht: zwanzig Rohclips sind mehrere hundert Megabyte, und sie sind ein
-Zwischenschritt. Ins Repository gehört nur das Ergebnis der Nachbearbeitung in
-`assets/scenes-motion/` — dort liegen die Dateien nach dem Verlangsamen und
-Komprimieren bei wenigen hundert Kilobyte pro Clip.
+Sie sind versioniert (rund 104 MB), und das ist eine bewusste Entscheidung: sie
+sind die einzige Quelle, aus der sich `assets/scenes-motion/` reproduzieren
+lässt. Ohne sie hinge jede Neuberechnung an signierten Links in einem fremden
+Konto. Wer die Kompression nachjustiert, braucht genau diese Dateien —
+`node scripts/build-scene-motion.mjs --force` erzeugt daraus alles neu.
 
 ## Dateinamen
 
@@ -45,7 +45,13 @@ Standbilder aus dem Artlist-Konto werden dafür nicht gebraucht.
 
 ## Danach
 
-Die Nachbearbeitung (verlangsamen, MP4 + WebM, Poster als AVIF und WebP,
-Größenprüfung) schreibt nach `assets/scenes-motion/`; von dort verteilt
-`scripts/copy-scenes.mjs` in `apps/*/public/scenes/motion/`. Sichtbar wird ein
-Clip erst, wenn sein `available`-Schalter in `sceneMotion.ts` auf `true` steht.
+```bash
+node scripts/build-scene-motion.mjs      # → assets/scenes-motion/
+node --import tsx scripts/copy-scenes.mjs # → apps/*/public/scenes/motion/
+```
+
+Was dabei passiert und warum, steht im Kopf von
+[`scripts/build-scene-motion.mjs`](../../scripts/build-scene-motion.mjs) — vor
+allem der Pendelschnitt, der die sichtbare Naht der Rohclips repariert.
+Sichtbar wird ein Clip erst, wenn sein `available`-Schalter in
+`sceneMotion.ts` auf `true` steht; für alle zwanzig ist er das.
