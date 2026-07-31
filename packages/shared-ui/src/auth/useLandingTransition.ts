@@ -16,6 +16,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
  *
  * Dauer: 620 ms mit Bewegung, 180 ms ohne. Beides liegt im Bereich, in dem sich
  * ein Wechsel noch direkt anfühlt.
+ *
+ * Der Übergang endet nicht von selbst: `data-leaving` bleibt gesetzt, damit der
+ * Schleier über der Seite liegen bleibt, bis die Zielseite übernimmt — sonst
+ * blitzt zwischen beiden Seiten der Hintergrund auf. Wer auf der Seite *bleibt*
+ * (die Anmeldekarte wird im selben Baum eingeblendet), muss den Übergang darum
+ * ausdrücklich mit `settle()` beenden. Ohne das bliebe der Schleier für immer
+ * stehen und die Seite wirkte leer.
  */
 
 const TRANSITION_MS = 620;
@@ -32,6 +39,12 @@ export interface LandingTransition<T extends string> {
   leavingTo: T | null;
   /** Startet den Übergang und ruft danach `run` auf. */
   start: (target: T, origin: { x: number; y: number }, run: () => void) => void;
+  /**
+   * Beendet den Übergang und nimmt den Schleier zurück. Aufzurufen, wenn die
+   * Seite bestehen bleibt — nicht bei einer echten Navigation, dort deckt der
+   * Schleier den Wechsel ab.
+   */
+  settle: () => void;
   /** Auf `.uwe-lp-root` zu setzen. */
   rootProps: {
     "data-leaving": "true" | "false";
@@ -50,6 +63,25 @@ export function useLandingTransition<T extends string>(): LandingTransition<T> {
     if (timer.current) clearTimeout(timer.current);
   }, []);
 
+  const settle = useCallback(() => {
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+    setLeavingTo(null);
+  }, []);
+
+  // Zurück aus der Ziel-App: der Browser stellt die Seite aus dem Cache genau so
+  // wieder her, wie sie verlassen wurde — mit gesetztem `data-leaving` und damit
+  // hinter dem Schleier. Ohne das hier wäre die Startseite nach jedem Zurück leer.
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) settle();
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, [settle]);
+
   const start = useCallback((target: T, from: { x: number; y: number }, run: () => void) => {
     // Zweiter Klick während eines laufenden Übergangs: ignorieren. Sonst
     // konkurrieren zwei Timer um zwei verschiedene Ziele.
@@ -57,12 +89,19 @@ export function useLandingTransition<T extends string>(): LandingTransition<T> {
 
     setOrigin(from);
     setLeavingTo(target);
-    timer.current = setTimeout(run, prefersReducedMotion() ? REDUCED_MS : TRANSITION_MS);
+    const wait = prefersReducedMotion() ? REDUCED_MS : TRANSITION_MS;
+    timer.current = setTimeout(() => {
+      // Erst freigeben, dann ausführen: sonst bliebe die Sperre oben für immer
+      // stehen und kein zweiter Klick käme je wieder durch.
+      timer.current = null;
+      run();
+    }, wait);
   }, []);
 
   return {
     leavingTo,
     start,
+    settle,
     rootProps: {
       "data-leaving": leavingTo ? "true" : "false",
       style: {

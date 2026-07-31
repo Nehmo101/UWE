@@ -111,10 +111,15 @@ export function UweLandingPage({
   const openTarget = (target: LandingTarget, element: HTMLElement) => {
     transition.start(target, elementOrigin(element), () => {
       if (signedIn) {
+        // Echte Navigation: der Schleier bleibt liegen, bis die Zielseite
+        // übernimmt.
         window.location.assign(appUrlFor(target));
         return;
       }
+      // Die Anmeldekarte erscheint im selben Baum — hier endet der Übergang,
+      // sonst bliebe die Karte hinter dem Schleier unsichtbar.
       setView(target);
+      transition.settle();
     });
   };
 
