@@ -60,3 +60,8 @@ perf-results.json
 qa-artifacts/
 .worktrees/
 tools/uwe-host-command-center/dist/
+
+# Rohclips der bewegten Bühne: Zwischenschritt, mehrere hundert MB.
+# Ins Repository gehört nur das Ergebnis in assets/scenes-motion/.
+assets/scenes-motion-raw/*
+!assets/scenes-motion-raw/README.md
