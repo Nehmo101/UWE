@@ -1,7 +1,7 @@
 // Einstieg: verdrahtet Module, baut die Startkarte, treibt die Renderschleife.
 import { DEG, hashi } from './core/rng.js';
 import { S, HALF, VW, setScene, mkElement, nextSeed } from './core/store.js';
-import { scene, initPipeline, resizePipeline, renderFrame, setPalette, setMultiplane, PALETTE_STANDARD } from './render/pipeline.js';
+import { scene, initPipeline, resizePipeline, renderFrame, tickLeistung, setPalette, setMultiplane, PALETTE_STANDARD } from './render/pipeline.js';
 import { camera, cam, initKeys, updateCamera, moveFocus } from './editor/camera.js';
 import { base, genBase, initTerrain, heightAt, slopeAt, refreshTerrainFull, basisGeaendert } from './world/terrain.js';
 import './generators/geometry.js';        // registriert alle Objekt-Pools
@@ -396,6 +396,10 @@ function animate() {
   // Marker-Beschriftung als HTML-Overlay ueber dem Canvas (D1) — eigene
   // Zeile statt Anhaengsel von tickToast, damit der Taktgeber eindeutig bleibt.
   markerOverlayAktualisieren();
+  // Adaptive Aufloesung: die ECHTE Bildzeit melden (raw, nicht das geklammerte
+  // dt) — der Regler senkt bei anhaltend zaehen Bildern die Renderskala und
+  // hebt sie wieder, sobald die Rate traegt.
+  tickLeistung(raw);
   renderFrame(camera, now * 0.001);
 
   frameCount++; fpsAcc += raw;

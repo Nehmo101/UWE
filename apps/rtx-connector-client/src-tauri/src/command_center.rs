@@ -19,6 +19,13 @@ pub const HOST_PROGRESS_EVENT: &str = "host-action-progress";
 
 const DESKTOP_HOST_CLI_REL: &str = "tools/uwe-host-command-center/src/desktop-host-cli.ts";
 
+/// Fassung dieser Desktop-App, an die Host-CLI durchgereicht. Eine
+/// Bundle-Installation hat keine `tauri.conf.json` neben sich — nur so weiß der
+/// Update-Check, ob die App hinter dem Release-Tag liegt und der Installer
+/// geöffnet werden muss. Der Release-Workflow hält `Cargo.toml` und
+/// `tauri.conf.json` auf derselben Version.
+const COMMAND_CENTER_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 fn resolve_requested_root(root: Option<String>) -> Result<PathBuf, String> {
     if let Some(value) = root
         .map(|value| value.trim().to_string())
@@ -69,10 +76,15 @@ fn build_host_command(
                 } else {
                     configure_hidden_process(&mut command);
                 }
-                command.arg(cli).arg(action).current_dir(&runtime).env(
-                    "UWE_COMMAND_CENTER_DATA_DIR",
-                    connector_app_data_dir()?.join("host"),
-                );
+                command
+                    .arg(cli)
+                    .arg(action)
+                    .current_dir(&runtime)
+                    .env(
+                        "UWE_COMMAND_CENTER_DATA_DIR",
+                        connector_app_data_dir()?.join("host"),
+                    )
+                    .env("UWE_COMMAND_CENTER_VERSION", COMMAND_CENTER_VERSION);
                 if let Some(target) = target {
                     command.arg("--target").arg(target);
                 }
@@ -104,7 +116,8 @@ fn build_host_command(
         .env(
             "UWE_COMMAND_CENTER_DATA_DIR",
             connector_app_data_dir()?.join("host"),
-        );
+        )
+        .env("UWE_COMMAND_CENTER_VERSION", COMMAND_CENTER_VERSION);
     if let Some(target) = target {
         command.arg("--target").arg(target);
     }

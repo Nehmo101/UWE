@@ -1,6 +1,6 @@
 # MCP-Server für UWE
 
-UWE stellt seine drei Produkte als **MCP-Server** (Model Context Protocol) bereit, damit ein
+UWE stellt seine vier Produkte als **MCP-Server** (Model Context Protocol) bereit, damit ein
 Agent wie Claude Code direkt mit der laufenden Instanz arbeiten kann — statt sich durch den
 Quellcode zu raten.
 
@@ -9,15 +9,16 @@ Quellcode zu raten.
 | `uwe-studio` | DM-App (Port 3000) | `/uwestudio` | Welten, Brain, Jobs, Health, Admin |
 | `uwe-portal` | Spieler-Wiki (Port 3001) | `/uweportal` | Spielersicht einer zugeordneten Welt prüfen |
 | `uwe-brain` | Owner-Bereich (Port 3002) | `/uwebrain` | Personal Brain, Daily Admin OS — privacy-gated |
+| `uwe-family` | Haushalt (Port 3004) | `/uwefamily` | Mitglieder, Kalender, Einkauf, Rezepte, Gesundheitsakte |
 
 Code: `packages/mcp`. Registrierung: `.mcp.json` im Repo-Root.
 
-## Warum drei Server statt einem
+## Warum vier Server statt einem
 
-Das Repo erzwingt den Drei-Produkt-Split hart (`@uwe/product-contracts` → `APP_AUDIENCE`,
-`scripts/product-boundary-check.mjs`). Drei Server spiegeln diese Grenze — und, wichtiger:
-**Brain lässt sich einzeln weglassen.** Wer Studio und Portal an einen Agenten hängen will,
-muss den owner-privaten Bereich nicht mitliefern.
+Das Repo erzwingt den Produkt-Split hart (`@uwe/product-contracts` → `APP_AUDIENCE`,
+`scripts/product-boundary-check.mjs`). Vier Server spiegeln diese Grenze — und, wichtiger:
+**Brain und Family lassen sich einzeln weglassen.** Wer Studio und Portal an einen Agenten
+hängen will, muss weder den owner-privaten Bereich noch den Haushalt mitliefern.
 
 ## Warum HTTP statt Direktzugriff
 
@@ -40,9 +41,9 @@ Studios `/api/worlds` nur `POST` kennt — `studio_search` ist der Weg dorthin.
 
 Ein MCP-Server liefert **Tools**; seine Prompts erscheinen in Claude Code als
 `/mcp__uwe-brain__<prompt>`. Ein kurzes `/uwebrain` entsteht dadurch **nicht** von selbst.
-Deshalb liegen in `.claude/commands/` drei dünne Slash-Commands (`uwebrain.md`, `uwestudio.md`,
-`uweportal.md`), die den passenden Server ansteuern und die Reihenfolge der Tool-Aufrufe
-vorgeben. Der MCP-Server ist die Fähigkeit, der Slash-Command der Einstieg.
+Deshalb liegen in `.claude/commands/` vier dünne Slash-Commands (`uwebrain.md`, `uwestudio.md`,
+`uweportal.md`, `uwefamily.md`), die den passenden Server ansteuern und die Reihenfolge der
+Tool-Aufrufe vorgeben. Der MCP-Server ist die Fähigkeit, der Slash-Command der Einstieg.
 
 ## Konfiguration
 
@@ -55,6 +56,8 @@ Die Server lesen beim Start `.env` im Repo-Root (`node --env-file-if-exists=.env
 | `UWE_STUDIO_URL` | `http://127.0.0.1:3000` | Studio-Origin (Fallback: `NEXT_PUBLIC_STUDIO_URL`) |
 | `UWE_PORTAL_URL` | `http://127.0.0.1:3001` | Portal-Origin |
 | `UWE_BRAIN_URL` | `http://127.0.0.1:3002` | Brain-App-Origin (nur Health) |
+| `UWE_FAMILY_URL` | `http://127.0.0.1:3004` | Family-Origin (Fallback: `NEXT_PUBLIC_FAMILY_URL`) |
+| `UWE_FAMILY_TOKEN` | – | API-Token für Family (Fallback: `UWE_MCP_TOKEN`) |
 | `UWE_STUDIO_TOKEN` | – | API-Token für Studio (Fallback: `UWE_MCP_TOKEN`, `STUDIO_API_TOKEN`) |
 | `UWE_MCP_TOKEN` | – | Gemeinsamer Token für alle Server |
 | `UWE_MCP_ALLOW_WRITES` | `false` | Registriert schreibende Tools (nur `true` zählt) |
@@ -80,6 +83,25 @@ MCP-Client wie Claude Code **ist** Cloud-AI. Deshalb hat `uwe-brain` zwei Stufen
 Die Freigabe ist bewusst eine Umgebungsvariable und kein Tool-Argument: Sie ist eine
 Entscheidung des Betreibers pro Sitzung, nicht des Modells zur Laufzeit.
 
+## Family: geteilt, aber nicht öffentlich
+
+Family serviert seine Inhalte selbst unter `/api/v1/*` — `dataApi` zeigt deshalb auf denselben
+Origin wie `primary`, anders als bei Portal und Brain, die über Studio lesen.
+
+Zwei Dinge unterscheiden diesen Katalog von den anderen:
+
+- **Kein Welt-Begriff, keine Rollen.** Wer das Häkchen `Family` trägt, sieht alles. Ein
+  API-Token braucht `family_read` zum Lesen und `family_write` zum Schreiben; die Abos des
+  Kalender-Feeds hängen an `family_calendar`.
+- **Der Haushalt betrifft Angehörige, auch Kinder.** Termine, Einkaufsliste und
+  Gesundheitsakte kommen heraus — private Chats und Dokumente bewusst nicht. Dafür gibt es
+  keinen Endpunkt, nicht nur kein Tool.
+
+Mitglieder können ohne Konto existieren (Kleinkind, Gast, Haustier). Termine gehören keiner,
+einer oder mehreren Personen; ohne Zuordnung betreffen sie den ganzen Haushalt. Geburtstage
+und Jahrestage sind keine gespeicherten Termine — `family_calendar_upcoming` spannt sie mit
+`includeAnniversaries` auf.
+
 ## Die Spielersicht
 
 Der eigene Portal-Server existiert, damit „was sieht ein Spieler?" beantwortbar bleibt, ohne
@@ -94,7 +116,7 @@ Portal fährt.
 ## Betrieb
 
 ```bash
-# Voraussetzung: die jeweilige App läuft (pnpm dev:studio / dev:portal / dev:brain)
+# Voraussetzung: die jeweilige App läuft (pnpm dev:studio / dev:portal / dev:brain / dev:family)
 pnpm mcp:studio     # stdio-Server, spricht JSON-RPC — nicht interaktiv gedacht
 pnpm mcp:portal
 pnpm mcp:brain

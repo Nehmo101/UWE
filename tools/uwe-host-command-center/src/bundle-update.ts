@@ -7,10 +7,13 @@ import {
   fetchLatestManifest,
   installAppBundles,
   installInitialDatabases,
+  releaseAssetUrl,
   type ReleaseManifestV2,
 } from "./bundle-install.ts";
 import { beginHostProgress, reportHostStep } from "./desktop-host-progress.ts";
+import { openExternalUrl, runningCommandCenterVersion } from "./desktop-host-system.ts";
 import type { HostServiceId } from "./desktop-host-types.ts";
+import { compareSemver } from "./release-tags.ts";
 
 /**
  * Update einer Bundle-Installation — das Gegenstück zum git-basierten Update
@@ -33,10 +36,27 @@ export interface BundleUpdateResult {
   toVersion: string | null;
 }
 
-interface InstalledState {
+export interface InstalledState {
   version: string | null;
   /** SHA-256 je installierter App, Stand der letzten Installation. */
   appHashes: Partial<Record<HostServiceId, string>>;
+}
+
+/**
+ * Ergebnis des Update-Checks einer Bundle-Installation. Der Vergleich läuft
+ * gegen das Manifest des neuesten Release-Tags — in dieser Welt gibt es kein
+ * git, der Release-Tag ist die einzige Wahrheit über „was ist neu“.
+ */
+export interface BundleUpdateCheck {
+  updateAvailable: boolean;
+  installedVersion: string | null;
+  latestVersion: string;
+  latestTag: string;
+  /** Apps, deren Bundle sich gegenüber dem installierten Stand geändert hat. */
+  changedApps: HostServiceId[];
+  /** Dateiname des Command-Center-Installers im Release, falls vorhanden. */
+  installerFile: string | null;
+  message: string;
 }
 
 function stateFile(installRoot: string): string {
@@ -73,6 +93,66 @@ export function installedApps(installRoot: string): HostServiceId[] {
     .readdirSync(appsDir, { withFileTypes: true })
     .filter((e) => e.isDirectory() && fs.existsSync(path.join(appsDir, e.name, "package.json")))
     .map((e) => e.name as HostServiceId);
+}
+
+/**
+ * Was ein Release-Tag gegenüber dem installierten Stand bedeutet — bewusst rein
+ * (Manifest + Zustand rein, Urteil raus), damit Update-Check und Update-Lauf
+ * dieselbe Entscheidung treffen und nicht auseinanderlaufen können.
+ *
+ * Verglichen wird nicht nur die Version: Ein neu gebautes Release mit
+ * identischem Bundle kostet keinen Download, ein Nachbau derselben Version mit
+ * geänderter Prüfsumme wird dagegen erkannt.
+ */
+export function evaluateBundleUpdate(
+  manifest: ReleaseManifestV2,
+  state: InstalledState,
+  apps: readonly HostServiceId[],
+): BundleUpdateCheck {
+  const changedApps = apps.filter((app) => {
+    const asset = manifest.apps?.[app];
+    return asset ? asset.sha256 !== state.appHashes[app] : false;
+  });
+  const updateAvailable = changedApps.length > 0 || state.version !== manifest.version;
+  return {
+    updateAvailable,
+    installedVersion: state.version,
+    latestVersion: manifest.version,
+    latestTag: manifest.tag,
+    changedApps,
+    installerFile: manifest.windows?.nsis ?? null,
+    message: updateAvailable
+      ? `Update verfügbar: ${manifest.tag} (${manifest.version})` +
+        (changedApps.length > 0
+          ? ` — neu zu laden: ${changedApps.join(", ")}.`
+          : " — keine Bundle-Änderungen.")
+      : `UWE ist aktuell (${manifest.tag}).`,
+  };
+}
+
+/** Update-Check einer Bundle-Installation gegen das neueste Release-Manifest. */
+export async function checkBundleUpdate(installRoot: string): Promise<BundleUpdateCheck> {
+  const manifest = await fetchLatestManifest();
+  return evaluateBundleUpdate(manifest, readInstalledState(installRoot), installedApps(installRoot));
+}
+
+/**
+ * Installer-URL, wenn das laufende Command Center hinter dem Release-Tag liegt —
+ * sonst null. Die Desktop-App erneuert nur ihr eigener Installer; die App-Bundles
+ * kommen über das Manifest.
+ *
+ * Ist die Fassung der laufenden App unbekannt (ein älterer Rust-Host reicht
+ * `UWE_COMMAND_CENTER_VERSION` nicht durch), wird nichts geöffnet: ein
+ * ungefragt gestarteter Installer wäre schlimmer als ein fehlender Hinweis.
+ */
+export function commandCenterInstallerUrl(manifest: ReleaseManifestV2): string | null {
+  const datei = manifest.windows?.nsis;
+  if (!datei) return null;
+  const laufend = runningCommandCenterVersion();
+  if (!laufend) return null;
+  const ziel = manifest.commandCenterVersion ?? manifest.version;
+  if (compareSemver(laufend, ziel) >= 0) return null;
+  return releaseAssetUrl(manifest.tag, datei);
 }
 
 /**
@@ -204,15 +284,27 @@ export async function applyBundleUpdate(
     return { ok: false, message: "Keine installierten Apps gefunden.", updatedApps: [], fromVersion: stand.version, toVersion: manifest.version };
   }
 
-  // Nur nachladen, was sich geändert hat — der Vergleich läuft über die
-  // Prüfsumme, nicht über die Version: ein neu gebautes Release mit
-  // identischem Bundle kostet so keinen Download.
-  const zuAktualisieren = apps.filter((app) => {
-    const asset = manifest.apps?.[app];
-    return asset ? asset.sha256 !== stand.appHashes[app] : false;
-  });
+  // Dieselbe Entscheidung wie im Update-Check: nur nachladen, was sich laut
+  // Prüfsumme geändert hat.
+  const pruefung = evaluateBundleUpdate(manifest, stand, apps);
+  const zuAktualisieren = pruefung.changedApps;
 
-  if (zuAktualisieren.length === 0 && stand.version === manifest.version) {
+  // Die Desktop-App erneuert nur ihr eigener Installer. Sie kann hinter dem
+  // Release-Tag liegen, während die Bundles schon aktuell sind — dann ist das
+  // Öffnen des Installers die einzige verbleibende Arbeit.
+  const installer = commandCenterInstallerUrl(manifest);
+
+  if (!pruefung.updateAvailable) {
+    if (installer) {
+      openExternalUrl(installer);
+      return {
+        ok: true,
+        message: `App-Bundles sind aktuell (${manifest.version}). Der Command-Center-Installer wurde geöffnet — bitte die App-Aktualisierung abschließen.`,
+        updatedApps: [],
+        fromVersion: stand.version,
+        toVersion: manifest.version,
+      };
+    }
     return { ok: true, message: `Bereits aktuell (${manifest.version}).`, updatedApps: [], fromVersion: stand.version, toVersion: manifest.version };
   }
 
@@ -233,5 +325,9 @@ export async function applyBundleUpdate(
     migration.detail,
   ];
   if (backup) teile.push(`Sicherung: ${backup}`);
+  if (installer) {
+    openExternalUrl(installer);
+    teile.push("Der Command-Center-Installer wurde geöffnet — bitte die App-Aktualisierung abschließen.");
+  }
   return { ok: true, message: teile.join(" "), updatedApps: zuAktualisieren, fromVersion: stand.version, toVersion: manifest.version };
 }

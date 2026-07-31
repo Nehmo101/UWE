@@ -31,23 +31,38 @@ export interface ReleaseManifestV2 {
   schemaVersion: number;
   version: string;
   tag: string;
+  /** Fassung des Command Centers zu diesem Release-Tag (= version). */
+  commandCenterVersion?: string;
+  /** Dateinamen der Windows-Installer im Release — der Update-Knopf öffnet den NSIS. */
+  windows?: { nsis?: string | null; msi?: string | null };
   runtime?: { node: string; nodeAbi: string; platform: string; arch: string };
   apps?: Partial<Record<HostServiceId, ReleaseAsset | null>>;
   databases?: ReleaseAsset | null;
 }
 
-function releaseDownloadUrl(tag: string, file: string, repo: string): string {
+/** Download-URL eines Assets am Release-Tag. */
+export function releaseAssetUrl(tag: string, file: string, repo: string = UWE_RELEASE_REPO): string {
   return `https://github.com/${repo}/releases/download/${encodeURIComponent(tag)}/${encodeURIComponent(file)}`;
 }
 
-/** Manifest der neuesten Release laden (GitHub folgt von /latest/ per Redirect). */
-export async function fetchLatestManifest(repo: string = UWE_RELEASE_REPO): Promise<ReleaseManifestV2> {
-  const url = `https://github.com/${repo}/releases/latest/download/uwe-release.json`;
+/** Die öffentliche Release-Seite eines Tags — darauf verweist der Update-Hinweis. */
+export function releasePageUrl(tag: string, repo: string = UWE_RELEASE_REPO): string {
+  return `https://github.com/${repo}/releases/tag/${encodeURIComponent(tag)}`;
+}
+
+async function fetchManifest(url: string): Promise<ReleaseManifestV2> {
   const antwort = await fetch(url, { redirect: "follow" });
   if (!antwort.ok) {
     throw new Error(`Release-Manifest nicht erreichbar (${antwort.status}) — ${url}`);
   }
-  const manifest = (await antwort.json()) as ReleaseManifestV2;
+  return (await antwort.json()) as ReleaseManifestV2;
+}
+
+/** Manifest der neuesten Release laden (GitHub folgt von /latest/ per Redirect). */
+export async function fetchLatestManifest(repo: string = UWE_RELEASE_REPO): Promise<ReleaseManifestV2> {
+  const manifest = await fetchManifest(
+    `https://github.com/${repo}/releases/latest/download/uwe-release.json`,
+  );
   if (manifest.schemaVersion < 2) {
     throw new Error(
       `Release ${manifest.version ?? "?"} trägt noch Manifest v${manifest.schemaVersion} ohne App-Bundles — ` +
@@ -55,6 +70,22 @@ export async function fetchLatestManifest(repo: string = UWE_RELEASE_REPO): Prom
     );
   }
   return manifest;
+}
+
+/**
+ * Manifest eines bestimmten Release-Tags — best effort. Der Checkout-Weg braucht
+ * daraus nur den Installer-Dateinamen; ist das Release älter als das Manifest
+ * oder das Netz gerade weg, bleibt der Update-Check trotzdem aussagefähig.
+ */
+export async function tryFetchManifestForTag(
+  tag: string,
+  repo: string = UWE_RELEASE_REPO,
+): Promise<ReleaseManifestV2 | null> {
+  try {
+    return await fetchManifest(releaseAssetUrl(tag, "uwe-release.json", repo));
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -89,7 +120,7 @@ export async function downloadAndVerify(
   zielDatei: string,
   repo: string = UWE_RELEASE_REPO,
 ): Promise<void> {
-  const url = releaseDownloadUrl(manifest.tag, asset.file, repo);
+  const url = releaseAssetUrl(manifest.tag, asset.file, repo);
   const antwort = await fetch(url, { redirect: "follow" });
   if (!antwort.ok || !antwort.body) {
     throw new Error(`Download fehlgeschlagen (${antwort.status}) — ${url}`);

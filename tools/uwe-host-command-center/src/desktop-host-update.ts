@@ -1,10 +1,11 @@
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
 import {
   collectDesktopHostStatus,
   commandCenterDataRoot,
+  detectHostMode,
   getInstallSelection,
   resolveDesktopHostRoot,
   setupHost,
@@ -15,9 +16,20 @@ import {
   type DesktopHostStatus,
 } from "./desktop-host.ts";
 import { beginHostProgress, reportHostStep } from "./desktop-host-progress.ts";
+import { openExternalUrl, runningCommandCenterVersion } from "./desktop-host-system.ts";
+import { releaseAssetUrl, releasePageUrl, tryFetchManifestForTag } from "./bundle-install.ts";
+import { checkBundleUpdate, readInstalledState } from "./bundle-update.ts";
+import {
+  compareSemver,
+  isReleaseVersion,
+  parseReleaseTag,
+  selectLatestReleaseTag,
+  RELEASE_TAG_PREFIX,
+} from "./release-tags.ts";
 
-const RELEASE_TAG_PREFIX = "uwe-v";
-const RELEASE_TAG_PATTERN = /^uwe-v(\d+\.\d+\.\d+)$/;
+// Die Tag-Helfer bleiben von hier aus erreichbar — Bestandsimporte (CLI, Tests)
+// zeigen weiter auf dieses Modul.
+export { compareSemver, parseReleaseTag, selectLatestReleaseTag };
 
 export interface DesktopHostUpdateInfo {
   updateAvailable: boolean;
@@ -60,48 +72,27 @@ function readLocalVersion(root: string): string | null {
   const versionPath = path.join(root, "VERSION");
   if (!fs.existsSync(versionPath)) return null;
   const value = fs.readFileSync(versionPath, "utf8").trim();
-  return /^\d+\.\d+\.\d+$/.test(value) ? value : null;
+  return isReleaseVersion(value) ? value : null;
 }
 
+/**
+ * Die Fassung des Command Centers: bevorzugt die des laufenden Prozesses (die
+ * Bundle-Installation hat keine `tauri.conf.json` neben sich), sonst die des
+ * Checkouts.
+ */
 function readCommandCenterVersion(root: string): string | null {
+  const laufend = runningCommandCenterVersion();
+  if (laufend) return laufend;
   const configPath = path.join(root, "apps", "rtx-connector-client", "src-tauri", "tauri.conf.json");
   if (!fs.existsSync(configPath)) return readLocalVersion(root);
   try {
     const config = JSON.parse(fs.readFileSync(configPath, "utf8")) as { version?: unknown };
-    return typeof config.version === "string" && /^\d+\.\d+\.\d+$/.test(config.version)
+    return typeof config.version === "string" && isReleaseVersion(config.version)
       ? config.version
       : readLocalVersion(root);
   } catch {
     return readLocalVersion(root);
   }
-}
-
-export function compareSemver(left: string, right: string): number {
-  const leftParts = left.split(".").map((part) => Number.parseInt(part, 10));
-  const rightParts = right.split(".").map((part) => Number.parseInt(part, 10));
-  for (let index = 0; index < 3; index += 1) {
-    const delta = (leftParts[index] ?? 0) - (rightParts[index] ?? 0);
-    if (delta !== 0) return delta < 0 ? -1 : 1;
-  }
-  return 0;
-}
-
-export function parseReleaseTag(tag: string): { tag: string; version: string } | null {
-  const match = tag.trim().match(RELEASE_TAG_PATTERN);
-  if (!match) return null;
-  return { tag: match[0], version: match[1]! };
-}
-
-export function selectLatestReleaseTag(tags: string[]): { tag: string; version: string } | null {
-  let latest: { tag: string; version: string } | null = null;
-  for (const tag of tags) {
-    const parsed = parseReleaseTag(tag);
-    if (!parsed) continue;
-    if (!latest || compareSemver(parsed.version, latest.version) > 0) {
-      latest = parsed;
-    }
-  }
-  return latest;
 }
 
 function listReleaseTags(root: string): string[] {
@@ -128,44 +119,34 @@ function resolveGithubRepoSlug(root: string): string | null {
   return null;
 }
 
-function resolveInstallerAssetName(root: string, tag: string, version: string): string {
-  const viaGh = spawnSync(
-    "gh",
-    ["release", "view", tag, "--json", "assets", "--jq", ".assets[].name"],
-    {
-      cwd: root,
-      encoding: "utf8",
-      windowsHide: true,
-      env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
-    },
-  );
-  if (viaGh.status === 0) {
-    const names = (viaGh.stdout ?? "")
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean);
-    const stable = names.find((name) => name === `UWE_Command_Center_${version}_x64-setup.exe`);
-    if (stable) return stable;
-    const setup = names.find((name) => /setup\.exe$/i.test(name) || /\.exe$/i.test(name));
-    if (setup) return setup;
-  }
-  return `UWE_Command_Center_${version}_x64-setup.exe`;
+/**
+ * Der Installer-Dateiname am Release-Tag. Quelle ist `uwe-release.json` des
+ * Releases — kein `gh` und kein Token: die Zielrechner haben beides nicht. Ist
+ * das Manifest nicht erreichbar, greift der Name, den der Release-Workflow
+ * garantiert (stabiler NSIS-Name).
+ */
+async function resolveInstallerAssetName(
+  slug: string,
+  tag: string,
+  version: string,
+): Promise<string> {
+  const manifest = await tryFetchManifestForTag(tag, slug);
+  const nsis = manifest?.windows?.nsis?.split("/").pop();
+  return nsis || `UWE_Command_Center_${version}_x64-setup.exe`;
 }
 
-function buildReleaseUrls(
+async function buildReleaseUrls(
   root: string,
   tag: string,
   version: string,
-): Pick<DesktopHostUpdateInfo, "releaseUrl" | "windowsInstallerUrl"> {
+): Promise<Pick<DesktopHostUpdateInfo, "releaseUrl" | "windowsInstallerUrl">> {
   const slug = resolveGithubRepoSlug(root);
   if (!slug) {
     return { releaseUrl: null, windowsInstallerUrl: null };
   }
-  const releaseUrl = `https://github.com/${slug}/releases/tag/${tag}`;
-  const installerName = resolveInstallerAssetName(root, tag, version);
   return {
-    releaseUrl,
-    windowsInstallerUrl: `https://github.com/${slug}/releases/download/${tag}/${installerName.split("/").pop()}`,
+    releaseUrl: releasePageUrl(tag, slug),
+    windowsInstallerUrl: releaseAssetUrl(tag, await resolveInstallerAssetName(slug, tag, version), slug),
   };
 }
 
@@ -184,20 +165,67 @@ function appendUpdateLog(_root: string, line: string): void {
   );
 }
 
-function openExternal(url: string): void {
-  if (process.platform === "win32") {
-    spawn(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", "start", "", url], {
-      detached: true,
-      windowsHide: true,
-      stdio: "ignore",
-    }).unref();
-    return;
+/**
+ * Update-Check einer Bundle-Installation: hier gibt es kein git und keine Tags
+ * im Dateisystem — die Wahrheit ist `uwe-release.json` des neuesten Releases,
+ * und der Release-Tag darin ist die Version, gegen die verglichen wird.
+ *
+ * Das Ergebnis trägt dieselbe Form wie der Checkout-Weg, damit der Update-Knopf
+ * im Command Center in beiden Welten derselbe bleibt.
+ */
+async function checkBundleReleaseUpdate(
+  root: string,
+  status: DesktopHostStatus,
+): Promise<DesktopHostUpdateCheckResult> {
+  const installedVersion = readInstalledState(root).version;
+  try {
+    appendUpdateLog(root, "Update-Check: Release-Manifest laden ...");
+    const check = await checkBundleUpdate(root);
+    const appVersion = runningCommandCenterVersion();
+    const commandCenterUpdateAvailable = appVersion
+      ? compareSemver(appVersion, check.latestVersion) < 0
+      : false;
+    const meldungen = [check.message];
+    if (commandCenterUpdateAvailable) {
+      meldungen.push(`Das Command Center selbst ist auf ${appVersion} und wird neu installiert.`);
+    }
+    return {
+      ok: true,
+      updateAvailable: check.updateAvailable || commandCenterUpdateAvailable,
+      currentVersion: check.installedVersion,
+      // Eine Bundle-Installation kennt keinen Commit — nur den Release-Tag.
+      currentRevision: null,
+      latestVersion: check.latestVersion,
+      latestTag: check.latestTag,
+      latestRevision: null,
+      releaseUrl: releasePageUrl(check.latestTag),
+      windowsInstallerUrl: check.installerFile
+        ? releaseAssetUrl(check.latestTag, check.installerFile)
+        : null,
+      commandCenterUpdateAvailable,
+      dirtyWorktree: false,
+      message: meldungen.join(" "),
+      status,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    appendUpdateLog(root, `Update-Check fehlgeschlagen: ${message}`);
+    return {
+      ok: false,
+      updateAvailable: false,
+      currentVersion: installedVersion,
+      currentRevision: null,
+      latestVersion: null,
+      latestTag: null,
+      latestRevision: null,
+      releaseUrl: null,
+      windowsInstallerUrl: null,
+      commandCenterUpdateAvailable: false,
+      dirtyWorktree: false,
+      message: `Update-Check fehlgeschlagen: ${message}`,
+      status,
+    };
   }
-  if (process.platform === "darwin") {
-    spawn("open", [url], { detached: true, stdio: "ignore" }).unref();
-    return;
-  }
-  spawn("xdg-open", [url], { detached: true, stdio: "ignore" }).unref();
 }
 
 export async function checkDesktopHostUpdate(
@@ -205,6 +233,9 @@ export async function checkDesktopHostUpdate(
 ): Promise<DesktopHostUpdateCheckResult> {
   const root = resolveDesktopHostRoot(rootInput);
   const status = await collectDesktopHostStatus(root);
+  if (detectHostMode(root) === "bundle") {
+    return checkBundleReleaseUpdate(root, status);
+  }
   const currentVersion = readLocalVersion(root);
   const currentRevision = git(root, ["rev-parse", "--short", "HEAD"], { allowFailure: true }) || null;
 
@@ -265,7 +296,7 @@ export async function checkDesktopHostUpdate(
     : true;
   const revisionNewer = Boolean(latestFull && currentFull && latestFull !== currentFull);
   const updateAvailable = versionNewer || revisionNewer;
-  const urls = buildReleaseUrls(root, latest.tag, latest.version);
+  const urls = await buildReleaseUrls(root, latest.tag, latest.version);
   const commandCenterVersion = readCommandCenterVersion(root);
   const commandCenterUpdateAvailable = commandCenterVersion
     ? compareSemver(commandCenterVersion, latest.version) < 0
@@ -372,9 +403,9 @@ export async function applyDesktopHostUpdate(rootInput?: string): Promise<Deskto
 
     if (check.commandCenterUpdateAvailable && check.windowsInstallerUrl) {
       appendUpdateLog(root, `Command-Center-Installer öffnen: ${check.windowsInstallerUrl}`);
-      openExternal(check.windowsInstallerUrl);
+      openExternalUrl(check.windowsInstallerUrl);
     } else if (check.releaseUrl && check.commandCenterUpdateAvailable) {
-      openExternal(check.releaseUrl);
+      openExternalUrl(check.releaseUrl);
     }
 
     const versionLabel = check.latestVersion ?? check.latestTag;

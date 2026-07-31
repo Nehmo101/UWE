@@ -1356,6 +1356,9 @@ enum ApiTokenScopeName {
   admin_write
   backup_read
   backup_write
+  family_read
+  family_write
+  family_calendar
 }
 
 enum SecurityWarningSeverity {
@@ -2677,8 +2680,6 @@ enum PantryLocation {
   spices
 }
 
-/// Freigabe-Zustand einer Terra-Karte (J5) — Vorgabe `freigegeben`, damit
-/// Studio-Karten und Bestandszeilen unveraendert gueltig bleiben.
 enum TerraKarteStatus {
   entwurf
   eingereicht
@@ -2724,4 +2725,19 @@ enum FamilyChatScope {
 enum FamilyChatRole {
   user
   assistant
+}
+
+enum FamilyMemberKind {
+  adult
+  child
+  pet
+  guest
+}
+
+enum FamilyHealthRecordKind {
+  vaccination
+  checkup
+  medication
+  vet
+  other
 }

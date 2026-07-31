@@ -33,6 +33,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { terraUniforms } from './materials.js';
 import { setzeTexturAnisotropie } from './textures.js';
 import { berechneRenderMasse } from './render-masse.js';
+import { erzeugeLeistungsRegler } from './leistungsregler.js';
 
 export const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0xdfe8f0, 200, 950);
@@ -42,6 +43,13 @@ let renderer = null, composer = null, bloomPass = null, gradePass = null,
 let depthRT = null;
 let postAn = true;
 let infoCalls = 0, infoTris = 0;
+/* Adaptive Renderskala: der Leistungsregler (reine Logik, eigener Test)
+   beobachtet die Bildzeit; hier wird seine Skala auf Renderer, Composer und
+   Tiefenziel angewandt. kameraRef braucht der Groessenwechsel ausserhalb des
+   window-resize-Ereignisses. */
+let leistung = erzeugeLeistungsRegler();
+let renderSkala = 1;
+let kameraRef = null;
 
 /** Sanfte Stufe wie smoothstep — pipeline.js bleibt sonst importfrei. */
 function sanft(a, b, x) {
@@ -415,6 +423,7 @@ const KanteBildShader = {
 };
 
 function initPipeline(camera) {
+  kameraRef = camera;
   renderer = new THREE.WebGLRenderer({
     antialias: true,
     preserveDrawingBuffer: true,   // fuer den PNG-Export
@@ -427,7 +436,7 @@ function initPipeline(camera) {
     stencil: true
   });
   var w = window.innerWidth, h = window.innerHeight;
-  var masse = berechneRenderMasse(w, h, window.devicePixelRatio);
+  var masse = berechneRenderMasse(w, h, window.devicePixelRatio, renderSkala);
   renderer.setPixelRatio(masse.pixelRatio);
   renderer.setSize(w, h);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -494,7 +503,7 @@ function initPipeline(camera) {
 
 function resizePipeline(camera) {
   var w = window.innerWidth, h = window.innerHeight;
-  var masse = berechneRenderMasse(w, h, window.devicePixelRatio);
+  var masse = berechneRenderMasse(w, h, window.devicePixelRatio, renderSkala);
   var pr = masse.pixelRatio;
   if (renderer.getPixelRatio() !== pr) {
     renderer.setPixelRatio(pr);
@@ -961,7 +970,24 @@ function renderFrame(camera) {
   infoTris = renderer.info.render.triangles;
 }
 
-function getRenderInfo() { return { calls: infoCalls, triangles: infoTris }; }
+function getRenderInfo() {
+  return { calls: infoCalls, triangles: infoTris, skala: renderSkala };
+}
+
+/**
+ * Adaptive Aufloesung: einmal je Bild mit der ECHTEN (ungeklammerten)
+ * Bildzeit aufrufen. Faellt die Rate anhaltend, sinkt die Renderskala in
+ * Stufen (Renderer, Composer und Tiefenziel werden gemeinsam kleiner);
+ * traegt sie wieder, steigt die Skala zurueck bis zur vollen Schaerfe.
+ * Die Traegheit in beide Richtungen liegt im Regler (leistungsregler.js).
+ */
+function tickLeistung(dt) {
+  if (!renderer) return;
+  var neu = leistung.tick(dt);
+  if (neu === null) return;
+  renderSkala = neu;
+  resizePipeline(kameraRef);
+}
 
 /** PNG-Export: liefert das fertig komponierte Bild (inkl. Bloom und Grade). */
 function exportPNG(name) {
@@ -974,7 +1000,7 @@ function exportPNG(name) {
 function getRenderer() { return renderer; }
 
 export { initPipeline, resizePipeline, setLook, setPost, getPost, renderFrame,
-  getRenderInfo, exportPNG, getRenderer,
+  getRenderInfo, tickLeistung, exportPNG, getRenderer,
   setFarbskript, getFarbskript, setPapierkante, getPapierkante,
   setPalette, getPalette, setMalschicht, getMalschicht,
   setMultiplane, getMultiplane, PALETTE_STANDARD, MAL_DEZENT };

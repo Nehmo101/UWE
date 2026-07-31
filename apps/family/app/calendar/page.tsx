@@ -6,9 +6,18 @@ import {
   prisma,
 } from "@uwe/database/server";
 import { familyPrisma } from "@uwe/database/family-client";
+import {
+  attachMembersToEvents,
+  createFamilyMemberService,
+  expandAnniversaries,
+  resolveMemberColour,
+} from "@uwe/family-core";
 import { getFamilyUser } from "@/src/lib/page-family";
 import { FamilyShell, FamilyDenied } from "@/src/components/FamilyShell";
 import { FamilyCalendarMonth } from "@/src/components/FamilyCalendarMonth";
+import { EventMemberPicker, type PickerMember } from "@/src/components/calendar/EventMemberPicker";
+import { MemberFilter } from "@/src/components/calendar/MemberFilter";
+import { MemberDot } from "@/src/components/members/MemberFields";
 import {
   createEventAction,
   deleteEventAction,
@@ -65,6 +74,8 @@ function monthHref(focus: Date): string {
 
 function EventFields({
   event,
+  members,
+  selectedMemberIds,
 }: {
   event?: {
     title: string;
@@ -75,6 +86,8 @@ function EventFields({
     allDay: boolean;
     kind: string;
   };
+  members: readonly PickerMember[];
+  selectedMemberIds?: readonly string[];
 }) {
   return (
     <>
@@ -121,6 +134,7 @@ function EventFields({
         Notiz
         <textarea name="description" rows={2} defaultValue={event?.description ?? ""} />
       </label>
+      <EventMemberPicker members={members} selected={selectedMemberIds} />
     </>
   );
 }
@@ -128,7 +142,7 @@ function EventFields({
 export default async function FamilyCalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ year?: string; month?: string }>;
+  searchParams: Promise<{ year?: string; month?: string; member?: string }>;
 }) {
   const user = await getFamilyUser();
   if (!user) {
@@ -139,17 +153,42 @@ export default async function FamilyCalendarPage({
     );
   }
 
-  const { year, month } = await searchParams;
+  const { year, month, member: memberFilter } = await searchParams;
   const now = new Date();
   const focus = parseMonth(year, month, now);
   const rangeStart = new Date(focus.getFullYear(), focus.getMonth(), 1);
   const rangeEnd = new Date(focus.getFullYear(), focus.getMonth() + 1, 0, 23, 59, 59, 999);
 
   const calendar = createCalendarService(familyPrisma, prisma);
-  const [events, feeds] = await Promise.all([
+  const memberService = createFamilyMemberService(familyPrisma);
+  const [rawEvents, feeds, memberRows] = await Promise.all([
     calendar.listEvents({ from: rangeStart, to: rangeEnd, limit: 400 }),
     calendar.listFeeds(true),
+    memberService.listMembers(),
   ]);
+
+  const members: PickerMember[] = memberRows.map((row) => ({
+    id: row.id,
+    displayName: row.displayName,
+    colour: resolveMemberColour(row),
+  }));
+
+  const withMembers = await attachMembersToEvents(familyPrisma, rawEvents);
+
+  // Gefiltert wird erst nach dem Anreichern — sonst wüsste die Ansicht nicht,
+  // welche Termine zu der gewählten Person gehören.
+  const activeMemberId = members.some((m) => m.id === memberFilter) ? memberFilter : undefined;
+  const events = activeMemberId
+    ? withMembers.filter((event) => event.members.some((m) => m.id === activeMemberId))
+    : withMembers;
+
+  // Geburtstage und Jahrestage sind keine gespeicherten Termine, sondern werden
+  // für den gezeigten Monat aufgespannt.
+  const anniversaries = expandAnniversaries(memberRows, {
+    from: rangeStart,
+    to: rangeEnd,
+    colourOf: resolveMemberColour,
+  }).filter((occurrence) => !activeMemberId || occurrence.memberId === activeMemberId);
 
   const monthLabel = new Intl.DateTimeFormat("de-DE", {
     month: "long",
@@ -188,22 +227,40 @@ export default async function FamilyCalendarPage({
     >
       <section className="family-section">
         <h2>{monthLabel}</h2>
+        <MemberFilter
+          members={members}
+          activeMemberId={activeMemberId}
+          year={focus.getFullYear()}
+          month={focus.getMonth() + 1}
+        />
         <FamilyCalendarMonth
           month={focus}
           today={now}
-          events={events.map((event) => ({
-            id: event.id,
-            title: event.title,
-            startAt: event.startAt.toISOString(),
-            allDay: event.allDay,
-          }))}
+          events={[
+            ...events.map((event) => ({
+              id: event.id,
+              title: event.title,
+              startAt: event.startAt.toISOString(),
+              allDay: event.allDay,
+              memberColours: event.members.map((m) => m.colour),
+              memberNames: event.members.map((m) => m.displayName),
+            })),
+            ...anniversaries.map((occurrence) => ({
+              id: occurrence.uid,
+              title: occurrence.title,
+              startAt: occurrence.date.toISOString(),
+              allDay: true,
+              memberColours: [occurrence.colour],
+              memberNames: [occurrence.memberName],
+            })),
+          ]}
         />
       </section>
 
       <section className="family-section">
         <h2>Neuer Termin</h2>
         <form action={createEventAction} className="family-form family-card">
-          <EventFields />
+          <EventFields members={members} />
           <div>
             <button type="submit" className="family-btn">
               Termin anlegen
@@ -223,6 +280,9 @@ export default async function FamilyCalendarPage({
               return (
                 <li key={event.id} id={`event-${event.id}`} className="family-row">
                   <div className="family-row-head">
+                    {event.members.map((m) => (
+                      <MemberDot key={m.id} colour={m.colour} title={m.displayName} />
+                    ))}
                     <strong>{event.title}</strong>
                     <span className="family-tag">{CALENDAR_EVENT_KIND_LABELS[event.kind]}</span>
                     <span className="family-muted">
@@ -247,7 +307,11 @@ export default async function FamilyCalendarPage({
                       <summary>Bearbeiten</summary>
                       <form action={updateEventAction} className="family-form">
                         <input type="hidden" name="id" value={event.id} />
-                        <EventFields event={event} />
+                        <EventFields
+                          event={event}
+                          members={members}
+                          selectedMemberIds={event.members.map((m) => m.id)}
+                        />
                         <div>
                           <button type="submit" className="family-btn family-btn-sm">
                             Speichern
@@ -283,9 +347,9 @@ export default async function FamilyCalendarPage({
             ))}
           </ul>
           <p className="family-muted">
-            Fremde Kalender kommen über die Kalender-API herein
-            (<code>POST /api/calendar/feeds</code>) und werden von einem Job abgeholt. Hier stehen
-            sie nur zum Nachsehen — was von außen kommt, wird nicht von Hand geändert.
+            Was von außen kommt, wird nicht von Hand geändert — eine Änderung würde beim nächsten
+            Abgleich überschrieben. Abonnieren und entfernen unter{" "}
+            <Link href="/calendar/feeds">Fremde Kalender</Link>.
           </p>
         </section>
       ) : null}

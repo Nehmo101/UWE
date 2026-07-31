@@ -21,8 +21,17 @@ export const BRAIN_PUBLIC_ROUTES = ["/login", "/api/health", "/api/health/*"] as
  * Public routes on the Family surface. Same shape as Brain — the difference is
  * which checkbox the handlers require (`family` instead of `brain`), and that
  * is enforced server-side, never in the middleware.
+ *
+ * Plus the ICS calendar subscription: a calendar app on a phone fetches the
+ * feed without an `Authorization` header, so the secret sits in the path. It is
+ * a dedicated read-only token type (`uwecal_…`), separately revocable and
+ * stored only as a hash — the route handler resolves it, the middleware just
+ * lets the request through.
  */
-export const FAMILY_PUBLIC_ROUTES = BRAIN_PUBLIC_ROUTES;
+export const FAMILY_PUBLIC_ROUTES = [
+  ...BRAIN_PUBLIC_ROUTES,
+  "/api/calendar/feed/*",
+] as const;
 
 export type RouteAccess = "public" | "protected" | "protected-session";
 

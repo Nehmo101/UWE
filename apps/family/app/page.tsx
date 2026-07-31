@@ -2,6 +2,7 @@ import Link from "next/link";
 import { EmptyState } from "@uwe/shared-ui";
 import { createFamilyService } from "@uwe/database/family-service";
 import { familyPrisma } from "@uwe/database/family-client";
+import { createFamilyMemberService } from "@uwe/family-core";
 import { getFamilyUser } from "@/src/lib/page-family";
 import { FamilyShell, FamilyDenied } from "@/src/components/FamilyShell";
 
@@ -26,13 +27,14 @@ export default async function FamilyStartPage() {
   }
 
   const service = createFamilyService(familyPrisma);
-  await service.ensureMemberProfile({ userId: user.id, displayName: user.displayName });
+  const memberService = createFamilyMemberService(familyPrisma);
+  await memberService.ensureMemberForUser({ userId: user.id, displayName: user.displayName });
 
   const [conversations, sharedFacts, privateFacts, members] = await Promise.all([
     service.listConversations(user.id),
     service.listFacts(user.id, "shared"),
     service.listFacts(user.id, "private"),
-    service.listMemberProfiles(),
+    memberService.listMembers(),
   ]);
 
   return (

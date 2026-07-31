@@ -24,6 +24,7 @@
     "test:ci:affected": "node scripts/migration-check.mjs && node scripts/product-boundary-check.mjs && turbo run test --filter=\"...[origin/main]\" && pnpm test:terra && node --import tsx --test scripts/product-boundary.test.ts scripts/selfhost.test.ts scripts/release.test.ts scripts/standalone-assets.test.ts scripts/integration-smoke.test.ts scripts/client-server-boundary.test.ts scripts/file-size-budget.test.ts scripts/server-barrel-freeze.test.ts scripts/ui-primitive-sync.test.ts scripts/theme-token-bridge.test.ts scripts/server-action-db-client.test.ts",
     "security:audit": "pnpm audit:prod",
     "docs:check": "node scripts/docs-check.mjs",
+    "release:version": "node scripts/set-release-version.mjs",
     "file-size:check": "node scripts/file-size-budget-check.mjs",
     "boundary:check": "node scripts/product-boundary-check.mjs",
     "typecheck": "turbo run typecheck",

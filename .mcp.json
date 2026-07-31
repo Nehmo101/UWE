@@ -26,6 +26,15 @@
         "tsx",
         "packages/mcp/src/bin/brain.ts"
       ]
+    },
+    "uwe-family": {
+      "command": "node",
+      "args": [
+        "--env-file-if-exists=.env",
+        "--import",
+        "tsx",
+        "packages/mcp/src/bin/family.ts"
+      ]
     }
   }
 }

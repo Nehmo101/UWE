@@ -1,15 +1,17 @@
 /**
  * Server factories — one MCP server per UWE product.
  *
- * Three servers rather than one, because the repo enforces a hard three-product
- * split (`@uwe/product-contracts` → APP_AUDIENCE, scripts/product-boundary-check.mjs)
- * and because Brain must be separately switchable: an operator can wire Studio
- * and Portal into an agent while leaving the owner-private surface out entirely.
+ * Vier Server statt einem, weil das Repo die Produkttrennung hart durchsetzt
+ * (`@uwe/product-contracts` → APP_AUDIENCE, scripts/product-boundary-check.mjs)
+ * und weil Brain und Family einzeln zuschaltbar sein müssen: wer Studio und
+ * Portal an einen Agenten hängt, will den owner-privaten Bereich und den
+ * Haushalt nicht zwangsläufig mitliefern.
  */
 import { loadConfig, type McpSurface } from "./client/config";
 import type { McpServerDefinition, PromptDefinition } from "./protocol/types";
 import { BRAIN_INSTRUCTIONS, createBrainTools } from "./tools/brain";
 import { createToolContext } from "./tools/context";
+import { FAMILY_INSTRUCTIONS, createFamilyTools } from "./tools/family";
 import { PORTAL_INSTRUCTIONS, createPortalTools } from "./tools/portal";
 import { STUDIO_INSTRUCTIONS, createStudioTools } from "./tools/studio";
 
@@ -70,6 +72,23 @@ const BRAIN_PROMPTS: PromptDefinition[] = [
   },
 ];
 
+const FAMILY_PROMPTS: PromptDefinition[] = [
+  {
+    name: "family-week",
+    description: "Die kommende Woche im Haushalt zusammenfassen.",
+    build: userMessage(
+      "Fasse die kommende Woche im Haushalt zusammen. Nutze family_members für die Personen, family_calendar_upcoming mit includeAnniversaries für Termine und Geburtstage und family_health_due für anstehende Arzt- und Tierarzttermine. Ordne die Termine nach Person und nenne, was Vorbereitung braucht.",
+    ),
+  },
+  {
+    name: "family-shopping",
+    description: "Einkaufsliste sichten und mit den Rezepten der Woche abgleichen.",
+    build: userMessage(
+      "Sieh dir mit family_shopping_list die offene Einkaufsliste an und gleiche sie mit family_recipes ab. Nenne, was fehlen könnte, und fasse die Liste nach Kategorien zusammen.",
+    ),
+  },
+];
+
 export function createServer(
   surface: McpSurface,
   env: NodeJS.ProcessEnv = process.env,
@@ -94,6 +113,16 @@ export function createServer(
       instructions: PORTAL_INSTRUCTIONS,
       tools: createPortalTools(context),
       prompts: PORTAL_PROMPTS,
+    };
+  }
+
+  if (surface === "family") {
+    return {
+      name: "uwe-family",
+      version: UWE_MCP_VERSION,
+      instructions: FAMILY_INSTRUCTIONS,
+      tools: createFamilyTools(context),
+      prompts: FAMILY_PROMPTS,
     };
   }
 
