@@ -11,8 +11,15 @@ test.describe("Studio world dashboard on WorldShell", () => {
 
     await expect(page.getByRole("link", { name: "Terra", exact: true }).first()).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Brotkrumen" })).toContainText("Terra");
+    await expect(page.getByRole("heading", { level: 1, name: "Terra" })).toHaveCount(1);
+
+    // Die Sidebar-Gruppen sind zusammenklappbar; offen ist nur die mit der
+    // aktiven Route. Auf dem Cockpit ist das „Übersicht", „Wiki" liegt
+    // eingeklappt darunter. Der Test erwartete Sichtbarkeit, die es nie gab.
+    const wikiGroup = page.getByRole("button", { name: "Wiki" });
+    await expect(wikiGroup).toHaveAttribute("aria-expanded", "false");
+    await wikiGroup.click();
     await expect(page.getByRole("link", { name: "Wiki / Seiten" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Terra" })).toBeVisible();
   });
 
   test("studio defaults to Gemalte-Welt accent tokens", async ({ page }) => {
