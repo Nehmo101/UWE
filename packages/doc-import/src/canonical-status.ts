@@ -108,7 +108,11 @@ export function stripCanonMarkers(rawTitle: string): StrippedTitle {
     .split(PROPOSAL_MARKER)
     .join("")
     .replace(/\s{2,}/g, " ")
-    .replace(/\s+([),.:;])/g, "$1")
+    // `\s` statt `\s+`: die Zeile darüber hat jeden Weißraum-Lauf schon auf ein
+    // einzelnes Zeichen zusammengezogen, `\s+` wäre also nicht nur überflüssig,
+    // sondern quadratisch — es setzt über den ganzen Lauf zurück, sobald das
+    // Satzzeichen dahinter fehlt, und das an jeder Startstelle erneut.
+    .replace(/\s([),.:;])/g, "$1")
     .trim();
 
   const marker: CanonMarker | null = hasProposal ? "proposal" : hasCanon ? "canon" : null;

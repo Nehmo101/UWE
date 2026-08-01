@@ -1,0 +1,81 @@
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+
+import { stripCanonMarkers } from "./canonical-status";
+import { buildDocumentTree, normalizeBodyHeadings } from "./doc-tree";
+import { markdownToWikiHtml } from "./markdown-html";
+
+/**
+ * Regressionstest gegen quadratisches Zurücksetzen in den Mustern dieses Packages.
+ *
+ * Der Anlass war echt: vier Ausdrücke hier brauchten für 16 000 Zeichen rund
+ * 200 ms — pro Zeile. Das Material kommt aus hochgeladenen Dokumenten, ein
+ * Kampagnenbuch hat 1 778 Zeilen, und ein Absatz aus lauter Leerzeichen ist in
+ * einem 190-KB-Markdown kein konstruierter Sonderfall.
+ *
+ * Gemessen wird bewusst mit **viel** Luft: linear braucht das hier unter 5 ms,
+ * quadratisch läge bei über einer Minute. Zwischen beiden liegen Größenordnungen,
+ * also wackelt der Test auch auf einem ausgelasteten CI-Läufer nicht.
+ */
+
+const SIZE = 200_000;
+const BUDGET_MS = 2_000;
+
+function within(label: string, run: () => void): void {
+  const started = process.hrtime.bigint();
+  run();
+  const elapsed = Number(process.hrtime.bigint() - started) / 1e6;
+
+  assert.ok(
+    elapsed < BUDGET_MS,
+    `${label} brauchte ${elapsed.toFixed(0)} ms für ${SIZE} Zeichen — das riecht nach ` +
+      `quadratischem Zurücksetzen im Muster, nicht nach ehrlicher Arbeit.`,
+  );
+}
+
+describe("Muster bleiben linear", () => {
+  it("verkraftet eine Überschriftenzeile aus lauter Leerzeichen", () => {
+    const line = `# ${" ".repeat(SIZE)}`;
+
+    within("buildDocumentTree", () => {
+      const tree = buildDocumentTree(line);
+      // Rauten ohne Text sind keine Überschrift — sonst entstünde eine Seite ohne Titel.
+      assert.equal(tree.nodes.length, 0);
+    });
+  });
+
+  it("verkraftet denselben Fall beim Verschieben der Rumpf-Überschriften", () => {
+    const line = `# ${" ".repeat(SIZE)}`;
+
+    within("normalizeBodyHeadings", () => {
+      assert.equal(normalizeBodyHeadings(line), line);
+    });
+  });
+
+  it("verkraftet einen langen Weißraum-Lauf im Überschriftentext", () => {
+    const title = `Teil 4 ◆${" ".repeat(SIZE)}!`;
+
+    within("stripCanonMarkers", () => {
+      const { marker } = stripCanonMarkers(title);
+      assert.equal(marker, "canon");
+    });
+  });
+
+  it("verkraftet rohes HTML mit lauter offenen Tags", () => {
+    // `marked` reicht rohes HTML durch — offene Tags sind damit erreichbar.
+    within("markdownToWikiHtml (offene h1)", () => {
+      assert.ok(typeof markdownToWikiHtml("<h1>".repeat(SIZE / 4)) === "string");
+    });
+
+    within("markdownToWikiHtml (offene spitze Klammern)", () => {
+      assert.ok(typeof markdownToWikiHtml(`<h1>x</h1>${"<".repeat(SIZE)}`) === "string");
+    });
+  });
+
+  it("gibt Überschriften weiterhin ihre id — auch verschachtelt und doppelt", () => {
+    const html = markdownToWikiHtml("# Auf einen Blick\n\nText.\n\n# Auf einen Blick\n\nMehr.");
+
+    assert.match(html, /<h1 id="auf-einen-blick">/);
+    assert.match(html, /<h1 id="auf-einen-blick-2">/);
+  });
+});

@@ -74,9 +74,10 @@ function isMarkdownFile(name: string): boolean {
  * Liest Markdown von einem Pfad — eine Datei oder ein ganzer Ordner.
  *
  * Versteckte Ordner werden übersprungen: ein Obsidian-Vault trägt `.obsidian`
- * und `.trash` mit sich, und beides gehört nicht ins Wiki. Symlinks werden
- * nicht verfolgt (`readdir` ohne `follow`), damit ein Vault-Link nicht in den
- * Rest des Dateisystems führt.
+ * und `.trash` mit sich, und beides gehört nicht ins Wiki. Symlinks bleiben
+ * außen vor, weil `readdir` mit `withFileTypes` den Link selbst meldet und
+ * nicht sein Ziel — `isDirectory()` und `isFile()` sind dafür beide `false`.
+ * So führt ein Vault-Link nicht in den Rest des Dateisystems.
  */
 export async function readImportFiles(sourcePath: string): Promise<DocImportSourceFile[]> {
   const resolved = path.resolve(sourcePath);

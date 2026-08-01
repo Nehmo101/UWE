@@ -33,29 +33,68 @@ const marked = new Marked({
   breaks: false,
 });
 
-const HEADING_TAG = /<(h[1-6])>([\s\S]*?)<\/\1>/g;
-const TAG = /<[^>]*>/g;
+const HEADING_OPEN = /<(h[1-6])>/g;
+/**
+ * `[^<>]` statt `[^>]`: mit `[^>]` frisst das Muster über ein `<` hinweg bis zum
+ * Textende und setzt dann Zeichen für Zeichen zurück — an jeder Startstelle neu.
+ * Für rohes HTML im Markdown (`marked` reicht es durch) ist das quadratisch.
+ */
+const TAG = /<[^<>]*>/g;
 
 /**
  * Gibt Überschriften stabile `id`s, damit der Session-Runner an eine Stelle
  * springen und ein Lesezeichen sie wiederfinden kann. Doppelte Titel bekommen
  * einen Zähler, sonst führte „Auf einen Blick" (in Himmelsrouten neunmal) alle
  * auf dieselbe Marke.
+ *
+ * Das schließende Tag wird mit `indexOf` gesucht statt mit einer Regex über den
+ * ganzen Block (`<(h[1-6])>([\s\S]*?)<\/\1>`): die suchte bei jedem **nicht**
+ * geschlossenen `<h1>` bis ans Textende und begann beim nächsten von vorn. Ein
+ * roher HTML-Schnipsel im importierten Markdown reicht, um das auszulösen.
  */
 function addHeadingIds(html: string): string {
   const used = new Map<string, number>();
+  /** Tags, für die es hinter der aktuellen Stelle kein schließendes mehr gibt. */
+  const unclosed = new Set<string>();
 
-  return html.replace(HEADING_TAG, (match, tag: string, inner: string) => {
-    const text = inner.replace(TAG, "").trim();
-    const base = slugifyDe(text, { maxLength: 60 });
-    if (!base) return match;
+  let out = "";
+  let cursor = 0;
 
-    const seen = used.get(base) ?? 0;
-    used.set(base, seen + 1);
-    const id = seen === 0 ? base : `${base}-${seen + 1}`;
+  for (const match of html.matchAll(HEADING_OPEN)) {
+    const start = match.index ?? -1;
+    if (start < cursor) continue;
 
-    return `<${tag} id="${id}">${inner}</${tag}>`;
-  });
+    const tag = match[1];
+    if (unclosed.has(tag)) continue;
+
+    const closing = `</${tag}>`;
+    const innerStart = start + match[0].length;
+    const innerEnd = html.indexOf(closing, innerStart);
+    if (innerEnd < 0) {
+      // Weiter hinten kann erst recht keines mehr kommen — nicht noch einmal suchen.
+      unclosed.add(tag);
+      continue;
+    }
+
+    const inner = html.slice(innerStart, innerEnd);
+    const after = innerEnd + closing.length;
+    const base = slugifyDe(inner.replace(TAG, "").trim(), { maxLength: 60 });
+
+    out += html.slice(cursor, start);
+
+    if (base) {
+      const seen = used.get(base) ?? 0;
+      used.set(base, seen + 1);
+      const id = seen === 0 ? base : `${base}-${seen + 1}`;
+      out += `<${tag} id="${id}">${inner}${closing}`;
+    } else {
+      out += html.slice(start, after);
+    }
+
+    cursor = after;
+  }
+
+  return out + html.slice(cursor);
 }
 
 /**

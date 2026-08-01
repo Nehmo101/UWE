@@ -37,6 +37,21 @@ export function normalizeFrontmatterKey(key: string): string {
   return slugifyDe(key);
 }
 
+/**
+ * Schlüssel, die niemals eine Objekt-Eigenschaft werden dürfen.
+ *
+ * Heute kommt keiner davon hier an: `slugifyDe` wirft Unterstriche weg, aus
+ * `__proto__` wird `proto`. Genau darauf soll sich dieser Parser aber nicht
+ * verlassen — er schreibt Schlüssel aus **fremden** Dokumenten in ein Objekt,
+ * und die Slug-Funktion gehört einem anderen Package. Diese drei Zeilen sind
+ * billiger als die Wette, dass sie sich nie ändert.
+ */
+const UNSAFE_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+
+export function isUnsafeFrontmatterKey(key: string): boolean {
+  return UNSAFE_KEYS.has(key);
+}
+
 function stripQuotes(raw: string): string {
   const trimmed = raw.trim();
   if (trimmed.length >= 2) {
@@ -155,7 +170,7 @@ export function parseFrontmatterLines(lines: string[]): Record<string, Frontmatt
     flushPending();
 
     const key = normalizeFrontmatterKey(trimmed.slice(0, colon));
-    if (!key) continue;
+    if (!key || isUnsafeFrontmatterKey(key)) continue;
 
     const rest = trimmed.slice(colon + 1).trim();
     if (!rest) {

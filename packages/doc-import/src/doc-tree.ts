@@ -19,9 +19,39 @@
 import { stripCanonMarkers } from "./canonical-status";
 import type { DocumentNode, DocumentTree } from "./types";
 
-const HEADING = /^(#{1,6})[ \t]+(.*\S)[ \t]*$/;
+/**
+ * Überschriftenzeile.
+ *
+ * Der Titel wird **nachträglich** von Leerzeichen befreit, statt ihn im Muster
+ * mit `(.*\S)[ \t]*$` einzugrenzen. Dort überlappen `.*` und `[ \t]*`: eine Zeile
+ * aus Raute plus lauter Leerzeichen zwingt die Regex-Maschine in quadratisches
+ * Zurücksetzen — bei 16 000 Zeichen gemessene 234 ms für eine einzige Zeile, und
+ * die Zeilen kommen aus hochgeladenen Dokumenten. `(.*)$` ist eindeutig.
+ */
+const HEADING = /^(#{1,6})[ \t]+(.*)$/;
 const FENCE = /^(?:```|~~~)/;
 const HORIZONTAL_RULE = /^(?:-{3,}|\*{3,}|_{3,})$/;
+
+/** Nur Blank und Tab am Ende weg — `trimEnd()` fräße auch geschützte Leerzeichen. */
+function trimTrailingSpace(value: string): string {
+  let end = value.length;
+  while (end > 0 && (value[end - 1] === " " || value[end - 1] === "\t")) end -= 1;
+  return value.slice(0, end);
+}
+
+/**
+ * Eine Zeile als Überschrift lesen — oder `null`, wenn sie keine ist.
+ *
+ * Eine Zeile aus Rauten ohne Text ist wie bisher **keine** Überschrift; das
+ * erledigte früher das `\S` im Muster, jetzt der leere Titel.
+ */
+function matchHeading(line: string): { level: number; title: string } | null {
+  const match = HEADING.exec(line);
+  if (!match) return null;
+
+  const title = trimTrailingSpace(match[2]);
+  return title ? { level: match[1].length, title } : null;
+}
 
 export interface BuildDocumentTreeOptions {
   /** Bis zu welcher Überschriftenebene eigene Knoten entstehen. Vorgabe: 3. */
@@ -61,10 +91,10 @@ function collectSections(markdown: string): { preamble: string[]; sections: RawS
       inFence = !inFence;
     }
 
-    const heading = inFence ? null : HEADING.exec(line);
+    const heading = inFence ? null : matchHeading(line);
 
     if (heading) {
-      current = { level: heading[1].length, rawTitle: heading[2], lines: [] };
+      current = { level: heading.level, rawTitle: heading.title, lines: [] };
       sections.push(current);
       continue;
     }
@@ -103,8 +133,8 @@ export function normalizeBodyHeadings(body: string): string {
   for (const line of lines) {
     if (FENCE.test(line.trim())) inFence = !inFence;
     if (inFence) continue;
-    const heading = HEADING.exec(line);
-    if (heading) minLevel = Math.min(minLevel, heading[1].length);
+    const heading = matchHeading(line);
+    if (heading) minLevel = Math.min(minLevel, heading.level);
   }
 
   if (minLevel > 6 || minLevel === 2) return body;
@@ -117,11 +147,11 @@ export function normalizeBodyHeadings(body: string): string {
       if (FENCE.test(line.trim())) inFence = !inFence;
       if (inFence) return line;
 
-      const heading = HEADING.exec(line);
+      const heading = matchHeading(line);
       if (!heading) return line;
 
-      const level = Math.min(6, Math.max(1, heading[1].length + shift));
-      return `${"#".repeat(level)} ${heading[2]}`;
+      const level = Math.min(6, Math.max(1, heading.level + shift));
+      return `${"#".repeat(level)} ${heading.title}`;
     })
     .join("\n");
 }

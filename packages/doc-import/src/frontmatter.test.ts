@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   asList,
   asScalar,
+  isUnsafeFrontmatterKey,
   normalizeFrontmatterKey,
   parseFrontmatterLines,
   splitFrontmatter,
@@ -44,6 +45,38 @@ describe("parseFrontmatterLines", () => {
     const values = parseFrontmatterLines(['titel: "Der Zaunkönig"', "typ: 'nsc'"]);
     assert.equal(values.titel, "Der Zaunkönig");
     assert.equal(values.typ, "nsc");
+  });
+
+  it("never turns a document key into a prototype property", () => {
+    // `slugifyDe` macht aus `__proto__` heute `proto`; die Sperre steht trotzdem,
+    // weil die Slug-Funktion einem anderen Package gehört.
+    const values = parseFrontmatterLines([
+      "__proto__: {}",
+      "constructor: kaputt",
+      "prototype: auch",
+      "titel: Echt",
+    ]);
+
+    // `hasOwn`, nicht `values.constructor`: das erbt sonst von `Object.prototype`
+    // und wäre auch dann gesetzt, wenn die Sperre greift.
+    assert.equal(Object.hasOwn(values, "constructor"), false);
+    assert.equal(Object.hasOwn(values, "prototype"), false);
+    // `__proto__` landet als harmloses `proto` — der Slug hat die Unterstriche
+    // schon weggenommen, bevor die Sperre überhaupt gefragt wird.
+    assert.equal(values.proto, "{}");
+    assert.equal(values.titel, "Echt");
+    assert.equal(({} as Record<string, unknown>).polluted, undefined);
+  });
+});
+
+describe("isUnsafeFrontmatterKey", () => {
+  it("names the three keys that must never become properties", () => {
+    for (const key of ["__proto__", "constructor", "prototype"]) {
+      assert.equal(isUnsafeFrontmatterKey(key), true, key);
+    }
+    for (const key of ["titel", "typ", "proto", "siehe-auch"]) {
+      assert.equal(isUnsafeFrontmatterKey(key), false, key);
+    }
   });
 });
 

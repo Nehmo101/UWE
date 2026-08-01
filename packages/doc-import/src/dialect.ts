@@ -21,6 +21,7 @@ import type { DocFrontmatter } from "./types";
 import {
   asList,
   asScalar,
+  isUnsafeFrontmatterKey,
   normalizeFrontmatterKey,
   splitFrontmatter,
   type FrontmatterValue,
@@ -135,6 +136,10 @@ export function applyDialect(values: Record<string, FrontmatterValue>): DocFront
   const result = emptyFrontmatter();
 
   for (const [rawKey, rawValue] of Object.entries(values)) {
+    // Auch hier, nicht nur im Parser: `applyDialect` ist öffentlich und darf
+    // nicht davon abhängen, dass die Werte durch `parseFrontmatterLines` kamen.
+    if (isUnsafeFrontmatterKey(rawKey)) continue;
+
     const key = KEY_ALIASES[rawKey];
 
     if (!key) {

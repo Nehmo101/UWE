@@ -83,6 +83,13 @@ Typ-Profile (`profiles.ts`) belegen den `PageType` aus der Überschrift vor:
 > steht deshalb nur dort, wo sie einen Fehltreffer verhindert (`\borden\b`, sonst würde
 > „Norden" zur Fraktion).
 
+> **Muster ohne Mehrdeutigkeit:** Die Überschriftenzeile ist `^(#{1,6})[ \t]+(.*)$`, der
+> Titel wird **danach** im Code beschnitten. Das naheliegende `(.*\S)[ \t]*$` überlappt
+> sich selbst — `.*` und `[ \t]*` streiten um dieselben Zeichen —, und eine Zeile aus
+> lauter Leerzeichen kostete gemessene 234 ms. Bei 1 778 Zeilen pro Buch ist das keine
+> Theorie. Dieselbe Falle steckte in `\s+([),.:;])` und in `<[^>]*>`; der Regressionstest
+> dazu steht in `redos.test.ts`.
+
 **Kanon-Marker:** `◆` (Kanon) und `◇` (Vorschlag) im Überschriftentext werden zu
 `CanonicalStatus` und aus dem Titel entfernt. Die Abschnittsnummern bleiben stehen — die
 Dokumente verweisen untereinander über genau sie („himmelsrouten 7.4").
