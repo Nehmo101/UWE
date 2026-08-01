@@ -145,7 +145,6 @@ export const PRISMA_MODEL_BOUNDARIES = {
   ImageStudioLink: U("assets", "dm_only", "database_only", "G4"),
   CalendarFeed: F("family", "database_only", "G3"),
   CalendarEvent: F("family", "database_only", "G3"),
-  DevAgentJob: U("jobs", "dm_only"),
   DevIdea: U("platform_ops", "dm_only", "platform_dev_files", "G9"),
   BugReport: U("platform_ops", "dm_only", "platform_dev_files", "G9"),
   MiniatureCollectionItem: B("admin_life", "brain_workshop_files", "G9"),

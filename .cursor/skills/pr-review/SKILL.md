@@ -1,13 +1,13 @@
 ---
 name: pr-review
-description: Review UWE pull requests for correctness, security, CI readiness, and merge safety. Use when reviewing PRs, draft PRs from Agent Jobs, security hardening batches, or before merging to main.
+description: Review UWE pull requests for correctness, security, CI readiness, and merge safety. Use when reviewing PRs, draft PRs from coding agents, security hardening batches, or before merging to main.
 ---
 
 # UWE PR Review
 
 ## Quick start
 
-1. Read the PR diff and description; note whether it is a **Draft PR from Agent Jobs** (no auto-merge).
+1. Read the PR diff and description; note whether it is a **Draft PR from a coding agent** (no auto-merge).
 2. Run the CI-equivalent checks locally (see [references/checklist.md](references/checklist.md)).
 3. Review by category: scope, security, data/visibility, migrations, tests, docs.
 4. Output a structured review: **Blockers**, **Concerns**, **Nits**, **Verdict** (`approve` / `request-changes` / `needs-discussion`).

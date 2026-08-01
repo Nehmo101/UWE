@@ -2,7 +2,7 @@
  * Central, framework-agnostic slug utilities.
  *
  * This is the single home for UWE's slug/lookup-key transforms so every package
- * (database, auth, knoteforge-import, agent-jobs, …) shares one implementation
+ * (database, auth, knoteforge-import, doc-import, …) shares one implementation
  * instead of re-deriving subtly different ones.
  *
  * Three slugifiers with intentionally different normalisation:

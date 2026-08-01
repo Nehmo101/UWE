@@ -74,7 +74,6 @@ export interface UpdateDevIdeaInput {
   module?: string | null;
   maturityLevel?: string | null;
   generatedPrompt?: string | null;
-  devAgentJobId?: string | null;
   attachments?: DevIdeaAttachment[] | null;
   metadata?: Record<string, unknown> | null;
 }
@@ -195,9 +194,6 @@ export class DevIdeaService {
         ...(input.generatedPrompt !== undefined
           ? { generatedPrompt: input.generatedPrompt }
           : {}),
-        ...(input.devAgentJobId !== undefined
-          ? { devAgentJobId: input.devAgentJobId }
-          : {}),
         ...(input.attachments !== undefined
           ? { attachments: toPrismaJsonValue(input.attachments) }
           : {}),
@@ -214,10 +210,6 @@ export class DevIdeaService {
 
   async setGeneratedPrompt(id: string, prompt: string | null): Promise<DevIdea> {
     return this.db.devIdea.update({ where: { id }, data: { generatedPrompt: prompt } });
-  }
-
-  async linkAgentJob(id: string, devAgentJobId: string | null): Promise<DevIdea> {
-    return this.db.devIdea.update({ where: { id }, data: { devAgentJobId } });
   }
 
   async getAttachments(id: string): Promise<DevIdeaAttachment[]> {

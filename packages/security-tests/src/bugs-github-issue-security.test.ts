@@ -30,8 +30,8 @@ describe("bugs GitHub issue sync security", () => {
     const source = read(routePath);
     assert.match(source, /guardStudioApiMutation/);
     assert.match(source, /resolveOwnerApiUser/);
-    assert.match(source, /resolveAgentJobsDispatchConfig/);
-    assert.doesNotMatch(source, /process\.env\.(GITHUB_TOKEN|AGENT_JOBS_GITHUB_TOKEN)/);
+    assert.match(source, /resolveGitHubIssueConfig/);
+    assert.doesNotMatch(source, /process\.env\.(GITHUB_TOKEN|GITHUB_ISSUE_TOKEN)/);
   });
 
   it("blocks cross-site POST to bug GitHub issue endpoint", () => {

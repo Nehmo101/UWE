@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
 import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
 import { resolveOwnerApiUser } from "@/src/lib/owner-api-auth";
-import { createGitHubIssue, resolveAgentJobsDispatchConfig } from "@uwe/agent-jobs";
+import {
+  createGitHubIssue,
+  resolveGitHubIssueConfig,
+  splitGitHubRepo,
+} from "@uwe/github-issues";
 import {
   BUG_REPORT_SEVERITY_LABELS,
   BUG_REPORT_STATUS_LABELS,
@@ -72,30 +76,28 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const parsedParams = await parseParams(context.params, bugIdParamSchema);
   if (!parsedParams.success) return parsedParams.response;
 
-  const dispatchConfig = resolveAgentJobsDispatchConfig();
-  if (!dispatchConfig.githubToken) {
+  const githubConfig = resolveGitHubIssueConfig();
+  if (!githubConfig.token) {
     return NextResponse.json(
       {
-        error:
-          "GITHUB_TOKEN oder AGENT_JOBS_GITHUB_TOKEN fehlt — siehe Admin → Agent Jobs oder .env.example.",
+        error: "GITHUB_TOKEN oder GITHUB_ISSUE_TOKEN fehlt — siehe .env.example.",
       },
       { status: 503 },
     );
   }
-  if (!dispatchConfig.githubRepo) {
+  if (!githubConfig.repo) {
     return NextResponse.json(
       {
-        error:
-          "AGENT_JOBS_GITHUB_REPO nicht gesetzt (Format: owner/repo) — siehe Admin → Agent Jobs.",
+        error: "GITHUB_ISSUE_REPO nicht gesetzt (Format: owner/repo) — siehe .env.example.",
       },
       { status: 503 },
     );
   }
 
-  const [repoOwner, repoName] = dispatchConfig.githubRepo.split("/");
-  if (!repoOwner || !repoName) {
+  const target = splitGitHubRepo(githubConfig.repo);
+  if (!target) {
     return NextResponse.json(
-      { error: "AGENT_JOBS_GITHUB_REPO ungültig — erwartet owner/repo." },
+      { error: "GITHUB_ISSUE_REPO ungültig — erwartet owner/repo." },
       { status: 503 },
     );
   }
@@ -114,7 +116,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     );
   }
 
-  const issueResult = await createGitHubIssue(repoOwner, repoName, dispatchConfig.githubToken, {
+  const issueResult = await createGitHubIssue(target.owner, target.name, githubConfig.token, {
     title: `[Bug] ${report.title}`,
     body: buildIssueBody(report),
     labels: ["bug"],

@@ -5,7 +5,7 @@
     {
       "id": "ai-agent-proposal-workflow",
       "path": ".cursor/skills/ai-agent-proposal-workflow/SKILL.md",
-      "trigger": "AI inference, Review/Apply proposals, ai_run jobs, Agent Jobs, RTX routing"
+      "trigger": "AI inference, Review/Apply proposals, ai_run jobs, RTX routing"
     },
     {
       "id": "api-routes",

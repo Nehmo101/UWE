@@ -244,8 +244,7 @@ export function resolveStudioRailActiveId(activePath: string): string | undefine
     normalized.startsWith("/image-studio") ||
     normalized.startsWith("/mail") ||
     normalized.startsWith("/brain") ||
-    normalized.startsWith("/life-brain") ||
-    normalized.startsWith("/admin/agent-jobs")
+    normalized.startsWith("/life-brain")
   ) {
     return "media-ai";
   }

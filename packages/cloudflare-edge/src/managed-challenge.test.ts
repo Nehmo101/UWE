@@ -108,7 +108,6 @@ describe("config normalisation", () => {
     for (const path of [
       "/api/health",
       "/api/internal/state",
-      "/api/agent-jobs/42",
       "/api/connectors/heartbeat",
       "/api/connectors/claim-job",
     ]) {

@@ -50,7 +50,7 @@ const AI_ACTION_GUARDS: Record<string, string> = {
  * braucht.
  */
 const AI_IMPORT_PATTERNS: readonly RegExp[] = [
-  /@uwe\/(ai-brain|brain-assistant|image-studio|page-ai-review|agent-jobs|web-search|theme-studio)/,
+  /@uwe\/(ai-brain|brain-assistant|image-studio|page-ai-review|web-search|theme-studio)/,
   // Studio-eigene Helfer, die hinter der Fassade Inferenz starten.
   /@\/src\/lib\/generator-handlers/,
   /@\/src\/lib\/ai-handlers/,

@@ -19,7 +19,7 @@ export const DOCUMENT_TEMPLATE_CATEGORY_LABELS: Record<DocumentTemplateCategory,
   other: "Sonstiges",
 };
 
-/** `{{variable}}`-Platzhalter, analog zu packages/agent-jobs presets.ts. */
+/** `{{variable}}`-Platzhalter für Dokumentvorlagen. */
 const TEMPLATE_PLACEHOLDER_PATTERN = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
 
 /** Alle im Template-Body referenzierten Platzhalter-Keys (sortiert, eindeutig). */

@@ -23,7 +23,6 @@ describe("DevIdeaService", () => {
     assert.equal(idea.body, "Portal dark mode");
     assert.equal(idea.status, "in_planning");
     assert.equal(idea.generatedPrompt, null);
-    assert.equal(idea.devAgentJobId, null);
 
     await service.deleteIdea(idea.id);
   });
@@ -33,7 +32,7 @@ describe("DevIdeaService", () => {
     await assert.rejects(() => service.createIdea({ title: "   " }), /Titel/);
   });
 
-  it("updates fields, status, prompt and agent-job link", async () => {
+  it("updates fields, status and prompt", async () => {
     const service = createDevIdeaService(db);
     const idea = await service.createIdea({ title: "Feature X" });
 
@@ -46,9 +45,6 @@ describe("DevIdeaService", () => {
 
     const withPrompt = await service.setGeneratedPrompt(idea.id, "Implement Feature Y");
     assert.equal(withPrompt.generatedPrompt, "Implement Feature Y");
-
-    const linked = await service.linkAgentJob(idea.id, "job_123");
-    assert.equal(linked.devAgentJobId, "job_123");
 
     await service.deleteIdea(idea.id);
   });

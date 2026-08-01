@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import {
   DEV_IDEA_LIFECYCLE_LABELS, DEV_IDEA_LIFECYCLES, DEV_IDEA_MATURITY_LABELS, DEV_IDEA_MATURITY_LEVELS,
   DEV_IDEA_MODULE_LABELS, DEV_IDEA_MODULES, DEV_IDEA_TYPE_LABELS, DEV_IDEA_TYPES,
@@ -60,35 +59,15 @@ export interface IdeaDto {
   transcript: IdeaChatMessage[];
   attachments: IdeaAttachment[];
   generatedPrompt: string | null;
-  devAgentJobId: string | null;
   updatedAt: string;
-}
-
-export interface IdeaAgentJobDto {
-  id: string;
-  status: string;
-  provider: string;
-  branchName: string | null;
-  prUrl: string | null;
-  errorMessage: string | null;
-  summary: string | null;
-  url: string | null;
 }
 
 interface IdeaWorkspaceClientProps {
   ideas: IdeaDto[];
-  agentJobsById: Record<string, IdeaAgentJobDto>;
   initialSelectedId: string | null;
   initialView: IdeaWorkspaceView;
   initialLifecycleFilter: string | null;
   initialModuleFilter: string | null;
-  agentJobs: {
-    enabled: boolean;
-    cursorConfigured: boolean;
-    githubRepo: string | null;
-    defaultBranch: string;
-    defaultProvider: string;
-  };
 }
 
 type WorkspaceContext = {
@@ -110,17 +89,6 @@ const PROVIDER_LABELS: Record<ProviderMode, string> = {
   local_rtx: "Lokal (RTX)",
   cloud: "Cloud",
 };
-
-const JOB_STATUS_LABELS: Record<string, string> = {
-  pending: "Wartend",
-  dispatched: "Abgesendet",
-  running: "Läuft",
-  completed: "Abgeschlossen",
-  failed: "Fehlgeschlagen",
-  cancelled: "Abgebrochen",
-};
-
-const RUNNING_JOB_STATUSES = new Set(["pending", "dispatched", "running"]);
 
 /** Native select styling used where Kit-Select (Radix) cannot be used — see TODO(design-kit) comments below. */
 const NATIVE_SELECT_CLASS =
@@ -158,31 +126,20 @@ function maturityLabel(maturity: string | null): string | null { if (!maturity) 
 function truncatePrompt(text: string, max = 120): string { const trimmed = text.trim(); return trimmed.length <= max ? trimmed : `${trimmed.slice(0, max - 1)}…`; }
 function buildIdeasHref(options: { view: IdeaWorkspaceView; lifecycle?: string | null; module?: string | null; idea?: string | null; }): string { const params = new URLSearchParams(); if (options.view !== "all") params.set("view", options.view); if (options.lifecycle) params.set("lifecycle", options.lifecycle); if (options.module) params.set("module", options.module); if (options.idea) params.set("idea", options.idea); const q = params.toString(); return q ? `/ideas?${q}` : "/ideas"; }
 
-function jobBadgeVariant(status: string): BadgeVariant {
-  if (status === "completed") return "success";
-  if (status === "failed" || status === "cancelled") return "danger";
-  return "warning";
-}
-
 export function IdeaWorkspaceClient({
   ideas: initialIdeas,
-  agentJobsById: initialJobs,
   initialSelectedId,
   initialView,
   initialLifecycleFilter,
   initialModuleFilter,
-  agentJobs,
 }: IdeaWorkspaceClientProps) {
-  const router = useRouter();
   const [ideas, setIdeas] = useState<IdeaDto[]>(initialIdeas);
-  const [jobs, setJobs] = useState<Record<string, IdeaAgentJobDto>>(initialJobs);
   const view = initialView;
   const lifecycleFilter = initialLifecycleFilter;
   const moduleFilter = initialModuleFilter;
   const workspaceContext: WorkspaceContext = { view, lifecycle: lifecycleFilter, module: moduleFilter };
 
   useEffect(() => { setIdeas(initialIdeas); }, [initialIdeas]);
-  useEffect(() => { setJobs(initialJobs); }, [initialJobs]);
 
   const filteredIdeas = useMemo(() => ideas.filter((idea) => {
     if (view === "features" && idea.ideaType !== "feature") return false;
@@ -203,7 +160,7 @@ export function IdeaWorkspaceClient({
     <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-3" data-columns="3">
       <IdeaListColumn ideas={filteredIdeas} selectedId={selected?.id ?? null} onSelect={setSelectedId} view={view} lifecycleFilter={lifecycleFilter} moduleFilter={moduleFilter} workspaceContext={workspaceContext} />
       <ChatColumn key={`chat-${selected?.id ?? "none"}`} idea={selected} workspaceContext={workspaceContext} onTranscript={(transcript) => selected && patchIdea(selected.id, { transcript })} onAttachments={(attachments) => selected && patchIdea(selected.id, { attachments })} />
-      <PromptColumn key={`prompt-${selected?.id ?? "none"}`} idea={selected} highlightPrompt={view === "prompts"} job={selected?.devAgentJobId ? (jobs[selected.devAgentJobId] ?? null) : null} agentJobs={agentJobs} onPrompt={(p) => selected && patchIdea(selected.id, { generatedPrompt: p })} onDispatched={(job) => { if (!selected) return; patchIdea(selected.id, { devAgentJobId: job.id }); setJobs((c) => ({ ...c, [job.id]: job })); }} onJobUpdate={(job) => setJobs((c) => ({ ...c, [job.id]: job }))} onRefresh={() => router.refresh()} />
+      <PromptColumn key={`prompt-${selected?.id ?? "none"}`} idea={selected} highlightPrompt={view === "prompts"} onPrompt={(p) => selected && patchIdea(selected.id, { generatedPrompt: p })} />
     </div>
   );
 }
@@ -494,78 +451,28 @@ function ChatColumn({
 function PromptColumn({
   idea,
   highlightPrompt,
-  job,
-  agentJobs,
   onPrompt,
-  onDispatched,
-  onJobUpdate,
-  onRefresh,
 }: {
   idea: IdeaDto | null;
   highlightPrompt: boolean;
-  job: IdeaAgentJobDto | null;
-  agentJobs: {
-    enabled: boolean;
-    cursorConfigured: boolean;
-    githubRepo: string | null;
-    defaultBranch: string;
-    defaultProvider: string;
-  };
   onPrompt: (prompt: string) => void;
-  onDispatched: (job: IdeaAgentJobDto) => void;
-  onJobUpdate: (job: IdeaAgentJobDto) => void;
-  onRefresh: () => void;
 }) {
   const [draft, setDraft] = useState(idea?.generatedPrompt ?? "");
   const [providerMode, setProviderMode] = useState<ProviderMode>("auto");
   const [genBusy, setGenBusy] = useState(false);
   const [saveBusy, setSaveBusy] = useState(false);
-  const [dispatchBusy, setDispatchBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const pollRef = useRef<number | null>(null);
 
   useEffect(() => {
     setDraft(idea?.generatedPrompt ?? "");
   }, [idea?.id, idea?.generatedPrompt]);
 
-  // Poll the linked Cursor agent while it is still running.
-  useEffect(() => {
-    if (!job || !RUNNING_JOB_STATUSES.has(job.status)) {
-      if (pollRef.current) {
-        window.clearInterval(pollRef.current);
-        pollRef.current = null;
-      }
-      return undefined;
-    }
-    const jobId = job.id;
-    const timer = window.setInterval(() => {
-      void (async () => {
-        try {
-          const res = await fetch(studioApiUrl(`/api/agent-jobs/${jobId}`), {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "poll" }),
-          });
-          if (!res.ok) return;
-          const data = (await res.json()) as { job?: RawJob; cursorStatus?: { summary?: string | null; url?: string | null } };
-          if (data.job) {
-            onJobUpdate(toJobDto(data.job, data.cursorStatus));
-          }
-        } catch {
-          // best effort
-        }
-      })();
-    }, 5000);
-    pollRef.current = timer;
-    return () => window.clearInterval(timer);
-  }, [job, onJobUpdate]);
-
   if (!idea) {
     return (
       <Card className="flex flex-col gap-4 p-4">
         <h2 className="text-base font-semibold tracking-tight">Aktueller Prompt</h2>
-        <p className="text-sm text-muted-foreground">Wähle eine Idee, um einen Cursor-Prompt zu erstellen.</p>
+        <p className="text-sm text-muted-foreground">Wähle eine Idee, um einen Prompt zu erstellen.</p>
       </Card>
     );
   }
@@ -628,61 +535,9 @@ function PromptColumn({
     }
   }
 
-  async function dispatch() {
-    if (dispatchBusy || !idea || draft.trim().length === 0) return;
-    setDispatchBusy(true);
-    setError(null);
-    try {
-      const res = await fetch(studioApiUrl(`/api/ideas/${idea.id}/dispatch`), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: draft }),
-      });
-      const data = (await res.json()) as { job?: RawJob; error?: string };
-      if (!res.ok || !data.job) {
-        throw new Error(data.error ?? "Übergabe an Cursor fehlgeschlagen.");
-      }
-      onDispatched(toJobDto(data.job));
-      onRefresh();
-    } catch (dispatchError) {
-      setError(
-        dispatchError instanceof Error ? dispatchError.message : "Übergabe an Cursor fehlgeschlagen.",
-      );
-    } finally {
-      setDispatchBusy(false);
-    }
-  }
-
-  const cursorDispatchReady =
-    agentJobs.enabled && agentJobs.cursorConfigured && Boolean(agentJobs.githubRepo);
-
-  const dispatchDisabled =
-    dispatchBusy || draft.trim().length === 0 || !cursorDispatchReady;
-
-  const dispatchTitle = !agentJobs.enabled
-    ? "Agent Jobs sind deaktiviert (AGENT_JOBS_ENABLED)."
-    : !agentJobs.cursorConfigured
-      ? "CURSOR_CLOUD_API_KEY fehlt."
-      : !agentJobs.githubRepo
-        ? "AGENT_JOBS_GITHUB_REPO fehlt (Format: owner/repo)."
-        : undefined;
-
   return (
     <Card className={cn("flex flex-col gap-4 p-4", highlightPrompt && draft.trim().length > 0 && "ring-1 ring-inset ring-primary/40")}>
       <h2 className="text-base font-semibold tracking-tight">{highlightPrompt ? "Prompt-Bibliothek" : "Aktueller Prompt"}</h2>
-      {agentJobs.enabled && (
-        <p className="text-sm text-muted-foreground">
-          Cursor-Ziel:{" "}
-          {agentJobs.githubRepo ? (
-            <><code>github.com/{agentJobs.githubRepo}</code>{" · Branch "}<code>{agentJobs.defaultBranch}</code></>
-          ) : (
-            <>GitHub-Repo nicht konfiguriert{" — setze "}<code>AGENT_JOBS_GITHUB_REPO=owner/repo</code></>
-          )}
-          {agentJobs.githubRepo && (
-            <>{" · "}<a href="https://cursor.com/docs/integrations/github" target="_blank" rel="noopener noreferrer">Cursor GitHub App</a>{" muss auf diesem Repo installiert sein."}</>
-          )}
-        </p>
-      )}
       {/* TODO(design-kit): controlliertes Select (value+onChange) — bleibt nativ mit Tailwind-Styling. */}
       <div className="flex flex-wrap items-end gap-2">
         <div className="flex flex-col gap-1.5">
@@ -698,89 +553,14 @@ function PromptColumn({
         value={draft}
         onChange={(event) => setDraft(event.target.value)}
         rows={10}
-        placeholder="Hier erscheint der aus dem KI-Chat erzeugte Cursor-Prompt. Du kannst ihn vor der Übergabe anpassen."
+        placeholder="Hier erscheint der aus dem KI-Chat erzeugte Entwicklungs-Prompt. Du kannst ihn anpassen, bevor du ihn kopierst."
       />
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant="ghost" onClick={() => void savePrompt()} disabled={saveBusy || draft.trim().length === 0}>{saveBusy ? "Speichere…" : "Prompt speichern"}</Button>
         <Button type="button" variant="ghost" onClick={() => void copy()} disabled={draft.trim().length === 0}>{copied ? "Kopiert!" : "Kopieren"}</Button>
-        <Button type="button" onClick={() => void dispatch()} disabled={dispatchDisabled} title={dispatchTitle}>{dispatchBusy ? "Übergebe…" : "An Cursor übergeben"}</Button>
       </div>
       <IdeaClaudeHandover title={idea.title} body={idea.body} prompt={draft} attachments={idea.attachments} />
-      {!agentJobs.enabled && (
-        <p className="text-sm text-muted-foreground">
-          Cursor-Übergabe inaktiv — setze <code>AGENT_JOBS_ENABLED=true</code>,
-          <code> AGENT_JOBS_GITHUB_REPO=owner/repo</code> und
-          <code> CURSOR_CLOUD_API_KEY</code>. Der Prompt kann trotzdem kopiert werden.
-        </p>
-      )}
-      {agentJobs.enabled && !agentJobs.cursorConfigured && (
-        <p className="text-sm text-muted-foreground">Hinweis: <code>CURSOR_CLOUD_API_KEY</code> fehlt — Übergabe ist deaktiviert, Kopieren geht.</p>
-      )}
-      {agentJobs.enabled && agentJobs.cursorConfigured && !agentJobs.githubRepo && (
-        <p className="text-sm text-muted-foreground">Hinweis: <code>AGENT_JOBS_GITHUB_REPO</code> fehlt — Übergabe ist deaktiviert, Kopieren geht.</p>
-      )}
       {error && <Alert tone="danger">{error}</Alert>}
-      <CursorStatusPanel job={job} />
     </Card>
   );
-}
-
-function CursorStatusPanel({ job }: { job: IdeaAgentJobDto | null }) {
-  if (!job) {
-    return (
-      <div className="flex flex-col gap-2 border-t border-border pt-4">
-        <h3 className="text-sm font-semibold">Cursor-Status</h3>
-        <p className="text-sm text-muted-foreground">Noch nicht an Cursor übergeben.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-2 border-t border-border pt-4">
-      <h3 className="text-sm font-semibold">Cursor-Status</h3>
-      <p className="flex flex-wrap items-center gap-2">
-        <Badge variant={jobBadgeVariant(job.status)}>{JOB_STATUS_LABELS[job.status] ?? job.status}</Badge>
-        {RUNNING_JOB_STATUSES.has(job.status) && <span className="text-sm text-muted-foreground"> · Aktualisierung alle 5 s</span>}
-      </p>
-      {job.summary && <p className="whitespace-pre-wrap text-sm">{job.summary}</p>}
-      <ul className="flex flex-col gap-1 text-sm">
-        {job.url && (<li><a href={job.url} target="_blank" rel="noreferrer">Agent in Cursor öffnen</a></li>)}
-        {job.branchName && <li>Branch: <code>{job.branchName}</code></li>}
-        {job.prUrl && (<li><a href={job.prUrl} target="_blank" rel="noreferrer">Pull Request</a></li>)}
-      </ul>
-      {job.errorMessage && <Alert tone="danger">{job.errorMessage}</Alert>}
-    </div>
-  );
-}
-
-interface RawJob {
-  id: string;
-  status: string;
-  provider: string;
-  branchName?: string | null;
-  prUrl?: string | null;
-  errorMessage?: string | null;
-  result?: unknown;
-}
-
-function toJobDto(
-  job: RawJob,
-  cursorStatus?: { summary?: string | null; url?: string | null },
-): IdeaAgentJobDto {
-  const cursor =
-    job.result && typeof job.result === "object"
-      ? ((job.result as Record<string, unknown>).cursor as
-          | { summary?: string | null; url?: string | null }
-          | undefined)
-      : undefined;
-  return {
-    id: job.id,
-    status: job.status,
-    provider: job.provider,
-    branchName: job.branchName ?? null,
-    prUrl: job.prUrl ?? null,
-    errorMessage: job.errorMessage ?? null,
-    summary: cursorStatus?.summary ?? cursor?.summary ?? null,
-    url: cursorStatus?.url ?? cursor?.url ?? null,
-  };
 }

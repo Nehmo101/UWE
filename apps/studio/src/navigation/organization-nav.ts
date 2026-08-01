@@ -23,7 +23,7 @@ export const ORGANIZATION_NAV: NavGroup[] = [
         permission: ["owner"],
         status: "active",
         source: "organization",
-        keywords: ["ideen", "ideas", "cursor", "prompt", "agent", "ideen-management"],
+        keywords: ["ideen", "ideas", "prompt", "ideen-management"],
       },
       {
         id: "org-bugs",

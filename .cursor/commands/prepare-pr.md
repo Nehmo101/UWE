@@ -42,5 +42,4 @@ Summarize changes and produce a ready-to-paste PR description for UWE.
 ## Rules
 
 - Draft PRs by default for agent-generated work.
-- Never enable auto-merge for agent jobs.
 - Link related docs (`docs/engineering/ci.md`, domain docs) when relevant.

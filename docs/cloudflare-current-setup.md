@@ -164,14 +164,14 @@ encrypted and never rendered back.
 | Hostnames | The list in the settings form; empty = derived from the configured Landing/Studio/Portal/Brain URLs. |
 | Order | Appended **last**, so a `skip` rule you place in front of it (e.g. for your own IP) still wins. |
 | Level | *Managed Challenge* (Cloudflare picks the lightest sufficient check) or *JS Challenge*. |
-| Exemptions | `/api/health`, `/api/internal`, `/api/agent-jobs` are **always** exempt — the tunnel probes, healthcheck timer and job callbacks are machine clients and would read a challenge page as an outage. More can be added; these cannot be removed. |
+| Exemptions | `/api/health`, `/api/internal`, `/api/connectors` are **always** exempt — the tunnel probes, healthcheck timer and the RTX connector are machine clients and would read a challenge page as an outage. More can be added; these cannot be removed. |
 | Default | Off. Enabling is always an explicit decision. |
 
 The generated expression is visible in the status panel, e.g.:
 
 ```
 (http.host in {"portal.uwe.example" "studio.uwe.example"})
-  and not (starts_with(http.request.uri.path, "/api/agent-jobs")
+  and not (starts_with(http.request.uri.path, "/api/connectors")
         or starts_with(http.request.uri.path, "/api/health")
         or starts_with(http.request.uri.path, "/api/internal"))
 ```

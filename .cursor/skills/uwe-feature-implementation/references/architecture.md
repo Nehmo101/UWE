@@ -101,7 +101,6 @@ For large features, ship in small PRs — one package at a time.
 ## Do not
 
 - Put domain logic directly in React components
-- Auto-merge Agent Job PRs
 - Send campaign/brain context to cloud AI
 - Hardcode Terra/demo world in product logic (seed only)
 - Expose RTX/Ollama via Cloudflare Tunnel
@@ -110,4 +109,3 @@ For large features, ship in small PRs — one package at a time.
 
 - `docs/ARCHITECTURE.md` — full module map
 - `docs/dnd-generator-upgrade.md` — AI workflow
-- `docs/AGENT_JOBS.md` — automated dev jobs

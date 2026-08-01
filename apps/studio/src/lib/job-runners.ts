@@ -53,7 +53,6 @@ import {
 } from "@uwe/knoteforge-import";
 import { resolveGatewayUserById } from "./ai-gateway-user";
 import {
-  runAgentJob,
   runBriefingJob,
   runCalendarSyncJob,
   runImageStudioJob,
@@ -857,8 +856,6 @@ export async function executeJobRunners(ctx: JobRunnerContext): Promise<Record<s
       return runBackupRestoreJob(ctx);
     case "image_studio":
       return runImageStudioJob(ctx);
-    case "agent_job":
-      return runAgentJob(ctx);
     case "calendar_sync":
       return runCalendarSyncJob(ctx);
     case "research":

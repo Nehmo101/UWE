@@ -15,7 +15,7 @@ _uwe_ai_diag_key() {
 redact_sensitive_text() {
   local input="$1"
   printf '%s' "$input" | sed -E \
-    -e 's/((DATABASE_URL|SECRET|TOKEN|API_KEY|PASSWORD|AUTH|COOKIE|PRIVATE_KEY|OPENAI_API_KEY|CURSOR_API_KEY)[^[:space:]]*=)[^[:space:]]+/\1[REDACTED]/gi' \
+    -e 's/((DATABASE_URL|SECRET|TOKEN|API_KEY|PASSWORD|AUTH|COOKIE|PRIVATE_KEY|OPENAI_API_KEY)[^[:space:]]*=)[^[:space:]]+/\1[REDACTED]/gi' \
     -e 's/(Bearer[[:space:]]+)[A-Za-z0-9._-]+/\1[REDACTED]/g'
 }
 

@@ -36,12 +36,13 @@ describe("parseFeatureMatrixOverviewTable", () => {
     assert.equal(rows[2]?.title, "Global Search 2.0");
   });
 
-  it("loads all 15 features from the repo matrix doc", () => {
+  it("loads every feature from the repo matrix doc", () => {
     const markdown = loadFeatureMatrixMarkdown();
     const rows = parseFeatureMatrixOverviewTable(markdown);
-    assert.equal(rows.length, 15);
+    // 14 Zeilen, aber Nummern bis 15: #4 (Agent Jobs) wurde entfernt.
+    assert.equal(rows.length, 14);
     assert.equal(rows[0]?.title, "Image Studio");
-    assert.equal(rows[14]?.number, 15);
+    assert.equal(rows[13]?.number, 15);
     assert.ok(rows.every((row) => FEATURE_MATRIX_ENRICHMENT[row.number]));
   });
 });

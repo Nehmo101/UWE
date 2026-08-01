@@ -14,8 +14,7 @@ import { requireStudioAccess } from "@/src/lib/auth";
 export default async function JobsPage() {
   await requireStudioAccess();
   const jobs = createJobService(prisma);
-  const rawJobs = await jobs.list({ limit: 100 });
-  const jobList = rawJobs.filter((job) => job.type !== "agent_job");
+  const jobList = await jobs.list({ limit: 100 });
   const [summary, worlds, sessions] = await Promise.all([
     jobs.getSummary(),
     prisma.world.findMany({
@@ -73,7 +72,7 @@ export default async function JobsPage() {
     >
       <PageHeader
         title="Job-Warteschlange"
-        summary="System-Jobs (Mail, KI, Import, Backup). Cursor/GitHub-Agent-Verwaltung: /admin/agent-jobs."
+        summary="System-Jobs (Mail, KI, Import, Backup)."
       />
 
       <CampaignJobPresetsPanel

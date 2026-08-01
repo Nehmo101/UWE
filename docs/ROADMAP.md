@@ -96,12 +96,6 @@ Shells-Nav-Vertrag: `@uwe/shared-utils/navigation` — alle drei Apps (Studio, P
 |---------|--------|
 | Package `@uwe/dnd-api`, Suche, Statblock-Import, Encounter-Builder | ✅ done |
 
-### Agent Jobs (`docs/AGENT_JOBS.md`)
-
-| Phase 1 | Status |
-|---------|--------|
-| Admin-UI, Job-Queue, GitHub Workflow, Polling | ✅ done (kein Auto-Merge — by design) |
-
 ---
 
 ## Daily Admin OS

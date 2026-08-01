@@ -52,13 +52,10 @@ Regression: `scripts/studio-route-auth.test.ts`
 - Seed changes optional; production uses `RUN_DB_SEED=false`
 - See skill `database-migration-review` for deep review
 
-## Agent Job PRs
-
-From `docs/AGENT_JOBS.md`:
+## Agent-generated PRs
 
 - Always **Draft PR**, never auto-merge
-- Verify prompt scope matches diff (no unrelated refactors)
-- Check for placeholder commits when Cursor CLI unavailable in CI
+- Verify the task scope matches the diff (no unrelated refactors)
 
 ## Merge decision matrix
 

@@ -143,7 +143,7 @@ All content routes redirect to `/login` without a session in production:
 - `/login`, `/logout`, `/setup`, `/forgot-password`, `/reset-password`
 - `/api/health`, `/api/health/public`, `/api/maintenance/status`, `/api/maintenance/evaluate`
 - `/api/auth/login|logout|setup|forgot-password|reset-password|two-factor/verify`
-- `/api/spotify/callback`, `/api/agent-jobs/callback`, `/api/connectors/*` (eigene Token-Auth im Handler)
+- `/api/spotify/callback`, `/api/connectors/*` (eigene Token-Auth im Handler)
 
 ### Studio — protected (session or bearer)
 

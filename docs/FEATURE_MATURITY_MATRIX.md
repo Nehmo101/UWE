@@ -25,7 +25,6 @@ Stand: 2026-07-01 (Doku-Sync nach PR #394) · Rest-Batches 1–5 + Backlog-Welle
 | 1 | Image Studio | Phase 2 (Projekt-Flow) | Ja (Generierung + Inpaint + Retry) | Teilweise |
 | 2 | Calendar / iOS / FamilyWall | Phase 2 | Ja (lokal + Feeds + Wochenansicht) | Teilweise |
 | 3 | DnD API / offene Quellen | Stable (Kern) | Ja (Suche + Statblock-Import) | Ja (Kern) |
-| 4 | Agent Jobs / Orchestrator | Phase 1 done | Ja (mit Limits) | Teilweise |
 | 5 | Daily Admin OS | Basis vorhanden | Ja | Teilweise |
 | 6 | Import Preview / Undo | Preview ja, Undo Beta | Ja (Preview + Undo) | Preview ja, Undo Beta |
 | 7 | Secrets-/Reveal-System | Stable (Page + Block) | Ja | Ja (Kern) |
@@ -59,7 +58,6 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 - Daily Admin OS (Today/Capture/Projekte/… — teilweise)
 - Secrets/Reveal (Page + Block — production-ready Kern)
 - Kanon-Konfliktprüfung, Prepare-for-next-session (modell-/RTX-abhängig)
-- Agent Jobs (Dispatch + Polling — kein Auto-Merge by design)
 - Life-Brain Retrieval — implementiert (RTX-Embeddings + Keyword-Fallback,
   `/life-brain`-UI + `/api/life-brain/search`), Qualität RTX-abhängig
 - Charaktersheet Voll-5e (Kern + Level-Up + Spell-Slots), Party-Treasury/Inventar (Studio + Portal)
@@ -184,43 +182,6 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 4. Research-UI (Odysseus-Matrix).
 
 **Referenzen:** `docs/DND_API_INTEGRATION.md`, `packages/dnd-api/`
-
----
-
-## 4. Agent Jobs / Orchestrator / Subagent-Ausführung
-
-| Kriterium | Status |
-|-----------|--------|
-| Vorhanden | Ja (Runtime) + Docs-only (Orchestrator) |
-| Scaffolding | `cursor_cli_local`, Orchestrator-Prompts (Doku-only) |
-| UI | Ja — `/admin/agent-jobs`, `/jobs` |
-| API | Ja — `/api/agent-jobs`, Job-Queue `agent_job` |
-| DB | Ja — `DevAgentJob` |
-| Tests | Minimal — Config-Resolution |
-| Nutzbar | **Ja** — Dispatch zu GitHub Actions / Cursor Cloud |
-| Production-ready | **Teilweise** — Dispatch + Polling; kein Auto-Merge (by design, siehe [SECURITY_SETTINGS.md](./SECURITY_SETTINGS.md)) |
-
-**Runtime vs. Doku**
-
-- **Runtime:** Admin-Prompt → SQLite → `dispatchAgentJob` → GHA / Cursor Cloud.
-- **Orchestrator/Subagents:** Keine In-App-Orchestrierung — Agent-Jobs werden extern (GHA / Cursor Cloud) ausgeführt.
-
-**Sicherheitsgrenzen (bestehend + verstärkt)**
-
-- Kein automatischer Brain/Welt-Kontext an Cloud — nur manueller Prompt.
-- Tokens serverseitig; Route-Policy + optional Cloudflare Access.
-- Warnung in UI/Doku: keine Secrets/Weltdaten in Prompts.
-
-**Risiken**
-
-- Prompt-Inhalt = Admin-Verantwortung (Leak-Vektor).
-- GHA-Logs zeigen `workflow_dispatch`-Inputs.
-- Placeholder `.cursor-agent-prompt.txt` auf Branch wenn CLI fehlt.
-- Retry ohne Idempotenz → doppelte Runs.
-
-**Optional (nicht im Produkt-Backlog):** Prompt-Sanitizer, robusteres Run-ID-Tracking.
-
-**Referenzen:** `docs/AGENT_JOBS.md`, `packages/agent-jobs/`, `.github/workflows/cursor-agent.yml`
 
 ---
 
@@ -524,7 +485,6 @@ Wave-Übersicht:
 | Phase-1-UI nur `generate`/`variant` | Image Studio |
 | `/api/research` in Route-Policy + CSRF auf POST | DnD Research |
 | Ehrliche README/REPO_AUDIT-Status | Doku |
-| Agent-Jobs-Sicherheitshinweis in UI + Doku | Agent Jobs |
 | Open5e/SRD-Lizenz-Hinweise | DnD API |
 
 ---
@@ -534,7 +494,6 @@ Wave-Übersicht:
 - [IMAGE_STUDIO.md](./IMAGE_STUDIO.md)
 - [CALENDAR_INTEGRATION.md](./CALENDAR_INTEGRATION.md)
 - [DND_API_INTEGRATION.md](./DND_API_INTEGRATION.md)
-- [AGENT_JOBS.md](./AGENT_JOBS.md)
 - [daily-admin-os.md](./daily-admin-os.md)
 - `REPO_AUDIT.md` (Datei entfernt)
 - `odysseus-feature-porting/FEATURE_PORTING_MATRIX.md` (Datei entfernt)

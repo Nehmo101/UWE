@@ -127,7 +127,7 @@ Support warten.
 **Umzug, der dabei anfällt:**
 
 - Self-hosted Runner neu registrieren (hängt am alten Repo, Label `uwe-deploy`)
-- Secrets neu setzen: `CURSOR_API_KEY`, `STUDIO_API_TOKEN`,
+- Secrets neu setzen: `STUDIO_API_TOKEN`,
   `STUDIO_CALLBACK_URL`, `TAURI_SIGNING_PRIVATE_KEY` (+ Passwort)
 - `/opt/uwe` auf dem Host auf die neue Remote-URL umstellen
 - Erledigt: Runner abgemeldet und `deploy.yml` entfernt — der Host ist stillgelegt

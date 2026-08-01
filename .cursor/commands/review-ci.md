@@ -4,7 +4,7 @@ Audit the UWE CI/CD setup for correctness, redundancy, and local reproducibility
 
 ## Steps
 
-1. Read `.github/workflows/ci.yml`, `pr-check.yml`, `security.yml`, `docs-check.yml`, and `cursor-agent.yml`.
+1. Read `.github/workflows/ci.yml`, `pr-check.yml`, `security.yml`, and `docs-check.yml`.
 2. Compare workflow steps with root `package.json` scripts (`ci`, `quality`, `lint`, `typecheck`, `test`, `test:ci`, `build:release`, `security:audit`, `docs:check`).
 3. Verify `pnpm-lock.yaml` version matches `packageManager` in `package.json`.
 4. Check Node version alignment (engines `>=20`, CI uses 22).

@@ -32,7 +32,7 @@ Rules are loaded automatically by Cursor. `alwaysApply: true` rules apply to eve
 | `api-routes` | Studio/Portal REST routes, guards |
 | `react-next-ui` | App Router, shared-ui, forms |
 | `auth-access` | Sessions, Zugangs-Häkchen, Welt-Zuordnung |
-| `ai-agent-proposal-workflow` | AI router, Review/Apply, Agent Jobs |
+| `ai-agent-proposal-workflow` | AI router, Review/Apply, RTX routing |
 | `local-first-privacy` | RTX-only, no cloud brain context |
 | `uwe-brain` | DnD Brain + Life Brain |
 | `dnd-content-consistency-check` | Canon, leaks, generator QA |
@@ -72,12 +72,6 @@ Invoke from Cursor chat with `/` or via the command palette:
 4. Use `/prepare-pr` to draft the PR description.
 5. Open a **draft PR** — no auto-merge for agent work.
 
-### Cloud / GitHub Agent Jobs
-
-Studio admin can dispatch jobs via `.github/workflows/cursor-agent.yml`. See `docs/AGENT_JOBS.md`.
-
-The workflow runs `pnpm quality` before pushing. Failed quality blocks the PR.
-
 ### Reviewing AI-generated code
 
 - Treat agent output like any other PR — run `pnpm quality` locally if reviewing.
@@ -89,7 +83,7 @@ The workflow runs `pnpm quality` before pushing. Failed quality blocks the PR.
 ## PR rules
 
 - **Draft** for agent-generated PRs until human review.
-- **No auto-merge** for agent jobs (`AGENT_JOBS_AUTO_MERGE` must stay `false`).
+- **No auto-merge** for agent-generated PRs.
 - Full `pnpm quality` must pass in CI before merge.
 - Document ENV, migration, and deployment impacts in the PR body.
 
@@ -108,4 +102,3 @@ Prefer `pnpm quality` before push — it matches the blocking CI gate exactly.
 - `AGENTS.md` — concise agent instructions
 - `docs/engineering/ci.md` — workflow details
 - `docs/engineering/self-hosted-ci.md` — Self-hosted Runner, Hardware, Billing-Alternativen (für später)
-- `docs/AGENT_JOBS.md` — GitHub Actions agent integration

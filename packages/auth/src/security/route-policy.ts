@@ -161,8 +161,6 @@ export const PROTECTED_ROUTE_PREFIXES = [
   "/api/mail/*",
   "/api/jobs",
   "/api/jobs/*",
-  "/api/agent-jobs",
-  "/api/agent-jobs/*",
   "/api/ideas",
   "/api/ideas/*",
   "/api/projects",
@@ -210,10 +208,9 @@ export const PUBLIC_STUDIO_API_ROUTES = [
   "/api/auth/google/start",
   "/api/auth/google/callback",
   "/api/spotify/callback",
-  "/api/agent-jobs/callback",
   // Maschinenraum endpoints authenticate with their own connector token in
-  // the route handler (authenticateConnector), not a user session — so they stay
-  // public at the middleware layer like the agent-jobs callback.
+  // the route handler (authenticateConnector), not a user session — so they
+  // stay public at the middleware layer.
   "/api/connectors/*",
 ] as const;
 

@@ -61,7 +61,7 @@ wurde am 2026-07-26 entfernt (`packages/auth/src/area-access.ts`,
 `@uwe/shared-utils`, `@uwe/config`, `@uwe/env`, `@uwe/product-contracts`,
 `@uwe/connector`, `@uwe/static-export`; dazu Feature-Packages (u.a. `@uwe/backup`,
 `@uwe/calendar`, `@uwe/mail`, `@uwe/mail-core`, `@uwe/dnd-api`,
-`@uwe/image-studio`, `@uwe/agent-jobs`, `@uwe/kitchen`, `@uwe/scan-inbox`,
+`@uwe/image-studio`, `@uwe/github-issues`, `@uwe/kitchen`, `@uwe/scan-inbox`,
 `@uwe/passkeys`, `@uwe/security-tests`). Der Karteneditor **Terra** lebt außerhalb
 des Workspace unter `terra/`. Aktive Tools: `tools/uwe-rtx-connector`,
 `tools/uwe-host-command-center`.
@@ -74,7 +74,7 @@ Vollständig: [FEATURE_MATURITY_MATRIX.md](FEATURE_MATURITY_MATRIX.md).
   Backup, Search, Static/Wiki Export.
 - **Beta:** Calendar (inkl. CalDAV-Vollsync), DnD API, Daily Admin OS,
   Secrets/Reveal (Page + Block), Kanonprüfung, Prepare-for-next-session,
-  Agent Jobs (Dispatch + Polling), Image Studio (Masken-Canvas), Import Undo,
+  Image Studio (Masken-Canvas), Import Undo,
   Auto-Backup-Scheduler, Life-Brain Retrieval — implementiert
   (RTX-Embeddings + Keyword-Fallback), Qualität RTX-abhängig;
   aus den Backlog-Wellen: Charaktersheet (Voll-5e-Kern),
@@ -104,7 +104,7 @@ dessen Code und Tabellen am 27.07.2026 entfernt wurden — alte Inhalte wurden p
 
 **Nicht im Backlog** (bewusst nicht verfolgt): Asset-Level-Secrets, manuelle Browser-QA
 über 9 Theme-Presets, vollständiges Light-Theme-Refactoring, DB↔Client-Theme-Sync,
-`docs:check` für Skills-README, DnD-API-Cache-Aufräumen, Agent-Jobs-Completion-Callback;
+`docs:check` für Skills-README, DnD-API-Cache-Aufräumen;
 per Beschluss (ehem. FEATURE_BACKLOG_PLAN.md §13): KI-Capture-Sortierung (LLM-Ausbau),
 voller Secret-Vault, semantische Suche (Embeddings).
 
@@ -115,7 +115,6 @@ voller Secret-Vault, semantische Suche (Embeddings).
   Cloud-Fallback, Qualität RTX-abhängig.
 - **Performance** — keine Browser-LCP-Gates, nur CI-Smoke + Bundle-Budget.
 - **Capture Bild-Upload** — implementiert (`/api/capture/upload`, Quick Capture); UI auf `/capture`.
-- **Agent Jobs** — Dispatch + Polling funktional; kein Auto-Merge (by design, siehe [SECURITY_SETTINGS.md](SECURITY_SETTINGS.md)).
 - **Drei-Produkte-Split (Portal/Studio/Brain)** — abgeschlossen und überholt:
   `apps/brain` und `apps/family` laufen mit eigenen Datenbanken (physischer
   DB-Split, PR #783; Family in Abspeckung N.3, PR #811). Die frühere

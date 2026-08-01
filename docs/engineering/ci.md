@@ -33,7 +33,6 @@ GitHub-hosted minutes are reserved for **cheap PR feedback**. Expensive checks r
 | **Sunday 03:00 UTC / manual** | `ci.yml` | E2E + performance budget checks |
 | **Monday 06:00 UTC / manual** | `security.yml` | Secret scan, prod audit, security tests |
 | **Push `main` (docs paths)** | `docs-check.yml` | Supplemental link scan (not a PR gate) |
-| **Manual** | `cursor-agent.yml` | Agent branch + draft PR (PR gate validates after push) |
 | **CI success on `main`** | — | Kein automatischer Deploy mehr (Host stillgelegt, Workflow entfernt) |
 
 ## Workflows
@@ -44,7 +43,6 @@ GitHub-hosted minutes are reserved for **cheap PR feedback**. Expensive checks r
 | **CI** | `.github/workflows/ci.yml` | Push `main`, weekly schedule, manual | Full `pnpm quality`, Postgres smoke; E2E on schedule/manual only | No |
 | **Security** | `.github/workflows/security.yml` | Weekly Monday, manual | Audit + security tests (secret scan also in PR via `ci:light`) | No |
 | **Docs Check** | `.github/workflows/docs-check.yml` | Push `main` (docs paths), manual | Supplemental link scan | No |
-| **Cursor Agent** | `.github/workflows/cursor-agent.yml` | Manual | Agent jobs from Studio admin | No |
 | **UWE Windows Release** | `.github/workflows/uwe-windows-release.yml` | Manual | Build Command Center NSIS/MSI + publish GitHub Release `uwe-v*` | No |
 
 > The former `windows-installer.yml` workflow (Docker/one-click path) was removed
@@ -128,12 +126,6 @@ Supplemental only — PRs already run `pnpm docs:check` in `pr-check.yml`.
 - Basic internal link scan (warnings only for broken relative links)
 
 Triggers: push `main` when docs-related paths change, `workflow_dispatch`.
-
-### Cursor Agent (`cursor-agent.yml`)
-
-- Pushes branch and opens draft PR — does **not** run `ci:light` (PR gate `pr-check.yml` validates the opened PR, avoiding duplicate ~9 min runs)
-- Full gate runs after merge to `main` via `ci.yml`
-- Agents run in the GitHub Cloud; there is no self-hosted runner requirement
 
 ## Local commands
 
@@ -273,7 +265,6 @@ From GitHub Actions usage on a busy agent day (~200 runs):
 - `docs/engineering/self-hosted-ci.md` — historical / optional reference (self-hosted runner, hardware) — **not** the active gate
 - `AGENTS.md` — agent gate (GitHub Cloud CI authoritative; local `pnpm quality` optional pre-check)
 - `.cursor/skills/ci-quality-gate/SKILL.md` — detailed failure patterns
-- `docs/AGENT_JOBS.md` — Cursor agent GitHub Actions integration
 
 ## `turbo.json` → `globalPassThroughEnv`
 

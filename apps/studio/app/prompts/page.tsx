@@ -54,7 +54,7 @@ export default async function PromptsPage({ searchParams }: Props) {
     <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Prompt-Bibliothek" }]} />}>
       <PageHeader
         title="Prompt-Bibliothek"
-        summary="Prompts als eigene Objekte mit Kategorie, Tags und Variablen — durchsuchbar und als Agent Job startbar."
+        summary="Prompts als eigene Objekte mit Kategorie, Tags und Variablen — durchsuchbar, ausfüllbar und kopierbar."
       />
 
       <form method="get" className="mb-4 flex flex-wrap items-end gap-3">
