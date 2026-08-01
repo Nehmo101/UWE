@@ -18,6 +18,7 @@
     "@uwe/cloudflare-edge": "workspace:*",
     "@uwe/connector-client-config": "workspace:*",
     "@uwe/database": "workspace:*",
+    "@uwe/doc-import": "workspace:*",
     "@uwe/host-cockpit": "workspace:*",
     "@uwe/host-monitor": "workspace:*"
   },

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ViewEditToggle } from "@uwe/shared-ui";
+import { ViewEditToggle, WikiContent } from "@uwe/shared-ui";
 import {
   GAME_SESSION_STATUS_LABELS,
   GameSessionStatusBadge,
@@ -41,6 +41,11 @@ interface Props {
   sessionId: string;
   session: DmGameSessionView;
   linkablePages: LinkablePage[];
+  /**
+   * Notizen und DM-Zusammenfassung als gerendertes HTML mit aufgelösten
+   * `[[Wikilinks]]`. Serverseitig gebaut, weil dafür der Welt-Index nötig ist.
+   */
+  richText?: { notesHtml?: string; summaryDmHtml?: string };
   flash?: {
     saved?: string;
     published?: string;
@@ -63,6 +68,7 @@ export function SessionDetailClient({
   sessionId,
   session,
   linkablePages,
+  richText,
   flash,
 }: Props) {
   const router = useRouter();
@@ -87,13 +93,21 @@ export function SessionDetailClient({
       {session.summaryDm ? (
         <section className="flex flex-col gap-2">
           <h2 className="text-base font-semibold text-foreground">DM-Zusammenfassung</h2>
-          <p className="whitespace-pre-wrap">{session.summaryDm}</p>
+          {richText?.summaryDmHtml ? (
+            <WikiContent html={richText.summaryDmHtml} readMode={false} />
+          ) : (
+            <p className="whitespace-pre-wrap">{session.summaryDm}</p>
+          )}
         </section>
       ) : null}
       {session.notes ? (
         <section className="flex flex-col gap-2">
           <h2 className="text-base font-semibold text-foreground">Vorbereitungsnotizen</h2>
-          <p className="whitespace-pre-wrap">{session.notes}</p>
+          {richText?.notesHtml ? (
+            <WikiContent html={richText.notesHtml} readMode={false} />
+          ) : (
+            <p className="whitespace-pre-wrap">{session.notes}</p>
+          )}
         </section>
       ) : null}
       <div className="flex flex-wrap gap-2">

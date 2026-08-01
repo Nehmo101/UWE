@@ -653,6 +653,11 @@ const OPS_ACTIONS: &[&str] = &[
     "turnstile-status",
     "turnstile-set",
     "google-login-set",
+    // Dokument- und Bulk-Wiki-Import: liest Markdown von einem Pfad auf dem
+    // Host und legt daraus Wiki-Seiten an.
+    "doc-import-targets",
+    "doc-import-preview",
+    "doc-import-execute",
 ];
 
 fn build_ops_command(action: &str) -> Result<Command, String> {

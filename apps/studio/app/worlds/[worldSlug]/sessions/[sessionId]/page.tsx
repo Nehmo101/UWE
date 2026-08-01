@@ -18,6 +18,7 @@ import { AiContextPanel } from "@/components/AiContextPanel";
 import { SessionDetailClient } from "@/components/sessions/SessionDetailClient";
 import { StudioWikiPageView } from "@/components/StudioWikiPageView";
 import { isLikelyGameSessionId } from "@/src/lib/session-route";
+import { renderWorldTextToHtml } from "@/src/lib/page-reader";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { Alert, Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
@@ -179,6 +180,10 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
           type: page.type,
           slug: page.slug,
         }))}
+        richText={{
+          notesHtml: await renderWorldTextToHtml(worldSlug, session.notes ?? ""),
+          summaryDmHtml: await renderWorldTextToHtml(worldSlug, session.summaryDm ?? ""),
+        }}
         flash={{ saved, published, linked, unlinked }}
       />
     </WorldShell>

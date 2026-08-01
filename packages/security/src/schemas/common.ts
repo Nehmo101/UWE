@@ -27,6 +27,11 @@ export const worldSlugParamSchema = z.object({
   worldSlug: slugSchema,
 });
 
+export const worldPageParamsSchema = z.object({
+  worldSlug: slugSchema,
+  pageSlug: slugSchema,
+});
+
 export const tokenParamSchema = z.object({
   token: tokenSchema,
 });

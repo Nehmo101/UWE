@@ -24,6 +24,7 @@ import { DownloadsPanel } from "./components/DownloadsPanel";
 import { HostPanel } from "./components/HostPanel";
 import { ImagePanel } from "./components/ImagePanel";
 import { SpeechPanel } from "./components/SpeechPanel";
+import { ImportPanel } from "./components/ImportPanel";
 import { JobsPanel } from "./components/JobsPanel";
 import { LogsPanel } from "./components/LogsPanel";
 import { DocumentOcrPanel } from "./components/DocumentOcrPanel";
@@ -539,6 +540,7 @@ export default function App() {
             onTest={() => testPrint(config.defaultPrinterId)}
           />
         );
+      case "/import": return <ImportPanel />;
       case "/jobs": return <JobsPanel onLoadJobs={loadConnectorJobs} />;
       case "/logs": return <LogsPanel onLoadLogs={loadConnectorLogs} />;
       case "/diagnostics": return renderDiagnostics();

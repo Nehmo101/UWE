@@ -27,9 +27,32 @@ describe("entityToCreatePageInput", () => {
       source: "pdf-campaign-import",
       importJobId: "job-1",
       sourceFile: "abenteuer.pdf",
+      // Ohne eigene Angabe steht der Dateiname für den Band, und der Import
+      // gilt als eigenes Material.
+      sourceTitle: "abenteuer.pdf",
+      licence: "own",
       extractedKind: "quest",
       aiRoute: "local_rtx",
     });
+  });
+
+  it("records a third-party band by name", () => {
+    const input = entityToCreatePageInput(
+      { kind: "npc", title: "Die Kesselhexe", body: "Rührt." },
+      {
+        worldId: "world-1",
+        campaignId: "campaign-1",
+        slug: "die-kesselhexe",
+        importJobId: "job-2",
+        sourceFile: "obojima.pdf",
+        sourceTitle: "Obojima — Tales from the Tall Grass",
+        licence: "third_party",
+      },
+    );
+
+    const metadata = input.contentBlocks?.[0]?.metadata as Record<string, unknown>;
+    assert.equal(metadata.licence, "third_party");
+    assert.equal(metadata.sourceTitle, "Obojima — Tales from the Tall Grass");
   });
 
   it("falls back to lore for an unknown runtime kind", () => {

@@ -654,6 +654,7 @@ model Page {
   worldId         String             @map("world_id")
   campaignId      String?            @map("campaign_id")
   parentPageId    String?            @map("parent_page_id")
+  sortIndex       Int?               @map("sort_index")
   title           String
   slug            String
   type            PageType
@@ -694,6 +695,7 @@ model Page {
 
   @@unique([worldId, slug])
   @@index([parentPageId])
+  @@index([parentPageId, sortIndex])
   @@map("pages")
 }
 

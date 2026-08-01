@@ -429,7 +429,10 @@ export type OpsAction =
   | "cloudflare-tunnel-apply"
   | "turnstile-status"
   | "turnstile-set"
-  | "google-login-set";
+  | "google-login-set"
+  | "doc-import-targets"
+  | "doc-import-preview"
+  | "doc-import-execute";
 
 export interface OpsResult<T = unknown> {
   ok: boolean;

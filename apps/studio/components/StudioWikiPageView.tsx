@@ -63,6 +63,28 @@ function withPlayerPreviewHref(href: string, active: boolean): string {
   return `${href}${href.includes("?") ? "&" : "?"}preview=player`;
 }
 
+/**
+ * Woher stammt diese Seite, wenn sie nicht aus eigener Feder ist?
+ *
+ * Der Kampagnen-Import schreibt `licence: "third_party"` und den Bandtitel in
+ * die Block-Metadaten. Sichtbarkeit steuert das nicht — die haengt in UWE allein
+ * an der Welt-Zuordnung —, aber nach ein paar Monaten ist es der einzige Weg,
+ * eigenes und fremdes Material noch auseinanderzuhalten.
+ */
+function readThirdPartySource(page: { contentBlocks: Array<{ metadata: unknown }> }): string | null {
+  for (const block of page.contentBlocks) {
+    const metadata =
+      block.metadata && typeof block.metadata === "object" && !Array.isArray(block.metadata)
+        ? (block.metadata as Record<string, unknown>)
+        : null;
+    if (metadata?.licence !== "third_party") continue;
+
+    const title = metadata.sourceTitle ?? metadata.sourceFile;
+    return typeof title === "string" && title.trim() ? title.trim() : "einer fremden Quelle";
+  }
+  return null;
+}
+
 export async function StudioWikiPageView({
   worldSlug,
   category,
@@ -126,6 +148,7 @@ export async function StudioWikiPageView({
     }
 
     const pageHref = buildPageUrl(worldSlug, rawPage.type, slug);
+    const thirdPartySource = readThirdPartySource(rawPage);
 
     const dmPage = isPlayerPreview ? null : rawPage;
     const useMockAi = process.env.NEXT_PUBLIC_AI_USE_MOCK === "true";
@@ -269,6 +292,12 @@ export async function StudioWikiPageView({
           />
 
           <div className="max-w-[52rem] uwe-v2-wiki">
+            {thirdPartySource ? (
+              <Alert tone="info" role="note">
+                Übernommen aus <strong>{thirdPartySource}</strong>. Fremdes Material — nach der
+                Welt-Zuordnung für alle sichtbar, die dieser Welt zugeordnet sind.
+              </Alert>
+            ) : null}
             {view.links.some((link) => link.status === "broken") && (
               <Alert tone="warning" role="note">
                 Diese Seite enthält {view.links.filter((link) => link.status === "broken").length}{" "}

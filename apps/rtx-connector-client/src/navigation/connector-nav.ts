@@ -31,6 +31,7 @@ export const CONNECTOR_NAV: NavGroup[] = [
       connectorItem("connector-runner", "Runner / Ollama", "/runner", "cpu", ["runner", "ollama", "llm"]),
       connectorItem("connector-models", "Modelle", "/models", "boxes", ["modelle", "models"]),
       connectorItem("connector-printers", "Drucker", "/printers", "printer", ["drucker", "printer", "label"]),
+      connectorItem("connector-import", "Import", "/import", "file-input", ["import", "importieren", "markdown", "obsidian", "vault", "kampagne", "kampagnenbuch", "dungeon", "weltkanon", "wiki", "seiten", "bulk"]),
       connectorItem("connector-jobs", "Jobs", "/jobs", "list-checks", ["jobs", "queue"]),
       connectorItem("connector-logs", "Logs", "/logs", "scroll-text", ["logs"]),
       connectorItem("connector-diagnostics", "Diagnose", "/diagnostics", "stethoscope", ["diagnose", "diagnostics"]),

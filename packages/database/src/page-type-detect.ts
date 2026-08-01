@@ -77,6 +77,18 @@ const MARKDOWN_DECORATION_PATTERN = /[*_~`]/g;
 const MARKER_PATTERN =
   /(?:^|[\s.;,•\-–—(>])(?:kategorie|typ|type|category|art)\s*[:：=]\s*([\p{L}][\p{L}\- ]*)/giu;
 
+/**
+ * Label (Markerwert, Tag oder Frontmatter-Wert) auf einen bekannten PageType
+ * auflösen — `nsc` → `npc`, `Dungeon Ebene` → `dungeon_level`.
+ *
+ * Öffentlich, damit der Dokument-Import `typ: nsc` aus dem Frontmatter über
+ * dieselbe Tabelle auflöst, statt eine vierte danebenzustellen. Gibt `null`
+ * zurück, wenn nichts passt — es wird bewusst nicht geraten.
+ */
+export function resolvePageTypeLabel(label: string): PageType | null {
+  return resolveLabel(label);
+}
+
 /** Label (Markerwert oder Tag) auf einen bekannten PageType auflösen. */
 function resolveLabel(label: string): PageType | null {
   const normalized = label.trim().toLocaleLowerCase("de");

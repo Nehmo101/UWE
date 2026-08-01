@@ -10,6 +10,7 @@ import {
   prisma,
   type SessionLiveEntryKind,
 } from "@uwe/database/server";
+import { SESSION_BOOKMARK_KIND, encodeBookmarkPayload } from "@uwe/session-runner";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { requireStudioWorldEdit } from "@/src/lib/authz";
 
@@ -53,6 +54,67 @@ export async function appendSessionLiveEntryAction(input: {
     refPageId: input.refPageId ?? null,
   });
   revalidatePath(`/worlds/${input.worldSlug}/sessions/${input.sessionId}/live`);
+}
+
+/**
+ * Leseposition des Session-Runners festhalten.
+ *
+ * Zwei Sorten, und der Unterschied ist wichtig fürs Protokoll:
+ *
+ * - **automatisch** (`explicit: false`) — bei jedem Seitenwechsel im Lesebereich.
+ *   Ersetzt den vorigen automatischen Eintrag, sonst wäre das Live-Protokoll
+ *   nach einer Stunde Blättern unlesbar.
+ * - **ausdrücklich** — die Spielleitung setzt ein Lesezeichen. Das bleibt stehen
+ *   und wird zur Spur durch den Abend.
+ */
+export async function saveSessionBookmarkAction(input: {
+  worldSlug: string;
+  sessionId: string;
+  pageId: string;
+  pageTitle: string;
+  anchor?: string | null;
+  scrollRatio?: number | null;
+  explicit?: boolean;
+}): Promise<void> {
+  await requireStudioActionAuth();
+  await requireStudioWorldEdit(input.worldSlug);
+
+  const service = liveEntries();
+  const explicit = input.explicit === true;
+
+  if (!explicit) {
+    const existing = await service.listEntries(input.sessionId);
+    for (const entry of existing) {
+      if (entry.kind !== SESSION_BOOKMARK_KIND) continue;
+      const payload = entry.payload;
+      const isAuto =
+        payload && typeof payload === "object" && !Array.isArray(payload)
+          ? (payload as Record<string, unknown>).auto === true
+          : false;
+      if (isAuto) {
+        await service.deleteEntry(entry.id);
+      }
+    }
+  }
+
+  await service.appendEntry({
+    gameSessionId: input.sessionId,
+    kind: SESSION_BOOKMARK_KIND,
+    content: input.pageTitle.trim() || "Leseposition",
+    refPageId: input.pageId,
+    payload: {
+      ...encodeBookmarkPayload({
+        pageId: input.pageId,
+        anchor: input.anchor ?? null,
+        scrollRatio: input.scrollRatio ?? null,
+      }),
+      auto: !explicit,
+    },
+  });
+
+  if (explicit) {
+    revalidatePath(`/worlds/${input.worldSlug}/sessions/${input.sessionId}/live`);
+  }
 }
 
 export async function deleteSessionLiveEntryAction(input: {

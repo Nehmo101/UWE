@@ -8,9 +8,12 @@
   "exports": {
     ".": "./src/index.ts",
     "./page-types": "./src/page-types.ts",
+    "./page-type-detect": "./src/page-type-detect.ts",
+    "./obsidian-vault": "./src/obsidian-vault-import.ts",
     "./graph-types": "./src/graph-types.ts",
     "./graph-service": "./src/graph-service.ts",
     "./page-viewer-service": "./src/page-viewer-service.ts",
+    "./page-service": "./src/page-service.ts",
     "./client": "./src/client.ts",
     "./brain-client": "./src/brain-client.ts",
     "./passkeys": "./src/passkey-credential-store.ts",
