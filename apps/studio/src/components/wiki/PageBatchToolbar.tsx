@@ -7,9 +7,16 @@ import type { PageType } from "@uwe/database/enums";
 import type { PageBulkOperation } from "@uwe/database/page-bulk";
 import { bulkUpdatePagesAction } from "@/app/page-bulk-actions";
 import { PageBatchConvertPanel } from "./PageBatchConvertPanel";
+import { PageBatchTransferPanel } from "./PageBatchTransferPanel";
 
 /** "convert" und KI-Aktionen sind keine deklarativen Feldänderungen — eigene Panels. */
-type OpKind = PageBulkOperation["kind"] | "convert" | "ki_format" | "ki_tags" | "ki_convert";
+type OpKind =
+  | PageBulkOperation["kind"]
+  | "convert"
+  | "transfer"
+  | "ki_format"
+  | "ki_tags"
+  | "ki_convert";
 
 const OP_OPTIONS: { value: OpKind; label: string }[] = [
   { value: "type", label: "Seitentyp setzen" },
@@ -17,6 +24,7 @@ const OP_OPTIONS: { value: OpKind; label: string }[] = [
   { value: "removeTags", label: "Tags entfernen" },
   { value: "campaign", label: "Kampagne zuweisen" },
   { value: "convert", label: "Konvertieren" },
+  { value: "transfer", label: "In andere Welt übernehmen" },
   { value: "ki_format", label: "KI ausarbeiten / formatieren" },
   { value: "ki_tags", label: "KI Tags" },
   { value: "ki_convert", label: "KI Konvertierung" },
@@ -107,7 +115,12 @@ export function PageBatchToolbar({ worldSlug, campaigns, selectedIds, clearSelec
       ? "inline-flex h-8 items-center rounded-md bg-destructive px-3 text-sm text-destructive-foreground hover:opacity-90 disabled:opacity-60"
       : "inline-flex h-8 items-center rounded-md bg-primary px-3 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-60";
 
-  const isPanelOp = kind === "convert" || kind === "ki_format" || kind === "ki_tags" || kind === "ki_convert";
+  const isPanelOp =
+    kind === "convert" ||
+    kind === "transfer" ||
+    kind === "ki_format" ||
+    kind === "ki_tags" ||
+    kind === "ki_convert";
 
   return (
     <div className="flex w-full flex-col gap-2">
@@ -192,6 +205,14 @@ export function PageBatchToolbar({ worldSlug, campaigns, selectedIds, clearSelec
 
       {kind === "convert" && (
         <PageBatchConvertPanel
+          worldSlug={worldSlug}
+          selectedIds={selectedIds}
+          clearSelection={clearSelection}
+        />
+      )}
+
+      {kind === "transfer" && (
+        <PageBatchTransferPanel
           worldSlug={worldSlug}
           selectedIds={selectedIds}
           clearSelection={clearSelection}

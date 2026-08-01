@@ -8,6 +8,19 @@ export interface CampaignPageMappingContext {
   slug: string;
   importJobId: string;
   sourceFile: string;
+  /**
+   * Titel des Bandes, aus dem der Eintrag stammt — bei fremden Kampagnenbüchern
+   * der einzige Weg, später noch zu erkennen, was eigenes Material ist und was
+   * nicht. Ohne Angabe wird der Dateiname verwendet.
+   */
+  sourceTitle?: string;
+  /**
+   * `third_party` markiert lizenziertes Fremdmaterial. Das ist keine technische
+   * Sperre — Sichtbarkeit hängt in UWE allein an der Welt-Zuordnung —, sondern
+   * ein sichtbarer Hinweis auf der Seite, damit fremdes und eigenes Material
+   * nach Monaten noch unterscheidbar bleiben.
+   */
+  licence?: "own" | "third_party";
 }
 
 export function entityToCreatePageInput(
@@ -31,6 +44,8 @@ export function entityToCreatePageInput(
           source: "pdf-campaign-import",
           importJobId: context.importJobId,
           sourceFile: context.sourceFile,
+          sourceTitle: context.sourceTitle?.trim() || context.sourceFile,
+          licence: context.licence ?? "own",
           extractedKind: entity.kind,
           aiRoute: "local_rtx",
         },
