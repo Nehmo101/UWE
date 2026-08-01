@@ -49,6 +49,7 @@
     "@uwe/player-hub": "workspace:*",
     "@uwe/roll-tables": "workspace:*",
     "@uwe/security": "workspace:*",
+    "@uwe/session-runner": "workspace:*",
     "@uwe/shared-ui": "workspace:*",
     "@uwe/shared-utils": "workspace:*",
     "@uwe/soundboard": "workspace:*",

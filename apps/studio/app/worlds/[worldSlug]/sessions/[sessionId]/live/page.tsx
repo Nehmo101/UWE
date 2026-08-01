@@ -14,6 +14,8 @@ import {
 } from "@uwe/database/server";
 import { SessionLivePanel } from "@/components/SessionLivePanel";
 import { SessionLiveSoundboard } from "@/components/SessionLiveSoundboard";
+import { SessionRunner } from "@/components/session-runner/SessionRunner";
+import { latestBookmark } from "@uwe/session-runner";
 import type { SoundboardButtonView } from "@uwe/shared-ui";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
@@ -71,6 +73,25 @@ export default async function SessionLivePage({ params }: Props) {
     href: buildPageUrl(worldSlug, page.type, page.slug),
   }));
 
+  // Wo zuletzt gelesen wurde. Das Lesezeichen zeigt auf eine Seiten-ID; der
+  // Runner braucht den Slug, also wird er hier einmal nachgeschlagen.
+  const bookmark = latestBookmark(
+    liveEntries.map((entry) => ({
+      kind: entry.kind,
+      refPageId: entry.refPageId ?? null,
+      payload: entry.payload ?? null,
+      createdAt: entry.createdAt,
+    })),
+  );
+  const bookmarkPage = bookmark ? await repo.getPageById(bookmark.pageId) : null;
+
+  const jumpTargets = session.linkedPages.map((page) => ({
+    id: page.id,
+    title: page.title,
+    slug: page.slug,
+    type: page.type,
+  }));
+
   const linkedById = new Map(linkedPages.map((page) => [page.id, page]));
   const timeFormat = new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit" });
   const entryViews = liveEntries.map((entry) => {
@@ -115,6 +136,14 @@ export default async function SessionLivePage({ params }: Props) {
             Session vorbereiten
           </Link>
         }
+      />
+
+      <SessionRunner
+        worldSlug={worldSlug}
+        sessionId={sessionId}
+        jumpTargets={jumpTargets}
+        initialPageSlug={bookmarkPage?.slug ?? null}
+        initialAnchor={bookmark?.anchor ?? null}
       />
 
       <SessionLivePanel

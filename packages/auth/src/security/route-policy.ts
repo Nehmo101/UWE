@@ -180,6 +180,12 @@ export const PROTECTED_ROUTE_PREFIXES = [
   "/api/worlds/*/brain",
   "/api/worlds/*/brain/*",
   "/api/worlds/*/graph",
+  // Leseansicht einer Seite für den Session-Runner (Studio, nur lesend).
+  //
+  // `[pageSlug]` statt `*` am Ende ist kein Stilfrage: `matchesRoutePattern`
+  // behandelt ein Muster, das auf `/*` endet, als reinen Präfixvergleich —
+  // ein `*` weiter vorne wird dann nicht mehr ersetzt und das Muster trifft nie.
+  "/api/worlds/*/reader/[pageSlug]",
   "/api/worlds/*/labels/*/export",
   "/api/worlds/*/print-lists/*/export",
   "/api/worlds/*/spotify/*",

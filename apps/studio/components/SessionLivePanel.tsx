@@ -50,10 +50,18 @@ interface Props {
   entries: LiveEntryView[];
 }
 
+/**
+ * Die Nachbereitung wertet `loot`, `quest_update` und `bookmark` aus, das
+ * Live-Panel konnte sie aber nie erfassen (siehe ui-assessment.md). Damit
+ * standen im Review Spalten, die nie etwas enthalten konnten.
+ */
 const ENTRY_KINDS: { value: LiveEntryKind; label: string; needsRef: boolean }[] = [
   { value: "note", label: "Notiz", needsRef: false },
   { value: "npc_update", label: "NPC-Update", needsRef: true },
+  { value: "quest_update", label: "Quest-Update", needsRef: true },
+  { value: "loot", label: "Beute", needsRef: false },
   { value: "initiative", label: "Initiative", needsRef: false },
+  { value: "bookmark", label: "Lesezeichen", needsRef: true },
 ];
 
 function liveTimerStorageKey(sessionId: string): string {
