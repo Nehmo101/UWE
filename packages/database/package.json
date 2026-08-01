@@ -8,6 +8,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./page-types": "./src/page-types.ts",
+    "./page-type-detect": "./src/page-type-detect.ts",
     "./graph-types": "./src/graph-types.ts",
     "./graph-service": "./src/graph-service.ts",
     "./page-viewer-service": "./src/page-viewer-service.ts",

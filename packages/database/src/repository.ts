@@ -86,6 +86,8 @@ export interface CreatePageInput {
   worldId: string;
   campaignId?: string | null;
   parentPageId?: string | null;
+  /** Lesereihenfolge unter Geschwistern; `null` sortiert ans Ende (nach Titel). */
+  sortIndex?: number | null;
   title: string;
   slug: string;
   type: PageType;
@@ -105,6 +107,7 @@ export interface UpdatePageInput {
   summary?: string | null;
   campaignId?: string | null;
   parentPageId?: string | null;
+  sortIndex?: number | null;
   canonicalStatus?: CanonicalStatus;
   prepStatus?: import("./generated/prisma/client").DungeonPrepStatus | null;
   questStatus?: import("./generated/prisma/client").QuestLifecycleStatus | null;
@@ -218,6 +221,7 @@ export class UweRepository {
         worldId: input.worldId,
         campaignId: input.campaignId ?? null,
         parentPageId: input.parentPageId ?? null,
+        sortIndex: input.sortIndex ?? null,
         title: input.title,
         slug: input.slug,
         type: input.type,
@@ -256,6 +260,7 @@ export class UweRepository {
         summary: input.summary,
         campaignId: input.campaignId,
         parentPageId: input.parentPageId,
+        sortIndex: input.sortIndex,
         canonicalStatus: input.canonicalStatus,
         prepStatus: input.prepStatus,
         questStatus: input.questStatus,

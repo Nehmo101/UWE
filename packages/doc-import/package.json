@@ -1,0 +1,26 @@
+{
+  "name": "@uwe/doc-import",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pure document import helpers: German frontmatter dialect, Markdown→HTML, heading trees",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node ../../scripts/run-node-tests.mjs"
+  },
+  "dependencies": {
+    "@uwe/database": "workspace:*",
+    "@uwe/shared-utils": "workspace:*",
+    "marked": "^15.0.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.32",
+    "@uwe/config": "workspace:*",
+    "tsx": "^4.23.1",
+    "typescript": "^5.8.3"
+  }
+}
