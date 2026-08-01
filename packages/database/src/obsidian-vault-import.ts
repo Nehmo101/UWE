@@ -43,6 +43,13 @@ export interface ObsidianVaultExtractResult {
   files: string[];
 }
 
+export interface ObsidianVaultFile {
+  /** Vault-relative path, forward slashes. */
+  fileName: string;
+  /** Raw file content, unchanged. */
+  content: string;
+}
+
 /** Vault-Markdown-Datei? Versteckte Ordner (.obsidian, .trash, …) werden übersprungen. */
 export function isObsidianVaultMarkdownEntry(entryName: string): boolean {
   const normalized = entryName.replace(/\\/g, "/");
@@ -100,15 +107,8 @@ function mapZipSecurityError(error: ZipSecurityError): ObsidianVaultImportError 
   }
 }
 
-/**
- * Extract all vault markdown files from an Obsidian vault export ZIP and
- * combine them into one markdown bundle (documents separated by `---`),
- * matching the client-side multi-file combine format.
- *
- * Wikilinks (`[[…]]`) und eingebettete Anhänge bleiben unverändert als Text
- * erhalten — es findet keine Link-Auflösung statt.
- */
-export function extractObsidianVaultMarkdown(zipBuffer: Buffer): ObsidianVaultExtractResult {
+/** Öffnet das Archiv und liefert die Markdown-Einträge, alle Guards vorgeschaltet. */
+function readVaultEntries(zipBuffer: Buffer): SafeZipEntry[] {
   if (zipBuffer.length === 0) {
     throw new ObsidianVaultImportError("ZIP-Datei ist leer.");
   }
@@ -119,9 +119,8 @@ export function extractObsidianVaultMarkdown(zipBuffer: Buffer): ObsidianVaultEx
     throw new ObsidianVaultImportError("Datei ist kein gültiges ZIP-Archiv.");
   }
 
-  let entries: SafeZipEntry[];
   try {
-    entries = extractSafeZipEntries(zipBuffer, {
+    return extractSafeZipEntries(zipBuffer, {
       policy: VAULT_ZIP_POLICY,
       entryFilter: isObsidianVaultMarkdownEntry,
     });
@@ -131,6 +130,51 @@ export function extractObsidianVaultMarkdown(zipBuffer: Buffer): ObsidianVaultEx
     }
     throw new ObsidianVaultImportError("ZIP-Datei konnte nicht gelesen werden.");
   }
+}
+
+/**
+ * Dieselben Vault-Dateien, aber **einzeln** statt zu einem Bündel verklebt.
+ *
+ * Der Dokument-Import braucht die Dateigrenzen: beim Bulk-Wiki ist eine Datei
+ * genau eine Seite, und der Dateiname ist der Notnagel für den Titel. Beim
+ * verklebten Bündel wäre beides verloren.
+ */
+export function extractObsidianVaultFiles(zipBuffer: Buffer): ObsidianVaultFile[] {
+  const files = readVaultEntries(zipBuffer)
+    .slice()
+    .sort((a, b) => a.entryName.localeCompare(b.entryName, "en"))
+    .map((entry) => ({
+      fileName: entry.entryName.replace(/\\/g, "/"),
+      content: entry.data.toString("utf8"),
+    }))
+    .filter((file) => file.content.trim().length > 0);
+
+  if (files.length === 0) {
+    throw new ObsidianVaultImportError(
+      "Keine Markdown-Dateien im Vault-Export gefunden (.md, .markdown, .txt).",
+    );
+  }
+
+  const total = files.reduce((sum, file) => sum + file.content.length, 0);
+  if (total > MAX_VAULT_MARKDOWN_BYTES) {
+    throw new ObsidianVaultImportError(
+      "Entpackter Markdown-Inhalt überschreitet das Limit von 10 MB.",
+    );
+  }
+
+  return files;
+}
+
+/**
+ * Extract all vault markdown files from an Obsidian vault export ZIP and
+ * combine them into one markdown bundle (documents separated by `---`),
+ * matching the client-side multi-file combine format.
+ *
+ * Wikilinks (`[[…]]`) und eingebettete Anhänge bleiben unverändert als Text
+ * erhalten — es findet keine Link-Auflösung statt.
+ */
+export function extractObsidianVaultMarkdown(zipBuffer: Buffer): ObsidianVaultExtractResult {
+  const entries = readVaultEntries(zipBuffer);
 
   const documents = entries
     .slice()

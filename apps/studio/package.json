@@ -37,6 +37,7 @@
     "@uwe/daily-cockpit": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/dnd-api": "workspace:*",
+    "@uwe/doc-import": "workspace:*",
     "@uwe/env": "workspace:*",
     "@uwe/host-cockpit": "workspace:*",
     "@uwe/image-studio": "workspace:*",

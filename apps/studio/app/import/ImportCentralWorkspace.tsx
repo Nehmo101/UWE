@@ -17,6 +17,7 @@ import {
   isImportCampaignTarget,
   isImportCentralComboSupported,
   isImportCentralMarkdownTarget,
+  isImportCentralObsidianSource,
   isImportCentralPdfSource,
   isImportCentralSourceComingSoon,
   isImportCentralTargetComingSoon,
@@ -24,6 +25,7 @@ import {
 import { createImportCentralJobAction, rollbackImportCentralJobAction } from "../import-central-actions";
 import { ImportWorkspace } from "../worlds/[worldSlug]/import/ImportWorkspace";
 import { CampaignPdfImportPanel } from "./CampaignPdfImportPanel";
+import { DocImportPanel } from "./DocImportPanel";
 import { MarkdownCentralImportPanel } from "./MarkdownCentralImportPanel";
 import { PdfCentralImportPanel } from "./PdfCentralImportPanel";
 import {
@@ -203,6 +205,24 @@ export function ImportCentralWorkspace({
           Vollständiger Import:{" "}
           <Link href={`/worlds/${activeJob.targetWorldSlug}/import`}>Welt-Import öffnen</Link>
         </p>
+      );
+    }
+
+    // Markdown und Obsidian gehen über den Dokument-Import: er kennt den
+    // deutschen Frontmatter-Dialekt, baut Seitenbäume und schreibt Beziehungen.
+    // Der KnoteForge-Pfad darunter bleibt für JSON-Exporte zuständig.
+    if (
+      activeJob.targetType === "world" &&
+      isImportCentralComboSupported(activeJob.sourceType, activeJob.targetType) &&
+      activeJob.sourceType !== "knoteforge"
+    ) {
+      return (
+        <DocImportPanel
+          jobId={activeJob.id}
+          isObsidianSource={isImportCentralObsidianSource(activeJob.sourceType)}
+          fileAccept={importCentralSourceAccept(activeJob.sourceType)}
+          onComplete={handleImportComplete}
+        />
       );
     }
 

@@ -516,6 +516,9 @@ importers:
       '@uwe/dnd-api':
         specifier: workspace:*
         version: link:../../packages/dnd-api
+      '@uwe/doc-import':
+        specifier: workspace:*
+        version: link:../../packages/doc-import
       '@uwe/env':
         specifier: workspace:*
         version: link:../../packages/env
