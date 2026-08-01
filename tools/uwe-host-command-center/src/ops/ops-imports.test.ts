@@ -47,4 +47,25 @@ describe("ops bridge imports", () => {
     assert.equal(typeof turnstile.getTurnstileStatus, "function");
     assert.equal(typeof turnstile.setTurnstile, "function");
   });
+
+  it("resolves @uwe/doc-import with its named exports", async () => {
+    // Der Import-Pfad haengt an zwei Subpath-Exports (`.` und `./writer`).
+    // Genau dort ist der `export *`-Fallstrick oben aufgetreten, und Typecheck
+    // wie Paket-Tests sehen ihn nicht — sie nehmen andere Aufloesungswege.
+    const docImport = await import("@uwe/doc-import");
+    for (const name of ["buildDocImportPlan", "buildDocImportPreview", "DOC_PROFILES"]) {
+      assert.ok(name in docImport, `Export fehlt zur Laufzeit: ${name}`);
+    }
+
+    const writer = await import("@uwe/doc-import/writer");
+    assert.equal(typeof writer.writeDocImport, "function");
+  });
+
+  it("loads the document import ops module", async () => {
+    const docImportOps = await import("./doc-import-ops.ts");
+    assert.equal(typeof docImportOps.listDocImportTargets, "function");
+    assert.equal(typeof docImportOps.previewDocImport, "function");
+    assert.equal(typeof docImportOps.executeDocImport, "function");
+    assert.equal(typeof docImportOps.readImportFiles, "function");
+  });
 });

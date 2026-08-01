@@ -17,6 +17,11 @@ import {
 import { applyTunnelIngressNow, getTunnelIngressStatus } from "./ops/cloudflare-tunnel-ops";
 import { getTurnstileStatus, setTurnstile } from "./ops/turnstile-ops";
 import { clearSmtp, setGoogleLogin, setSmtp, setupStatus, smtpStatus } from "./ops/setup-ops";
+import {
+  executeDocImport,
+  listDocImportTargets,
+  previewDocImport,
+} from "./ops/doc-import-ops";
 
 /**
  * Operations CLI for the UWE Command Center — the surfaces that moved out of
@@ -59,6 +64,9 @@ const ACTIONS = [
   "turnstile-status",
   "turnstile-set",
   "google-login-set",
+  "doc-import-targets",
+  "doc-import-preview",
+  "doc-import-execute",
 ] as const;
 
 type OpsAction = (typeof ACTIONS)[number];
@@ -117,6 +125,12 @@ async function run(action: OpsAction, db: ReturnType<typeof createPrismaClient>)
       return setTurnstile(db, await readStdinJson());
     case "google-login-set":
       return setGoogleLogin(db, await readStdinJson());
+    case "doc-import-targets":
+      return listDocImportTargets(db);
+    case "doc-import-preview":
+      return previewDocImport(db, await readStdinJson());
+    case "doc-import-execute":
+      return executeDocImport(db, await readStdinJson());
     default: {
       const exhaustive: never = action;
       return exhaustive;

@@ -15,6 +15,12 @@ benutzt man sie am Spieltisch, ohne beim Nachschlagen die Stelle zu verlieren**.
 | Kampagnenbuch, Dungeon, Weltkanon | ein langes Markdown | Import-Zentrale → Welt → **Dokument / Buch** |
 | Fremdes Kampagnenbuch | gekaufte PDF | PDF → Kampagne in eine **Werkstatt-Welt**, dann übernehmen |
 
+Beides — Bulk-Wiki und Dokument — geht auch ohne Browser: das **Command Center** hat
+dafür den Reiter *Import*. Dort genügt ein Pfad auf dem Host statt eines Uploads; die
+Ops-Brücke ruft dieselbe Maschinerie über `ops-cli.ts` direkt gegen die Datenbank auf
+(Aktionen `doc-import-targets`, `doc-import-preview`, `doc-import-execute`).
+Siehe [command-center.md](../command-center.md).
+
 ## 2. Der Frontmatter-Dialekt
 
 `@uwe/doc-import` liest deutsche Schlüssel. Englische bleiben gültig.

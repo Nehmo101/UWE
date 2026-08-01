@@ -139,6 +139,31 @@ node tools/uwe-host-command-center/src/desktop-host-cli.ts setup --root /pfad/zu
    unter „Verbindung“ (`hybrid`/`queue`; eine dort gewählte reine
    Direktverbindung bleibt erhalten).
 
+### Inhalte importieren
+
+Der Reiter **Import** legt Markdown-Dateien von diesem Rechner als Wiki-Seiten an —
+ohne Upload, weil das Command Center auf derselben Maschine läuft wie die Dateien:
+ein **Pfad** genügt, ein Ordner wird mit Unterordnern gelesen (`.obsidian` und andere
+versteckte Ordner bleiben außen vor).
+
+Zwei Betriebsarten, identisch zur Import-Zentrale im Studio:
+
+| Modus | Wirkung |
+|---|---|
+| **Wiki-Seiten** | Eine Datei wird eine Seite. Für Vault-Ordner mit vielen NSC-Dateien. |
+| **Dokument / Buch** | Eine Datei wird ein Seitenbaum in Lesereihenfolge, mit Typ-Profil und wählbarer Baumtiefe. |
+
+Erst **Vorschau** — sie zeigt, wie viele Seiten entstehen, was mit bestehenden Slugs
+oder Titeln kollidiert und welche `[[Verweise]]` danach noch ins Leere zeigen. Erst
+dann anlegen. Rückgängig machen geht im Studio über das Aktivitätsprotokoll.
+
+Technisch läuft das über dieselbe Ops-Brücke wie Betrieb und Cloudflare
+(`ops-cli.ts`, Aktionen `doc-import-targets` / `-preview` / `-execute`) und damit
+direkt gegen die Datenbank — kein HTTP, kein API-Token. Es gilt derselbe Vertrag wie
+im ganzen Ops-Pfad: das Command Center läuft auf dem Host, und der physische Zugang
+*ist* die Berechtigung. Details zum Import selbst:
+[engineering/doc-import-und-session-runner.md](engineering/doc-import-und-session-runner.md).
+
 ### Lebensdauer der Dienste
 
 Das Command Center ist der Schalter für die öffentliche Erreichbarkeit: läuft es

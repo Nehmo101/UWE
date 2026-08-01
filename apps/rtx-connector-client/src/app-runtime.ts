@@ -11,6 +11,7 @@ export type ConnectorPath =
   | "/runner"
   | "/models"
   | "/printers"
+  | "/import"
   | "/jobs"
   | "/logs"
   | "/diagnostics";
