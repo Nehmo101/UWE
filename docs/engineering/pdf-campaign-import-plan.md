@@ -19,8 +19,17 @@ Lore) → preview them → create one campaign-scoped wiki `Page` per selected e
    undo machinery.
 
 **Non-negotiable privacy invariant:** the AI call is **local-only** (RTX). Cloud must be
-impossible, no campaign/brain context is attached to the prompt, and every created page +
-content block defaults to `visibility: "dm_only"` (so it never reaches the Portal).
+impossible and no campaign/brain context is attached to the prompt.
+
+> **Korrektur (2026-08-01):** Der ursprüngliche Satz versprach hier zusätzlich
+> `visibility: "dm_only"` für jede erzeugte Seite. Das gibt es seit dem 26.07.2026 nicht
+> mehr — die Per-Item-Sichtbarkeit wurde entfernt, und es gilt genau eine Regel:
+> **wer einer Welt zugeordnet ist, sieht alles darin** (`packages/auth/src/permissions.ts`,
+> [access-model.md](access-model.md)). Für fremdes Material ist die Welt selbst die Grenze:
+> in eine Werkstatt-Welt ohne Spieler-Zuordnung importieren und die kuratierten Teile über
+> die Massenaktion „In andere Welt übernehmen" weiterschieben
+> (`@uwe/doc-import/transfer`). Die Herkunft steht in den Block-Metadaten
+> (`sourceTitle`, `licence`) und wird auf der Seite angezeigt.
 
 ## Architecture / data flow
 

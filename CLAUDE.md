@@ -28,6 +28,8 @@ packages/*    → Alle Business-Logik, nie in Route Handlers oder Komponenten
 | `@uwe/mcp` | MCP-Server für Studio/Portal/Brain (HTTP-Clients, kein DB-Zugriff) |
 | `@uwe/cloudflare-edge` | Cloudflare-Edge-Konfiguration, die UWE selbst besitzt (Managed Challenge / WAF-Regel) |
 | `@uwe/pdf-ocr` | Layout-treues PDF-Parsing über lokales Unlimited-OCR (Rendern, Seitenplanung, Marker) |
+| `@uwe/doc-import` | Markdown-Import: deutscher Frontmatter-Dialekt, Markdown→HTML, Überschriftenbaum, Welt-Übernahme |
+| `@uwe/session-runner` | Lesereihenfolge im Seitenbaum und Lesezeichen für den Spielabend |
 | Feature-Packages | `backup`, `calendar`, `mail`, `dnd-api`, `image-studio`, `agent-jobs`, `brain-assistant` |
 
 ### Neuen Code platzieren
@@ -136,6 +138,7 @@ Minimaler Diff; Package-Grenzen einhalten; keine Drive-by Refactors; Services er
 - [docs/engineering/self-service-config.md](docs/engineering/self-service-config.md) — Self-Service-Konfig & Host-Sync-Muster
 - [docs/engineering/mcp-servers.md](docs/engineering/mcp-servers.md) — MCP-Server & `/uwestudio` `/uweportal` `/uwebrain` `/uwefamily`
 - [docs/family/README.md](docs/family/README.md) — Family: Mitglieder, Kalender, API, Kochbuch, Konto
+- [docs/engineering/doc-import-und-session-runner.md](docs/engineering/doc-import-und-session-runner.md) — Frontmatter-Dialekt, Seitenbaum-Import, Splitscreen am Spieltisch, API-Allowlist-Falle
 - [docs/design/responsive-tables.md](docs/design/responsive-tables.md) — Tabellen auf dem Telefon: `ResponsiveTable`, `DataTable`, Attribut-Vertrag
 - [docs/design/theme-a11y-checklist.md](docs/design/theme-a11y-checklist.md) — Schwellen der a11y-Prüfmatrix und die Kaskadenfallen
 - [.cursor/skills/manifest.json](.cursor/skills/manifest.json) — Skill-Index (24 Skills)
