@@ -19,38 +19,43 @@
 import { stripCanonMarkers } from "./canonical-status";
 import type { DocumentNode, DocumentTree } from "./types";
 
-/**
- * Überschriftenzeile.
- *
- * Der Titel wird **nachträglich** von Leerzeichen befreit, statt ihn im Muster
- * mit `(.*\S)[ \t]*$` einzugrenzen. Dort überlappen `.*` und `[ \t]*`: eine Zeile
- * aus Raute plus lauter Leerzeichen zwingt die Regex-Maschine in quadratisches
- * Zurücksetzen — bei 16 000 Zeichen gemessene 234 ms für eine einzige Zeile, und
- * die Zeilen kommen aus hochgeladenen Dokumenten. `(.*)$` ist eindeutig.
- */
-const HEADING = /^(#{1,6})[ \t]+(.*)$/;
 const FENCE = /^(?:```|~~~)/;
 const HORIZONTAL_RULE = /^(?:-{3,}|\*{3,}|_{3,})$/;
+
+const isSpace = (char: string) => char === " " || char === "\t";
 
 /** Nur Blank und Tab am Ende weg — `trimEnd()` fräße auch geschützte Leerzeichen. */
 function trimTrailingSpace(value: string): string {
   let end = value.length;
-  while (end > 0 && (value[end - 1] === " " || value[end - 1] === "\t")) end -= 1;
+  while (end > 0 && isSpace(value[end - 1])) end -= 1;
   return value.slice(0, end);
 }
 
 /**
  * Eine Zeile als Überschrift lesen — oder `null`, wenn sie keine ist.
  *
- * Eine Zeile aus Rauten ohne Text ist wie bisher **keine** Überschrift; das
- * erledigte früher das `\S` im Muster, jetzt der leere Titel.
+ * Bewusst **ohne** Regex. `^(#{1,6})[ \t]+(.*\S)[ \t]*$` sieht harmlos aus, aber
+ * `[ \t]+` und der Titel dahinter streiten um dieselben Zeichen: eine Zeile aus
+ * Raute plus 16 000 Leerzeichen kostete gemessene 234 ms, und zwar pro Zeile.
+ * Ein Kampagnenbuch hat 1 778 davon, und die Zeilen kommen aus hochgeladenen
+ * Dokumenten. Drei Schleifen sind hier nicht nur schneller, sondern ehrlicher:
+ * jede Regel steht als eine Zeile da.
+ *
+ * Unverändert gilt: keine Raute am Zeilenanfang → keine Überschrift; mehr als
+ * sechs → keine; kein Leerzeichen dahinter (`#Titel`) → keine; nur Rauten und
+ * Leerzeichen ohne Text → auch keine.
  */
 function matchHeading(line: string): { level: number; title: string } | null {
-  const match = HEADING.exec(line);
-  if (!match) return null;
+  let level = 0;
+  while (level < line.length && line[level] === "#") level += 1;
+  if (level === 0 || level > 6) return null;
 
-  const title = trimTrailingSpace(match[2]);
-  return title ? { level: match[1].length, title } : null;
+  let start = level;
+  while (start < line.length && isSpace(line[start])) start += 1;
+  if (start === level) return null;
+
+  const title = trimTrailingSpace(line.slice(start));
+  return title ? { level, title } : null;
 }
 
 export interface BuildDocumentTreeOptions {

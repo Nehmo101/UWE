@@ -18,7 +18,18 @@
 
 import { normalizeLookupKey } from "@uwe/shared-utils/slug";
 
-const WIKILINK = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
+/**
+ * `[[Ziel]]` oder `[[Ziel|Beschriftung]]`.
+ *
+ * Die öffnende Klammer ist in beiden Zeichenklassen ausgeschlossen. Ohne das
+ * läuft ein Ziel über das nächste `[[` hinweg bis ans Textende, findet dort kein
+ * `]]` und der Versuch beginnt beim nächsten `[[` von vorn — quadratisch in der
+ * Zahl der Klammern. Ein Wikilink-Ziel enthält ohnehin nie eine `[`.
+ *
+ * Dieselbe Klasse steht in `markdown-html.ts`, wo die Klammern für die
+ * Zusammenfassung entfernt werden. Wer eine ändert, ändert beide.
+ */
+const WIKILINK = /\[\[([^[\]|]+)(?:\|([^[\]]+))?\]\]/g;
 
 /** Alle Wikilink-Ziele eines Textes, in Dokumentreihenfolge, ohne Dubletten. */
 export function collectWikiLinkTargets(text: string): string[] {

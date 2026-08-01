@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import { stripCanonMarkers } from "./canonical-status";
 import { buildDocumentTree, normalizeBodyHeadings } from "./doc-tree";
 import { markdownToWikiHtml } from "./markdown-html";
+import { collectWikiLinkTargets } from "./relations";
 
 /**
  * Regressionstest gegen quadratisches Zurücksetzen in den Mustern dieses Packages.
@@ -70,6 +71,28 @@ describe("Muster bleiben linear", () => {
     within("markdownToWikiHtml (offene spitze Klammern)", () => {
       assert.ok(typeof markdownToWikiHtml(`<h1>x</h1>${"<".repeat(SIZE)}`) === "string");
     });
+  });
+
+  it("verkraftet einen Text aus lauter offenen Wikilink-Klammern", () => {
+    within("collectWikiLinkTargets", () => {
+      assert.deepEqual(collectWikiLinkTargets("[[".repeat(SIZE / 2)), []);
+    });
+  });
+
+  it("liest gültige Wikilinks weiterhin, auch mit Beschriftung", () => {
+    assert.deepEqual(collectWikiLinkTargets("Siehe [[Xarza]] und [[ferlor|Ferlor]]."), [
+      "Xarza",
+      "ferlor",
+    ]);
+  });
+
+  it("nimmt Markup aus dem Überschriftentext, ohne an einer spitzen Klammer zu hängen", () => {
+    const html = markdownToWikiHtml("# Der *Turm* von Validori\n\nText.");
+    assert.match(html, /<h1 id="der-turm-von-validori">/);
+
+    // `a < b` ist Text. Früher fraß der Tag-Entferner den Rest der Zeile.
+    const mit = markdownToWikiHtml("# Wenn a < b gilt\n\nText.");
+    assert.match(mit, /<h1 id="wenn-a-lt-b-gilt">/);
   });
 
   it("gibt Überschriften weiterhin ihre id — auch verschachtelt und doppelt", () => {

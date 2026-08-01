@@ -34,12 +34,38 @@ const marked = new Marked({
 });
 
 const HEADING_OPEN = /<(h[1-6])>/g;
+
 /**
- * `[^<>]` statt `[^>]`: mit `[^>]` frisst das Muster über ein `<` hinweg bis zum
- * Textende und setzt dann Zeichen für Zeichen zurück — an jeder Startstelle neu.
- * Für rohes HTML im Markdown (`marked` reicht es durch) ist das quadratisch.
+ * Markup aus einem HTML-Schnipsel nehmen — nur, um daraus einen Slug zu bauen.
+ *
+ * Bewusst **kein** `replace(/<[^>]*>/g, "")`. Das ist zweierlei Ärger in einer
+ * Zeile: Es frisst über die nächste spitze Klammer hinweg bis zum Textende und
+ * setzt an jeder Startstelle neu zurück — quadratisch. Und ein einzelner
+ * Durchlauf über ein mehrzeichiges Muster ist als Entferner grundsätzlich
+ * unvollständig: was er stehen lässt, kann zusammenwachsen, wonach er gesucht
+ * hat. Ein Durchlauf Zeichen für Zeichen kann beides nicht.
+ *
+ * Eine spitze Klammer ohne Gegenstück gilt als Text, nicht als angefangenes Tag
+ * — sonst verschluckte ein „a < b" den Rest der Überschrift.
  */
-const TAG = /<[^<>]*>/g;
+function stripTags(html: string): string {
+  let out = "";
+  let index = 0;
+
+  while (index < html.length) {
+    const open = html.indexOf("<", index);
+    if (open < 0) return out + html.slice(index);
+
+    out += html.slice(index, open);
+
+    const close = html.indexOf(">", open + 1);
+    if (close < 0) return out + html.slice(open);
+
+    index = close + 1;
+  }
+
+  return out;
+}
 
 /**
  * Gibt Überschriften stabile `id`s, damit der Session-Runner an eine Stelle
@@ -78,7 +104,7 @@ function addHeadingIds(html: string): string {
 
     const inner = html.slice(innerStart, innerEnd);
     const after = innerEnd + closing.length;
-    const base = slugifyDe(inner.replace(TAG, "").trim(), { maxLength: 60 });
+    const base = slugifyDe(stripTags(inner).trim(), { maxLength: 60 });
 
     out += html.slice(cursor, start);
 
@@ -151,7 +177,8 @@ export function markdownToSummary(markdown: string, maxLength = 240): string | n
 
   const text = collected
     .join(" ")
-    .replace(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g, (_match, target: string, label?: string) =>
+    // `[` in beiden Klassen ausgeschlossen — Begründung in `relations.ts`.
+    .replace(/\[\[([^[\]|]+)(?:\|([^[\]]+))?\]\]/g, (_match, target: string, label?: string) =>
       (label ?? target).trim(),
     )
     .replace(/\*\*([^*]+)\*\*/g, "$1")

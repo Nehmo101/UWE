@@ -83,12 +83,18 @@ Typ-Profile (`profiles.ts`) belegen den `PageType` aus der Überschrift vor:
 > steht deshalb nur dort, wo sie einen Fehltreffer verhindert (`\borden\b`, sonst würde
 > „Norden" zur Fraktion).
 
-> **Muster ohne Mehrdeutigkeit:** Die Überschriftenzeile ist `^(#{1,6})[ \t]+(.*)$`, der
-> Titel wird **danach** im Code beschnitten. Das naheliegende `(.*\S)[ \t]*$` überlappt
-> sich selbst — `.*` und `[ \t]*` streiten um dieselben Zeichen —, und eine Zeile aus
-> lauter Leerzeichen kostete gemessene 234 ms. Bei 1 778 Zeilen pro Buch ist das keine
-> Theorie. Dieselbe Falle steckte in `\s+([),.:;])` und in `<[^>]*>`; der Regressionstest
-> dazu steht in `redos.test.ts`.
+> **Muster ohne Mehrdeutigkeit:** Die Überschriftenzeile wird von Hand gelesen, nicht
+> von einer Regex. `^(#{1,6})[ \t]+(.*\S)[ \t]*$` sieht harmlos aus, aber `[ \t]+` und der
+> Titel dahinter streiten um dieselben Zeichen; eine Zeile aus lauter Leerzeichen kostete
+> gemessene 234 ms — pro Zeile, bei 1 778 Zeilen pro Buch. Dieselbe Falle steckte in
+> `\s+([),.:;])`, in `<[^>]*>` und in `\[\[([^\]|]+)…` (dort läuft ein Ziel über das
+> nächste `[[` hinweg, deshalb ist `[` jetzt aus der Zeichenklasse ausgeschlossen).
+> Faustregel: Wo ein `+`/`*` und das, was danach kommt, dieselben Zeichen fressen können,
+> ist die Laufzeit quadratisch. Der Regressionstest dazu steht in `redos.test.ts`.
+>
+> Aus demselben Grund entfernt `stripTags` Markup Zeichen für Zeichen: ein einzelner
+> `replace(/<[^>]*>/g, "")` ist als Entferner grundsätzlich unvollständig — was er stehen
+> lässt, kann zu dem zusammenwachsen, wonach er gesucht hat.
 
 **Kanon-Marker:** `◆` (Kanon) und `◇` (Vorschlag) im Überschriftentext werden zu
 `CanonicalStatus` und aus dem Titel entfernt. Die Abschnittsnummern bleiben stehen — die

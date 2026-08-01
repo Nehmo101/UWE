@@ -7,6 +7,8 @@
  * hier entsteht nur die gemeinsame Antwort.
  */
 
+import { cache } from "react";
+
 import { buildPageView, getAppRepository, buildPageUrl } from "@uwe/database/server";
 import {
   buildLookupIndex,
@@ -60,6 +62,19 @@ function toRef(worldSlug: string, page: ReadingPage): ReaderPageRef {
 }
 
 /**
+ * Der Wikilink-Index einer Welt, einmal pro Anfrage.
+ *
+ * `buildWorldWikiIndex` liest alle Seiten der Welt. Die Sessionseite rendert
+ * zwei Freitextfelder (Notizen und DM-Zusammenfassung), und ohne `cache` wäre
+ * das derselbe Index zweimal aus der Datenbank. `cache` ist hier dasselbe
+ * Muster wie in `auth.ts` — der Geltungsbereich ist die einzelne Anfrage, es
+ * bleibt also nichts zwischen zwei Aufrufern stehen.
+ */
+const worldLookupIndex = cache(async (worldSlug: string) =>
+  buildLookupIndex(await buildWorldWikiIndex(getAppRepository(), worldSlug)),
+);
+
+/**
  * Freitext einer Welt zu HTML rendern — Session-Notizen, Zusammenfassungen.
  *
  * Diese Felder sind bisher als `whitespace-pre-wrap` ausgegeben worden, also
@@ -70,8 +85,7 @@ function toRef(worldSlug: string, page: ReadingPage): ReaderPageRef {
 export async function renderWorldTextToHtml(worldSlug: string, text: string): Promise<string> {
   if (!text?.trim()) return "";
 
-  const repo = getAppRepository();
-  const index = buildLookupIndex(await buildWorldWikiIndex(repo, worldSlug));
+  const index = await worldLookupIndex(worldSlug);
 
   return renderContentHtml(text, resolveLinksInContent(text, index));
 }
