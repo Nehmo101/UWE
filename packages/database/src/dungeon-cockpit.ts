@@ -90,6 +90,8 @@ export interface DungeonEntitySummary {
   summary: string | null;
   prepStatus: DungeonPrepStatus | null;
   parentPageId: string | null;
+  /** Lesereihenfolge unter den Geschwistern; `null` bei handgepflegten Seiten. */
+  sortIndex: number | null;
   tags: string[];
   aliases: string[];
   createdAt: Date;
@@ -135,6 +137,12 @@ export interface PortalRoomCockpitView {
 export interface DmDungeonOverview {
   dungeon: DungeonEntitySummary;
   levels: DungeonEntitySummary[];
+  /**
+   * Direkte Unterseiten, die keine Ebene sind — Werteblöcke, Handouts, „Für die
+   * Spielleitung", „Danach". Ein importiertes Dungeonbuch besteht nicht nur aus
+   * Stockwerken, und was das Cockpit nicht zeigt, findet am Spieltisch niemand.
+   */
+  appendix: DungeonEntitySummary[];
   assets: Asset[];
   html: string;
 }
@@ -143,6 +151,30 @@ export interface DmLevelOverview {
   dungeon: DungeonEntitySummary;
   level: DungeonEntitySummary;
   rooms: DungeonEntitySummary[];
+  /**
+   * Alles andere, was an der Ebene hängt: Begegnungen, Rätsel, Fallen, Beute,
+   * Zugänge. Beim Import entsteht das reihenweise, und ohne diese Liste hinge
+   * es unsichtbar im Baum.
+   */
+  extras: DungeonEntitySummary[];
+}
+
+/**
+ * Geschwister in Lesereihenfolge.
+ *
+ * `sortIndex` kommt aus dem Import und bildet die Reihenfolge des Dokuments ab —
+ * alphabetisch stünde „Das Dach" vor „Ebene 1", und das Cockpit läse sich
+ * rückwärts. Seiten ohne Index (von Hand angelegt) bleiben hinten und werden
+ * untereinander nach Titel sortiert, damit sich für sie nichts ändert.
+ */
+function compareReadingOrder(
+  a: { sortIndex: number | null; title: string },
+  b: { sortIndex: number | null; title: string },
+): number {
+  const left = a.sortIndex ?? Number.MAX_SAFE_INTEGER;
+  const right = b.sortIndex ?? Number.MAX_SAFE_INTEGER;
+  if (left !== right) return left - right;
+  return a.title.localeCompare(b.title, "de");
 }
 
 function slugifyTitle(title: string): string {
@@ -159,6 +191,7 @@ function toEntitySummary(page: Prisma.PageGetPayload<{ include: { campaign: true
     summary: parsed.summary,
     prepStatus: parsed.prepStatus,
     parentPageId: parsed.parentPageId,
+    sortIndex: parsed.sortIndex,
     tags: parsed.tags,
     aliases: parsed.aliases,
     createdAt: parsed.createdAt,
@@ -278,19 +311,18 @@ export class DungeonCockpitService {
     });
     if (!dungeon) return null;
 
-    const levels = await this.db.page.findMany({
-      where: {
-        worldId: world.id,
-        parentPageId: dungeon.id,
-        type: { in: DUNGEON_CHILD_TYPES },
-      },
+    const children = await this.db.page.findMany({
+      where: { worldId: world.id, parentPageId: dungeon.id },
       include: { campaign: true },
       orderBy: { title: "asc" },
     });
 
+    const summaries = children.map(toEntitySummary).sort(compareReadingOrder);
+
     return {
       dungeon: toEntitySummary(dungeon),
-      levels: levels.map(toEntitySummary),
+      levels: summaries.filter((page) => DUNGEON_CHILD_TYPES.includes(page.type)),
+      appendix: summaries.filter((page) => !DUNGEON_CHILD_TYPES.includes(page.type)),
       assets: dungeon.assetPageLinks.map((link) => link.asset),
       html: renderPageContentHtml(dungeon, wikiIndex),
     };
@@ -321,20 +353,19 @@ export class DungeonCockpitService {
     });
     if (!level) return null;
 
-    const rooms = await this.db.page.findMany({
-      where: {
-        worldId: world.id,
-        parentPageId: level.id,
-        type: DUNGEON_ROOM_TYPE,
-      },
+    const children = await this.db.page.findMany({
+      where: { worldId: world.id, parentPageId: level.id },
       include: { campaign: true },
       orderBy: { title: "asc" },
     });
 
+    const summaries = children.map(toEntitySummary).sort(compareReadingOrder);
+
     return {
       dungeon: toEntitySummary(dungeon),
       level: toEntitySummary(level),
-      rooms: rooms.map(toEntitySummary),
+      rooms: summaries.filter((page) => page.type === DUNGEON_ROOM_TYPE),
+      extras: summaries.filter((page) => page.type !== DUNGEON_ROOM_TYPE),
     };
   }
 

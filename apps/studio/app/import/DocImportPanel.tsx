@@ -1,8 +1,17 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import type { DocImportPreview, DocImportSourceFile, DocProfile } from "@uwe/doc-import";
-import { DOC_PROFILES, DOC_PROFILE_HINTS, DOC_PROFILE_LABELS } from "@uwe/doc-import";
+import {
+  describeStructure,
+  DOC_PROFILES,
+  DOC_PROFILE_HINTS,
+  DOC_PROFILE_LABELS,
+  type DocImportPreview,
+  type DocImportSourceFile,
+  type DocImportStructure,
+  type DocProfile,
+} from "@uwe/doc-import";
+import type { PageType } from "@uwe/database/enums";
 import { arrayBufferToBase64 } from "@/src/lib/file-base64";
 import {
   executeImportDocJobAction,
@@ -10,11 +19,10 @@ import {
   previewImportDocJobAction,
 } from "../import-doc-actions";
 import {
+  DEFAULT_DOC_IMPORT_SETTINGS,
   DOC_IMPORT_MODES,
   DOC_IMPORT_MODE_HINTS,
   DOC_IMPORT_MODE_LABELS,
-  MAX_DOC_IMPORT_DEPTH,
-  MIN_DOC_IMPORT_DEPTH,
   type DocImportSettings,
 } from "@/src/lib/doc-import-settings";
 import {
@@ -54,13 +62,11 @@ function isMarkdownLikeFile(file: File): boolean {
 
 export function DocImportPanel({ jobId, isObsidianSource, fileAccept, onComplete }: Props) {
   const [files, setFiles] = useState<DocImportSourceFile[]>([]);
-  const [settings, setSettings] = useState<DocImportSettings>({
-    mode: "wiki_pages",
-    profile: "plain",
-    maxDepth: 3,
-  });
+  const [settings, setSettings] = useState<DocImportSettings>(DEFAULT_DOC_IMPORT_SETTINGS);
   const [preview, setPreview] = useState<DocImportPreview | null>(null);
+  const [structure, setStructure] = useState<DocImportStructure | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  const [typeOverrides, setTypeOverrides] = useState<Record<string, PageType>>({});
   const [resultSummary, setResultSummary] = useState<Record<string, unknown> | null>(null);
   const [undoToken, setUndoToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -70,7 +76,9 @@ export function DocImportPanel({ jobId, isObsidianSource, fileAccept, onComplete
 
   const resetPreview = useCallback(() => {
     setPreview(null);
+    setStructure(null);
     setSelectedKeys(new Set());
+    setTypeOverrides({});
     setResultSummary(null);
     setUndoToken(null);
     setError(null);
@@ -146,7 +154,9 @@ export function DocImportPanel({ jobId, isObsidianSource, fileAccept, onComplete
     try {
       const response = await previewImportDocJobAction(jobId, files, settings);
       setPreview(response.preview);
+      setStructure(response.structure);
       setSelectedKeys(new Set(response.preview.items.map((item) => item.key)));
+      setTypeOverrides({});
       setResultSummary(null);
       setUndoToken(null);
     } catch (caught) {
@@ -163,7 +173,12 @@ export function DocImportPanel({ jobId, isObsidianSource, fileAccept, onComplete
     setError(null);
 
     try {
-      const response = await executeImportDocJobAction(jobId, files, [...selectedKeys]);
+      const response = await executeImportDocJobAction(
+        jobId,
+        files,
+        [...selectedKeys],
+        typeOverrides,
+      );
       setResultSummary(response.resultSummary);
       setUndoToken(response.undoToken);
       onComplete?.();
@@ -172,7 +187,17 @@ export function DocImportPanel({ jobId, isObsidianSource, fileAccept, onComplete
     } finally {
       setLoading(false);
     }
-  }, [files, jobId, onComplete, preview, selectedKeys]);
+  }, [files, jobId, onComplete, preview, selectedKeys, typeOverrides]);
+
+  /** `null` heißt „zurück auf die Vorbelegung" — der Eintrag verschwindet dann. */
+  const handleTypeChange = useCallback((key: string, type: PageType | null) => {
+    setTypeOverrides((current) => {
+      const next = { ...current };
+      if (type) next[key] = type;
+      else delete next[key];
+      return next;
+    });
+  }, []);
 
   const fileSummary = useMemo(() => {
     if (files.length === 0) return "Keine Datei ausgewählt";
@@ -260,22 +285,19 @@ export function DocImportPanel({ jobId, isObsidianSource, fileAccept, onComplete
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="doc-import-depth">
-                  Bis Überschriftenebene {settings.maxDepth} aufteilen
+                <Label htmlFor="doc-import-ai" className="flex items-center gap-2">
+                  <input
+                    id="doc-import-ai"
+                    type="checkbox"
+                    checked={settings.useAi}
+                    onChange={(event) => updateSettings({ useAi: event.target.checked })}
+                  />
+                  <span>Zuordnung von der lokalen KI verfeinern</span>
                 </Label>
-                <input
-                  id="doc-import-depth"
-                  type="range"
-                  min={MIN_DOC_IMPORT_DEPTH}
-                  max={MAX_DOC_IMPORT_DEPTH}
-                  value={settings.maxDepth}
-                  onChange={(event) =>
-                    updateSettings({ maxDepth: Number.parseInt(event.target.value, 10) })
-                  }
-                  className="w-full max-w-sm"
-                />
                 <p className="text-sm text-muted-foreground">
-                  Tiefere Überschriften bleiben als Text in der Seite darüber stehen.
+                  Regeln erkennen {"„EBENE 3“"} und {"„Begegnung: Die Genesenen“"} von selbst. Namen
+                  ohne Amtsbezeichnung — {"„Tibbik Moosfunke“"}, {"„Windhafen“"} — erkennt nur die KI. Läuft
+                  ausschließlich auf dem RTX-Host; ist er offline, entscheiden die Regeln.
                 </p>
               </div>
             </>
@@ -300,11 +322,15 @@ export function DocImportPanel({ jobId, isObsidianSource, fileAccept, onComplete
         ) : null}
       </div>
 
+      {structure ? <StructureSummary structure={structure} /> : null}
+
       {preview ? (
         <DocImportPreviewTree
           preview={preview}
           selectedKeys={selectedKeys}
           onSelectionChange={setSelectedKeys}
+          typeOverrides={typeOverrides}
+          onTypeChange={handleTypeChange}
           disabled={loading || resultSummary !== null}
         />
       ) : null}
@@ -317,5 +343,38 @@ export function DocImportPanel({ jobId, isObsidianSource, fileAccept, onComplete
         </Alert>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Was aus dem Dokument geworden ist, in einem Absatz.
+ *
+ * Die entscheidende Zahl ist nicht „56 Seiten", sondern „8 Ebenen, 23 Räume,
+ * 11 Werteblöcke" — daran sieht man auf einen Blick, ob der Import den Text
+ * verstanden hat oder nur zerschnitten.
+ */
+function StructureSummary({ structure }: { structure: DocImportStructure }) {
+  const summary = describeStructure(structure.byRole);
+  if (!summary) return null;
+
+  const details = [
+    structure.extracted > 0 ? `${structure.extracted} aus Fließtext herausgelöst` : null,
+    structure.folded > 0 ? `${structure.folded} Abschnitte in die Seite darüber gefaltet` : null,
+    structure.merged > 0 ? `${structure.merged} Doppelung zusammengeführt` : null,
+    structure.linked > 0 ? `${structure.linked} Namen im Text verlinkt` : null,
+  ].filter(Boolean);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Was daraus wird</CardTitle>
+        <CardDescription>{summary}</CardDescription>
+      </CardHeader>
+      {details.length > 0 ? (
+        <CardContent>
+          <p className="text-sm text-muted-foreground">{details.join(" · ")}</p>
+        </CardContent>
+      ) : null}
+    </Card>
   );
 }

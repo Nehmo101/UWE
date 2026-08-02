@@ -23,10 +23,12 @@ Bürgermeister von [[Ferlor]].
 const TURM = [
   "# DER MAGISTER-TURM",
   "Ein Dungeon.",
+  "# TEIL C — DER TURM",
   "## C.1 EBENE 1 — Eingangsring",
   "Ein Foyer.",
   "### C.1.1 Die Räume",
-  "Ein Kreisgang.",
+  "- **Der Ring:** Ein Kreisgang um den Hohlkern.",
+  "- **Die Wachstube:** Ein kaltes Kohlebecken.",
   "## C.2 EBENE 2 — Archiv",
   "Eine Bibliothek.",
 ].join("\n\n");
@@ -90,7 +92,6 @@ describe("writeDocImport", () => {
     const plan = buildDocImportPlan([{ fileName: "turm.md", content: TURM }], {
       mode: "document",
       profile: "dungeon",
-      maxDepth: 3,
     });
 
     const result = await writeDocImport(repo, plan.pages, plan.relations, {
@@ -98,18 +99,21 @@ describe("writeDocImport", () => {
       confirmed: true,
     });
 
-    assert.equal(result.created, 4);
+    // Vier Gliederungsseiten plus die abgelegte Originaldatei.
+    assert.equal(result.created, 6);
 
     const root = await repo.getPageBySlug("validori-doc", "der-magister-turm");
-    const level1 = await repo.getPageBySlug("validori-doc", "c-1-ebene-1-eingangsring");
-    const level2 = await repo.getPageBySlug("validori-doc", "c-2-ebene-2-archiv");
-    const room = await repo.getPageBySlug("validori-doc", "c-1-1-die-raeume");
+    const level1 = await repo.getPageBySlug("validori-doc", "ebene-1-eingangsring");
+    const level2 = await repo.getPageBySlug("validori-doc", "ebene-2-archiv");
+    const room = await repo.getPageBySlug("validori-doc", "der-ring");
 
     assert.ok(root && level1 && level2 && room);
     assert.equal(root.type, "dungeon");
     assert.equal(level1.type, "dungeon_level");
     assert.equal(room.type, "room");
 
+    // Die Gliederungsklammer „TEIL C" steht nicht zwischen Dungeon und Ebene —
+    // sonst fände das Dungeon-Cockpit die Ebenen nicht.
     assert.equal(level1.parentPageId, root.id);
     assert.equal(level2.parentPageId, root.id);
     assert.equal(room.parentPageId, level1.id);
@@ -146,10 +150,9 @@ describe("writeDocImport", () => {
     const plan = buildDocImportPlan([{ fileName: "turm.md", content: TURM }], {
       mode: "document",
       profile: "dungeon",
-      maxDepth: 3,
     });
 
-    const room = plan.pages.find((page) => page.title.includes("Die Räume"));
+    const room = plan.pages.find((page) => page.title === "Der Ring");
     assert.ok(room);
 
     const result = await writeDocImport(repo, plan.pages, plan.relations, {
@@ -163,6 +166,29 @@ describe("writeDocImport", () => {
 
     const written = await repo.getPageBySlug("auswahl", room.slug);
     assert.equal(written?.parentPageId, null);
+  });
+
+  it("übernimmt eine von Hand korrigierte Typ-Zuordnung", async () => {
+    const repo = createUweRepository(databaseUrl);
+    await repo.createWorld({ name: "Korrektur", slug: "korrektur" });
+
+    const plan = buildDocImportPlan([{ fileName: "turm.md", content: TURM }], {
+      mode: "document",
+      profile: "dungeon",
+    });
+
+    const ring = plan.pages.find((page) => page.title === "Der Ring");
+    assert.ok(ring);
+    assert.equal(ring.type, "room");
+
+    await writeDocImport(repo, plan.pages, plan.relations, {
+      worldSlug: "korrektur",
+      confirmed: true,
+      typeOverrides: { [ring.key]: "npc" },
+    });
+
+    const written = await repo.getPageBySlug("korrektur", "der-ring");
+    assert.equal(written?.type, "npc");
   });
 
   it("refuses to write without confirmation", async () => {

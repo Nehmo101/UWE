@@ -2,14 +2,30 @@
 
 import { useCallback, useMemo } from "react";
 import type { DocImportItem, DocImportPreview } from "@uwe/doc-import";
+import type { PageType } from "@uwe/database/enums";
+import { PAGE_TYPE_LABELS } from "@uwe/shared-ui";
 import { Alert, Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
 
 interface Props {
   preview: DocImportPreview;
   selectedKeys: Set<string>;
   onSelectionChange: (keys: Set<string>) => void;
+  /** Von Hand korrigierte Seitentypen, nach Entwurfs-Schlüssel. */
+  typeOverrides: Record<string, PageType>;
+  onTypeChange: (key: string, type: PageType | null) => void;
   disabled?: boolean;
 }
+
+/**
+ * Die Typen zur Auswahl, in der Reihenfolge, in der man sie sucht.
+ *
+ * Die Zuordnung des Imports ist eine Vorbelegung, keine Wahrheit. Ohne diese
+ * Auswahl hieße eine danebenliegende Rolle: nach dem Import 63 Seiten einzeln
+ * nachbessern — also genau die Arbeit, die der Import abnehmen soll.
+ */
+const TYPE_OPTIONS = (Object.keys(PAGE_TYPE_LABELS) as PageType[]).sort((a, b) =>
+  PAGE_TYPE_LABELS[a].localeCompare(PAGE_TYPE_LABELS[b], "de"),
+);
 
 const STATUS_LABEL: Record<DocImportItem["status"], string> = {
   new: "neu",
@@ -47,6 +63,8 @@ export function DocImportPreviewTree({
   preview,
   selectedKeys,
   onSelectionChange,
+  typeOverrides,
+  onTypeChange,
   disabled,
 }: Props) {
   const toggle = useCallback(
@@ -79,6 +97,8 @@ export function DocImportPreviewTree({
     [onSelectionChange, preview.items],
   );
 
+  const retyped = Object.keys(typeOverrides).length;
+
   const counts = useMemo(
     () =>
       [
@@ -95,7 +115,10 @@ export function DocImportPreviewTree({
     <Card>
       <CardHeader>
         <CardTitle>Vorschau — {preview.items.length} Seite(n)</CardTitle>
-        <p className="text-sm text-muted-foreground">{counts}</p>
+        <p className="text-sm text-muted-foreground">
+          {counts}
+          {retyped > 0 ? ` · ${retyped} Typ(en) von Hand geändert` : ""}
+        </p>
       </CardHeader>
       <CardContent className="space-y-3">
         {preview.warnings.map((warning) => (
@@ -140,7 +163,23 @@ export function DocImportPreviewTree({
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="truncate font-medium">{item.title}</span>
-                  <Badge>{item.type}</Badge>
+                  <select
+                    className="rounded border border-border bg-background px-1 py-0.5 text-xs"
+                    value={typeOverrides[item.key] ?? item.type}
+                    disabled={disabled}
+                    aria-label={`Typ von ${item.title}`}
+                    onChange={(event) => {
+                      const next = event.target.value as PageType;
+                      onTypeChange(item.key, next === item.type ? null : next);
+                    }}
+                  >
+                    {TYPE_OPTIONS.map((type) => (
+                      <option key={type} value={type}>
+                        {PAGE_TYPE_LABELS[type]}
+                      </option>
+                    ))}
+                  </select>
+                  {typeOverrides[item.key] ? <Badge variant="info">geändert</Badge> : null}
                   {item.canonicalStatus ? <Badge>{item.canonicalStatus}</Badge> : null}
                   {item.status !== "new" ? (
                     <Badge variant={STATUS_VARIANT[item.status]}>{STATUS_LABEL[item.status]}</Badge>

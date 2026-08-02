@@ -50,6 +50,15 @@ export function worldNav(worldSlug: string): NavGroup[] {
           "create",
           "seite",
         ]),
+        item("world-read", "Lesen / Bände", `${base}/lesen`, "book-marked", "Wiki", [
+          "lesen",
+          "band",
+          "bände",
+          "kampagne",
+          "am stück",
+          "durchlesen",
+          "vorbereiten",
+        ]),
         item("world-graph", "Verbindungen / Graph", `${base}/graph`, "share-2", "Wiki", [
           "graph",
           "verbindungen",

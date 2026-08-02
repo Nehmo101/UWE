@@ -21,7 +21,7 @@
  * ausdrücklich als Beziehung hingeschrieben hat, wird eine Kante.
  */
 
-import type { Prisma, UweRepository } from "@uwe/database/server";
+import type { PageType, Prisma, UweRepository } from "@uwe/database/server";
 import { normalizeLookupKey, pickUniqueSlug } from "@uwe/shared-utils/slug";
 import type { PageDraft, RelationDraft } from "./types";
 
@@ -31,6 +31,15 @@ export interface WriteDocImportOptions {
   confirmed: boolean;
   /** Nur diese Entwurfs-Schlüssel schreiben. Ohne Angabe: alle. */
   keys?: string[];
+  /**
+   * Von Hand korrigierte Seitentypen, nach Entwurfs-Schlüssel.
+   *
+   * Die Zuordnung des Imports ist eine gute Vorbelegung, keine Wahrheit — wer
+   * in der Vorschau sieht, dass „Die Stillzelle — Arathion" eine Person ist und
+   * kein Hintergrundtext, soll das dort sagen können und nicht hinterher 63
+   * Seiten einzeln nachbessern müssen.
+   */
+  typeOverrides?: Record<string, PageType>;
 }
 
 export interface WrittenPage {
@@ -139,7 +148,7 @@ export async function writeDocImport(
         sortIndex: draft.sortIndex,
         title: draft.title,
         slug,
-        type: draft.type,
+        type: options.typeOverrides?.[draft.key] ?? draft.type,
         summary: draft.summary,
         canonicalStatus: draft.canonicalStatus ?? undefined,
         tags: draft.tags,

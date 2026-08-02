@@ -86,16 +86,24 @@ export interface ResolveNodeTypeContext {
 /**
  * Bestimmt den Seitentyp eines Knotens.
  *
- * Reihenfolge: ausdrückliche Angabe → Wurzelregel → Titelmuster → Profil-Vorgabe.
+ * Reihenfolge: ausdrückliche Angabe → Rolle aus dem semantischen Umbau →
+ * Wurzelregel → Titelmuster → Profil-Vorgabe.
+ *
+ * Der `typeHint` steht so weit vorn, weil er aus mehr Wissen kommt als ein
+ * Titelmuster: Er kennt die Stellung des Abschnitts im Dokument (Eintrag einer
+ * Werteblockliste, Raum unter einer Ebene) und, wenn der RTX-Host antwortet,
+ * das Urteil der lokalen KI.
  */
 export function resolveNodePageType(
-  node: Pick<DocumentNode, "title">,
+  node: Pick<DocumentNode, "title"> & Partial<Pick<DocumentNode, "typeHint">>,
   ctx: ResolveNodeTypeContext,
 ): PageType {
   if (ctx.declaredType) {
     const declared = resolvePageTypeLabel(ctx.declaredType);
     if (declared) return declared;
   }
+
+  if (node.typeHint) return node.typeHint;
 
   if (ctx.isRoot && ctx.profile === "dungeon") return "dungeon";
 

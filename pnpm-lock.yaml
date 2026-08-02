@@ -1016,6 +1016,9 @@ importers:
 
   packages/doc-import:
     dependencies:
+      '@uwe/ai-brain':
+        specifier: workspace:*
+        version: link:../ai-brain
       '@uwe/database':
         specifier: workspace:*
         version: link:../database
