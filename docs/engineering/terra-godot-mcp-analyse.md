@@ -347,17 +347,29 @@ headless Godot-Binärdatei. Konsequenzen für dieses Repo:
 Dieses Repo hat einen Engine-Wechsel **bereits durchgeführt** und ihn auf
 1.065 Zeilen protokolliert (`terra-runde-j-atlas-abbau.md`, erledigt am
 27.07.2026, Migration `20260727150000_drop_atlas3d`). Zwei Befunde daraus
-gelten unverändert für jedes künftige Vorhaben dieser Art:
+sind für jedes künftige Vorhaben dieser Art einschlägig — der erste mit einer
+Entwarnung, die man nur durch Nachsehen bekommt:
 
 1. **`packages/backup` sichert nur namentlich gelistete Modelle.**
-   `BackupData` zählt 22 Sektionen auf, `collect.ts` ruft hartkodierte
+   `BackupData` zählte damals 22 Sektionen auf, `collect.ts` ruft hartkodierte
    `db.<model>.findMany()`. Kein DMMF-Durchlauf. Die Atlas-Modelle fielen
    heraus, und **es fiel niemandem auf**, weil der einzige
    Vollständigkeitstest (`brain-export.test.ts`) nur die Brain-DB bewacht.
-   Prüffrage für heute: **Ist `TerraKarte` im Backup?** Falls nicht, hängt der
-   Erhalt aller Karten am rohen Dateisnapshot
-   (`deploy/scripts/uwe-backup.sh`) — und das müsste *vor* jeder Umstellung
-   geklärt sein, nicht danach.
+   **Für Terra ist die Lehre gezogen worden — nachgeprüft, Entwarnung.**
+   `TerraKarte` ist vollständig erfasst: `collect.ts:566`
+   (`db.terraKarte.findMany()`), `types.ts:265` (`BackupTerraKarteRecord`),
+   `:551` in `BackupData`, `:19` in den Manifest-Stats, Rückweg in
+   `restore.ts:654,663`, und Tests in `backup.test.ts:293,294,371` —
+   einschließlich eines Spieler-Entwurfs. Der Kopfkommentar `types.ts:259-263`
+   nennt den Grund beim Namen:
+
+   > Diese Sektion existiert, weil der Vorgänger sie NIE hatte: `packages/backup`
+   > kannte kein einziges seiner sechs Modelle […] und niemandem fiel es auf
+   > […]. Sein Löschen war dadurch unumkehrbar. Terra soll denselben Fehler
+   > nicht wiederholen.
+
+   Das Protokoll von damals hat also gewirkt. Für ein künftiges Vorhaben bleibt
+   die Prüffrage trotzdem stehen — sie ist nur diesmal schon beantwortet.
 2. **Schema-Drift SQLite ↔ PostgreSQL** wurde beim Atlas-Abbau erst spät
    entdeckt. Die Terra-Migrationen existieren in beiden Zweigen (siehe § 2.4)
    — das ist diesmal in Ordnung, sollte aber bei jedem Modell-Eingriff erneut
@@ -474,9 +486,9 @@ keine Werkzeuge, keine Persistenz — die ist ohnehin schon fertig und
 engine-unabhängig. Wenn dieser Spike nicht in zwei Wochen steht, ist die
 Vollmigration mit Sicherheit kein Quartalsvorhaben.
 
-**Vor dem Spike zu klären** (aus § 6): Ist `TerraKarte` in
-`packages/backup/src/collect.ts` erfasst? Falls nein, ist das unabhängig von
-Godot ein Fehler, der zuerst behoben gehört.
+Eine Vorbedingung, die man erwarten würde, entfällt: `TerraKarte` ist im
+Backup erfasst (§ 6, nachgeprüft). Die Karten hängen nicht am rohen
+Dateisnapshot.
 
 ### Schritt 3 — MCP getrennt entscheiden
 
@@ -489,17 +501,19 @@ Bauen.
 
 ## 10. Was sonst noch auffiel (unabhängig von Godot)
 
-Drei Kleinigkeiten, die bei der Bestandsaufnahme sichtbar wurden und für sich
+Zwei Kleinigkeiten, die bei der Bestandsaufnahme sichtbar wurden und für sich
 stehen:
 
 1. **`terra/README.md:3-5` ist veraltet** — behauptet CDN-Bezug von jsDelivr,
    tatsächlich ist Three seit dem 27.07.2026 vendored (§ 2.1). Für ein
    selbstgehostetes System ist die Aussage „hängt am CDN" das falsche Signal.
-2. **Backup-Abdeckung von `TerraKarte` ist ungeprüft** (§ 6). Der Atlas-Fall
-   zeigt, dass so etwas jahrelang unbemerkt bleibt.
-3. **Die 3–4-fps-Frage steht seit der Einzeldatei-Zeit offen** und blockiert
-   laut README ausdrücklich weitere GPU-Arbeit. Sie ist in einer Stunde zu
-   beantworten und blockiert derzeit mehr, als sie kostet.
+2. **Die 3–4-fps-Frage steht seit der Einzeldatei-Zeit offen** und blockiert
+   laut README ausdrücklich weitere GPU-Arbeit. Sie ist geführt als **Punkt
+   C10** in `terra-bearbeitungsplan.md:25` (seit Runde C, 26.07.2026) und dort
+   in Zeile 126 ausdrücklich zur Vorbedingung für H1 erklärt: „auf einem
+   Software-Rasterizer bringt Kachelung wenig, LOD dagegen viel". Sie blockiert
+   damit bereits geplante Terra-Arbeit — unabhängig von jeder Godot-Frage — und
+   ist in einer Stunde zu beantworten.
 
 ---
 
@@ -525,6 +539,8 @@ stehen:
 | Tests in drei CI-Skripten | `package.json:23,24,32,58` |
 | MCP: HTTP-Clients, kein DB-Zugriff | `packages/mcp/src/servers.ts:1-9`, `packages/mcp/package.json` |
 | Backup listet 22 Modelle namentlich | `docs/engineering/terra-runde-j-atlas-abbau.md` (Vorabbefund 1) |
+| `TerraKarte` **ist** gesichert | `packages/backup/src/collect.ts:566`, `types.ts:259-265,551`, `restore.ts:654`, `backup.test.ts:293,371` |
+| C10 seit Runde C offen, gatet H1 | `docs/engineering/terra-bearbeitungsplan.md:25,126` |
 | Atlas-Abbau durchgeführt | Migration `20260727150000_drop_atlas3d` |
 | Offene Performance-Frage | `terra/README.md:120-124` |
 | `terra/` außerhalb des Größen-Wächters | `scripts/file-size-budget-check.mjs:32` (`SCAN_DIRS`) |
