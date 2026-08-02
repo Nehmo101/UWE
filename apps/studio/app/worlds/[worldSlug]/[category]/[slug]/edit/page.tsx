@@ -26,7 +26,7 @@ import {
   deleteContentBlockAction,
 } from "../../../../../actions";
 import { pagePreviewHref } from "@/src/lib/page-preview";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { worldWikiPath } from "@/src/lib/world-last-route";
 import { CampaignSidebar } from "@/src/components/wiki";
 import { PageLinksPanel } from "@/components/wiki/PageLinksPanel";
@@ -92,29 +92,24 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
   }));
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldDetailBreadcrumb(
-            world.name,
-            worldSlug,
-            page.title,
-            pageHref,
-            "Bearbeiten",
-          )}
-        />
-      }
-      contextPanel={
+    <>
+      <ShellBreadcrumb
+        items={worldDetailBreadcrumb(
+          world.name,
+          worldSlug,
+          page.title,
+          pageHref,
+          "Bearbeiten",
+        )}
+      />
+      <ShellContextPanel>
         <CampaignSidebar
           items={[
             { label: "← Seitenansicht", href: pageHref, active: true },
             { label: "Seitenliste", href: worldWikiPath(worldSlug) },
           ]}
         />
-      }
-    >
+      </ShellContextPanel>
       <PageHeader
         title={page.title}
         summary="Seite bearbeiten"
@@ -415,6 +410,6 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
           formId="world-page-edit-form"
         />
       </div>
-    </WorldShell>
+    </>
   );
 }

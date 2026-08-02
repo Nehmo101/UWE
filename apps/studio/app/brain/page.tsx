@@ -6,7 +6,7 @@ import {
   getAppRepository,
 } from "@uwe/database/server";
 import { ResponsiveTable } from "@uwe/shared-ui";
-import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import {
   buttonVariants,
   Card,
@@ -37,9 +37,8 @@ export default async function BrainOverviewPage() {
   await db.$disconnect();
 
   return (
-    <StudioShell
-      breadcrumb={<BreadcrumbTrail items={[{ label: "Brain Knowledge Store" }]} />}
-    >
+    <>
+      <ShellBreadcrumb items={[{ label: "Brain Knowledge Store" }]} />
       <PageHeader
         title="Brain Knowledge Store"
         summary="Dauerhaftes DnD-Welt- und Kampagnenwissen — getrennt vom privaten Life-Brain unter /life-brain."
@@ -121,6 +120,6 @@ export default async function BrainOverviewPage() {
           ))}
         </div>
       )}
-    </StudioShell>
+    </>
   );
 }

@@ -8,7 +8,7 @@ import {
   IMAGE_STUDIO_STATUS_LABELS,
   prisma,
 } from "@uwe/database/server";
-import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { ImageStudioProjectReview } from "@/components/ImageStudioProjectReview";
 import { ImageStudioBulkDownload } from "@/components/ImageStudioBulkDownload";
 import { ImageStudioStatusBadge } from "@/components/ImageStudioStatusBadge";
@@ -72,16 +72,13 @@ export default async function ImageStudioProjectPage({ params, searchParams }: P
   ];
 
   return (
-    <StudioShell
-      breadcrumb={
-        <BreadcrumbTrail
-          items={[
-            { label: "Image Studio", href: "/image-studio" },
-            { label: project.title },
-          ]}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb
+        items={[
+          { label: "Image Studio", href: "/image-studio" },
+          { label: project.title },
+        ]}
+      />
       <PageHeader
         title={project.title}
         summary="Versionen prüfen, Entwurf speichern, Asset übernehmen oder im Canvas bearbeiten."
@@ -185,6 +182,6 @@ export default async function ImageStudioProjectPage({ params, searchParams }: P
           }))}
         />
       </div>
-    </StudioShell>
+    </>
   );
 }

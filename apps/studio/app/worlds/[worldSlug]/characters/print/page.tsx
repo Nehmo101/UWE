@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { buildPageUrl, createCharacterService, getAppRepository, prisma } from "@uwe/database/server";
 import { CharacterPrintFormatPicker } from "@/src/components/characters/CharacterPrintFormatPicker";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { ShellBreadcrumb, PageHeader } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { requireStudioWorldRead } from "@/src/lib/authz";
 import { buttonVariants, EmptyState } from "@/src/components/ui";
@@ -27,25 +27,22 @@ export default async function CharacterPrintPage({ params, searchParams }: Props
     notFound();
   }
 
-  const shellProps = {
-    worldSlug,
-    worldName: world.name,
-    breadcrumb: (
-      <BreadcrumbTrail
-        items={worldSectionBreadcrumb(
-          world.name,
-          worldSlug,
-          "Charakterbogen drucken",
-          `/worlds/${worldSlug}/characters/print`,
-        )}
-      />
-    ),
-  };
+  const breadcrumb = (
+    <ShellBreadcrumb
+      items={worldSectionBreadcrumb(
+        world.name,
+        worldSlug,
+        "Charakterbogen drucken",
+        `/worlds/${worldSlug}/characters/print`,
+      )}
+    />
+  );
 
   if (!characterId) {
     const characters = await createCharacterService(prisma).listForWorld(world.id);
     return (
-      <WorldShell {...shellProps}>
+      <>
+        {breadcrumb}
         <PageHeader
           title="Charakterbogen drucken"
           summary="Wähle einen Charakter für Druckansicht oder Markdown-Export."
@@ -85,17 +82,18 @@ export default async function CharacterPrintPage({ params, searchParams }: Props
             ))}
           </ul>
         )}
-      </WorldShell>
+      </>
     );
   }
 
   return (
-    <WorldShell {...shellProps}>
+    <>
+      {breadcrumb}
       <CharacterPrintFormatPicker
         worldSlug={worldSlug}
         characterId={characterId}
         worldName={world.name}
       />
-    </WorldShell>
+    </>
   );
 }

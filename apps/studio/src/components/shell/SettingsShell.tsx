@@ -20,7 +20,7 @@ export interface SettingsShellProps {
 }
 
 /**
- * Content-level settings layout (rendered inside StudioShell/SystemShell):
+ * Content-level settings layout (rendered inside the app shell):
  * a left tab list plus the active settings panel. Keeps a constant reading
  * width and stable sub-navigation. Without tabs it is a plain reading column.
  */

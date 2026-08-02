@@ -9,7 +9,7 @@ Stand: Juni 2026. Dieses Dokument beschreibt die getrennte Informationsarchitekt
 | **UWE Portal** | `apps/portal` | Spieler, Besucher, eingeloggte Nutzer | Lesen, finden, nutzen — keine Adminfunktionen |
 | **UWE Studio** | `apps/studio` | DM, Creator, Owner, Admin | Erstellen, verwalten, einrichten, diagnostizieren |
 
-Portal und Studio haben **eigene Navigationen**. Gemeinsame UI-Bausteine leben in `@uwe/shared-ui` (`AppShell`, `PortalShell`, `StudioShell`, `NavSidebarSections`, `SectionHeader`, `Breadcrumb`).
+Portal und Studio haben **eigene Navigationen** und je einen eigenen Shell unter `apps/<app>/src/components/shell/`. Gemeinsam sind nur der framework-agnostische Navigationsvertrag (`@uwe/shared-utils/navigation`) und die Blätter aus `@uwe/shared-ui` (Suche, Bottom-Nav, Theme-Umschalter).
 
 ---
 
@@ -137,10 +137,9 @@ Studio enthält alle Schreib-, Admin- und Setup-Funktionen. Player-Preview (`?pr
 |------------|-----|-------|
 | `portal-navigation.ts` | `apps/portal/src/lib/` | IA-Konfiguration Portal |
 | `PortalAppShell` | `apps/portal/src/components/` | Einheitliche Portal-Shell |
-| `studio-navigation.ts` | `apps/studio/src/lib/` | IA-Konfiguration Studio |
-| `StudioAppShell` | `apps/studio/components/` | Einheitliche Studio-Shell |
-| `NavSidebarSections` | `packages/shared-ui` | Gruppierte Sidebar |
-| `SectionHeader` | `packages/shared-ui` | Breadcrumb + PageHeader + Back |
+| `navigation/*.ts` | `apps/studio/src/` | IA-Konfiguration Studio (Studio- und Welt-Nav) |
+| `AppShell` | `apps/studio/src/components/shell/` | Der Studio-Shell, montiert im Root-Layout |
+| `ShellProvider` | `apps/studio/src/components/shell/` | Welt-Kontext + Slots für Brotkrumen/Kontextspalte |
 
 ### Portal-Layouts
 
@@ -169,8 +168,8 @@ app/auth/
 |-------|-----------|---------|
 | `/worlds/[slug]/pages/new` — `createPageAction` | Erledigt | `apps/studio/app/actions.ts` hat `"use server"`; Regression-Test in `studio-navigation.test.ts` |
 | Landing `/` vs. Dashboard `/studio` | Mittel | Zwei Einstiege bewusst (Marketing vs. Arbeitsbereich) |
-| Weltseiten: sectionierte Studio-Nav | Erledigt | `WorldModuleShell` nutzt `studioSidebarSections` + Icon-Rail (PR 2) |
-| Legacy Studio `AppShell`-Seiten | Erledigt | Module/Admin auf `AdminModuleShell` / `StudioAppShell` (PR 2–3) |
+| Weltseiten: sectionierte Studio-Nav | Erledigt | Ein Shell, Welt-Block über globalem Block ([studio-shell.md](studio-shell.md)) |
+| Zwei getrennte Studio-Shells | Erledigt | Zusammengeführt ins Root-Layout; Welt als Context + Cookie |
 | Portal-Gast-Wiki auf `PortalGuestShell` | Erledigt | `/worlds/*`, `/share/*` (PR 4) |
 | Command Palette an `studio-navigation.ts` | Erledigt | `studioCommandPaletteCommands()` in PR 1 |
 | Cloudflare/Hosting ohne dedizierte Route | Niedrig | Verteilt auf `/admin`, `/hardware`, `/settings` |
@@ -180,23 +179,26 @@ app/auth/
 ### Empfohlene nächste UX-Verbesserungen
 
 1. Studio-Dashboard (`/studio`): Widget-Grid statt loser Kacheln (Mockup-Richtung)
-2. `StudioAppShell variant="world"` mit `WorldModuleShell` zusammenführen (optional)
+2. ~~Welt- und Studio-Shell zusammenführen~~ — erledigt, siehe [studio-shell.md](studio-shell.md)
 3. Mobile Overlap-Audit auf tiefen Dungeon-/Editor-Routen
 4. Einheitliche Empty States / Stat-Cards auf verbleibenden Legacy-Inhalten
 5. `global-nav.ts` entfernen, wenn nirgends mehr referenziert
 
 ---
 
-## G) Shell-Komponenten (Stand Juni 2026)
+## G) Shell-Komponenten (Stand August 2026)
+
+**Studio hat genau einen Shell**, montiert im Root-Layout. Die frühere
+Aufteilung in einen welt-losen und einen Welt-Rahmen (`StudioShell`,
+`SystemShell`, `WorldShell`, `ModuleShell`) ist aufgelöst: die Welt ist Zustand
+mit Cookie, kein Rahmenwechsel, und keine Route rendert noch eigene Navigation.
+Details, Cookie-Vertrag und Slot-Melder: [studio-shell.md](studio-shell.md).
 
 | Komponente | App | Verwendung |
 |------------|-----|------------|
-| `StudioAppShell` | Studio | Dashboard, Module, Admin-Variante |
-| `AdminModuleShell` | Studio | Daily Admin OS, Inhalte, Admin-Unterseiten |
-| `WorldModuleShell` | Studio | Alle `/worlds/[slug]/**` Routen |
-| `PortalAppShell` | Portal | Authentifizierter Spieler-Hub (`/auth/**`) |
+| `AppShell` (+ `ShellProvider`) | Studio | Alle Routen außer Landing/Auth/Wartung |
+| `PortalShell` | Portal | Authentifizierter Spieler-Hub (`/auth/**`) |
 | `PortalGuestShell` | Portal | Öffentliches Wiki, Share-Links (`/worlds/*`, `/share/*`) |
-| Raw `AppShell` | — | Nur Auth/Landing — nicht für Feature-Seiten |
 
 ---
 

@@ -9,7 +9,7 @@ import {
   normalizeLabel,
   renderLabelHtml,
 } from "@uwe/database/server";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { buttonVariants, Card, CardContent } from "@/src/components/ui";
 
@@ -56,22 +56,18 @@ export default async function StudioLabelPreviewPage({ params, searchParams }: P
   );
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldDetailBreadcrumb(
-            world.name,
-            worldSlug,
-            "Labels",
-            `/worlds/${worldSlug}/labels`,
-            label.title,
-            `/worlds/${worldSlug}/labels/${labelId}`,
-          ).concat({ label: "Vorschau" })}
-        />
-      }
-      contextPanel={
+    <>
+      <ShellBreadcrumb
+        items={worldDetailBreadcrumb(
+          world.name,
+          worldSlug,
+          "Labels",
+          `/worlds/${worldSlug}/labels`,
+          label.title,
+          `/worlds/${worldSlug}/labels/${labelId}`,
+        ).concat({ label: "Vorschau" })}
+      />
+      <ShellContextPanel>
         <SidebarSection title="Export">
           <ul className="flex flex-col gap-2 text-sm">
             <li>
@@ -86,8 +82,7 @@ export default async function StudioLabelPreviewPage({ params, searchParams }: P
             </li>
           </ul>
         </SidebarSection>
-      }
-    >
+      </ShellContextPanel>
       <PageHeader
         title="Druckvorschau"
         summary="6×4 Zoll — Browser-Druck oder Export als PDF/HTML."
@@ -125,6 +120,6 @@ export default async function StudioLabelPreviewPage({ params, searchParams }: P
           </CardContent>
         </Card>
       </div>
-    </WorldShell>
+    </>
   );
 }

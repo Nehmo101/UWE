@@ -8,7 +8,7 @@ import {
 import { resolveUweAppUrls } from "@uwe/auth";
 import { getAdminDashboardStatus } from "@uwe/host-cockpit";
 import { ADMIN_HUB_SECTIONS } from "@/src/navigation/system-nav";
-import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { Alert, buttonVariants, Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
 
 export default async function AdminOverviewPage() {
@@ -23,13 +23,8 @@ export default async function AdminOverviewPage() {
   );
 
   return (
-    <SystemShell
-      breadcrumb={
-        <BreadcrumbTrail
-          items={[{ label: "Admin" }]}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb items={[{ label: "Admin" }]} />
       <PageHeader
         title="Admin-Übersicht"
         summary="Systemstatus, Cloudflare/Proxy, Auth, Backup und schnelle Aktionen — ohne Secrets."
@@ -117,6 +112,6 @@ export default async function AdminOverviewPage() {
           </p>
         </section>
       </div>
-    </SystemShell>
+    </>
   );
 }

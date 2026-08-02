@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import { buildPageUrl, getAppRepository, type PageType } from "@uwe/database/server";
 
-import { BreadcrumbTrail, PageHeader, WorldShell } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { Card, CardContent } from "@/src/components/ui";
 import { buildVolumeReaderView } from "@/src/lib/volume-reader";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
@@ -46,18 +46,14 @@ export default async function StudioVolumeReaderPage({ params }: Props) {
   const minutes = Math.max(1, Math.round(volume.characters / CHARACTERS_PER_MINUTE));
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={[
-            ...worldSectionBreadcrumb(world.name, worldSlug, "Lesen", `/worlds/${worldSlug}/lesen`),
-            { label: volume.root.title },
-          ]}
-        />
-      }
-      contextPanel={
+    <>
+      <ShellBreadcrumb
+        items={[
+          ...worldSectionBreadcrumb(world.name, worldSlug, "Lesen", `/worlds/${worldSlug}/lesen`),
+          { label: volume.root.title },
+        ]}
+      />
+      <ShellContextPanel>
         <nav aria-label="Inhalt" className="flex flex-col gap-1 text-sm">
           <span className="mb-1 font-semibold">Inhalt</span>
           {toc.map((entry) => (
@@ -71,8 +67,7 @@ export default async function StudioVolumeReaderPage({ params }: Props) {
             </a>
           ))}
         </nav>
-      }
-    >
+      </ShellContextPanel>
       <PageHeader
         title={volume.root.title}
         summary={`${volume.sections.length} Abschnitte · ${volume.filled} mit Text · etwa ${minutes} Minuten Lesezeit`}
@@ -143,6 +138,6 @@ export default async function StudioVolumeReaderPage({ params }: Props) {
           </CardContent>
         </Card>
       ) : null}
-    </WorldShell>
+    </>
   );
 }

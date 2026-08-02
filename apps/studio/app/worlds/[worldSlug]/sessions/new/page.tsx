@@ -7,7 +7,7 @@ import {
   GameSessionStatusEnum,
   getAppRepository,
 } from "@uwe/database/server";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { createGameSessionAction } from "../../../../session-actions";
 import { Button, buttonVariants, Input, Label, Textarea } from "@/src/components/ui";
@@ -28,21 +28,16 @@ export default async function StudioNewSessionPage({ params, searchParams }: Pro
   const campaigns = await repo.listCampaignsByWorld(worldSlug);
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldDetailBreadcrumb(
-            world.name,
-            worldSlug,
-            "Sessions",
-            `/worlds/${worldSlug}/sessions`,
-            "Neu",
-          )}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb
+        items={worldDetailBreadcrumb(
+          world.name,
+          worldSlug,
+          "Sessions",
+          `/worlds/${worldSlug}/sessions`,
+          "Neu",
+        )}
+      />
       <PageHeader
         title="Neue Session"
         summary="Schnellanlage mit Titel, Kampagne und Datum — weitere Felder optional."
@@ -149,6 +144,6 @@ export default async function StudioNewSessionPage({ params, searchParams }: Pro
           </Link>
         </div>
       </form>
-    </WorldShell>
+    </>
   );
 }

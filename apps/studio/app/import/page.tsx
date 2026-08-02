@@ -7,7 +7,7 @@ import {
   prisma,
 } from "@uwe/database/server";
 import { importSourceRegistry } from "@uwe/knoteforge-import";
-import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { requireStudioAccess } from "@/src/lib/auth";
 import {
   ImportCentralWorkspace,
@@ -66,9 +66,9 @@ export default async function ImportCentralPage() {
   const plannedFormats = importSourceRegistry.plannedFormats();
 
   return (
-    <StudioShell
-      breadcrumb={<BreadcrumbTrail items={[{ label: "Import-Zentrale" }]} />}
-      contextPanel={
+    <>
+      <ShellBreadcrumb items={[{ label: "Import-Zentrale" }]} />
+      <ShellContextPanel>
         <SidebarSection title="Hinweise">
           <ul className="flex list-disc flex-col gap-1 pl-4 text-sm text-muted-foreground">
             <li>
@@ -87,8 +87,7 @@ export default async function ImportCentralPage() {
             </li>
           </ul>
         </SidebarSection>
-      }
-    >
+      </ShellContextPanel>
       <PageHeader
         title="Import-Zentrale"
         summary="Zentraler Einstieg für Importe in Welten, Life Brain, Capture, DnD-Seiten und Kampagnen — mit Job-Verlauf, Vorschau und Status."
@@ -99,6 +98,6 @@ export default async function ImportCentralPage() {
         supportedFormats={supportedFormats}
         plannedFormats={plannedFormats}
       />
-    </StudioShell>
+    </>
   );
 }

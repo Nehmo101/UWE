@@ -23,7 +23,7 @@ import {
   linkAssetToDungeonPageAction,
   updateRoomContentAction,
 } from "../../../../../../../../dungeon-actions";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { CampaignSidebar } from "@/src/components/wiki";
 import { dungeonBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import {
@@ -104,37 +104,30 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
     .map((section) => section.title);
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={dungeonBreadcrumb(world.name, worldSlug, [
+    <>
+      <ShellBreadcrumb
+        items={dungeonBreadcrumb(world.name, worldSlug, [
+          { label: cockpit.dungeon.title, href: dungeonHref },
+          { label: cockpit.level.title, href: levelHref },
+          { label: cockpit.room.title },
+        ])}
+      />
+      <ShellContextPanel>
+        <CampaignSidebar
+          items={[
             { label: cockpit.dungeon.title, href: dungeonHref },
             { label: cockpit.level.title, href: levelHref },
-            { label: cockpit.room.title },
-          ])}
+          ]}
         />
-      }
-      contextPanel={
-        <>
-          <CampaignSidebar
-            items={[
-              { label: cockpit.dungeon.title, href: dungeonHref },
-              { label: cockpit.level.title, href: levelHref },
-            ]}
-          />
-          <AiContextPanel
-            kind="dungeon_room"
-            worldSlug={worldSlug}
-            pageSlug={roomSlug}
-            dungeonSlug={dungeonSlug}
-            levelSlug={levelSlug}
-            roomSlug={roomSlug}
-          />
-        </>
-      }
-    >
+        <AiContextPanel
+          kind="dungeon_room"
+          worldSlug={worldSlug}
+          pageSlug={roomSlug}
+          dungeonSlug={dungeonSlug}
+          levelSlug={levelSlug}
+          roomSlug={roomSlug}
+        />
+      </ShellContextPanel>
       <PageHeader
         title={cockpit.room.title}
         summary={`${cockpit.level.title} · ${cockpit.dungeon.title}`}
@@ -375,6 +368,6 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
           </div>
         </details>
       </section>
-    </WorldShell>
+    </>
   );
 }

@@ -12,7 +12,7 @@ import { resolveLoginMethodsPublicConfig } from "@uwe/database/login-methods-set
 import { GoogleAccountLinkCard } from "@/src/components/GoogleAccountLinkCard";
 import { PasskeySettingsPanel } from "@/src/components/PasskeySettingsPanel";
 import { TwoFactorSetupForm } from "@/src/components/TwoFactorSetupForm";
-import { BreadcrumbTrail, SystemShell } from "@/src/components/shell";
+import { ShellBreadcrumb } from "@/src/components/shell";
 import {
   Card,
   CardContent,
@@ -42,16 +42,13 @@ export default async function AccountSecurityPage() {
   const googleIdentity = identities.find((identity) => identity.provider === "google") ?? null;
 
   return (
-    <SystemShell
-      breadcrumb={
-        <BreadcrumbTrail
-          items={[
-            { label: "Einstellungen", href: "/settings" },
-            { label: "Sicherheit (2FA)" },
-          ]}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb
+        items={[
+          { label: "Einstellungen", href: "/settings" },
+          { label: "Sicherheit (2FA)" },
+        ]}
+      />
       <Card className="max-w-md">
         <CardHeader>
           <CardTitle>Sicherheit</CardTitle>
@@ -134,6 +131,6 @@ export default async function AccountSecurityPage() {
           />
         </CardContent>
       </Card>
-    </SystemShell>
+    </>
   );
 }

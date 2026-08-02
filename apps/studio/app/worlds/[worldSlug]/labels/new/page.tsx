@@ -10,7 +10,7 @@ import {
   createLabelFromSourceAction,
   createManualLabelAction,
 } from "@/app/label-actions";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { LabelTemplatePreviewPicker } from "@/src/components/labels/LabelTemplatePreviewPicker";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import {
@@ -69,29 +69,24 @@ export default async function StudioNewLabelPage({ params, searchParams }: Props
   const assets = await repo.listAssetsByWorld(worldSlug);
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldDetailBreadcrumb(
-            world.name,
-            worldSlug,
-            "Labels",
-            `/worlds/${worldSlug}/labels`,
-            "Neu",
-          )}
-        />
-      }
-      contextPanel={
+    <>
+      <ShellBreadcrumb
+        items={worldDetailBreadcrumb(
+          world.name,
+          worldSlug,
+          "Labels",
+          `/worlds/${worldSlug}/labels`,
+          "Neu",
+        )}
+      />
+      <ShellContextPanel>
         <SidebarSection title="Hinweis">
           <p className="m-0 text-sm text-muted-foreground">
             Labels sind 6×4 Zoll. DM-only Inhalte werden standardmäßig ausgeschlossen.
             AI-Bild-/Textgenerierung ist als Platzhalter vorbereitet.
           </p>
         </SidebarSection>
-      }
-    >
+      </ShellContextPanel>
       <PageHeader
         title="Neues Label erstellen"
         summary="Quelle und Vorlage wählen — Inhalt wird aus bestehenden Pages, Räumen, Blöcken oder Assets übernommen."
@@ -326,6 +321,6 @@ export default async function StudioNewLabelPage({ params, searchParams }: Props
           </CardContent>
         </Card>
       </div>
-    </WorldShell>
+    </>
   );
 }

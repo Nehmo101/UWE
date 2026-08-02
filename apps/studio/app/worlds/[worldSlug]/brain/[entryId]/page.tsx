@@ -5,7 +5,7 @@ import {
   getAppRepository,
 } from "@uwe/database/server";
 import { BrainDocumentClient } from "@/components/brain/BrainDocumentClient";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 interface Props {
@@ -29,21 +29,16 @@ export default async function StudioBrainDocumentPage({ params }: Props) {
   await db.$disconnect();
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldDetailBreadcrumb(
-            world.name,
-            worldSlug,
-            "Brain Store",
-            `/worlds/${worldSlug}/brain`,
-            document.title,
-          )}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb
+        items={worldDetailBreadcrumb(
+          world.name,
+          worldSlug,
+          "Brain Store",
+          `/worlds/${worldSlug}/brain`,
+          document.title,
+        )}
+      />
       <PageHeader
         title={document.title}
         summary="Brain-Dokument bearbeiten"
@@ -75,6 +70,6 @@ export default async function StudioBrainDocumentPage({ params }: Props) {
           </ul>
         </section>
       )}
-    </WorldShell>
+    </>
   );
 }

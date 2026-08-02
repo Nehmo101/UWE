@@ -2,15 +2,30 @@ import { resolvePortalPublicBaseUrl, resolveUweAppUrls } from "@uwe/auth";
 import type { PrismaClient } from "@uwe/database/server";
 import { createSettingsService, getAppRepository } from "@uwe/database/server";
 
-/** Resolve Portal deep-link for the DM's most relevant world (last active → favorite → first). */
-export async function resolveStudioPortalWorldHref(db: PrismaClient): Promise<string> {
+/**
+ * Resolve Portal deep-link for the DM's most relevant world
+ * (shell world → last active → favorite → first).
+ *
+ * `preferredSlug` ist die Welt, die der Studio-Shell gerade führt
+ * (`uwe_active_world`). Sie steht vor den Einstellungen, weil sie die
+ * jüngere Aussage ist: `lastActiveWorldSlug` wird im Studio nirgends
+ * geschrieben, „Portal öffnen" landete deshalb bisher immer auf der
+ * Favoritenwelt — auch mitten in einer anderen.
+ */
+export async function resolveStudioPortalWorldHref(
+  db: PrismaClient,
+  preferredSlug?: string | null,
+): Promise<string> {
   const urls = resolveUweAppUrls();
   const portalBase = resolvePortalPublicBaseUrl().replace(/\/$/, "");
   const settings = await createSettingsService(db).getSettings();
   const repo = getAppRepository();
 
   let worldSlug =
-    settings.app.lastActiveWorldSlug?.trim() || settings.app.favoriteWorldSlug?.trim() || "";
+    preferredSlug?.trim() ||
+    settings.app.lastActiveWorldSlug?.trim() ||
+    settings.app.favoriteWorldSlug?.trim() ||
+    "";
 
   if (worldSlug) {
     const world = await repo.getWorldBySlug(worldSlug);

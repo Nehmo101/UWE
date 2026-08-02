@@ -24,7 +24,7 @@ import {
   updateLabelAction,
 } from "@/app/label-actions";
 import { addLabelToPrintListAction } from "@/app/print-list-actions";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import {
   Alert,
@@ -80,81 +80,74 @@ export default async function StudioLabelEditPage({ params, searchParams }: Prop
     }));
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldDetailBreadcrumb(
-            world.name,
-            worldSlug,
-            "Labels",
-            `/worlds/${worldSlug}/labels`,
-            label.title,
-            `/worlds/${worldSlug}/labels/${labelId}`,
-          )}
-        />
-      }
-      contextPanel={
-        <>
-          <SidebarSection title="Export">
-            <ul className="flex flex-col gap-2 text-sm">
-              <li>
-                <a href={`/api/worlds/${worldSlug}/labels/${labelId}/export?format=html`}>
-                  HTML exportieren
-                </a>
-              </li>
-              <li>
-                <a href={`/api/worlds/${worldSlug}/labels/${labelId}/export?format=pdf`}>
-                  PDF exportieren
-                </a>
-              </li>
-              <li>
-                <a href={`/api/worlds/${worldSlug}/labels/${labelId}/export?format=png`}>
-                  PNG exportieren
-                </a>
-              </li>
-              <li>
-                <a href={`/api/worlds/${worldSlug}/labels/${labelId}/export?format=print`} target="_blank">
-                  Druckvorschau
-                </a>
-              </li>
-            </ul>
-            <p className="mt-3 text-xs text-muted-foreground">
-              PDF-Fallback: Bei Fehlern liefert der Server Print-HTML mit Header{" "}
-              <code>X-UWE-Export-Fallback: 1</code> — Grund steht in{" "}
-              <code>X-UWE-Export-Fallback-Reason</code>.
-            </p>
-          </SidebarSection>
-          <SidebarSection title="Druckstatus">
-            <form action={setLabelPrintStatusAction} className="flex flex-col gap-2">
-              <input type="hidden" name="worldSlug" value={worldSlug} />
-              <input type="hidden" name="labelId" value={labelId} />
-              <Select name="status" defaultValue={label.printStatus}>
-                <SelectTrigger aria-label="Druckstatus">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="open">Offen</SelectItem>
-                  <SelectItem value="exported">Exportiert</SelectItem>
-                  <SelectItem value="printed">Gedruckt</SelectItem>
-                  <SelectItem value="archived">Archiviert</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button type="submit" size="sm">Status setzen</Button>
-            </form>
-          </SidebarSection>
-          <SidebarSection title="Template">
-            <form action={saveLabelAsTemplateAction} className="flex flex-col gap-2">
-              <input type="hidden" name="worldSlug" value={worldSlug} />
-              <input type="hidden" name="labelId" value={labelId} />
-              <Input type="text" name="templateName" placeholder="Template-Name" required />
-              <Button type="submit" size="sm">Als Template speichern</Button>
-            </form>
-          </SidebarSection>
-        </>
-      }
-    >
+    <>
+      <ShellBreadcrumb
+        items={worldDetailBreadcrumb(
+          world.name,
+          worldSlug,
+          "Labels",
+          `/worlds/${worldSlug}/labels`,
+          label.title,
+          `/worlds/${worldSlug}/labels/${labelId}`,
+        )}
+      />
+      <ShellContextPanel>
+        <SidebarSection title="Export">
+          <ul className="flex flex-col gap-2 text-sm">
+            <li>
+              <a href={`/api/worlds/${worldSlug}/labels/${labelId}/export?format=html`}>
+                HTML exportieren
+              </a>
+            </li>
+            <li>
+              <a href={`/api/worlds/${worldSlug}/labels/${labelId}/export?format=pdf`}>
+                PDF exportieren
+              </a>
+            </li>
+            <li>
+              <a href={`/api/worlds/${worldSlug}/labels/${labelId}/export?format=png`}>
+                PNG exportieren
+              </a>
+            </li>
+            <li>
+              <a href={`/api/worlds/${worldSlug}/labels/${labelId}/export?format=print`} target="_blank">
+                Druckvorschau
+              </a>
+            </li>
+          </ul>
+          <p className="mt-3 text-xs text-muted-foreground">
+            PDF-Fallback: Bei Fehlern liefert der Server Print-HTML mit Header{" "}
+            <code>X-UWE-Export-Fallback: 1</code> — Grund steht in{" "}
+            <code>X-UWE-Export-Fallback-Reason</code>.
+          </p>
+        </SidebarSection>
+        <SidebarSection title="Druckstatus">
+          <form action={setLabelPrintStatusAction} className="flex flex-col gap-2">
+            <input type="hidden" name="worldSlug" value={worldSlug} />
+            <input type="hidden" name="labelId" value={labelId} />
+            <Select name="status" defaultValue={label.printStatus}>
+              <SelectTrigger aria-label="Druckstatus">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="open">Offen</SelectItem>
+                <SelectItem value="exported">Exportiert</SelectItem>
+                <SelectItem value="printed">Gedruckt</SelectItem>
+                <SelectItem value="archived">Archiviert</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button type="submit" size="sm">Status setzen</Button>
+          </form>
+        </SidebarSection>
+        <SidebarSection title="Template">
+          <form action={saveLabelAsTemplateAction} className="flex flex-col gap-2">
+            <input type="hidden" name="worldSlug" value={worldSlug} />
+            <input type="hidden" name="labelId" value={labelId} />
+            <Input type="text" name="templateName" placeholder="Template-Name" required />
+            <Button type="submit" size="sm">Als Template speichern</Button>
+          </form>
+        </SidebarSection>
+      </ShellContextPanel>
       <PageHeader
         title={label.title}
         summary={`Quelle: ${LABEL_SOURCE_TYPE_LABELS[label.sourceType]} · Vorlage: ${label.template.name} · Status: ${LABEL_PRINT_STATUS_LABELS[label.printStatus]}`}
@@ -410,6 +403,6 @@ export default async function StudioLabelEditPage({ params, searchParams }: Prop
           </form>
         </div>
       </div>
-    </WorldShell>
+    </>
   );
 }

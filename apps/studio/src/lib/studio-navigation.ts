@@ -2,20 +2,6 @@ import { isLikelyGameSessionId } from "./session-route";
 import { studioCommands } from "../navigation/studio-nav";
 import { worldNavItems as canonicalWorldNavItems } from "../navigation/world-nav";
 
-/** Horizontal cockpit tabs for world overview (reduced to cockpit-level areas). */
-export function worldCockpitTabItems(worldSlug: string, active?: WorldNavKey) {
-  const tabKeys: WorldNavKey[] = [
-    "overview",
-    "pages",
-    "sessions",
-    "prepare-session",
-    "dungeons",
-    "assets",
-    "brain",
-  ];
-  return worldNavItems(worldSlug, active).filter((item) => tabKeys.includes(item.key));
-}
-
 /** DM tools surfaced on the world dashboard for discoverability (canonical world IA). */
 export function worldDmToolQuickLinks(worldSlug: string): { label: string; href: string }[] {
   const highlightIds = new Set([

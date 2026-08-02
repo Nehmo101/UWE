@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getAppRepository } from "@uwe/database/server";
 import { TagAdminWorkspace } from "@/components/TagAdminWorkspace";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
 /**
@@ -22,20 +22,13 @@ export default async function WorldTagsPage({ params }: Props) {
   if (!world) notFound();
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(world.name, worldSlug, "Tags", `/worlds/${worldSlug}/tags`)}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb items={worldSectionBreadcrumb(world.name, worldSlug, "Tags", `/worlds/${worldSlug}/tags`)} />
       <PageHeader
         title={`Tags — ${world.name}`}
         summary="Tags dieser Welt normalisieren, ähnliche Schreibweisen erkennen und über alle Entitäten zusammenführen."
       />
       <TagAdminWorkspace worldId={world.id} />
-    </WorldShell>
+    </>
   );
 }

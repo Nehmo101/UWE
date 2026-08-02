@@ -14,7 +14,7 @@ import {
 } from "@uwe/database/server";
 import { createBrainDocumentAction, createBrainFactAction } from "../../../brain-actions";
 import { BrainAiGeneratePanel } from "@/components/BrainAiGeneratePanel";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { CampaignSidebar } from "@/src/components/wiki";
 import { campaignNavItems } from "@/src/lib/world-nav";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
@@ -89,28 +89,19 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
   }
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(world.name, worldSlug, "Brain Store", `/worlds/${worldSlug}/brain`)}
+    <>
+      <ShellBreadcrumb items={worldSectionBreadcrumb(world.name, worldSlug, "Brain Store", `/worlds/${worldSlug}/brain`)} />
+      <ShellContextPanel>
+        <CampaignSidebar
+          items={campaignNavItems(`/worlds/${worldSlug}/brain`, campaigns, campaignSlug)}
         />
-      }
-      contextPanel={
-        <>
-          <CampaignSidebar
-            items={campaignNavItems(`/worlds/${worldSlug}/brain`, campaigns, campaignSlug)}
-          />
-          <SidebarSection title="Kontext">
-            <p className="text-sm text-muted-foreground">
-              Brain-Wissen wird dauerhaft in UWE gespeichert — getrennt vom privaten Life-Brain.
-              KI-Generierung läuft über den Maschinenraum (lokal, kein Cloud-Fallback für Weltwissen).
-            </p>
-          </SidebarSection>
-        </>
-      }
-    >
+        <SidebarSection title="Kontext">
+          <p className="text-sm text-muted-foreground">
+            Brain-Wissen wird dauerhaft in UWE gespeichert — getrennt vom privaten Life-Brain.
+            KI-Generierung läuft über den Maschinenraum (lokal, kein Cloud-Fallback für Weltwissen).
+          </p>
+        </SidebarSection>
+      </ShellContextPanel>
       <PageHeader
         title="Brain Knowledge Store"
         summary="Dauerhaftes Welt- und Kampagnenwissen in UWE — Sichtbarkeit dm_only, player_visible und public."
@@ -296,6 +287,6 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
       </div>
 
       <BrainAiGeneratePanel worldSlug={worldSlug} campaignId={selectedCampaign?.id} />
-    </WorldShell>
+    </>
   );
 }

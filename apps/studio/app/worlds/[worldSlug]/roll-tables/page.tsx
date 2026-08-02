@@ -6,7 +6,7 @@ import {
   ROLL_TABLE_CATEGORY_LABELS,
   serializeRollTableEntries,
 } from "@uwe/roll-tables";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import {
   RollHistoryPanel,
@@ -56,20 +56,15 @@ export default async function RollTablesPage({ params, searchParams }: Props) {
   const tables = await createRollTableService(prisma).listForWorld(world.id);
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(
-            world.name,
-            worldSlug,
-            "Zufallstabellen",
-            `/worlds/${worldSlug}/roll-tables`,
-          )}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb
+        items={worldSectionBreadcrumb(
+          world.name,
+          worldSlug,
+          "Zufallstabellen",
+          `/worlds/${worldSlug}/roll-tables`,
+        )}
+      />
       <PageHeader
         title="Zufallstabellen"
         summary="Loot, Zufalls-Encounter und Namen — gewichtete Tabellen mit Würfeln-Button und Roll-Verlauf."
@@ -252,6 +247,6 @@ export default async function RollTablesPage({ params, searchParams }: Props) {
           </CardContent>
         </Card>
       </div>
-    </WorldShell>
+    </>
   );
 }

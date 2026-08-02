@@ -11,7 +11,7 @@ import {
   type InspectorFinding,
   type InspectorSeverity,
 } from "@uwe/database/server";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { applyInspectorFixAction } from "../../../inspector-actions";
 import { InspectorDiagnosePanel } from "@/components/InspectorDiagnosePanel";
@@ -122,15 +122,9 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
   const warningCount = report.canonFindings.filter((f) => f.severity === "warning").length;
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(world.name, worldSlug, "Kanon", `/worlds/${worldSlug}/inspector`)}
-        />
-      }
-      contextPanel={
+    <>
+      <ShellBreadcrumb items={worldSectionBreadcrumb(world.name, worldSlug, "Kanon", `/worlds/${worldSlug}/inspector`)} />
+      <ShellContextPanel>
         <SidebarSection title="Portal-Konfiguration">
           <ul className="flex flex-col gap-2 text-sm">
             <li>
@@ -141,8 +135,7 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
             </li>
           </ul>
         </SidebarSection>
-      }
-    >
+      </ShellContextPanel>
       <PageHeader
         title="Inspektor"
         summary="Prüft Kanon-Konflikte — tote Wikilinks, mehrdeutige Namen, widersprüchliche Seiten, Waisen und welt-spezifische Regeln."
@@ -179,6 +172,6 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
           </CardContent>
         </Card>
       </div>
-    </WorldShell>
+    </>
   );
 }

@@ -17,7 +17,7 @@ import { SessionLiveSoundboard } from "@/components/SessionLiveSoundboard";
 import { SessionRunner } from "@/components/session-runner/SessionRunner";
 import { latestBookmark } from "@uwe/session-runner";
 import type { SoundboardButtonView } from "@uwe/shared-ui";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { isLikelyGameSessionId } from "@/src/lib/session-route";
 
@@ -108,26 +108,19 @@ export default async function SessionLivePage({ params }: Props) {
   });
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      navMode="live"
-      liveSessionId={sessionId}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={[
-            ...worldDetailBreadcrumb(
-              world.name,
-              worldSlug,
-              "Sessions",
-              `/worlds/${worldSlug}/sessions`,
-              session.title,
-            ),
-            { label: "Live" },
-          ]}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb
+        items={[
+          ...worldDetailBreadcrumb(
+            world.name,
+            worldSlug,
+            "Sessions",
+            `/worlds/${worldSlug}/sessions`,
+            session.title,
+          ),
+          { label: "Live" },
+        ]}
+      />
       <PageHeader
         title={`Live · Session ${session.sessionNumber}`}
         meta={<GameSessionStatusBadge status={session.status} />}
@@ -162,6 +155,6 @@ export default async function SessionLivePage({ params }: Props) {
         campaignSlug={sessionCampaign?.slug ?? null}
         rtxAudioOnline={rtxAudioOnline}
       />
-    </WorldShell>
+    </>
   );
 }

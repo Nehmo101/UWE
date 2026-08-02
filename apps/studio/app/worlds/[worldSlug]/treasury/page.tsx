@@ -18,7 +18,7 @@ import {
   returnPartyItemToTreasuryAction,
   updatePartyTreasuryAction,
 } from "@/app/worlds/[worldSlug]/treasury-actions";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import {
   Alert,
@@ -102,28 +102,23 @@ export default async function WorldTreasuryPage({ params, searchParams }: Props)
   const items = treasury.items;
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(
-            world.name,
-            worldSlug,
-            "Gruppenschatz",
-            `/worlds/${worldSlug}/treasury`,
-          )}
-        />
-      }
-      contextPanel={
+    <>
+      <ShellBreadcrumb
+        items={worldSectionBreadcrumb(
+          world.name,
+          worldSlug,
+          "Gruppenschatz",
+          `/worlds/${worldSlug}/treasury`,
+        )}
+      />
+      <ShellContextPanel>
         <SidebarSection title="Gruppenschatz">
           <p className="text-sm text-muted-foreground">
             Gemeinsame Währung und Gegenstände der Gruppe — im Portal für Spieler sichtbar.
             &bdquo;Nur DM&ldquo;-Items und DM-Notizen bleiben im Studio.
           </p>
         </SidebarSection>
-      }
-    >
+      </ShellContextPanel>
       <PageHeader
         title="Gruppenschatz"
         summary="Verwalte Gruppenwährung und gemeinsames Inventar dieser Welt."
@@ -369,6 +364,6 @@ export default async function WorldTreasuryPage({ params, searchParams }: Props)
           )}
         </section>
       </div>
-    </WorldShell>
+    </>
   );
 }

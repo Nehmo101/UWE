@@ -6,7 +6,7 @@ import {
   type ConfidenceLevel,
   type KnowledgeSynthesisResult,
 } from "@uwe/database/knowledge-assistant";
-import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { requireStudioAccess } from "@/src/lib/auth";
 import {
   Badge,
@@ -49,7 +49,8 @@ export default async function KnowledgePage({ searchParams }: Props) {
     answer && synth === "1" ? await synthesizeKnowledgeAnswer(prisma, answer) : null;
 
   return (
-    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Wissensassistent" }]} />}>
+    <>
+      <ShellBreadcrumb items={[{ label: "Wissensassistent" }]} />
       <PageHeader
         title="Wissensassistent"
         summary="Life Brain, DnD-Brain und lokaler Q&A-Assistent — drei Einstiege, ein Knowledge-Bereich."
@@ -182,6 +183,6 @@ export default async function KnowledgePage({ searchParams }: Props) {
           Stell eine Frage — die Antwort kommt ausschließlich aus deinem lokalen Life-Brain.
         </p>
       )}
-    </StudioShell>
+    </>
   );
 }

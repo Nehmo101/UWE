@@ -9,7 +9,7 @@ import {
 } from "@uwe/database/server";
 import type { MailComposeKind } from "@uwe/mail";
 import { MailSendForm } from "@/components/MailSendForm";
-import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 
 const COMPOSE_KINDS = new Set<MailComposeKind>([
   "session_recap",
@@ -92,16 +92,13 @@ export default async function MailComposePage({ searchParams }: Props) {
   const world = worldSlug ? await getAppRepository().getWorldBySlug(worldSlug) : null;
 
   return (
-    <StudioShell
-      breadcrumb={
-        <BreadcrumbTrail
-          items={[
-            { label: "Mail Center", href: "/mail" },
-            { label: `Mail vorbereiten: ${KIND_LABELS[kind]}` },
-          ]}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb
+        items={[
+          { label: "Mail Center", href: "/mail" },
+          { label: `Mail vorbereiten: ${KIND_LABELS[kind]}` },
+        ]}
+      />
       <PageHeader
         title={`Mail vorbereiten: ${KIND_LABELS[kind]}`}
         summary="Vorschau prüfen, Empfänger wählen und erst nach explizitem Klick senden. Keine automatischen Mails."
@@ -128,6 +125,6 @@ export default async function MailComposePage({ searchParams }: Props) {
         warnings={draft.warnings}
         containsDmOnlyHint={draft.containsDmOnlyHint}
       />
-    </StudioShell>
+    </>
   );
 }

@@ -19,7 +19,7 @@ import { SessionDetailClient } from "@/components/sessions/SessionDetailClient";
 import { StudioWikiPageView } from "@/components/StudioWikiPageView";
 import { isLikelyGameSessionId } from "@/src/lib/session-route";
 import { renderWorldTextToHtml } from "@/src/lib/page-reader";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { Alert, Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
 
@@ -75,37 +75,30 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
   const linkablePages = allPages.filter((p) => !linkedIds.has(p.id));
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldDetailBreadcrumb(
-            world.name,
-            worldSlug,
-            "Sessions",
-            `/worlds/${worldSlug}/sessions`,
-            session.title,
-          )}
+    <>
+      <ShellBreadcrumb
+        items={worldDetailBreadcrumb(
+          world.name,
+          worldSlug,
+          "Sessions",
+          `/worlds/${worldSlug}/sessions`,
+          session.title,
+        )}
+      />
+      <ShellContextPanel>
+        <AiContextPanel
+          kind="session"
+          worldSlug={worldSlug}
+          sessionId={sessionId}
         />
-      }
-      contextPanel={
-        <>
-          <AiContextPanel
-            kind="session"
-            worldSlug={worldSlug}
-            sessionId={sessionId}
-          />
-          <SidebarSection title="Workflow">
-            <ol className="list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
-              <li>Geplant → Vorbereiten (DM-Notizen)</li>
-              <li>Gespielt → Nachbereiten</li>
-              <li>Recap schreiben → Portal veröffentlichen</li>
-            </ol>
-          </SidebarSection>
-        </>
-      }
-    >
+        <SidebarSection title="Workflow">
+          <ol className="list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
+            <li>Geplant → Vorbereiten (DM-Notizen)</li>
+            <li>Gespielt → Nachbereiten</li>
+            <li>Recap schreiben → Portal veröffentlichen</li>
+          </ol>
+        </SidebarSection>
+      </ShellContextPanel>
       <PageHeader
         title={`Session ${session.sessionNumber}: ${session.title}`}
         meta={
@@ -186,6 +179,6 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
         }}
         flash={{ saved, published, linked, unlinked }}
       />
-    </WorldShell>
+    </>
   );
 }

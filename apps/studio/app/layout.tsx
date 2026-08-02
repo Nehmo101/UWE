@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { Space_Mono, Newsreader } from "next/font/google";
 import { getAppRepository, resolveThemePreferencesForScope } from "@uwe/database/server";
 import { getSystemSettingsSnapshotSafe } from "@uwe/database/settings-service";
@@ -32,8 +32,11 @@ const newsreader = Newsreader({
 import { StudioCommandPalette } from "../components/StudioCommandPalette";
 import { StudioSessionChrome } from "../components/StudioSessionChrome";
 import { StudioThemeSyncProvider } from "../components/StudioThemeSyncProvider";
+import { AppShell, ShellProvider } from "@/src/components/shell";
+import { ACTIVE_WORLD_COOKIE, readActiveWorldCookie } from "@/src/lib/active-world";
 import { enforceStudioPageAuth, getCurrentAuthUser } from "@/src/lib/auth";
 import { enforceStudioMaintenance } from "@/src/lib/maintenance";
+import { isChromelessStudioPath } from "@/src/lib/studio-chrome";
 import "@uwe/shared-ui/uwe.css";
 import "@uwe/shared-ui/wiki-base.css";
 import "@uwe/shared-ui/uwe-landing.css";
@@ -104,6 +107,17 @@ export default async function RootLayout({
     // Auth/DB not ready — palette works without the admin-command entry.
   }
 
+  // Der Startwert des Welt-Kontexts. Weiter geführt wird er im Client
+  // (ShellProvider): das Root-Layout rendert bei einer Client-Navigation nicht
+  // neu und würde die Welt sonst auf dem Stand des letzten Vollaufschlags
+  // einfrieren.
+  const cookieStore = await cookies();
+  const initialWorldSlug = readActiveWorldCookie(
+    cookieStore.get(ACTIVE_WORLD_COOKIE)?.value,
+    worlds.map((world) => world.slug),
+  );
+  const chromeless = isChromelessStudioPath(pathname);
+
   return (
     <html lang="de" suppressHydrationWarning {...visualThemeAttrs} className={`${spaceMono.variable} ${newsreader.variable}`}>
       {/* Das ThemeBootstrapScript setzt Klasse und data-Attribute auf <body>,
@@ -125,7 +139,17 @@ export default async function RootLayout({
           {/* Die Produkt-Origins kommen aus der Laufzeit-Umgebung, nicht aus dem
               Build: eine nachträglich gesetzte oder abgeleitete Family-Adresse
               erreicht ein fertiges Client-Bundle sonst nie. */}
-          <AppUrlsProvider value={resolveCrossAppUrls()}>{children}</AppUrlsProvider>
+          <AppUrlsProvider value={resolveCrossAppUrls()}>
+            {/* Ein Shell für alle Arbeitsbereichs-Routen. Landing, Login und
+                Wartung rendern ohne Rahmen — siehe studio-chrome.ts. */}
+            {chromeless ? (
+              children
+            ) : (
+              <ShellProvider worlds={worlds} initialWorldSlug={initialWorldSlug}>
+                <AppShell>{children}</AppShell>
+              </ShellProvider>
+            )}
+          </AppUrlsProvider>
           <StudioCommandPalette worlds={worlds} canRunAdminCommands={canRunAdminCommands} />
           <TopBarSessionMount>
             <StudioSessionChrome />

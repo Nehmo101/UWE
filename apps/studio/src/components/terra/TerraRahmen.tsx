@@ -20,7 +20,7 @@ export interface TerraRahmenProps {
   version: number;
   daten: unknown | null;
   quelle?: string;
-  /** Schlanke, geschützte Pop-out-Route ohne WorldShell und KI-Panels. */
+  /** Schlanke, geschützte Pop-out-Route ohne Welt-Kontext und KI-Panels. */
   fensterModus?: boolean;
   /**
    * Ort-Wikis der Welt für die Vorgenerierung. Geladen von der Seite, die

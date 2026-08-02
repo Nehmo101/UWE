@@ -16,7 +16,7 @@ import {
   deleteSoundboardButtonAction,
   updateSoundboardButtonAction,
 } from "@/app/soundboard-actions";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { CampaignSidebar } from "@/src/components/wiki";
 import { campaignNavItems } from "@/src/lib/world-nav";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
@@ -92,28 +92,19 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
   }));
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(world.name, worldSlug, "Soundboard", `/worlds/${worldSlug}/soundboard`)}
+    <>
+      <ShellBreadcrumb items={worldSectionBreadcrumb(world.name, worldSlug, "Soundboard", `/worlds/${worldSlug}/soundboard`)} />
+      <ShellContextPanel>
+        <CampaignSidebar
+          items={campaignNavItems(`/worlds/${worldSlug}/soundboard`, campaigns, campaignSlug)}
         />
-      }
-      contextPanel={
-        <>
-          <CampaignSidebar
-            items={campaignNavItems(`/worlds/${worldSlug}/soundboard`, campaigns, campaignSlug)}
-          />
-          <SidebarSection title="Kontext">
-            <p className="text-sm text-muted-foreground">
-              {buttons.length} Buttons
-              {selectedCampaign ? ` in „${selectedCampaign.name}“` : ""}
-            </p>
-          </SidebarSection>
-        </>
-      }
-    >
+        <SidebarSection title="Kontext">
+          <p className="text-sm text-muted-foreground">
+            {buttons.length} Buttons
+            {selectedCampaign ? ` in „${selectedCampaign.name}“` : ""}
+          </p>
+        </SidebarSection>
+      </ShellContextPanel>
       <PageHeader
         title="Soundboard"
         summary={
@@ -243,6 +234,6 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
           </CardContent>
         </Card>
       </div>
-    </WorldShell>
+    </>
   );
 }

@@ -8,7 +8,7 @@ import {
   resolveDndApiConfig,
 } from "@uwe/database/server";
 import { searchAllDndApis } from "@uwe/dnd-api";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { DndApiEncounterPanel } from "@/components/DndApiEncounterPanel";
 import { DndApiBrowseCacheNotice } from "@/src/components/world/DndApiBrowseCache";
@@ -53,15 +53,8 @@ export default async function WorldDndApiPage({ params, searchParams }: Props) {
   const additionalResults = results.filter((item) => item.provider !== "open5e");
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(world.name, worldSlug, "DnD API", `/worlds/${worldSlug}/dnd-api`)}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb items={worldSectionBreadcrumb(world.name, worldSlug, "DnD API", `/worlds/${worldSlug}/dnd-api`)} />
       <PageHeader
         title="DnD API"
         summary="Open5e + D&amp;D 5e SRD API. D&amp;D Beyond nur als manuelle Link-Referenz — kein Scraping."
@@ -188,6 +181,6 @@ export default async function WorldDndApiPage({ params, searchParams }: Props) {
           )}
         </section>
       </div>
-    </WorldShell>
+    </>
   );
 }

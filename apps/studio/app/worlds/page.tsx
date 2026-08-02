@@ -2,7 +2,7 @@ import Link from "next/link";
 import { EmptyState } from "@uwe/shared-ui";
 import { listWorldTemplateOptions } from "@uwe/database/server";
 import { canAccessStudio } from "@uwe/auth";
-import { StudioShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { CreateWorldForm } from "@/components/CreateWorldForm";
 import { getCurrentAuthUser } from "@/src/lib/auth";
 import { getStudioWorldList } from "@/src/lib/world-list-cache";
@@ -21,7 +21,8 @@ export default async function WorldsPage() {
   ]);
   const canCreateWorld = user ? canAccessStudio(user) : false;
   return (
-    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Welten" }]} />}>
+    <>
+      <ShellBreadcrumb items={[{ label: "Welten" }]} />
       <PageHeader title="Welten" summary="Wähle eine Welt für Kampagne und Wiki-Bearbeitung — oder lege eine neue an." />
       {canCreateWorld ? (
         <section className="mb-6 rounded-lg border border-border p-4">
@@ -57,6 +58,6 @@ export default async function WorldsPage() {
           </article>
         ))}</div></section>
       )}
-    </StudioShell>
+    </>
   );
 }
