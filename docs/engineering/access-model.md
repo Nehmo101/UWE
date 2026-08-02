@@ -62,6 +62,56 @@ Konsequenz, die bewusst so gewollt ist: Sobald eine Seite in einer Welt
 existiert, sehen sie alle Zugeordneten. Vorbereitung, die niemand sehen soll,
 passiert außerhalb von UWE — oder in einer Welt, der noch niemand zugeordnet ist.
 
+### Die eine Ausnahme: der DM-Bereich im Wikitext
+
+Ganze Seiten und Blöcke sind nicht mehr abstufbar, ein paar Zeilen mitten im
+Text schon. Wer im Wikitext eine Marke setzt, macht daraus einen DM-Bereich:
+
+```
+Der Hauptmann empfängt euch freundlich.
+
+:::dm Der wahre Verräter
+Roderick arbeitet für die Gegenseite. Er verrät die Gruppe in Sitzung 4.
+:::
+
+Danach geht ihr weiter Richtung Hafen.
+```
+
+**Wer liest ihn:** wer das **Studio**-Häkchen trägt — plus der Owner, auch ohne
+Häkchen. Die Welt-Zuordnung reicht ausdrücklich *nicht*; Studio ist die DM-App,
+und DM ist, wer dort hinein darf. Die Vorschau als Spieler fällt heraus, genau
+dafür ist sie da. Regel: `canReadDmSections` in `packages/auth/src/permissions.ts`.
+
+**Wie es durchgesetzt wird** — der Bereich wird nicht ausgeblendet, sondern
+serverseitig aus dem Text geschnitten, bevor irgendetwas gerendert oder
+verschickt wird:
+
+| Fläche | Stelle |
+|---|---|
+| Blöcke auf jedem Lesepfad (Seite, Graph, Backlinks) | `filterBlocksForViewer` |
+| Kurzbeschreibung der Seite | `getPageForViewer`, `listPagesForViewer` |
+| Gerendertes HTML (zweites Netz) | `AuthService.renderBlockContentForViewer` |
+| Suche — Treffer *und* Ausschnitt | `searchForAuthContext` |
+| Spieler-APIs / Export | `sanitizeForPlayer` |
+
+**Fail-closed:** Eine öffnende Marke ohne `:::` macht den gesamten Rest des
+Blocks zum DM-Bereich. Ein vergessener Abschluss verschweigt zu viel, nie zu
+wenig. Verschachtelung gibt es nicht — das erste `:::` schließt.
+
+**Bearbeitung durch Spieler:** Am eigenen Charakterbogen dürfen Spieler
+Textblöcke ändern (`canEditPlayerCharacterBlock`). Sie haben den geschnittenen
+Stand bekommen, würden also beim Speichern die DM-Notiz löschen. Deshalb hängt
+`preserveDmSections` die gespeicherten Bereiche wieder an; selbst gesetzte
+Marken aus so einer Eingabe werden verworfen.
+
+Was **kein** DM-Bereich ist: Seitentitel, Tags, Aliase, Dateinamen von Assets.
+Die Marke wirkt in Block-Inhalten und in der Kurzbeschreibung — sonst nirgends.
+
+Parser und Schnitt: `packages/auth/src/dm-section.ts`. Der Kasten, den der DM
+im Studio sieht, entsteht in `renderContentHtml` (`packages/database/src/page-service.ts`)
+und wird in `apps/studio/app/wiki.css` gestaltet — im Portal gibt es dafür
+bewusst keine Regel, weil dort nie etwas ankommt.
+
 ## Wo die Regeln im Code stehen
 
 | Frage | Code |
@@ -70,6 +120,7 @@ passiert außerhalb von UWE — oder in einer Welt, der noch niemand zugeordnet 
 | Darf sie die RTX-KI benutzen? | `packages/auth/src/area-access.ts` → `canUseRtxAi` / `requireRtxAi` |
 | Darf die Session diese Studio-Route? | `getRequiredAccessForApiPath` / `getRequiredAccessForPagePath` + `satisfiesStudioRouteAccess` |
 | Darf dieser Kontext den Welt-Inhalt lesen? | `packages/auth/src/permissions.ts` → `canViewWorldContent` |
+| Darf sie den DM-Bereich im Wikitext lesen? | `packages/auth/src/permissions.ts` → `canReadDmSections` |
 | Darf dieser Nutzer *diese* Welt lesen? | `packages/auth/src/security/authz.ts` → `canReadWorld`, `scopeFromAccessContext` |
 
 `scopeFromAccessContext` ist tragend: Es übernimmt eine Zuordnung nur dann,

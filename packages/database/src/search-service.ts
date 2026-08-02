@@ -1,5 +1,10 @@
 import type { AccessContext as AuthAccessContext } from "@uwe/auth";
-import { canViewWorldContent } from "@uwe/auth";
+import {
+  canReadDmSections,
+  canViewWorldContent,
+  filterBlocksForViewer,
+  redactDmSectionsForViewer,
+} from "@uwe/auth";
 import type { PrismaClient } from "./client";
 import type {
   ContentBlock,
@@ -612,7 +617,35 @@ export async function searchForAuthContext(
   }
 
   const pages = await loadPagesForSearch(db, options);
-  return searchIndex(buildIndex(pages), options);
+  return searchIndex(buildIndex(redactDmSectionsInPages(context, pages)), options);
+}
+
+/**
+ * Schneidet die DM-Bereiche aus dem Suchindex, bevor er gebaut wird.
+ *
+ * Die Suche ist der Umweg, über den ein DM-Bereich sonst doch sichtbar würde:
+ * Der Treffer verrät den Wortlaut im Ausschnitt, und selbst ohne Ausschnitt
+ * verrät er, dass ein bestimmtes Wort auf einer bestimmten Seite steht.
+ *
+ * `loadPagesForSearch` gibt ein gemeinsam genutztes, memoisiertes Array zurück,
+ * das niemand verändern darf — deshalb entstehen hier neue Objekte, und nur für
+ * die Seiten, aus denen wirklich etwas herausfällt.
+ */
+function redactDmSectionsInPages(
+  context: AuthAccessContext,
+  pages: IndexedPage[],
+): IndexedPage[] {
+  if (canReadDmSections(context)) {
+    return pages;
+  }
+  return pages.map((page) => {
+    const summary = redactDmSectionsForViewer(context, page.summary);
+    const contentBlocks = filterBlocksForViewer(context, page.contentBlocks);
+    const changed =
+      summary !== page.summary ||
+      contentBlocks.some((block, index) => block !== page.contentBlocks[index]);
+    return changed ? { ...page, summary, contentBlocks } : page;
+  });
 }
 
 export async function searchGlobalForDm(

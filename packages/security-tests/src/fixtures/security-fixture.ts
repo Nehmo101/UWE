@@ -177,9 +177,16 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     type: "note",
     contentBlocks: [
       {
+        // Ein Block, zwei Zonen: der Vorlesetext ist für alle da, der
+        // DM-Bereich mittendrin nur für das Studio-Häkchen.
         type: "player_text",
         sortOrder: 0,
-        content: SECURITY_MARKERS.PLAYER_VISIBLE,
+        content: [
+          SECURITY_MARKERS.PLAYER_VISIBLE,
+          ":::dm",
+          SECURITY_MARKERS.DM_SECTION,
+          ":::",
+        ].join("\n"),
       },
     ],
   });

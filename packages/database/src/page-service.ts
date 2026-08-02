@@ -1,3 +1,4 @@
+import { splitDmSegments } from "@uwe/auth/dm-section";
 import type { ContentBlock, Page, PageType } from "./generated/prisma/client";
 import { buildPageUrl } from "./page-types";
 import { parseStringArray } from "./json-utils";
@@ -168,7 +169,57 @@ function renderRichHtml(content: string, links: PageViewLink[]): string {
   return sanitizeWikiHtml(out);
 }
 
+/**
+ * Rendert einen DM-Bereich als sichtbaren Kasten.
+ *
+ * Sicherheit passiert hier keine: Wer den Bereich nicht lesen darf, hat ihn
+ * schon vorher verloren — `filterBlocksForViewer` schneidet ihn aus den Blöcken,
+ * `renderBlockContentForViewer` noch einmal aus dem Inhalt. Was hier ankommt,
+ * darf gesehen werden; der Kasten sagt dem DM nur, was die Spieler NICHT sehen.
+ */
+function renderDmSectionHtml(inner: string, title: string | null): string {
+  const label = title ? `Nur für den DM — ${escapeHtml(title)}` : "Nur für den DM";
+  return (
+    `<section class="wiki-dm-section" data-uwe-dm="1" aria-label="${escapeAttr(
+      title ? `DM-Bereich: ${title}` : "DM-Bereich",
+    )}">` +
+    `<p class="wiki-dm-section-label">${label}</p>${inner}</section>`
+  );
+}
+
 export function renderContentHtml(content: string, links: PageViewLink[]): string {
+  if (!content) return "";
+
+  // DM-Bereiche werden abschnittsweise gesetzt: jeder Teil geht einzeln durch
+  // denselben Renderer, nur die DM-Teile bekommen den Kasten. Die `links` sind
+  // in Dokumentreihenfolge zu `parseWikiLinks(content)` sortiert, also lassen
+  // sie sich über die Fundstellen sauber auf die Abschnitte aufteilen.
+  const segments = splitDmSegments(content);
+  if (segments.some((segment) => segment.dm)) {
+    const wikilinks = parseWikiLinks(content);
+    let out = "";
+
+    for (const segment of segments) {
+      const from = wikilinks.findIndex((raw) => raw.start >= segment.start);
+      let take = 0;
+      if (from >= 0) {
+        while (from + take < wikilinks.length && wikilinks[from + take].start < segment.end) {
+          take += 1;
+        }
+      }
+      const segmentLinks = from >= 0 ? links.slice(from, from + take) : [];
+
+      const rendered = renderSegmentHtml(segment.text, segmentLinks);
+      out += segment.dm ? renderDmSectionHtml(rendered, segment.title) : rendered;
+    }
+
+    return out;
+  }
+
+  return renderSegmentHtml(content, links);
+}
+
+function renderSegmentHtml(content: string, links: PageViewLink[]): string {
   if (!content) return "";
 
   if (looksLikeHtml(content)) {
