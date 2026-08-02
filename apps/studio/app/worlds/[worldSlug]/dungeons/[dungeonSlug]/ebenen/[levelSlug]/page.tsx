@@ -11,6 +11,7 @@ import {
 } from "@uwe/database/server";
 import { createDungeonRoomAction } from "../../../../../../dungeon-actions";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { DungeonSidePages } from "@/src/components/dungeon/DungeonSidePages";
 import { CampaignSidebar } from "@/src/components/wiki";
 import { dungeonBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import {
@@ -102,6 +103,13 @@ export default async function StudioDungeonLevelPage({ params, searchParams }: P
           </div>
         )}
       </section>
+
+      <DungeonSidePages
+        worldSlug={worldSlug}
+        pages={overview.extras}
+        title="Begegnungen, Rätsel, Beute"
+        emptyHint="Nichts weiter an dieser Ebene"
+      />
 
       <section className={SECTION_CLASS}>
         <h2 className={HEADING_CLASS}>Neuer Raum</h2>

@@ -17,6 +17,17 @@ export {
 } from "./reading-order";
 
 export {
+  buildVolume,
+  buildVolumeToc,
+  countVolumePages,
+  findVolumeRoots,
+  type BuildVolumeOptions,
+  type Volume,
+  type VolumeSection,
+  type VolumeTocEntry,
+} from "./volume";
+
+export {
   SESSION_BOOKMARK_KIND,
   encodeBookmarkPayload,
   parseBookmarkPayload,

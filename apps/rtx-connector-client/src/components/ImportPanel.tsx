@@ -22,12 +22,13 @@ type Profile = "campaign_book" | "dungeon" | "canon" | "plain";
 
 const MODE_LABELS: Record<Mode, string> = {
   wiki_pages: "Wiki-Seiten",
-  document: "Dokument / Buch",
+  document: "Kampagne / Dungeon / Buch",
 };
 
 const MODE_HINTS: Record<Mode, string> = {
   wiki_pages: "Eine Datei wird eine Seite — auch bei vielen Überschriften. Für Vault-Ordner.",
-  document: "Eine Datei wird ein Seitenbaum. Für Kampagnenbücher, Dungeons, Weltkanon.",
+  document:
+    "Ein Dokument wird ein Seitenbaum aus Gegenständen: Ebenen, Räume, NSC, Begegnungen, Handouts, Werteblöcke. Nicht eine Seite pro Überschrift.",
 };
 
 const PROFILE_LABELS: Record<Profile, string> = {
@@ -57,6 +58,14 @@ interface PreviewResult {
   pageCount: number;
   perFile: Array<{ fileName: string; pageCount: number }>;
   summary: { new: number; conflict: number; duplicate: number };
+  structureSummary: string;
+  structure: {
+    folded: number;
+    dissolved: number;
+    extracted: number;
+    merged: number;
+    linked: number;
+  };
   warnings: string[];
   unresolvedLinks: string[];
   sample: PreviewSample[];
@@ -67,6 +76,7 @@ interface ExecuteResult {
   failed: number;
   linksCreated: number;
   warnings: string[];
+  undoToken: string | null;
 }
 
 function toMessage(error: unknown): string {
@@ -88,7 +98,7 @@ export function ImportPanel() {
   const [sourcePath, setSourcePath] = useState("");
   const [mode, setMode] = useState<Mode>("wiki_pages");
   const [profile, setProfile] = useState<Profile>("plain");
-  const [maxDepth, setMaxDepth] = useState(3);
+  const [useAi, setUseAi] = useState(true);
 
   const [preview, setPreview] = useState<PreviewResult | null>(null);
   const [result, setResult] = useState<ExecuteResult | null>(null);
@@ -118,8 +128,8 @@ export function ImportPanel() {
   }, [loadWorlds]);
 
   const request = useMemo(
-    () => ({ path: sourcePath.trim(), worldSlug, mode, profile, maxDepth }),
-    [maxDepth, mode, profile, sourcePath, worldSlug],
+    () => ({ path: sourcePath.trim(), worldSlug, mode, profile, useAi }),
+    [mode, profile, sourcePath, useAi, worldSlug],
   );
 
   const resetOutcome = useCallback(() => {
@@ -259,17 +269,22 @@ export function ImportPanel() {
               </div>
 
               <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium">Bis Überschriftenebene {maxDepth} aufteilen</span>
-                <input
-                  type="range"
-                  min={1}
-                  max={6}
-                  value={maxDepth}
-                  onChange={(event) => {
-                    setMaxDepth(Number.parseInt(event.target.value, 10));
-                    resetOutcome();
-                  }}
-                />
+                <span className="flex items-center gap-2 font-medium">
+                  <input
+                    type="checkbox"
+                    checked={useAi}
+                    onChange={(event) => {
+                      setUseAi(event.target.checked);
+                      resetOutcome();
+                    }}
+                  />
+                  Zuordnung von der lokalen KI verfeinern
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  Regeln erkennen {"„EBENE 3“"} und {"„Begegnung: Die Genesenen“"} von selbst. Namen ohne
+                  Amtsbezeichnung erkennt nur die KI. Läuft auf dem RTX-Host; ist er offline,
+                  entscheiden die Regeln.
+                </span>
               </label>
             </div>
           ) : null}
@@ -305,7 +320,9 @@ export function ImportPanel() {
               </p>
             ))}
             <p className="text-muted-foreground">
-              Rückgängig machen geht im Studio über das Aktivitätsprotokoll.
+              {result.undoToken
+                ? "Rückgängig machen geht im Studio über das Aktivitätsprotokoll."
+                : "Achtung: Für diesen Lauf konnte kein Rückbau-Eintrag angelegt werden — die Seiten müssten von Hand entfernt werden."}
             </p>
           </CardContent>
         </Card>
@@ -323,10 +340,20 @@ function PreviewCard({ preview }: { preview: PreviewResult }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 text-sm">
+        {preview.structureSummary ? (
+          <p className="font-medium">{preview.structureSummary}</p>
+        ) : null}
         <p className="text-muted-foreground">
           {preview.summary.new} neu · {preview.summary.conflict} mit vergebenem Slug ·{" "}
           {preview.summary.duplicate} mit vorhandenem Titel
         </p>
+        {preview.structure.extracted + preview.structure.folded + preview.structure.linked > 0 ? (
+          <p className="text-xs text-muted-foreground">
+            {preview.structure.extracted} aus Fließtext herausgelöst ·{" "}
+            {preview.structure.folded} Abschnitte in die Seite darüber gefaltet ·{" "}
+            {preview.structure.linked} Namen im Text verlinkt
+          </p>
+        ) : null}
 
         {preview.warnings.map((warning) => (
           <p key={warning} className="text-muted-foreground">

@@ -158,6 +158,18 @@ function foldRoots(nodes: DocumentNode[], mode: RootMergeMode): DocumentNode | n
   return root;
 }
 
+/**
+ * Ist dieser Frontmatter-Titel bloß der Dateiname?
+ *
+ * Verglichen wird über den Slug, damit `Magisterturm_Dungeon`,
+ * `magisterturm dungeon` und `Magisterturm-Dungeon` als dasselbe gelten.
+ */
+function looksLikeFileNameTitle(declared: string, fallbackTitle: string): boolean {
+  const asSlug = (value: string) => slugifyDe(value, { fallback: "" });
+  const declaredSlug = asSlug(declared);
+  return declaredSlug.length > 0 && declaredSlug === asSlug(fallbackTitle);
+}
+
 function statusFor(
   node: DocumentNode,
   frontmatter: DocFrontmatter,
@@ -209,11 +221,23 @@ export function mapDocumentTree(
     return { pages, relations, warnings };
   }
 
-  if (frontmatter.title?.trim() && frontmatter.title.trim() !== root.title) {
-    warnings.push(
-      `Frontmatter-Titel „${frontmatter.title.trim()}" weicht von der ersten Überschrift „${root.title}" ab — der Frontmatter-Titel gewinnt.`,
-    );
-    root.title = frontmatter.title.trim();
+  const declaredTitle = frontmatter.title?.trim();
+
+  if (declaredTitle && declaredTitle !== root.title) {
+    // Ein `titel:`, der nur der Dateiname ist, ist keine Entscheidung, sondern
+    // ein Artefakt des Exports. `Magisterturm_Dungeon.md` trägt `titel:
+    // "Magisterturm_Dungeon"` — die erste Überschrift sagt „Der Magister-Turm
+    // von Validori", und das ist der Titel, den jemand gemeint hat.
+    if (looksLikeFileNameTitle(declaredTitle, fallbackTitle)) {
+      warnings.push(
+        `Frontmatter-Titel „${declaredTitle}" sieht nach dem Dateinamen aus — die erste Überschrift „${root.title}" gewinnt.`,
+      );
+    } else {
+      warnings.push(
+        `Frontmatter-Titel „${declaredTitle}" weicht von der ersten Überschrift „${root.title}" ab — der Frontmatter-Titel gewinnt.`,
+      );
+      root.title = declaredTitle;
+    }
   }
 
   // Vorspann (Untertitel, Anreißer vor der ersten Überschrift) gehört zur Wurzel.
@@ -313,6 +337,8 @@ function buildDraft(input: BuildDraftInput): PageDraft {
     profile,
     headingLevel: node.level,
     docPath: input.path,
+    ...(node.role ? { role: node.role } : {}),
+    ...(node.synthetic ? { synthetic: true } : {}),
     ...(input.sourceFile ? { sourceFile: input.sourceFile } : {}),
     ...(node.marker ? { canonMarker: node.marker } : {}),
   };
@@ -334,7 +360,10 @@ function buildDraft(input: BuildDraftInput): PageDraft {
     summary: (isRoot ? frontmatter.summary : undefined) ?? markdownToSummary(node.body),
     canonicalStatus: statusFor(node, frontmatter, profile),
     tags: dedupe(tags),
-    aliases: isRoot ? dedupe(frontmatter.aliases) : [],
+    // Die Gliederungsnummer ist der Name, unter dem das Dokument selbst auf den
+    // Abschnitt verweist („siehe C.4.3", „3 Bannläufer (F.2)"). Als Alias wird
+    // aus jedem dieser Verweise ein auflösbarer Wikilink.
+    aliases: dedupe([...(isRoot ? frontmatter.aliases : []), ...(node.aliases ?? [])]),
     html: markdownToWikiHtml(node.body),
     campaigns: [...frontmatter.campaigns],
     seeAlso: isRoot ? [...frontmatter.seeAlso] : [],

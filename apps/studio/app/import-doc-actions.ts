@@ -9,17 +9,24 @@ import {
 } from "@uwe/database/server";
 import { brainPrisma } from "@uwe/database/brain-client";
 import { extractObsidianVaultFiles } from "@uwe/database/obsidian-vault";
+import { PageTypeEnum, type PageType } from "@uwe/database/enums";
 import {
   buildDocImportPlan,
   buildDocImportPreview,
   type DocImportPreview,
   type DocImportSourceFile,
+  type DocImportStructure,
+  type KnownEntity,
+  type SectionRole,
 } from "@uwe/doc-import";
+import { collectRoleHints } from "@uwe/doc-import/ai";
 import { writeDocImport } from "@uwe/doc-import/writer";
-import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
+import { requireStudioActionAuth, requireStudioAiActionAuth } from "@/src/lib/studio-action-auth";
 import {
   docImportSettingsFromMetadata,
   parseDocImportSettings,
+  roleHintsFromMetadata,
+  serializeRoleHints,
   type DocImportSettings,
 } from "@/src/lib/doc-import-settings";
 
@@ -28,9 +35,15 @@ import {
  *
  * Vorschau und Ausführung erzeugen den Plan **beide** aus demselben Text. Das
  * geht, weil der Weg von Markdown zu Seitenentwürfen vollständig deterministisch
- * ist — keine KI, kein Zufall, keine Uhr. Der Job speichert deshalb nur die
- * schlanke Vorschau, nicht das fertige HTML aller Seiten; ein Kampagnenbuch mit
- * 176 Seiten muss nicht doppelt in der Datenbank liegen.
+ * ist — kein Zufall, keine Uhr. Der Job speichert deshalb nur die schlanke
+ * Vorschau, nicht das fertige HTML aller Seiten; ein Kampagnenbuch mit 176
+ * Seiten muss nicht doppelt in der Datenbank liegen.
+ *
+ * Die eine Ausnahme ist der **KI-Feinschliff**: Der RTX-Host ist kein
+ * deterministischer Teil des Systems. Sein Urteil wird deshalb einmal in der
+ * Vorschau eingeholt, im Job abgelegt und beim Ausführen von dort gelesen —
+ * angelegt wird genau das, was bestätigt wurde, auch wenn der Host inzwischen
+ * schweigt oder anders antworten würde.
  */
 
 const MAX_CONTENT_BYTES = 10 * 1024 * 1024;
@@ -83,11 +96,27 @@ async function loadWorldContext(worldId: string) {
   return world;
 }
 
+/**
+ * Was die Welt schon kennt, in der Form, die der Import versteht.
+ *
+ * Direkt aus dem Repository — der Import sitzt auf derselben Maschine wie die
+ * Datenbank. Ein Umweg über den Studio-MCP wäre HTTP auf die eigene Instanz und
+ * hieße, dass der Import nur läuft, solange Studio läuft.
+ */
+function toKnownEntities(pages: Array<{ title: string; type: string; aliases: unknown }>): KnownEntity[] {
+  return pages.map((page) => ({
+    title: page.title,
+    type: page.type as KnownEntity["type"],
+    aliases: Array.isArray(page.aliases) ? (page.aliases as string[]) : [],
+  }));
+}
+
 async function buildPlanForJob(
   worldSlug: string,
   worldName: string,
   files: DocImportSourceFile[],
   settings: DocImportSettings,
+  roleHints: Map<string, Map<string, SectionRole>>,
 ) {
   const repo = createUweRepositoryFromClient(prisma);
   const existingPages = await repo.listPagesByWorld(worldSlug);
@@ -96,13 +125,55 @@ async function buildPlanForJob(
   const plan = buildDocImportPlan(files, {
     mode: settings.mode,
     profile: settings.profile,
-    maxDepth: settings.maxDepth,
     existingSlugs: existingPages.map((page) => page.slug),
     worldName,
     worldSlug,
+    roleHints,
+    knownEntities: toKnownEntities(existingPages),
   });
 
   return { plan, existingPages, campaigns };
+}
+
+/**
+ * Holt den KI-Feinschliff — oder gibt auf und sagt es.
+ *
+ * `requireStudioAiActionAuth` steht hier und nicht am Anfang der Action, weil
+ * der Import auch ohne KI-Berechtigung vollständig funktioniert. Wer die RTX
+ * nicht benutzen darf, bekommt die Regelzuordnung; niemand steht vor einer
+ * verschlossenen Tür, nur weil ein Häkchen fehlt.
+ */
+async function resolveRoleHints(
+  files: DocImportSourceFile[],
+  settings: DocImportSettings,
+  world: { slug: string; name: string },
+): Promise<{ hints: Map<string, Map<string, SectionRole>>; warnings: string[] }> {
+  if (!settings.useAi || settings.mode !== "document") {
+    return { hints: new Map(), warnings: [] };
+  }
+
+  try {
+    await requireStudioAiActionAuth();
+  } catch {
+    return {
+      hints: new Map(),
+      warnings: ["Dieses Konto darf die lokale KI nicht nutzen — die Zuordnung läuft über die Regeln."],
+    };
+  }
+
+  const repo = createUweRepositoryFromClient(prisma);
+  const collected = await collectRoleHints(
+    { repo, prisma },
+    {
+      profile: settings.profile,
+      files,
+      knownEntities: toKnownEntities(await repo.listPagesByWorld(world.slug)),
+      worldName: world.name,
+      useMock: process.env.NODE_ENV !== "production" && process.env.AI_USE_MOCK === "true",
+    },
+  );
+
+  return { hints: collected.hints, warnings: collected.warnings };
 }
 
 /**
@@ -126,7 +197,11 @@ export async function previewImportDocJobAction(
   jobId: string,
   files: DocImportSourceFile[],
   rawSettings: unknown,
-): Promise<{ preview: DocImportPreview; perFile: Array<{ fileName: string; pageCount: number }> }> {
+): Promise<{
+  preview: DocImportPreview;
+  perFile: Array<{ fileName: string; pageCount: number }>;
+  structure: DocImportStructure;
+}> {
   await requireStudioActionAuth();
 
   const job = await requireDocImportJob(jobId);
@@ -135,11 +210,14 @@ export async function previewImportDocJobAction(
   const settings = parseDocImportSettings(rawSettings);
   const world = await loadWorldContext(job.targetWorldId!);
 
+  const { hints, warnings: aiWarnings } = await resolveRoleHints(files, settings, world);
+
   const { plan, existingPages, campaigns } = await buildPlanForJob(
     world.slug,
     world.name,
     files,
     settings,
+    hints,
   );
 
   const preview = buildDocImportPreview(plan.pages, plan.relations, {
@@ -150,7 +228,9 @@ export async function previewImportDocJobAction(
       aliases: Array.isArray(page.aliases) ? (page.aliases as string[]) : [],
     })),
     campaignNames: campaigns.flatMap((campaign) => [campaign.name, campaign.slug]),
-    warnings: plan.warnings,
+    // Was entstanden ist, steht als eigene Karte im Panel (`structure`) — hier
+    // stehen nur Dinge, die jemand ansehen sollte, bevor er übernimmt.
+    warnings: [...aiWarnings, ...plan.warnings],
   });
 
   await importJobs().updateJob(jobId, {
@@ -162,6 +242,7 @@ export async function previewImportDocJobAction(
       unknownCampaigns: preview.unknownCampaigns,
       unresolvedLinks: preview.unresolvedLinks.slice(0, 200),
       perFile: plan.perFile,
+      structure: plan.structure,
     } as unknown as Record<string, unknown>,
     // Die bestätigten Einstellungen wandern in den Job, damit die Ausführung
     // exakt das erzeugt, was in der Vorschau stand.
@@ -170,17 +251,38 @@ export async function previewImportDocJobAction(
         ? (job.metadata as Record<string, unknown>)
         : {}),
       docImport: { ...settings },
+      docImportRoleHints: serializeRoleHints(hints),
     } as unknown as Record<string, unknown>,
   });
 
   revalidateImportCentral();
-  return { preview, perFile: plan.perFile };
+  return { preview, perFile: plan.perFile, structure: plan.structure };
+}
+
+/**
+ * Liest die Typ-Korrekturen aus der Vorschau.
+ *
+ * Geprüft statt vertraut: Der Client schickt Schlüssel und Typ, und ein Typ, den
+ * es nicht gibt, würde beim Anlegen die ganze Seite scheitern lassen.
+ */
+function parseTypeOverrides(raw: unknown): Record<string, PageType> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+
+  const known = new Set<string>(Object.values(PageTypeEnum));
+  const out: Record<string, PageType> = {};
+
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof value === "string" && known.has(value)) out[key] = value as PageType;
+  }
+
+  return out;
 }
 
 export async function executeImportDocJobAction(
   jobId: string,
   files: DocImportSourceFile[],
   keys?: string[],
+  rawTypeOverrides?: unknown,
 ): Promise<{ resultSummary: Record<string, unknown>; undoToken: string | null }> {
   await requireStudioActionAuth();
 
@@ -188,24 +290,29 @@ export async function executeImportDocJobAction(
   assertFilesWithinLimits(files);
 
   const settings = docImportSettingsFromMetadata(job.metadata);
+  const roleHints = roleHintsFromMetadata(job.metadata);
   const world = await loadWorldContext(job.targetWorldId!);
 
   await importJobs().markExecuting(jobId);
 
   try {
-    const { plan } = await buildPlanForJob(world.slug, world.name, files, settings);
+    const { plan } = await buildPlanForJob(world.slug, world.name, files, settings, roleHints);
     const repo = createUweRepositoryFromClient(prisma);
+
+    const typeOverrides = parseTypeOverrides(rawTypeOverrides);
 
     const result = await writeDocImport(repo, plan.pages, plan.relations, {
       worldSlug: world.slug,
       confirmed: true,
       keys: keys && keys.length > 0 ? keys : undefined,
+      ...(Object.keys(typeOverrides).length > 0 ? { typeOverrides } : {}),
     });
 
     const resultSummary = {
       created: result.created,
       failed: result.failed,
       linksCreated: result.linksCreated,
+      retyped: Object.keys(typeOverrides).length,
       warnings: result.warnings,
     };
 

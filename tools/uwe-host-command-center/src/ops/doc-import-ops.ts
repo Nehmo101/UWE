@@ -2,16 +2,26 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { createPrismaClient } from "@uwe/database/server";
-import { createUweRepositoryFromClient } from "@uwe/database/server";
+import {
+  createImportJobService,
+  createUndoService,
+  createUweRepositoryFromClient,
+} from "@uwe/database/server";
+import { brainPrisma } from "@uwe/database/brain-client";
 import {
   buildDocImportPlan,
   buildDocImportPreview,
+  describeStructure,
   DOC_PROFILES,
   type DocImportMode,
   type DocImportPreview,
   type DocImportSourceFile,
+  type DocImportStructure,
   type DocProfile,
+  type KnownEntity,
+  type SectionRole,
 } from "@uwe/doc-import";
+import { collectRoleHints } from "@uwe/doc-import/ai";
 import { writeDocImport } from "@uwe/doc-import/writer";
 
 /**
@@ -154,7 +164,8 @@ export interface DocImportRequest {
   worldSlug: string;
   mode: DocImportMode;
   profile: DocProfile;
-  maxDepth?: number;
+  /** Zuordnung von der lokalen KI verfeinern lassen, wenn der RTX-Host antwortet. */
+  useAi: boolean;
 }
 
 function normalizeRequest(input: unknown): DocImportRequest {
@@ -171,10 +182,87 @@ function normalizeRequest(input: unknown): DocImportRequest {
     ? (source.profile as DocProfile)
     : "plain";
 
-  const rawDepth = Number.parseInt(String(source.maxDepth ?? ""), 10);
-  const maxDepth = mode === "wiki_pages" ? 1 : Math.min(6, Math.max(1, rawDepth || 3));
+  // Im Bulk-Modus gibt es nichts einzuordnen: eine Datei ist eine Seite.
+  const useAi = mode === "document" && source.useAi !== false;
 
-  return { path: sourcePath, worldSlug, mode, profile, maxDepth };
+  return { path: sourcePath, worldSlug, mode, profile, useAi };
+}
+
+interface RoleHintResult {
+  hints: Map<string, Map<string, SectionRole>>;
+  warnings: string[];
+}
+
+/**
+ * Der Feinschliff der letzten Vorschau.
+ *
+ * Der Umbau selbst ist deterministisch, der RTX-Host ist es nicht: Zwischen
+ * „Vorschau" und „Anlegen" könnte er anders antworten oder gar nicht mehr, und
+ * dann entstünde etwas anderes, als in der Vorschau stand. Das Studio legt sein
+ * Urteil deshalb im Import-Job ab; hier gibt es keinen Job — aber es gibt genau
+ * einen Prozess und genau ein Panel davor, also genügt ein Merkposten.
+ *
+ * Passt der Schlüssel nicht, wird neu gefragt. Er umfasst deshalb nicht nur die
+ * Anfrage, sondern auch die **gelesenen Dateien**: Unter demselben Pfad kann
+ * zwischen Vorschau und Ausführung eine andere Datei liegen, und alte Hinweise
+ * auf eine neue Gliederung zu legen hieße, stillschweigend etwas anderes zu
+ * bauen als das Bestätigte.
+ */
+let lastRoleHints: { key: string; result: RoleHintResult } | null = null;
+
+function requestKey(request: DocImportRequest, files: DocImportSourceFile[]): string {
+  return JSON.stringify([
+    request.path,
+    request.worldSlug,
+    request.mode,
+    request.profile,
+    request.useAi,
+    files.map((file) => [file.fileName, file.content.length]),
+  ]);
+}
+
+/**
+ * Holt den KI-Feinschliff, wenn der RTX-Host antwortet.
+ *
+ * Wirft nicht: Ein stummer Host ist im Command Center der Normalfall (die
+ * Maschine kann laufen, ohne dass das Modell geladen ist), und ein Import, der
+ * daran scheitert, wäre für den Betrieb wertlos. Der Grund wandert in die
+ * Warnungen der Vorschau.
+ */
+async function loadRoleHints(
+  db: Db,
+  request: DocImportRequest,
+  files: DocImportSourceFile[],
+  world: { name: string; knownEntities: KnownEntity[] },
+): Promise<RoleHintResult> {
+  if (!request.useAi) return { hints: new Map(), warnings: [] };
+
+  const key = requestKey(request, files);
+  if (lastRoleHints?.key === key) return lastRoleHints.result;
+
+  let result: RoleHintResult;
+  try {
+    const collected = await collectRoleHints(
+      { repo: createUweRepositoryFromClient(db), prisma: db },
+      {
+        profile: request.profile,
+        files,
+        knownEntities: world.knownEntities,
+        worldName: world.name,
+      },
+    );
+    result = { hints: collected.hints, warnings: collected.warnings };
+  } catch (error) {
+    result = {
+      hints: new Map(),
+      warnings: [
+        `KI-Feinschliff übersprungen (${error instanceof Error ? error.message : "unbekannter Fehler"}) — die Regeln entscheiden.`,
+      ],
+    };
+  }
+
+  lastRoleHints = { key, result };
+  return result;
 }
 
 async function buildPlan(db: Db, request: DocImportRequest) {
@@ -190,16 +278,30 @@ async function buildPlan(db: Db, request: DocImportRequest) {
     repo.listCampaignsByWorld(request.worldSlug),
   ]);
 
+  // Was die Welt schon kennt — direkt aus derselben Datenbank, in die dieser
+  // Import schreibt. Kein MCP, kein HTTP: Der Command Center läuft auf dem Host.
+  const knownEntities: KnownEntity[] = existingPages.map((page) => ({
+    title: page.title,
+    type: page.type as KnownEntity["type"],
+    aliases: Array.isArray(page.aliases) ? (page.aliases as string[]) : [],
+  }));
+
+  const { hints, warnings: aiWarnings } = await loadRoleHints(db, request, files, {
+    name: world.name,
+    knownEntities,
+  });
+
   const plan = buildDocImportPlan(files, {
     mode: request.mode,
     profile: request.profile,
-    maxDepth: request.maxDepth,
     existingSlugs: existingPages.map((page) => page.slug),
     worldName: world.name,
     worldSlug: request.worldSlug,
+    roleHints: hints,
+    knownEntities,
   });
 
-  return { repo, plan, existingPages, campaigns, files };
+  return { repo, plan, existingPages, campaigns, files, aiWarnings };
 }
 
 export interface DocImportPreviewResult {
@@ -208,6 +310,9 @@ export interface DocImportPreviewResult {
   pageCount: number;
   perFile: Array<{ fileName: string; pageCount: number }>;
   summary: DocImportPreview["summary"];
+  /** „8 Ebenen · 23 Räume · 11 Werteblöcke" — woran man erkennt, ob es gepasst hat. */
+  structure: DocImportStructure;
+  structureSummary: string;
   warnings: string[];
   unresolvedLinks: string[];
   /** Die ersten Einträge des Baums — genug, um zu erkennen, ob es passt. */
@@ -219,7 +324,7 @@ export async function previewDocImport(
   input: unknown,
 ): Promise<DocImportPreviewResult> {
   const request = normalizeRequest(input);
-  const { plan, existingPages, campaigns, files } = await buildPlan(db, request);
+  const { plan, existingPages, campaigns, files, aiWarnings } = await buildPlan(db, request);
 
   const preview = buildDocImportPreview(plan.pages, plan.relations, {
     existingPages: existingPages.map((page) => ({
@@ -229,7 +334,7 @@ export async function previewDocImport(
       aliases: Array.isArray(page.aliases) ? (page.aliases as string[]) : [],
     })),
     campaignNames: campaigns.flatMap((campaign) => [campaign.name, campaign.slug]),
-    warnings: plan.warnings,
+    warnings: [...aiWarnings, ...plan.warnings],
   });
 
   return {
@@ -238,6 +343,8 @@ export async function previewDocImport(
     pageCount: preview.items.length,
     perFile: plan.perFile,
     summary: preview.summary,
+    structure: plan.structure,
+    structureSummary: describeStructure(plan.structure.byRole),
     warnings: preview.warnings,
     unresolvedLinks: preview.unresolvedLinks.slice(0, 50),
     sample: preview.items.slice(0, 40).map((item) => ({
@@ -256,6 +363,8 @@ export interface DocImportExecuteResult {
   failed: number;
   linksCreated: number;
   warnings: string[];
+  /** Kennung des Rückbau-Eintrags, unter der das Studio den Lauf zurücknimmt. */
+  undoToken: string | null;
 }
 
 /**
@@ -271,11 +380,28 @@ export async function executeDocImport(
   input: unknown,
 ): Promise<DocImportExecuteResult> {
   const request = normalizeRequest(input);
-  const { repo, plan } = await buildPlan(db, request);
+  const { repo, plan, files } = await buildPlan(db, request);
+
+  const world = await repo.getWorldBySlug(request.worldSlug);
+  if (!world) {
+    throw new Error(`Welt „${request.worldSlug}" wurde nicht gefunden.`);
+  }
 
   const result = await writeDocImport(repo, plan.pages, plan.relations, {
     worldSlug: request.worldSlug,
     confirmed: true,
+  });
+
+  const undoToken = await recordImportRun(db, {
+    worldId: world.id,
+    request,
+    fileCount: files.length,
+    createdPageIds: result.undo.createdPageIds,
+    resultSummary: {
+      created: result.created,
+      failed: result.failed,
+      linksCreated: result.linksCreated,
+    },
   });
 
   return {
@@ -284,5 +410,84 @@ export async function executeDocImport(
     failed: result.failed,
     linksCreated: result.linksCreated,
     warnings: result.warnings.slice(0, 50),
+    undoToken,
   };
+}
+
+/**
+ * Den Lauf so festhalten, dass das Studio ihn zurücknehmen kann.
+ *
+ * Das Panel verspricht seit jeher „Rückgängig machen geht im Studio über das
+ * Aktivitätsprotokoll" — nur hat der Command-Center-Pfad nie einen Eintrag
+ * angelegt. Solange ein Import drei Seiten erzeugte, fiel das kaum auf; ein
+ * Kampagnenbuch macht daraus fünfzig, und die von Hand wieder einzusammeln ist
+ * kein Vorgang, den man jemandem zumuten kann.
+ *
+ * Scheitert das Protokollieren, scheitert nicht der Import: Die Seiten sind
+ * angelegt, und ein fehlender Rückbau-Eintrag ist ein kleineres Übel als eine
+ * Fehlermeldung nach getaner Arbeit.
+ *
+ * Die drei Schritte hängen deshalb **nicht** aneinander. Scheiterte der
+ * Rückbau-Eintrag und risse den Abschluss mit, bliebe der Job für immer im
+ * Anfangszustand stehen — ein Eintrag im Protokoll, der behauptet, der Import
+ * laufe noch, obwohl die Seiten längst da sind. Der Job wird also auch ohne
+ * Rückbau-Eintrag abgeschlossen; dass keiner entstand, sagt das Panel.
+ */
+async function recordImportRun(
+  db: Db,
+  input: {
+    worldId: string;
+    request: DocImportRequest;
+    fileCount: number;
+    createdPageIds: string[];
+    resultSummary: Record<string, number>;
+  },
+): Promise<string | null> {
+  const jobs = createImportJobService(db);
+
+  let jobId: string;
+  try {
+    const job = await jobs.createJob({
+      sourceType: "markdown",
+      targetType: "world",
+      targetWorldId: input.worldId,
+      fileName: input.request.path,
+      metadata: {
+        origin: "command-center",
+        docImport: {
+          mode: input.request.mode,
+          profile: input.request.profile,
+          useAi: input.request.useAi,
+        },
+        fileCount: input.fileCount,
+      },
+    });
+    jobId = job.id;
+  } catch {
+    return null;
+  }
+
+  let undoToken: string | null = null;
+  try {
+    // PageLinks hängen per Cascade an ihrer Quellseite — das Löschen der
+    // erzeugten Seiten räumt sie mit ab.
+    const undoEntry = await createUndoService(brainPrisma, db).captureImportExecute({
+      worldId: input.worldId,
+      jobId,
+      createdPageIds: input.createdPageIds,
+      updatedPages: [],
+    });
+    undoToken = undoEntry?.id ?? null;
+  } catch {
+    undoToken = null;
+  }
+
+  try {
+    await jobs.markCompleted(jobId, input.resultSummary, undoToken);
+  } catch {
+    // Der Import ist durch; ein unvollständiger Protokolleintrag ändert daran
+    // nichts und darf den Rückgabewert nicht verfälschen.
+  }
+
+  return undoToken;
 }

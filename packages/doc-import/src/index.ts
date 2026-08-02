@@ -66,11 +66,65 @@ export { collectWikiLinkTargets, auditWikiLinks, type LinkAudit } from "./relati
 
 export {
   buildDocImportPlan,
+  DOC_IMPORT_SOURCE_TAG,
   type BuildDocImportPlanOptions,
   type DocImportMode,
   type DocImportPlan,
   type DocImportSourceFile,
+  type DocImportStructure,
 } from "./plan";
+
+export {
+  classifySection,
+  describeStructure,
+  isEntityRole,
+  isListRole,
+  isPageRole,
+  isPartHeading,
+  splitHeadingLabel,
+  tidyHeadingText,
+  SECTION_ROLE_LABELS,
+  type ClassifyContext,
+} from "./semantic/roles";
+
+export {
+  extractDefinitionBullets,
+  extractLabelledBlocks,
+  looksLikeCombatStatblock,
+  splitStatblockBody,
+  wrapDmSection,
+  type ExtractedBlock,
+  type ExtractBlocksResult,
+  type SplitStatblock,
+} from "./semantic/blocks";
+
+export {
+  collectEntityNodes,
+  restructureDocument,
+  shiftHeadings,
+  type RestructureOptions,
+  type RestructureResult,
+} from "./semantic/restructure";
+
+
+export { linkEntityNames, type LinkTarget } from "./semantic/crosslink";
+
+export {
+  buildKnownEntityIndex,
+  matchKnownEntity,
+  selectMentionedEntities,
+  type KnownEntity,
+  type KnownEntityMatch,
+} from "./semantic/world-context";
+
+export {
+  AI_ASSIGNABLE_ROLES,
+  buildOutlinePrompt,
+  parseOutlineHints,
+  type OutlinePromptOptions,
+} from "./semantic/ai-hints";
+
+export { nodePath, outlineExcerpt, type OutlineEntry } from "./semantic/outline";
 
 export {
   buildDocImportPreview,
@@ -89,4 +143,5 @@ export type {
   DocumentTree,
   PageDraft,
   RelationDraft,
+  SectionRole,
 } from "./types";

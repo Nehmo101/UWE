@@ -19,6 +19,7 @@ import {
 } from "../../../../dungeon-actions";
 import { DungeonLevelLayout } from "@/components/worlds/DungeonLevelLayout";
 import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { DungeonSidePages } from "@/src/components/dungeon/DungeonSidePages";
 import { CampaignSidebar } from "@/src/components/wiki";
 import { dungeonBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import {
@@ -103,6 +104,13 @@ export default async function StudioDungeonDetailPage({ params, searchParams }: 
           slug: level.slug,
           prepStatus: level.prepStatus,
         }))}
+      />
+
+      <DungeonSidePages
+        worldSlug={worldSlug}
+        pages={overview.appendix}
+        title="Weitere Seiten"
+        emptyHint="Keine weiteren Seiten an diesem Dungeon"
       />
 
       <section className={SECTION_CLASS}>

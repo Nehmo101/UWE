@@ -8,7 +8,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./writer": "./src/writer.ts",
-    "./transfer": "./src/transfer.ts"
+    "./transfer": "./src/transfer.ts",
+    "./ai": "./src/ai.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -17,7 +18,8 @@
   "dependencies": {
     "@uwe/database": "workspace:*",
     "@uwe/shared-utils": "workspace:*",
-    "marked": "^15.0.7"
+    "marked": "^15.0.7",
+    "@uwe/ai-brain": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.32",

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { buildDocImportPlan } from "./plan";
+import { buildDocImportPlan, DOC_IMPORT_SOURCE_TAG } from "./plan";
 import { buildDocImportPreview } from "./preview";
 
 const PELLAR = `---
@@ -114,33 +114,69 @@ describe("buildDocImportPlan — Dokument", () => {
         content: [
           "# DER MAGISTER-TURM",
           "Ein Dungeon.",
+          "# TEIL C — DER TURM",
           "## C.1 EBENE 1 — Eingangsring",
           "Ein Foyer.",
           "### C.1.1 Die Räume",
-          "Ein Kreisgang.",
+          "- **Der Ring:** Ein Kreisgang um den Hohlkern.",
+          "- **Die Wachstube:** Ein kaltes Kohlebecken.",
         ].join("\n\n"),
       },
     ],
-    { mode: "document", profile: "dungeon", maxDepth: 3 },
+    { mode: "document", profile: "dungeon" },
   );
 
-  it("builds a tree instead of one page", () => {
-    assert.equal(plan.pages.length, 3);
+  /** Ohne die Beleg-Seite — sie hat mit der Gliederung nichts zu tun. */
+  const structurePages = plan.pages.filter((page) => !page.tags.includes(DOC_IMPORT_SOURCE_TAG));
+
+  it("macht Gegenstände zu Seiten, nicht Überschriften", () => {
     assert.deepEqual(
-      plan.pages.map((page) => [page.type, page.sortIndex]),
+      structurePages.map((page) => [page.title, page.type, page.sortIndex]),
       [
-        ["dungeon", null],
-        ["dungeon_level", 0],
-        ["room", 0],
+        ["Der Magister-Turm", "dungeon", null],
+        ["EBENE 1 — Eingangsring", "dungeon_level", 0],
+        ["Der Ring", "room", 0],
+        ["Die Wachstube", "room", 1],
       ],
     );
   });
 
   it("wires parents to children", () => {
-    const [root, level, room] = plan.pages;
+    const [root, level, ring, wachstube] = structurePages;
     assert.equal(root.parentKey, null);
+    // „TEIL C" ist eine reine Gliederungsklammer und verschwindet.
     assert.equal(level.parentKey, root.key);
-    assert.equal(room.parentKey, level.key);
+    assert.equal(ring.parentKey, level.key);
+    assert.equal(wachstube.parentKey, level.key);
+  });
+
+  it("behält die Gliederungsnummer als Alias", () => {
+    const level = structurePages[1];
+    assert.ok(level.aliases.includes("C.1"));
+  });
+
+  it("zählt, was entstanden ist", () => {
+    assert.equal(plan.structure.byRole.level, 1);
+    assert.equal(plan.structure.byRole.room, 2);
+    assert.equal(plan.structure.extracted, 2);
+    // „TEIL C — DER TURM" und „Die Räume" — beide reine Gliederung.
+    assert.equal(plan.structure.dissolved, 2);
+  });
+
+  it("legt die Originaldatei als Beleg daneben", () => {
+    const source = plan.pages.find((page) => page.tags.includes(DOC_IMPORT_SOURCE_TAG));
+    assert.ok(source);
+    assert.equal(source.type, "note");
+    assert.equal(source.parentKey, structurePages[0].key);
+    assert.ok(source.html.includes("EBENE 1 — Eingangsring"));
+  });
+
+  it("lässt den Beleg weg, wenn er nicht gewollt ist", () => {
+    const lean = buildDocImportPlan(
+      [{ fileName: "turm.md", content: "# Turm\n\n## EBENE 1\n\nEin Foyer." }],
+      { mode: "document", profile: "dungeon", keepSource: false },
+    );
+    assert.ok(!lean.pages.some((page) => page.tags.includes(DOC_IMPORT_SOURCE_TAG)));
   });
 });
 
