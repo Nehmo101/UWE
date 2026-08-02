@@ -44,5 +44,15 @@ describe("splitGitHubRepo", () => {
   it("rejects malformed values", () => {
     assert.equal(splitGitHubRepo("owner"), null);
     assert.equal(splitGitHubRepo("/repo"), null);
+    assert.equal(splitGitHubRepo("owner/"), null);
+    assert.equal(splitGitHubRepo(""), null);
+    assert.equal(splitGitHubRepo("owner/ "), null);
+  });
+
+  // Ein drittes Segment darf nicht still auf owner/repo zurückfallen — sonst
+  // landet das Issue in einem anderen Repository als konfiguriert.
+  it("rejects more than two segments instead of truncating", () => {
+    assert.equal(splitGitHubRepo("owner/repo/extra"), null);
+    assert.equal(splitGitHubRepo("https://github.com/owner/repo"), null);
   });
 });

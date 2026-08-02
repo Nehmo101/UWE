@@ -19,6 +19,7 @@ const STATIC_SECRET_KEYS = [
   "SMTP_PASSWORD",
   "CALDAV_PASSWORD",
   "GITHUB_TOKEN",
+  "GITHUB_ISSUE_TOKEN",
   "AGENT_TOKEN",
   "password",
   "token",

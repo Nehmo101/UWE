@@ -51,6 +51,26 @@ describe("redactSecrets", () => {
     );
   });
 
+  // Der Bug-Center-Fallback GITHUB_ISSUE_TOKEN muss genauso verschwinden wie
+  // GITHUB_TOKEN — sonst steht der Wert blank in einer GitHub-Fehlermeldung.
+  it("removes both GitHub issue token names from logs", () => {
+    withEnv(
+      {
+        GITHUB_TOKEN: "ghp-primary-token-value-1234",
+        GITHUB_ISSUE_TOKEN: "ghp-fallback-token-value-5678",
+      },
+      () => {
+        const output = redactSecrets(
+          "GitHub 401 for ghp-primary-token-value-1234 and ghp-fallback-token-value-5678",
+          process.env,
+        );
+
+        assert.doesNotMatch(output, /ghp-primary-token-value-1234/);
+        assert.doesNotMatch(output, /ghp-fallback-token-value-5678/);
+      },
+    );
+  });
+
   it("redacts bearer tokens and password patterns", () => {
     const output = redactSecrets("Auth failed: password=super-secret bearer abc.def.ghi");
     assert.doesNotMatch(output, /super-secret/);
