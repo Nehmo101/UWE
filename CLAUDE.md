@@ -44,6 +44,11 @@ Portal            → apps/portal/app/**
 Shared UI         → packages/shared-ui/src/
 ```
 
+**Studio-Shell:** Der Rahmen sitzt einmal im Root-Layout. Eine neue Seite gibt
+nur Inhalt zurück — kein Shell-Wrapper, keine eigene Sidebar. Navigationsziele
+kommen aus `apps/studio/src/navigation/`; die aktive Welt ist Context + Cookie,
+kein Rahmenwechsel ([docs/engineering/studio-shell.md](docs/engineering/studio-shell.md)).
+
 ## CI & Agent-Regeln
 
 **Kanonical source:** [AGENTS.md](AGENTS.md) — Quality Gate (`pnpm quality` / `pnpm ci:light`), Common Failures, Auth-Import-Tabelle, Cursor-Cloud-Setup.
@@ -138,6 +143,7 @@ Minimaler Diff; Package-Grenzen einhalten; keine Drive-by Refactors; Services er
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Architektur
 - [docs/engineering/ci.md](docs/engineering/ci.md) — CI-Workflows
 - [docs/engineering/self-service-config.md](docs/engineering/self-service-config.md) — Self-Service-Konfig & Host-Sync-Muster
+- [docs/engineering/studio-shell.md](docs/engineering/studio-shell.md) — Ein Shell für alle Studio-Routen: Welt als Context + Cookie, Slot-Melder, welche Route ohne Rahmen läuft
 - [docs/engineering/mcp-servers.md](docs/engineering/mcp-servers.md) — MCP-Server & `/uwestudio` `/uweportal` `/uwebrain` `/uwefamily`
 - [docs/family/README.md](docs/family/README.md) — Family: Mitglieder, Kalender, API, Kochbuch, Konto
 - [docs/engineering/doc-import-und-session-runner.md](docs/engineering/doc-import-und-session-runner.md) — Frontmatter-Dialekt, Seitenbaum-Import, Splitscreen am Spieltisch, API-Allowlist-Falle

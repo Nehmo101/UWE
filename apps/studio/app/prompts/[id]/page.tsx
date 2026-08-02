@@ -5,7 +5,7 @@ import {
   PROMPT_CATEGORIES,
   PROMPT_CATEGORY_LABELS,
 } from "@uwe/database/prompt-library";
-import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { requireStudioAccess } from "@/src/lib/auth";
 import { deletePromptAction, updatePromptAction } from "@/app/prompt-actions";
 import { PromptFillClient } from "@/app/prompts/PromptFillClient";
@@ -42,13 +42,8 @@ export default async function PromptDetailPage({ params, searchParams }: Props) 
   if (!prompt) notFound();
 
   return (
-    <StudioShell
-      breadcrumb={
-        <BreadcrumbTrail
-          items={[{ label: "Prompt-Bibliothek", href: "/prompts" }, { label: prompt.title }]}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb items={[{ label: "Prompt-Bibliothek", href: "/prompts" }, { label: prompt.title }]} />
       <PageHeader
         title={prompt.title}
         summary={PROMPT_CATEGORY_LABELS[prompt.category]}
@@ -111,6 +106,6 @@ export default async function PromptDetailPage({ params, searchParams }: Props) 
           Prompt löschen
         </Button>
       </form>
-    </StudioShell>
+    </>
   );
 }

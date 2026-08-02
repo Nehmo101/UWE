@@ -10,7 +10,6 @@ import {
   ResponsiveTable,
   WorldCockpitCard,
   WorldCockpitHeader,
-  WorldCockpitTabs,
   WorldCockpitTag,
 } from "@uwe/shared-ui";
 import { type DashboardWidgetConfig } from "@uwe/database/dashboard-layout";
@@ -26,18 +25,11 @@ import {
 } from "@/src/components/ui";
 
 
-type CockpitTabItem = {
-  key: string;
-  label: string;
-  href: string;
-  active?: boolean;
-};
 
 export interface WorldDashboardClientProps {
   worldSlug: string;
   worldName: string;
   worldDescription: string | null;
-  cockpitTabs: CockpitTabItem[];
   widgets: DashboardWidgetConfig[];
   overview: {
     counts: {
@@ -83,7 +75,6 @@ export function WorldDashboardClient({
   worldSlug,
   worldName,
   worldDescription,
-  cockpitTabs,
   widgets,
   overview,
 }: WorldDashboardClientProps) {
@@ -275,7 +266,6 @@ export function WorldDashboardClient({
         }
       />
 
-      <WorldCockpitTabs items={cockpitTabs} />
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-3" aria-label="Priorität">
         {renderWidget({ id: "hero-next-session", widgetType: "next-session", order: 0, column: 1, visible: true })}

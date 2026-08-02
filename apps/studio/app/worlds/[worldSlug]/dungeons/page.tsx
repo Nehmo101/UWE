@@ -10,7 +10,7 @@ import {
   DungeonPrepStatusEnum,
   getAppRepository,
 } from "@uwe/database/server";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { CampaignSidebar } from "@/src/components/wiki";
 import { campaignNavItems } from "@/src/lib/world-nav";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
@@ -53,20 +53,13 @@ export default async function StudioDungeonsPage({ params, searchParams }: Props
     : dungeonList;
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(world.name, worldSlug, "Dungeons", `/worlds/${worldSlug}/dungeons`)}
-        />
-      }
-      contextPanel={
+    <>
+      <ShellBreadcrumb items={worldSectionBreadcrumb(world.name, worldSlug, "Dungeons", `/worlds/${worldSlug}/dungeons`)} />
+      <ShellContextPanel>
         <CampaignSidebar
           items={campaignNavItems(`/worlds/${worldSlug}/dungeons`, campaigns, campaignSlug)}
         />
-      }
-    >
+      </ShellContextPanel>
       <PageHeader
         title="Dungeon Cockpit"
         summary="Dungeons, Ebenen und Räume strukturiert vorbereiten — mit Vorlesetext, GM-Notizen und zugeordneten Assets."
@@ -137,6 +130,6 @@ export default async function StudioDungeonsPage({ params, searchParams }: Props
           </CardContent>
         </Card>
       )}
-    </WorldShell>
+    </>
   );
 }

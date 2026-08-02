@@ -45,7 +45,7 @@ using `onNavigate` callbacks instead of Next.js `<Link>`. Icons resolved via
 
 | Old | New |
 |---|---|
-| Bespoke shells in `packages/shared-ui/src/shells/*` (legacy widgets) | New shells in `apps/*/src/components/shell/*` consuming the central navigation contract |
+| Bespoke shells in `packages/shared-ui/src/shells/*` (legacy widgets) | One shell per app in `apps/*/src/components/shell/*` consuming the central navigation contract. Studio mounts it in the root layout — see [studio-shell.md](../engineering/studio-shell.md) |
 | Scattered nav arrays (`apps/studio/src/lib/studio-navigation.ts`, `world-nav.ts`, `global-nav.ts`, `apps/portal/src/lib/portal-navigation.ts`) | `@uwe/shared-utils/navigation` contract + `apps/*/src/navigation/*` |
 | Hand-rolled command palette (`packages/shared-ui/src/CommandPalette.tsx`) | cmdk fed from navigation |
 | Mixed emoji/text/SVG icons | Lucide React |

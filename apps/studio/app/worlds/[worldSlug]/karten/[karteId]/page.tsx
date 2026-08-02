@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { createPrismaClient, getAppRepository } from "@uwe/database/server";
 import { createTerraService } from "@uwe/database/terra";
 import { ortQuellenAusSeiten } from "@uwe/ai-brain/terra";
-import { WorldShell, BreadcrumbTrail } from "@/src/components/shell";
+import { ShellBreadcrumb } from "@/src/components/shell";
 import { worldDetailBreadcrumb, type BreadcrumbItem } from "@/src/lib/world-breadcrumbs";
 import { TerraRahmen } from "@/src/components/terra";
 
@@ -65,7 +65,8 @@ export default async function TerraKartePage({ params, searchParams }: Props) {
   );
 
   return (
-    <WorldShell worldSlug={worldSlug} worldName={world.name} breadcrumb={<BreadcrumbTrail items={breadcrumb} />}>
+    <>
+      <ShellBreadcrumb items={breadcrumb} />
       <div className="space-y-3">
         <h1 className="text-xl font-semibold">{karte.titel}</h1>
         {karte.autorName || karte.status !== "freigegeben" ? (
@@ -80,6 +81,6 @@ export default async function TerraKartePage({ params, searchParams }: Props) {
         ) : null}
         {editor}
       </div>
-    </WorldShell>
+    </>
   );
 }

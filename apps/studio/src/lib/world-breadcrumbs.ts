@@ -5,17 +5,23 @@ export interface BreadcrumbItem {
   href?: string;
 }
 
-/** Root breadcrumb segment — always links back to DM dashboard. */
+/**
+ * Wurzel-Segment jeder Welt-Spur.
+ *
+ * Das Ziel war immer die Weltenliste (`STUDIO_SESSION_ENTRY_PATH` = `/worlds`),
+ * die Beschriftung sagte aber „Dashboard" — und führte damit an genau der
+ * Stelle in die Irre, an der man aus einer Welt herausfindet.
+ */
 export function studioDashboardBreadcrumb(): BreadcrumbItem {
-  return { label: "Dashboard", href: STUDIO_SESSION_ENTRY_PATH };
+  return { label: "Welten", href: STUDIO_SESSION_ENTRY_PATH };
 }
 
-/** Breadcrumb: Dashboard > Welten */
-export function worldsListBreadcrumb(): BreadcrumbItem[] {
-  return [studioDashboardBreadcrumb(), { label: "Welten", href: "/worlds" }];
+/** Breadcrumb der Weltenliste selbst — ohne Selbstverweis. */
+export function worldsRootBreadcrumb(): BreadcrumbItem[] {
+  return [{ label: "Welten" }];
 }
 
-/** Breadcrumb: Dashboard > {worldName} */
+/** Breadcrumb: Welten > {worldName} */
 export function worldRootBreadcrumb(
   worldName: string,
   worldSlug: string,
@@ -26,7 +32,7 @@ export function worldRootBreadcrumb(
   ];
 }
 
-/** Breadcrumb: Dashboard > {world} > {section} */
+/** Breadcrumb: Welten > {world} > {section} */
 export function worldSectionBreadcrumb(
   worldName: string,
   worldSlug: string,
@@ -39,7 +45,7 @@ export function worldSectionBreadcrumb(
   ];
 }
 
-/** Breadcrumb: Dashboard > {world} > {section} > {detail} */
+/** Breadcrumb: Welten > {world} > {section} > {detail} */
 export function worldDetailBreadcrumb(
   worldName: string,
   worldSlug: string,
@@ -54,7 +60,7 @@ export function worldDetailBreadcrumb(
   ];
 }
 
-/** Breadcrumb for wiki pages: Dashboard > {world} > {category} > {title} */
+/** Breadcrumb for wiki pages: Welten > {world} > {category} > {title} */
 export function wikiPageBreadcrumb(
   worldName: string,
   worldSlug: string,

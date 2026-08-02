@@ -11,7 +11,7 @@ import {
   PageTypeEnum,
   CanonicalStatusEnum,
 } from "@uwe/database/server";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { worldWikiPath } from "@/src/lib/world-last-route";
 import { CampaignSidebar } from "@/src/components/wiki";
 import { NewPageAiPanel } from "@/components/NewPageAiPanel";
@@ -70,23 +70,16 @@ export default async function NewPageForm({ params, searchParams }: Props) {
   }
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(world.name, worldSlug, "Neue Seite")}
-        />
-      }
-      contextPanel={
+    <>
+      <ShellBreadcrumb items={worldSectionBreadcrumb(world.name, worldSlug, "Neue Seite")} />
+      <ShellContextPanel>
         <CampaignSidebar
           items={[
             { label: "← Übersicht", href: `/worlds/${worldSlug}/dashboard` },
             { label: "Seitenliste", href: worldWikiPath(worldSlug) },
           ]}
         />
-      }
-    >
+      </ShellContextPanel>
       <PageHeader
         title="Neue Seite"
         summary="Wähle eine Vorlage und lege los — Slug und DM-Notizblöcke werden automatisch angelegt."
@@ -241,6 +234,6 @@ export default async function NewPageForm({ params, searchParams }: Props) {
           </Link>
         </div>
       </form>
-    </WorldShell>
+    </>
   );
 }

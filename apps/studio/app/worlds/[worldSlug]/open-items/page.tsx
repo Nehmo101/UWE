@@ -10,7 +10,7 @@ import {
 } from "@uwe/database/server";
 import { OpenItemsBulkClose } from "@/components/worlds/OpenItemsBulkClose";
 import { bulkCloseOpenQuestsAction } from "../open-items-actions";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
 
 interface Props {
@@ -41,19 +41,14 @@ export default async function WorldOpenItemsPage({ params }: Props) {
   const grouped = groupOpenItemsByCategory(items);
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={[
-            { label: "Welten", href: "/worlds" },
-            { label: world.name, href: `/worlds/${worldSlug}/dashboard` },
-            { label: "Was ist offen?" },
-          ]}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb
+        items={[
+          { label: "Welten", href: "/worlds" },
+          { label: world.name, href: `/worlds/${worldSlug}/dashboard` },
+          { label: "Was ist offen?" },
+        ]}
+      />
       <PageHeader
         title="Was ist offen?"
         summary="Vereinheitlichte Übersicht: offene Quests, Session-Plots, vorbereitete und gespielte Inhalte, NPCs in Arbeit und Rätsel. Verworfene Seiten werden ausgeblendet."
@@ -104,6 +99,6 @@ export default async function WorldOpenItemsPage({ params }: Props) {
           })}
         </div>
       )}
-    </WorldShell>
+    </>
   );
 }

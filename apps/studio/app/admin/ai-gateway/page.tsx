@@ -3,7 +3,7 @@ import { AiGatewayWizard } from "@/components/AiGatewayWizard";
 import type { GatewayDashboard } from "@/components/ai-gateway/types";
 import { requireOwner } from "@/src/lib/auth";
 import { loadAiGatewayDashboard } from "@/src/lib/ai-gateway-handlers";
-import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 
 export default async function AiGatewayAdminPage() {
   await requireOwner();
@@ -13,21 +13,18 @@ export default async function AiGatewayAdminPage() {
   const initialData: GatewayDashboard = await loadAiGatewayDashboard();
 
   return (
-    <SystemShell
-      breadcrumb={
-        <BreadcrumbTrail
-          items={[
-            { label: "Dashboard", href: STUDIO_SESSION_ENTRY_PATH },
-            { label: "KI & RTX Fallback" },
-          ]}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb
+        items={[
+          { label: "Dashboard", href: STUDIO_SESSION_ENTRY_PATH },
+          { label: "KI & RTX Fallback" },
+        ]}
+      />
       <PageHeader
         title="KI & RTX Fallback"
         summary="Master-Admin-Wizard: RTX bevorzugen, Cloud-Fallback optional, Privacy-Regeln, Budgets und User-Freigaben."
       />
       <AiGatewayWizard initialData={initialData} />
-    </SystemShell>
+    </>
   );
 }

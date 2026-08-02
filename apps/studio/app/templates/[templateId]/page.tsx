@@ -7,7 +7,7 @@ import {
 import { createPageTemplateService, prisma } from "@uwe/database/server";
 import { updateTemplateAction } from "../../template-actions";
 import { TemplateEditorClient } from "../TemplateEditorClient";
-import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { Alert, buttonVariants, Card, CardContent } from "@/src/components/ui";
 
 interface Props {
@@ -25,16 +25,13 @@ export default async function EditTemplatePage({ params, searchParams }: Props) 
   const isEditMode = edit === "1";
 
   return (
-    <StudioShell
-      breadcrumb={
-        <BreadcrumbTrail
-          items={[
-            { label: "Seiten-Templates", href: "/templates" },
-            { label: template.name },
-          ]}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb
+        items={[
+          { label: "Seiten-Templates", href: "/templates" },
+          { label: template.name },
+        ]}
+      />
       <PageHeader
         title={template.name}
         summary={
@@ -102,6 +99,6 @@ export default async function EditTemplatePage({ params, searchParams }: Props) 
           </Card>
         )}
       </div>
-    </StudioShell>
+    </>
   );
 }

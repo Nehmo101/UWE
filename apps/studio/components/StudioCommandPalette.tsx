@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useMemo } from "react";
 import type { NavCommand } from "@uwe/shared-utils/navigation";
 import { CommandPalette, type CommandPaletteAction } from "@/src/components/ui/command-palette";
+import { pickKnownWorldSlug, worldSlugFromPathname } from "@/src/lib/active-world";
 import { studioCommandPaletteCommands } from "@/src/lib/studio-navigation";
 
 interface StudioCommandPaletteProps {
@@ -29,21 +30,19 @@ interface StudioCommandPaletteProps {
  */
 const ACTION_COMMANDS: CommandPaletteAction[] = [];
 
-const RESERVED_TOP_LEVEL = new Set(["worlds", "search", "backup", "settings", "api"]);
-
-function worldSlugFromPathname(pathname: string): string | null {
-  const match = pathname.match(/^\/worlds\/([^/]+)/);
-  if (!match) return null;
-  const slug = decodeURIComponent(match[1]);
-  return RESERVED_TOP_LEVEL.has(slug) ? null : slug;
-}
-
 export function StudioCommandPalette({
   worlds,
   canRunAdminCommands = false,
 }: StudioCommandPaletteProps) {
   const pathname = usePathname();
-  const worldSlug = worldSlugFromPathname(pathname ?? "");
+  // Dieselbe Regel wie im Shell (`active-world.ts`): der Pfad-Slug zählt nur,
+  // wenn es die Welt wirklich gibt. Die frühere Blacklist reservierter
+  // Segmente riet nur — sie hätte eine Welt namens „settings" ausgesperrt und
+  // eine erfundene durchgelassen.
+  const worldSlug = pickKnownWorldSlug(
+    worldSlugFromPathname(pathname ?? ""),
+    worlds.map((world) => world.slug),
+  );
 
   const commands = useMemo<NavCommand[]>(
     () =>

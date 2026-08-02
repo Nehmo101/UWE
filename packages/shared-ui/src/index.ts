@@ -28,7 +28,6 @@ export {
 
 /** @deprecated Legacy shared-ui shell widgets — new product code uses app-local shells. */
 export {
-  WorldCockpitTabs,
   WorldCockpitCard,
   WorldCockpitHeader,
   WorldCockpitTag,

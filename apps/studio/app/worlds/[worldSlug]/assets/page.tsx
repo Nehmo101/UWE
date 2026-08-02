@@ -20,7 +20,7 @@ import {
   updateAssetAction,
 } from "@/app/asset-actions";
 import { AssetBatchToolbar, AssetTagProposalPanel } from "@/components/assets/AssetBatchToolbar";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import {
   Alert,
@@ -88,20 +88,13 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
 
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(world.name, worldSlug, "Medien & Assets", `/worlds/${worldSlug}/assets`)}
-        />
-      }
-      contextPanel={
+    <>
+      <ShellBreadcrumb items={worldSectionBreadcrumb(world.name, worldSlug, "Medien & Assets", `/worlds/${worldSlug}/assets`)} />
+      <ShellContextPanel>
         <SidebarSection title="Kontext">
           <p className="text-sm text-muted-foreground">{assets.length} Assets</p>
         </SidebarSection>
-      }
-    >
+      </ShellContextPanel>
       <PageHeader
         title="Asset-Bibliothek"
         summary="Bilder, Karten, Handouts und Medien zentral verwalten."
@@ -412,7 +405,7 @@ export default async function StudioAssetsPage({ params, searchParams }: Props) 
           </details>
         )}
       </div>
-    </WorldShell>
+    </>
   );
 }
 

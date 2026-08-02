@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { resolveAiChatAccess } from "@/src/lib/ai-gateway-access";
 import { getCurrentAuthUser } from "@/src/lib/auth";
 import { MobileAiPromptPanel } from "@/components/MobileAiPromptPanel";
@@ -12,25 +12,27 @@ export default async function AiPage() {
 
   if (!access.allowed) {
     return (
-      <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "KI" }]} />}>
+      <>
+        <ShellBreadcrumb items={[{ label: "KI" }]} />
         <PageHeader title="KI" summary={access.message} />
         <p className="text-sm text-muted-foreground">
           Master-Admin:{" "}
           <Link href="/admin/ai-gateway">KI-Gateway</Link> → User-Freigaben →{" "}
           <code>AI_CHAT_USE</code> vergeben.
         </p>
-      </StudioShell>
+      </>
     );
   }
 
   return (
-    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "KI" }]} />}>
+    <>
+      <ShellBreadcrumb items={[{ label: "KI" }]} />
       <PageHeader
         title="KI"
         summary="Allgemeiner Chat ohne lokalen Brain-/Objekt-Kontext. DnD-Kontext nur in Welten verfügbar."
       />
       <AiHubShortcuts />
       <MobileAiPromptPanel useMock={useMock} pollIntervalMs={30_000} />
-    </StudioShell>
+    </>
   );
 }

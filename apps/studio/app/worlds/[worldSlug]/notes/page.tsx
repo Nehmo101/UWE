@@ -16,7 +16,7 @@ import {
   deletePlayerNoteAction,
   hidePlayerNoteAction,
 } from "../../../note-actions";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { CampaignSidebar } from "@/src/components/wiki";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import {
@@ -89,51 +89,42 @@ export default async function StudioPlayerNotesPage({ params, searchParams }: Pr
     : allNotes;
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(world.name, worldSlug, "Spielernotizen", `/worlds/${worldSlug}/notes`)}
+    <>
+      <ShellBreadcrumb items={worldSectionBreadcrumb(world.name, worldSlug, "Spielernotizen", `/worlds/${worldSlug}/notes`)} />
+      <ShellContextPanel>
+        <CampaignSidebar
+          title="Ansicht"
+          items={[
+            {
+              label: "Review Queue",
+              href: `${notesBase}${campaignSlug ? `?campaign=${campaignSlug}` : ""}`,
+              active: view !== "all",
+            },
+            {
+              label: "Alle Notizen",
+              href: `${notesBase}?view=all${campaignSlug ? `&campaign=${campaignSlug}` : ""}`,
+              active: view === "all",
+            },
+          ]}
         />
-      }
-      contextPanel={
-        <>
-          <CampaignSidebar
-            title="Ansicht"
-            items={[
-              {
-                label: "Review Queue",
-                href: `${notesBase}${campaignSlug ? `?campaign=${campaignSlug}` : ""}`,
-                active: view !== "all",
-              },
-              {
-                label: "Alle Notizen",
-                href: `${notesBase}?view=all${campaignSlug ? `&campaign=${campaignSlug}` : ""}`,
-                active: view === "all",
-              },
-            ]}
-          />
-          <CampaignSidebar
-            items={[
-              {
-                label: "Alle",
-                href: `${notesBase}${viewAllSuffix}`,
-                active: !campaignSlug,
-              },
-              ...campaigns.map((c) => ({
-                label: c.name,
-                href: `${notesBase}?${view === "all" ? "view=all&" : ""}campaign=${c.slug}`,
-                active: campaignSlug === c.slug,
-              })),
-            ]}
-          />
-          <SidebarSection title="Kontext">
-            <p className="text-sm text-muted-foreground">{reviewQueue.length} in Review Queue</p>
-          </SidebarSection>
-        </>
-      }
-    >
+        <CampaignSidebar
+          items={[
+            {
+              label: "Alle",
+              href: `${notesBase}${viewAllSuffix}`,
+              active: !campaignSlug,
+            },
+            ...campaigns.map((c) => ({
+              label: c.name,
+              href: `${notesBase}?${view === "all" ? "view=all&" : ""}campaign=${c.slug}`,
+              active: campaignSlug === c.slug,
+            })),
+          ]}
+        />
+        <SidebarSection title="Kontext">
+          <p className="text-sm text-muted-foreground">{reviewQueue.length} in Review Queue</p>
+        </SidebarSection>
+      </ShellContextPanel>
       <PageHeader
         title={view === "all" ? "Alle Spielernotizen" : "Review Queue"}
         summary={
@@ -270,6 +261,6 @@ export default async function StudioPlayerNotesPage({ params, searchParams }: Pr
           ))}
         </div>
       )}
-    </WorldShell>
+    </>
   );
 }

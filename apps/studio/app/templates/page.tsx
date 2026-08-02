@@ -5,7 +5,7 @@ import {
   duplicateTemplateAction,
   setTemplateActiveAction,
 } from "../template-actions";
-import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import {
   Badge,
   Button,
@@ -42,7 +42,8 @@ export default async function TemplatesPage({ searchParams }: Props) {
   const pageTypes = [...new Set(templates.map((template) => template.pageType))].sort();
 
   return (
-    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Seiten-Templates" }]} />}>
+    <>
+      <ShellBreadcrumb items={[{ label: "Seiten-Templates" }]} />
       <PageHeader
         title="Seiten-Templates"
         summary="Vorlagen für Quick Create — System-Templates lassen sich anpassen und deaktivieren, eigene Templates frei verwalten."
@@ -169,6 +170,6 @@ export default async function TemplatesPage({ searchParams }: Props) {
           }
         />
       </div>
-    </StudioShell>
+    </>
   );
 }

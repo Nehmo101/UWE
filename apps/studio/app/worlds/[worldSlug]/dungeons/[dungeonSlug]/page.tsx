@@ -18,7 +18,7 @@ import {
   updateDungeonEntityAction,
 } from "../../../../dungeon-actions";
 import { DungeonLevelLayout } from "@/components/worlds/DungeonLevelLayout";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { DungeonSidePages } from "@/src/components/dungeon/DungeonSidePages";
 import { CampaignSidebar } from "@/src/components/wiki";
 import { dungeonBreadcrumb } from "@/src/lib/world-breadcrumbs";
@@ -67,17 +67,13 @@ export default async function StudioDungeonDetailPage({ params, searchParams }: 
   const redirectTo = `/worlds/${worldSlug}/dungeons/${dungeonSlug}`;
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={dungeonBreadcrumb(world.name, worldSlug, [
-            { label: overview.dungeon.title },
-          ])}
-        />
-      }
-      contextPanel={
+    <>
+      <ShellBreadcrumb
+        items={dungeonBreadcrumb(world.name, worldSlug, [
+          { label: overview.dungeon.title },
+        ])}
+      />
+      <ShellContextPanel>
         <CampaignSidebar
           title="Ebenen"
           items={overview.levels.map((level) => ({
@@ -85,8 +81,7 @@ export default async function StudioDungeonDetailPage({ params, searchParams }: 
             href: `/worlds/${worldSlug}/dungeons/${dungeonSlug}/ebenen/${level.slug}`,
           }))}
         />
-      }
-    >
+      </ShellContextPanel>
       <PageHeader
         title={overview.dungeon.title}
         summary={overview.dungeon.summary ?? undefined}
@@ -263,6 +258,6 @@ export default async function StudioDungeonDetailPage({ params, searchParams }: 
           </CardContent>
         </Card>
       </section>
-    </WorldShell>
+    </>
   );
 }

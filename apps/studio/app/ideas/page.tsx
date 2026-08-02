@@ -10,7 +10,7 @@ import {
   parseIdeaWorkspaceView,
   type IdeaWorkspaceView,
 } from "@uwe/database/dev-idea-constants";
-import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { requireOwner } from "@/src/lib/auth";
 import { IdeaWorkspaceClient, type IdeaDto } from "./IdeaWorkspaceClient";
 
@@ -39,7 +39,8 @@ export default async function IdeasPage({ searchParams }: IdeasPageProps) {
   }));
   const pageTitle = view === "all" ? "Ideen-Management" : IDEA_WORKSPACE_VIEW_LABELS[view];
   return (
-    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Ideen" }]} />}>
+    <>
+      <ShellBreadcrumb items={[{ label: "Ideen" }]} />
       <PageHeader title={pageTitle} summary={VIEW_SUMMARIES[view]} />
       <IdeaWorkspaceClient
         ideas={ideas}
@@ -49,6 +50,6 @@ export default async function IdeasPage({ searchParams }: IdeasPageProps) {
         initialModuleFilter={module ?? null}
       />
       <p className="text-sm text-muted-foreground"><Link href="/worlds">← Welten</Link></p>
-    </StudioShell>
+    </>
   );
 }

@@ -15,7 +15,7 @@ import { updateSettingsAction } from "../settings-actions";
 import { PortalThemeSettingsSection } from "../../components/PortalThemeSettingsSection";
 import { DesignAssistantWizard } from "../../components/DesignAssistantWizard";
 import { CustomThemesManager } from "../../components/CustomThemesManager";
-import { BreadcrumbTrail, SettingsShell, SystemShell } from "@/src/components/shell";
+import { SettingsShell, ShellBreadcrumb } from "@/src/components/shell";
 import { Alert, Button, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui";
 
 /**
@@ -76,11 +76,8 @@ export default async function SettingsPage({ searchParams }: Props) {
   const settings = await getAppRepository().getSystemSettings();
 
   return (
-    <SystemShell
-      breadcrumb={
-        <BreadcrumbTrail items={[{ label: "Einstellungen" }]} />
-      }
-    >
+    <>
+      <ShellBreadcrumb items={[{ label: "Einstellungen" }]} />
       <SettingsShell
         title="Design & Startseite"
         description="Wie Studio und das Portal aussehen, und wohin dich / nach der Anmeldung bringt."
@@ -202,6 +199,6 @@ export default async function SettingsPage({ searchParams }: Props) {
           </SettingsCollapsiblePanel>
         </div>
       </SettingsShell>
-    </SystemShell>
+    </>
   );
 }

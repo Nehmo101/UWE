@@ -7,7 +7,7 @@ import {
   getAppRepository,
 } from "@uwe/database/server";
 import { AiRunActions } from "@/components/AiRunActions";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { formatStudioDate } from "@/src/lib/format";
 
@@ -45,21 +45,16 @@ export default async function AiRunDetailPage({ params }: Props) {
       : "";
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldDetailBreadcrumb(
-            world.name,
-            worldSlug,
-            "KI-Läufe",
-            `/worlds/${worldSlug}/ai-runs`,
-            run.id.slice(0, 8),
-          )}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb
+        items={worldDetailBreadcrumb(
+          world.name,
+          worldSlug,
+          "KI-Läufe",
+          `/worlds/${worldSlug}/ai-runs`,
+          run.id.slice(0, 8),
+        )}
+      />
       <PageHeader
         title={AI_TASK_LABELS[run.taskType as keyof typeof AI_TASK_LABELS] ?? run.taskType}
         summary={`${AI_RUN_STATUS_LABELS[run.status]} · ${formatStudioDate(run.createdAt, "medium")}`}
@@ -143,6 +138,6 @@ export default async function AiRunDetailPage({ params }: Props) {
           <pre className="ai-run-pre">{formatJson(run.resultMeta)}</pre>
         </details>
       )}
-    </WorldShell>
+    </>
   );
 }

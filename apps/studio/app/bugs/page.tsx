@@ -8,7 +8,7 @@ import {
   type BugReportStatus,
 } from "@uwe/database/server";
 import { resolveGitHubIssueConfig } from "@uwe/github-issues";
-import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { getCurrentAuthUser, requireStudioAccess } from "@/src/lib/auth";
 import { BugWorkspaceClient, type BugReportDto } from "./BugWorkspaceClient";
 
@@ -89,7 +89,8 @@ export default async function BugsPage({ searchParams }: BugsPageProps) {
   };
 
   return (
-    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Bug-Center" }]} />}>
+    <>
+      <ShellBreadcrumb items={[{ label: "Bug-Center" }]} />
       <PageHeader
         title="Bug-Center"
         summary="Fehler melden, priorisieren und den Bearbeitungsstand verfolgen — Studio-intern, nicht im Portal."
@@ -104,6 +105,6 @@ export default async function BugsPage({ searchParams }: BugsPageProps) {
       <p className="text-sm text-muted-foreground">
         <Link href="/worlds">← Welten</Link>
       </p>
-    </StudioShell>
+    </>
   );
 }

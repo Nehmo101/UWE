@@ -10,7 +10,7 @@ import {
   PRINT_CENTER_TEMPLATE_SLUGS,
 } from "@uwe/database/server";
 import { PrintQueuePanel } from "@/components/PrintQueuePanel";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import {
   Badge,
@@ -58,20 +58,15 @@ export default async function PrintCenterPage({ params }: Props) {
   }));
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(
-            world.name,
-            worldSlug,
-            "Print Center",
-            `/worlds/${worldSlug}/print-center`,
-          )}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb
+        items={worldSectionBreadcrumb(
+          world.name,
+          worldSlug,
+          "Print Center",
+          `/worlds/${worldSlug}/print-center`,
+        )}
+      />
       <PageHeader
         title="Print Center"
         summary="6×4 Handouts, NPC- und Item-Karten, Drucklisten und Label-Vorlagen — zentral für die Session."
@@ -190,6 +185,6 @@ export default async function PrintCenterPage({ params }: Props) {
           )}
         </section>
       </div>
-    </WorldShell>
+    </>
   );
 }

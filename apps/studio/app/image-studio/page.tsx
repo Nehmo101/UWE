@@ -8,7 +8,7 @@ import {
   ImageStudioStatusEnum,
   prisma,
 } from "@uwe/database/server";
-import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { ImageStudioJobForm } from "@/components/ImageStudioJobForm";
 import { ImageStudioStatusBadge } from "@/components/ImageStudioStatusBadge";
 import { ImageStudioWorkspace } from "@/components/ImageStudioWorkspace";
@@ -59,7 +59,8 @@ export default async function ImageStudioPage({ searchParams }: Props) {
   );
 
   return (
-    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Image Studio" }]} />}>
+    <>
+      <ShellBreadcrumb items={[{ label: "Image Studio" }]} />
       <PageHeader
         title="Image Studio"
         summary="Prompt-Generierung und Inpainting (RTX) — optional Cloud nur für generate/variant."
@@ -144,6 +145,6 @@ export default async function ImageStudioPage({ searchParams }: Props) {
           )}
         </section>
       </div>
-    </StudioShell>
+    </>
   );
 }

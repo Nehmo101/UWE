@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { createPrismaClient, getAppRepository } from "@uwe/database/server";
 import { createTerraService } from "@uwe/database/terra";
-import { WorldShell, BreadcrumbTrail } from "@/src/components/shell";
+import { ShellBreadcrumb } from "@/src/components/shell";
 import { worldSectionBreadcrumb, type BreadcrumbItem } from "@/src/lib/world-breadcrumbs";
 import { TerraKartenListe } from "@/src/components/terra";
 
@@ -27,7 +27,8 @@ export default async function TerraKartenIndexPage({ params }: Props) {
   const breadcrumb: BreadcrumbItem[] = worldSectionBreadcrumb(world.name, worldSlug, "Karten");
 
   return (
-    <WorldShell worldSlug={worldSlug} worldName={world.name} breadcrumb={<BreadcrumbTrail items={breadcrumb} />}>
+    <>
+      <ShellBreadcrumb items={breadcrumb} />
       <div className="space-y-4">
         <h1 className="text-xl font-semibold">Karten</h1>
         <p className="text-sm text-muted-foreground">
@@ -49,6 +50,6 @@ export default async function TerraKartenIndexPage({ params }: Props) {
           }))}
         />
       </div>
-    </WorldShell>
+    </>
   );
 }

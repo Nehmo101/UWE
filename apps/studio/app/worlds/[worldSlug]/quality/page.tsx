@@ -10,7 +10,7 @@ import {
   type WikiQualityFindingCode,
 } from "@uwe/database/server";
 import { computeWikiQualityInsights } from "@uwe/database/wiki-quality";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { runBulkAutoLinkAction } from "../quality-actions";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, NavIcon } from "@/src/components/ui";
@@ -130,20 +130,16 @@ export default async function WorldQualityPage({ params, searchParams }: Props) 
   const openTotal = report.findings.length;
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(
-            world.name,
-            worldSlug,
-            "Wiki-Pflege",
-            `/worlds/${worldSlug}/quality`,
-          )}
-        />
-      }
-      contextPanel={
+    <>
+      <ShellBreadcrumb
+        items={worldSectionBreadcrumb(
+          world.name,
+          worldSlug,
+          "Wiki-Pflege",
+          `/worlds/${worldSlug}/quality`,
+        )}
+      />
+      <ShellContextPanel>
         <SidebarSection title="Pflege">
           <ul className="flex flex-col gap-2 text-sm">
             <li>
@@ -157,8 +153,7 @@ export default async function WorldQualityPage({ params, searchParams }: Props) 
             </li>
           </ul>
         </SidebarSection>
-      }
-    >
+      </ShellContextPanel>
       <PageHeader
         title="Wiki-Aufräumzentrale"
         summary="Pflege-Cockpit: findet unverlinkte Begriffe, dünne Seiten, NPCs ohne Fraktion/Ort, Orte ohne Karte, Quests ohne Status und mehrdeutige Aliase. Alles read-only — die Fundstellen verlinken direkt auf die betroffene Seite."
@@ -266,6 +261,6 @@ export default async function WorldQualityPage({ params, searchParams }: Props) 
           </CardContent>
         </Card>
       </div>
-    </WorldShell>
+    </>
   );
 }

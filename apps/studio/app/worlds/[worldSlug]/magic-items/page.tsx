@@ -7,7 +7,7 @@ import {
   type ItemRarity,
 } from "@uwe/database/magic-item";
 import { getAppRepository, prisma } from "@uwe/database/server";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { Badge, buttonVariants, EmptyState } from "@/src/components/ui";
 
@@ -53,20 +53,15 @@ export default async function MagicItemsPage({ params, searchParams }: Props) {
   const listBase = `/worlds/${worldSlug}/magic-items`;
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(
-            world.name,
-            worldSlug,
-            "Magic-Item-Werkbank",
-            listBase,
-          )}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb
+        items={worldSectionBreadcrumb(
+          world.name,
+          worldSlug,
+          "Magic-Item-Werkbank",
+          listBase,
+        )}
+      />
       <PageHeader
         title="Magic-Item-Werkbank"
         summary="Strukturierte magische Gegenstände: sichtbare Beschreibung vs. DM-Geheimnis, Fluch, Einstimmung, Seltenheit — mit Export für Homebrewery/5e.tools und Spieler-Handout."
@@ -125,6 +120,6 @@ export default async function MagicItemsPage({ params, searchParams }: Props) {
           </ul>
         )}
       </section>
-    </WorldShell>
+    </>
   );
 }

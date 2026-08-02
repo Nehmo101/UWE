@@ -12,7 +12,7 @@ import {
 } from "@uwe/database/server";
 import { parseWorldCalendarSettings } from "@uwe/database/world-calendar-settings";
 import { updateWorldCalendarAction, advanceWorldCalendarAction } from "@/app/world-calendar-actions";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { Alert, Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from "@/src/components/ui";
 
@@ -46,20 +46,16 @@ export default async function WorldCalendarPage({ params, searchParams }: Props)
   const holidays = calendarSettings.holidays;
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(
-            world.name,
-            worldSlug,
-            "Weltuhr",
-            `/worlds/${worldSlug}/calendar`,
-          )}
-        />
-      }
-      contextPanel={
+    <>
+      <ShellBreadcrumb
+        items={worldSectionBreadcrumb(
+          world.name,
+          worldSlug,
+          "Weltuhr",
+          `/worlds/${worldSlug}/calendar`,
+        )}
+      />
+      <ShellContextPanel>
         <SidebarSection title="Chronik-Tools">
           <p className="text-sm text-muted-foreground">
             Der In-Game-Kalender ist die Basis für datierte Chronik-Einträge und die
@@ -69,8 +65,7 @@ export default async function WorldCalendarPage({ params, searchParams }: Props)
             <Link href={`/worlds/${worldSlug}/chronicle`}>Zur Welt-Chronik</Link>
           </p>
         </SidebarSection>
-      }
-    >
+      </ShellContextPanel>
       <PageHeader
         title="Weltuhr"
         summary="Konfiguriere Monate, Wochentage und das aktuelle In-Game-Datum dieser Welt."
@@ -308,6 +303,6 @@ export default async function WorldCalendarPage({ params, searchParams }: Props)
           </CardContent>
         </Card>
       </div>
-    </WorldShell>
+    </>
   );
 }

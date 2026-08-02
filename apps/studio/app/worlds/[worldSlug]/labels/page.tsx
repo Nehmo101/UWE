@@ -19,7 +19,7 @@ import {
   renameTemplateAction,
 } from "@/app/label-actions";
 import { createPrintListAction } from "@/app/print-list-actions";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import {
   Alert,
@@ -67,22 +67,15 @@ export default async function StudioLabelsPage({ params, searchParams }: Props) 
   const printLists = await printListService.listByWorld(worldSlug);
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(world.name, worldSlug, "Labels", `/worlds/${worldSlug}/labels`)}
-        />
-      }
-      contextPanel={
+    <>
+      <ShellBreadcrumb items={worldSectionBreadcrumb(world.name, worldSlug, "Labels", `/worlds/${worldSlug}/labels`)} />
+      <ShellContextPanel>
         <SidebarSection title="Kontext">
           <p className="m-0 text-sm text-muted-foreground">
             {labelRows.length} Labels · {printLists.length} Drucklisten · Format 6×4 Zoll
           </p>
         </SidebarSection>
-      }
-    >
+      </ShellContextPanel>
       <PageHeader
         title="Label-Bibliothek"
         summary="6×4 Zoll Labels, Karten und Handouts erstellen, bearbeiten und drucken."
@@ -396,6 +389,6 @@ export default async function StudioLabelsPage({ params, searchParams }: Props) 
           </>
         )}
       </div>
-    </WorldShell>
+    </>
   );
 }

@@ -3,7 +3,7 @@
  *
  * Seven stable areas: Start, Welten, Knowledge & Brain, AI & Generatoren,
  * Werkzeuge, Organisation, System. This is the single source of truth consumed
- * by the StudioShell sidebar, mobile nav, breadcrumbs, command palette, the
+ * by the app shell sidebar, mobile nav, breadcrumbs, command palette, the
  * System → Navigation overview, and tests.
  */
 import { ORGANIZATION_NAV } from "./organization-nav";

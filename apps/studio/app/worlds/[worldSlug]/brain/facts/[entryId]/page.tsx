@@ -10,7 +10,7 @@ import {
   getAppRepository,
 } from "@uwe/database/server";
 import { updateBrainFactAction } from "../../../../../brain-actions";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import {
   Button,
@@ -60,21 +60,16 @@ export default async function StudioBrainFactPage({ params }: Props) {
     .slice(0, 6);
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldDetailBreadcrumb(
-            world.name,
-            worldSlug,
-            "Brain Store",
-            `/worlds/${worldSlug}/brain`,
-            fact.title,
-          )}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb
+        items={worldDetailBreadcrumb(
+          world.name,
+          worldSlug,
+          "Brain Store",
+          `/worlds/${worldSlug}/brain`,
+          fact.title,
+        )}
+      />
       <PageHeader
         title={fact.title}
         summary="Brain-Fakt bearbeiten"
@@ -220,6 +215,6 @@ export default async function StudioBrainFactPage({ params }: Props) {
           </Card>
         )}
       </div>
-    </WorldShell>
+    </>
   );
 }

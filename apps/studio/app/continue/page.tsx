@@ -6,7 +6,7 @@ import {
   type ContinuationKind,
 } from "@uwe/database/continue-work";
 import { EmptyState, StatusPill } from "@uwe/shared-ui";
-import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { buttonVariants } from "@/src/components/ui/button";
 import { requireStudioAccess } from "@/src/lib/auth";
 
@@ -24,7 +24,8 @@ export default async function ContinuePage() {
   const continuations = await createContinueWorkService(brainPrisma).getContinuations(5);
 
   return (
-    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Mach weiter" }]} />}>
+    <>
+      <ShellBreadcrumb items={[{ label: "Mach weiter" }]} />
       <PageHeader
         title="Mach weiter, wo du aufgehört hast"
         summary="Deine wahrscheinlich relevanten Fortsetzungen: offene Projekte mit nächstem Schritt, Werkstatt-Aufgaben, unbearbeitete Captures und wartende Scans."
@@ -73,6 +74,6 @@ export default async function ContinuePage() {
         Mehr Kontext im <Link href="/brain">Brain Store</Link> oder in der{" "}
         <Link href="/worlds">Weltübersicht</Link>.
       </p>
-    </StudioShell>
+    </>
   );
 }

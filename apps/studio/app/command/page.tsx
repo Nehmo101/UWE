@@ -1,6 +1,6 @@
 import { NlCommandWorkspace } from "@/components/NlCommandWorkspace";
 import { requireAdminAccess } from "@/src/lib/auth";
-import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 
 export default async function CommandCenterPage({
   searchParams,
@@ -13,21 +13,18 @@ export default async function CommandCenterPage({
   const initialText = typeof params.q === "string" ? params.q : undefined;
 
   return (
-    <SystemShell
-      breadcrumb={
-        <BreadcrumbTrail
-          items={[
-            { label: "Admin", href: "/admin" },
-            { label: "Command Center" },
-          ]}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb
+        items={[
+          { label: "Admin", href: "/admin" },
+          { label: "Command Center" },
+        ]}
+      />
       <PageHeader
         title="NL Admin Command Center"
         summary="Whitelist-Befehle mit Intent-Vorschau und Klartext-Bestätigung vor Mutationen — Ausführung über bestehende Services mit Audit-Log."
       />
       <NlCommandWorkspace initialText={initialText} />
-    </SystemShell>
+    </>
   );
 }

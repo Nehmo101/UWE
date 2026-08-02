@@ -21,7 +21,7 @@ import {
   type SearchEntityFilter,
   type CanonicalStatus,
 } from "@uwe/database/server";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import {
   CampaignSidebar,
   WikiPageTable,
@@ -114,15 +114,9 @@ export default async function StudioWorldWikiPage({ params, searchParams }: Prop
   const campaignItems = campaignNavItems(wikiBase, campaigns, campaignSlug);
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(world.name, worldSlug, "Wiki / Seiten", wikiBase)}
-        />
-      }
-      contextPanel={
+    <>
+      <ShellBreadcrumb items={worldSectionBreadcrumb(world.name, worldSlug, "Wiki / Seiten", wikiBase)} />
+      <ShellContextPanel>
         <CampaignSidebar
           items={[
             { label: "Alle Kampagnen", href: wikiBase, active: !campaignSlug },
@@ -133,8 +127,7 @@ export default async function StudioWorldWikiPage({ params, searchParams }: Prop
             })),
           ]}
         />
-      }
-    >
+      </ShellContextPanel>
       <PageHeader
         title="Wiki / Seiten"
         summary={world.description ?? "Alle Wiki-Seiten dieser Welt — filtern, suchen und verwalten."}
@@ -231,6 +224,6 @@ export default async function StudioWorldWikiPage({ params, searchParams }: Prop
           campaigns={campaigns.map((campaign) => ({ id: campaign.id, name: campaign.name }))}
         />
       )}
-    </WorldShell>
+    </>
   );
 }

@@ -13,7 +13,7 @@ import {
   getAppRepository,
   GAME_SESSION_STATUS_LABELS,
 } from "@uwe/database/server";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { CampaignSidebar } from "@/src/components/wiki";
 import { campaignNavItems } from "@/src/lib/world-nav";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
@@ -78,28 +78,19 @@ export default async function StudioSessionsPage({ params, searchParams }: Props
   }
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(world.name, worldSlug, "Sessions", `/worlds/${worldSlug}/sessions`)}
+    <>
+      <ShellBreadcrumb items={worldSectionBreadcrumb(world.name, worldSlug, "Sessions", `/worlds/${worldSlug}/sessions`)} />
+      <ShellContextPanel>
+        <CampaignSidebar
+          items={campaignNavItems(`/worlds/${worldSlug}/sessions`, campaigns, campaignSlug)}
         />
-      }
-      contextPanel={
-        <>
-          <CampaignSidebar
-            items={campaignNavItems(`/worlds/${worldSlug}/sessions`, campaigns, campaignSlug)}
-          />
-          <SidebarSection title="Kontext">
-            <p className="text-sm text-muted-foreground">
-              {totalCount} Sessions
-              {selectedCampaign ? ` in „${selectedCampaign.name}“` : ""}
-            </p>
-          </SidebarSection>
-        </>
-      }
-    >
+        <SidebarSection title="Kontext">
+          <p className="text-sm text-muted-foreground">
+            {totalCount} Sessions
+            {selectedCampaign ? ` in „${selectedCampaign.name}“` : ""}
+          </p>
+        </SidebarSection>
+      </ShellContextPanel>
       <PageHeader
         title="Sessions"
         summary="Vorbereiten, spielen und nachbereiten — Recaps fürs Portal veröffentlichen."
@@ -216,6 +207,6 @@ export default async function StudioSessionsPage({ params, searchParams }: Props
           ) : null}
         </nav>
       )}
-    </WorldShell>
+    </>
   );
 }

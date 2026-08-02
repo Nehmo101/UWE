@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { buttonVariants } from "@/src/components/ui/button";
 import { createSettingsService, prisma } from "@uwe/database/server";
-import { BreadcrumbTrail, PageHeader, SystemShell } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { requireAdminAccess } from "@/src/lib/auth";
 import { AiPromptEditorClient } from "./AiPromptEditorClient";
 
@@ -29,16 +29,13 @@ export default async function AdminAiPromptPage({ searchParams }: Props) {
   const legacyAiHref = legacyQs ? `/ai?${legacyQs}` : "/ai";
 
   return (
-    <SystemShell
-      breadcrumb={
-        <BreadcrumbTrail
-          items={[
-            { label: "Admin", href: "/admin" },
-            { label: "KI-System-Prompt" },
-          ]}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb
+        items={[
+          { label: "Admin", href: "/admin" },
+          { label: "KI-System-Prompt" },
+        ]}
+      />
       <PageHeader
         title="KI-System-Prompt"
         summary="System-Prompt für den allgemeinen Chat — Entwurf lokal, explizites Aktivieren verhindert versehentliche Übernahme."
@@ -54,6 +51,6 @@ export default async function AdminAiPromptPage({ searchParams }: Props) {
         activated={activated === "1"}
         legacyAiHref={legacyAiHref}
       />
-    </SystemShell>
+    </>
   );
 }

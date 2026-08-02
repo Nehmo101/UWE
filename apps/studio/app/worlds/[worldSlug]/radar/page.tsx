@@ -3,7 +3,7 @@ import { SidebarSection, StatGrid } from "@uwe/shared-ui";
 import { getAppRepository, prisma } from "@uwe/database/server";
 import { createCampaignRadarService } from "@uwe/database/campaign-radar";
 import { notFound } from "next/navigation";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { updateQuestStatusAction } from "../quest-status-actions";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
@@ -24,20 +24,16 @@ export default async function CampaignRadarPage({ params }: Props) {
   if (!radar) notFound();
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(
-            world.name,
-            worldSlug,
-            "Kampagnen-Radar",
-            `/worlds/${worldSlug}/radar`,
-          )}
-        />
-      }
-      contextPanel={
+    <>
+      <ShellBreadcrumb
+        items={worldSectionBreadcrumb(
+          world.name,
+          worldSlug,
+          "Kampagnen-Radar",
+          `/worlds/${worldSlug}/radar`,
+        )}
+      />
+      <ShellContextPanel>
         <SidebarSection title="Welt">
           <ul className="flex flex-col gap-2 text-sm">
             {radar.clockLabel ? (
@@ -57,8 +53,7 @@ export default async function CampaignRadarPage({ params }: Props) {
             </li>
           </ul>
         </SidebarSection>
-      }
-    >
+      </ShellContextPanel>
       <PageHeader
         title="Kampagnen-Radar"
         summary="Was passiert gerade in der Welt? Fraktionen, offene Quests, Zeit, letzte Session und Kanon-Konflikte auf einen Blick."
@@ -177,6 +172,6 @@ export default async function CampaignRadarPage({ params }: Props) {
           </p>
         ) : null}
       </div>
-    </WorldShell>
+    </>
   );
 }

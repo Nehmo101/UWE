@@ -28,7 +28,7 @@ import {
 import { buildPageGraphForViewer } from "@uwe/database/graph-service";
 import { buildPageViewForViewer } from "@uwe/database/page-viewer-service";
 import { pagePreviewHref } from "@/src/lib/page-preview";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { ShellBreadcrumb, ShellContextPanel, PageHeader } from "@/src/components/shell";
 import { PreviewAsPlayerControls } from "@/src/components/PreviewAsPlayerControls";
 import { WikiContextPanel } from "@/src/components/wiki";
 import { wikiPageBreadcrumb } from "@/src/lib/world-breadcrumbs";
@@ -182,147 +182,138 @@ export async function StudioWikiPageView({
             )}
           </div>
         )}
-        <WorldShell
-          worldSlug={worldSlug}
-          worldName={world.name}
-          breadcrumb={
-            <BreadcrumbTrail
-              items={wikiPageBreadcrumb(
-                world.name,
-                worldSlug,
-                NAV_CATEGORY_LABELS[category as NavCategory],
-                view.page.title,
-                withPlayerPreviewHref(pageHref, isPlayerPreview),
-              )}
-            />
-          }
-          contextPanel={
+        <ShellBreadcrumb
+          items={wikiPageBreadcrumb(
+            world.name,
+            worldSlug,
+            NAV_CATEGORY_LABELS[category as NavCategory],
+            view.page.title,
+            withPlayerPreviewHref(pageHref, isPlayerPreview),
+          )}
+        />
+        <ShellContextPanel>
+          <WikiContextPanel
+            worldSlug={worldSlug}
+            backlinks={view.backlinks.map((link) => ({
+              ...link,
+              href: withPlayerPreviewHref(link.href, isPlayerPreview),
+            }))}
+            outgoingLinks={view.links.map((link) => ({
+              ...link,
+              href: link.href ? withPlayerPreviewHref(link.href, isPlayerPreview) : link.href,
+            }))}
+            relatedPages={view.relatedPages.map((page) => ({
+              ...page,
+              href: withPlayerPreviewHref(page.href, isPlayerPreview),
+            }))}
+            showCreateMissing={!isPlayerPreview}
+          />
+          {!isPlayerPreview && dmPage && (
             <>
-              <WikiContextPanel
-                worldSlug={worldSlug}
-                backlinks={view.backlinks.map((link) => ({
-                  ...link,
-                  href: withPlayerPreviewHref(link.href, isPlayerPreview),
-                }))}
-                outgoingLinks={view.links.map((link) => ({
-                  ...link,
-                  href: link.href ? withPlayerPreviewHref(link.href, isPlayerPreview) : link.href,
-                }))}
-                relatedPages={view.relatedPages.map((page) => ({
-                  ...page,
-                  href: withPlayerPreviewHref(page.href, isPlayerPreview),
-                }))}
-                showCreateMissing={!isPlayerPreview}
-              />
-              {!isPlayerPreview && dmPage && (
-                <>
-                  <SidebarSection title="Metadaten">
-                    <MetaPanel
-                      canonicalStatus={dmPage.canonicalStatus}
-                      type={dmPage.type}
-                      tags={parseStringArray(dmPage.tags)}
-                      aliases={parseStringArray(dmPage.aliases)}
-                    />
-                  </SidebarSection>
-                  <Collapsible variant="sidebar" title="KI & Assistenz" defaultOpen={false}>
-                    <MobileAiPromptPanel
-                      worldSlug={worldSlug}
-                      pageSlug={slug}
-                      pageTitle={view.page.title}
-                      useMock={useMockAi}
-                      variant="page"
-                    />
-                  </Collapsible>
-                  <Collapsible variant="sidebar" title="Brain-Aktionen" defaultOpen={false}>
-                    <p className="mt-0 text-sm text-muted-foreground">
-                      Strukturierte Brain-Aktionen mit Review-Proposal — läuft über Maschinenraum.
-                    </p>
-                    <AiBrainSidebar worldSlug={worldSlug} pageSlug={slug} variant="store" />
-                  </Collapsible>
-                </>
-              )}
+              <SidebarSection title="Metadaten">
+                <MetaPanel
+                  canonicalStatus={dmPage.canonicalStatus}
+                  type={dmPage.type}
+                  tags={parseStringArray(dmPage.tags)}
+                  aliases={parseStringArray(dmPage.aliases)}
+                />
+              </SidebarSection>
+              <Collapsible variant="sidebar" title="KI & Assistenz" defaultOpen={false}>
+                <MobileAiPromptPanel
+                  worldSlug={worldSlug}
+                  pageSlug={slug}
+                  pageTitle={view.page.title}
+                  useMock={useMockAi}
+                  variant="page"
+                />
+              </Collapsible>
+              <Collapsible variant="sidebar" title="Brain-Aktionen" defaultOpen={false}>
+                <p className="mt-0 text-sm text-muted-foreground">
+                  Strukturierte Brain-Aktionen mit Review-Proposal — läuft über Maschinenraum.
+                </p>
+                <AiBrainSidebar worldSlug={worldSlug} pageSlug={slug} variant="store" />
+              </Collapsible>
             </>
+          )}
+        </ShellContextPanel>
+        <PageHeader
+          title={view.page.title}
+          summary={rawPage.summary}
+          meta={
+            !isPlayerPreview && dmPage ? (
+              <>
+                {view.page.tags.map((tag) => (
+                  <TagChip key={tag} tag={tag} />
+                ))}
+              </>
+            ) : (
+              view.page.tags.map((tag) => <TagChip key={tag} tag={tag} />)
+            )
           }
-        >
-          <PageHeader
-            title={view.page.title}
-            summary={rawPage.summary}
-            meta={
-              !isPlayerPreview && dmPage ? (
-                <>
-                  {view.page.tags.map((tag) => (
-                    <TagChip key={tag} tag={tag} />
-                  ))}
-                </>
-              ) : (
-                view.page.tags.map((tag) => <TagChip key={tag} tag={tag} />)
-              )
-            }
-            actions={
-              !isPlayerPreview ? (
-                <>
-                  <Link
-                    className="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted"
-                    href={`/worlds/${worldSlug}/labels/new?sourceRef=${rawPage.type === "room" ? "dungeon_room" : "page"}:${rawPage.id}`}
-                  >
-                    Label erstellen
-                  </Link>
-                  <Link
-                    className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm text-primary-foreground hover:bg-primary/90"
-                    href={`${pageHref}/edit`}
-                  >
-                    Bearbeiten
-                  </Link>
-                  <Link
-                    className="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted"
-                    href={pagePreviewHref(worldSlug, rawPage.type, slug)}
-                  >
-                    Vorschau als Spieler
-                  </Link>
-                </>
-              ) : (
+          actions={
+            !isPlayerPreview ? (
+              <>
                 <Link
                   className="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted"
-                  href={pageHref}
+                  href={`/worlds/${worldSlug}/labels/new?sourceRef=${rawPage.type === "room" ? "dungeon_room" : "page"}:${rawPage.id}`}
                 >
-                  Zurück zur DM-Ansicht
+                  Label erstellen
                 </Link>
-              )
-            }
-          />
-
-          <div className="max-w-[52rem] uwe-v2-wiki">
-            {thirdPartySource ? (
-              <Alert tone="info" role="note">
-                Übernommen aus <strong>{thirdPartySource}</strong>. Fremdes Material — nach der
-                Welt-Zuordnung für alle sichtbar, die dieser Welt zugeordnet sind.
-              </Alert>
-            ) : null}
-            {view.links.some((link) => link.status === "broken") && (
-              <Alert tone="warning" role="note">
-                Diese Seite enthält {view.links.filter((link) => link.status === "broken").length}{" "}
-                defekte Wikilinks — siehe Seitenleiste „Ausgehende Links“.
-              </Alert>
-            )}
-            <WikiContent html={view.html} />
-
-            <section className="wiki-graph-section uwe-v2-wiki-aside mt-8">
-              <div className="wiki-graph-head mb-3 flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-lg font-semibold">Nachbarschafts-Graph</h2>
-                <Link className="text-sm hover:underline" href={graphHref}>
-                  Im großen Graph öffnen →
+                <Link
+                  className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-sm text-primary-foreground hover:bg-primary/90"
+                  href={`${pageHref}/edit`}
+                >
+                  Bearbeiten
                 </Link>
-              </div>
-              <GraphView
-                nodes={pageGraph.nodes}
-                edges={pageGraph.edges}
-                compact
-                focusPageId={rawPage.id}
-                height={320}
-              />
-            </section>
-          </div>
-        </WorldShell>
+                <Link
+                  className="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted"
+                  href={pagePreviewHref(worldSlug, rawPage.type, slug)}
+                >
+                  Vorschau als Spieler
+                </Link>
+              </>
+            ) : (
+              <Link
+                className="inline-flex h-9 items-center rounded-md border border-border px-4 text-sm hover:bg-muted"
+                href={pageHref}
+              >
+                Zurück zur DM-Ansicht
+              </Link>
+            )
+          }
+        />
+
+        <div className="max-w-[52rem] uwe-v2-wiki">
+          {thirdPartySource ? (
+            <Alert tone="info" role="note">
+              Übernommen aus <strong>{thirdPartySource}</strong>. Fremdes Material — nach der
+              Welt-Zuordnung für alle sichtbar, die dieser Welt zugeordnet sind.
+            </Alert>
+          ) : null}
+          {view.links.some((link) => link.status === "broken") && (
+            <Alert tone="warning" role="note">
+              Diese Seite enthält {view.links.filter((link) => link.status === "broken").length}{" "}
+              defekte Wikilinks — siehe Seitenleiste „Ausgehende Links“.
+            </Alert>
+          )}
+          <WikiContent html={view.html} />
+
+          <section className="wiki-graph-section uwe-v2-wiki-aside mt-8">
+            <div className="wiki-graph-head mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-lg font-semibold">Nachbarschafts-Graph</h2>
+              <Link className="text-sm hover:underline" href={graphHref}>
+                Im großen Graph öffnen →
+              </Link>
+            </div>
+            <GraphView
+              nodes={pageGraph.nodes}
+              edges={pageGraph.edges}
+              compact
+              focusPageId={rawPage.id}
+              height={320}
+            />
+          </section>
+        </div>
       </>
     );
   } finally {

@@ -8,9 +8,9 @@ import {
   prisma,
   studioWorldDashboardPageKey,
 } from "@uwe/database/server";
-import { WorldShell, BreadcrumbTrail } from "@/src/components/shell";
+import { ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { worldRootBreadcrumb } from "@/src/lib/world-breadcrumbs";
-import { worldCockpitTabItems, worldDmToolQuickLinks } from "@/src/lib/studio-navigation";
+import { worldDmToolQuickLinks } from "@/src/lib/studio-navigation";
 import { WorldDashboardClient } from "./WorldDashboardClient";
 
 interface Props {
@@ -38,80 +38,70 @@ export default async function WorldDashboardPage({ params }: Props) {
     { label: "+ Session", href: `/worlds/${worldSlug}/sessions/new` },
   ];
 
-  const cockpitTabs = worldCockpitTabItems(worldSlug, "overview");
   const dmTools = worldDmToolQuickLinks(worldSlug);
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={[...worldRootBreadcrumb(world.name, worldSlug), { label: "Übersicht" }]}
-        />
-      }
-      contextPanel={
-        <>
-          <SidebarSection title="Schnell erstellen">
-            <div className="flex flex-col gap-1">
-              {quickCreate.map((action) => (
-                <Link
-                  key={action.href}
-                  className="rounded-md px-2 py-1.5 text-sm hover:bg-muted"
-                  href={action.href}
-                >
-                  {action.label}
-                </Link>
-              ))}
-            </div>
-          </SidebarSection>
+    <>
+      <ShellBreadcrumb items={[...worldRootBreadcrumb(world.name, worldSlug), { label: "Übersicht" }]} />
+      <ShellContextPanel>
+        <SidebarSection title="Schnell erstellen">
+          <div className="flex flex-col gap-1">
+            {quickCreate.map((action) => (
+              <Link
+                key={action.href}
+                className="rounded-md px-2 py-1.5 text-sm hover:bg-muted"
+                href={action.href}
+              >
+                {action.label}
+              </Link>
+            ))}
+          </div>
+        </SidebarSection>
 
-          <SidebarSection title="DM-Werkzeuge">
-            <div className="flex flex-col gap-1">
-              {dmTools.map((tool) => (
-                <Link
-                  key={tool.href}
-                  className="rounded-md px-2 py-1.5 text-sm hover:bg-muted"
-                  href={tool.href}
-                >
-                  {tool.label}
-                </Link>
-              ))}
-            </div>
-          </SidebarSection>
+        <SidebarSection title="DM-Werkzeuge">
+          <div className="flex flex-col gap-1">
+            {dmTools.map((tool) => (
+              <Link
+                key={tool.href}
+                className="rounded-md px-2 py-1.5 text-sm hover:bg-muted"
+                href={tool.href}
+              >
+                {tool.label}
+              </Link>
+            ))}
+          </div>
+        </SidebarSection>
 
-          <SidebarSection title="Portal-Status">
-            <ul className="space-y-1 text-sm">
+        <SidebarSection title="Portal-Status">
+          <ul className="space-y-1 text-sm">
+            <li>
+              Portal: <strong>{overview.portal.portalEnabled ? "aktiv" : "deaktiviert"}</strong>
+            </li>
+            <li>
+              Sichtbare Seiten: <strong>{overview.portal.visiblePageCount}</strong>
+            </li>
+            <li>
+              <Link href={`/worlds/${worldSlug}/inspector`} className="hover:underline">
+                Inspektor öffnen →
+              </Link>
+            </li>
+          </ul>
+        </SidebarSection>
+
+        {overview.playerNotesForReview > 0 && (
+          <SidebarSection title="Spielernotizen">
+            <ul className="text-sm">
               <li>
-                Portal: <strong>{overview.portal.portalEnabled ? "aktiv" : "deaktiviert"}</strong>
-              </li>
-              <li>
-                Sichtbare Seiten: <strong>{overview.portal.visiblePageCount}</strong>
-              </li>
-              <li>
-                <Link href={`/worlds/${worldSlug}/inspector`} className="hover:underline">
-                  Inspektor öffnen →
+                <Link href={`/worlds/${worldSlug}/notes`} className="hover:underline">
+                  {overview.playerNotesForReview}{" "}
+                  {overview.playerNotesForReview === 1 ? "Notiz wartet" : "Notizen warten"} auf
+                  Review →
                 </Link>
               </li>
             </ul>
           </SidebarSection>
-
-          {overview.playerNotesForReview > 0 && (
-            <SidebarSection title="Spielernotizen">
-              <ul className="text-sm">
-                <li>
-                  <Link href={`/worlds/${worldSlug}/notes`} className="hover:underline">
-                    {overview.playerNotesForReview}{" "}
-                    {overview.playerNotesForReview === 1 ? "Notiz wartet" : "Notizen warten"} auf
-                    Review →
-                  </Link>
-                </li>
-              </ul>
-            </SidebarSection>
-          )}
-        </>
-      }
-    >
+        )}
+      </ShellContextPanel>
       {/*
         Hier stand ein `PageHeader` mit demselben Titel und derselben
         Beschreibung, die `WorldCockpitHeader` unten schon trägt: der Weltname
@@ -123,7 +113,6 @@ export default async function WorldDashboardPage({ params }: Props) {
         worldSlug={worldSlug}
         worldName={world.name}
         worldDescription={world.description}
-        cockpitTabs={cockpitTabs}
         widgets={dashboardWidgets}
         overview={{
           counts: overview.counts,
@@ -147,6 +136,6 @@ export default async function WorldDashboardPage({ params }: Props) {
           })),
         }}
       />
-    </WorldShell>
+    </>
   );
 }

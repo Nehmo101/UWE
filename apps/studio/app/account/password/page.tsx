@@ -2,10 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createPrismaClient, createUserService } from "@uwe/database/server";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
-import {
-  BreadcrumbTrail,
-  SystemShell,
-} from "@/src/components/shell";
+import { ShellBreadcrumb } from "@/src/components/shell";
 import {
   Card,
   CardContent,
@@ -39,16 +36,13 @@ export default async function AccountPasswordPage() {
   }
 
   return (
-    <SystemShell
-      breadcrumb={
-        <BreadcrumbTrail
-          items={[
-            { label: "Einstellungen", href: "/settings" },
-            { label: "Passwort" },
-          ]}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb
+        items={[
+          { label: "Einstellungen", href: "/settings" },
+          { label: "Passwort" },
+        ]}
+      />
       <Card className="max-w-md">
         <CardHeader>
           <CardTitle>Passwort ändern</CardTitle>
@@ -70,6 +64,6 @@ export default async function AccountPasswordPage() {
           </p>
         </CardContent>
       </Card>
-    </SystemShell>
+    </>
   );
 }

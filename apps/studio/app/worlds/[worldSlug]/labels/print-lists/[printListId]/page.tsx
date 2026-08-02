@@ -25,7 +25,7 @@ import {
   setPrintListStatusAction,
   updatePrintListAction,
 } from "@/app/print-list-actions";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import {
   Alert,
@@ -93,21 +93,17 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
   });
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldDetailBreadcrumb(
-            world.name,
-            worldSlug,
-            "Labels",
-            `/worlds/${worldSlug}/labels?tab=print-lists`,
-            list.name,
-          )}
-        />
-      }
-      contextPanel={
+    <>
+      <ShellBreadcrumb
+        items={worldDetailBreadcrumb(
+          world.name,
+          worldSlug,
+          "Labels",
+          `/worlds/${worldSlug}/labels?tab=print-lists`,
+          list.name,
+        )}
+      />
+      <ShellContextPanel>
         <SidebarSection title="Export">
           <ul className="flex flex-col gap-2 text-sm">
             <li>
@@ -131,8 +127,7 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
             <code>X-UWE-Export-Fallback: 1</code>.
           </p>
         </SidebarSection>
-      }
-    >
+      </ShellContextPanel>
       <PageHeader
         title={list.name}
         summary={`${summary.labelCount} Labels · ${summary.totalCopies} Kopien · Status: ${LABEL_PRINT_STATUS_LABELS[list.status]}`}
@@ -273,6 +268,6 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
           </form>
         </div>
       </div>
-    </WorldShell>
+    </>
   );
 }

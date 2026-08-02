@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAppRepository } from "@uwe/database/server";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { DungeonQuickStartPresets } from "@/src/components/dungeon/DungeonQuickStartPresets";
 import { createDungeonAction } from "../../../../dungeon-actions";
@@ -28,21 +28,16 @@ export default async function NewDungeonPage({ params, searchParams }: Props) {
     : campaigns[0];
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldDetailBreadcrumb(
-            world.name,
-            worldSlug,
-            "Dungeons",
-            `/worlds/${worldSlug}/dungeons`,
-            "Neuer Dungeon",
-          )}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb
+        items={worldDetailBreadcrumb(
+          world.name,
+          worldSlug,
+          "Dungeons",
+          `/worlds/${worldSlug}/dungeons`,
+          "Neuer Dungeon",
+        )}
+      />
       <PageHeader
         title="Neuer Dungeon"
         summary="Dungeon mit Ebenen und Räumen anlegen."
@@ -86,6 +81,6 @@ export default async function NewDungeonPage({ params, searchParams }: Props) {
           </Link>
         </div>
       </form>
-    </WorldShell>
+    </>
   );
 }

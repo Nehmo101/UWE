@@ -4,7 +4,7 @@ import {
 } from "@uwe/shared-ui";
 import { getAppRepository } from "@uwe/database/server";
 import { importSourceRegistry } from "@uwe/knoteforge-import";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { ImportWorkspace } from "./ImportWorkspace";
 import { WikitextConvertPanel } from "./WikitextConvertPanel";
@@ -24,15 +24,9 @@ export default async function StudioImportPage({ params }: Props) {
   const plannedFormats = importSourceRegistry.plannedFormats();
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(world.name, worldSlug, "Import", `/worlds/${worldSlug}/import`)}
-        />
-      }
-      contextPanel={
+    <>
+      <ShellBreadcrumb items={worldSectionBreadcrumb(world.name, worldSlug, "Import", `/worlds/${worldSlug}/import`)} />
+      <ShellContextPanel>
         <SidebarSection title="Hinweise">
           <ul className="flex list-disc flex-col gap-1 pl-4 text-sm text-muted-foreground">
             <li>Import ist einseitig (KnoteForge → UWE).</li>
@@ -47,8 +41,7 @@ export default async function StudioImportPage({ params }: Props) {
             </li>
           </ul>
         </SidebarSection>
-      }
-    >
+      </ShellContextPanel>
       <PageHeader
         title="Import & Konvertierung"
         summary="KnoteForge-JSON oder unstrukturierte Texte importieren — zuerst Vorschau, dann bestätigter Import. Bestehende Wikitexte lassen sich gesammelt verlinken und strukturieren."
@@ -59,6 +52,6 @@ export default async function StudioImportPage({ params }: Props) {
         plannedFormats={plannedFormats}
       />
       <WikitextConvertPanel worldSlug={worldSlug} />
-    </WorldShell>
+    </>
   );
 }

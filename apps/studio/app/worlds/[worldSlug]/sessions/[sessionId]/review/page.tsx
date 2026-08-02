@@ -13,7 +13,7 @@ import {
   sessionLiveKindLabel,
   type SessionLiveEntryRecord,
 } from "@uwe/database/server";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { isLikelyGameSessionId } from "@/src/lib/session-route";
 import {
@@ -156,24 +156,19 @@ export default async function SessionReviewPage({ params, searchParams }: Props)
   const inference = await getInferenceStatus();
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={[
-            ...worldDetailBreadcrumb(
-              world.name,
-              worldSlug,
-              "Sessions",
-              `/worlds/${worldSlug}/sessions`,
-              session.title,
-            ),
-            { label: "Review" },
-          ]}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb
+        items={[
+          ...worldDetailBreadcrumb(
+            world.name,
+            worldSlug,
+            "Sessions",
+            `/worlds/${worldSlug}/sessions`,
+            session.title,
+          ),
+          { label: "Review" },
+        ]}
+      />
       <PageHeader
         title={`Review · Session ${session.sessionNumber}`}
         summary="Vorgemerkte Ereignisse aus dem Live-Modus. Prüfe und übernimm sie bewusst — nichts wird automatisch Kanon."
@@ -271,6 +266,6 @@ export default async function SessionReviewPage({ params, searchParams }: Props)
         rtxReady={inference.online}
         rtxEnabled={inference.enabled}
       />
-    </WorldShell>
+    </>
   );
 }

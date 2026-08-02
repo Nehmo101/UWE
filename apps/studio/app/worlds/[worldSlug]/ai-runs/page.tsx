@@ -8,7 +8,7 @@ import {
   type AiRunStatus,
 } from "@uwe/database/server";
 import { AiRunsTable } from "@/components/AiRunsTable";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { CampaignSidebar } from "@/src/components/wiki";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 
@@ -57,15 +57,9 @@ export default async function AiRunsPage({ params, searchParams }: Props) {
   }));
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(world.name, worldSlug, "KI-Läufe", runsBase)}
-        />
-      }
-      contextPanel={
+    <>
+      <ShellBreadcrumb items={worldSectionBreadcrumb(world.name, worldSlug, "KI-Läufe", runsBase)} />
+      <ShellContextPanel>
         <CampaignSidebar
           title="Status"
           items={statusFilters.map((filter) => ({
@@ -74,8 +68,7 @@ export default async function AiRunsPage({ params, searchParams }: Props) {
             active: statusFilter === filter.value || (!statusFilter && !filter.value),
           }))}
         />
-      }
-    >
+      </ShellContextPanel>
       <PageHeader
         title="AI Run History"
         summary={`${total} gespeicherte KI-Läufe. Ergebnisse sind Vorschläge — nichts wird automatisch als Kanon übernommen. Laufende Jobs aktualisieren sich automatisch.`}
@@ -86,6 +79,6 @@ export default async function AiRunsPage({ params, searchParams }: Props) {
         taskLabels={AI_TASK_LABELS as Record<string, string>}
         statusLabels={AI_RUN_STATUS_LABELS as Record<string, string>}
       />
-    </WorldShell>
+    </>
   );
 }

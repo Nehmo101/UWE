@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import { getAppRepository } from "@uwe/database/server";
 
-import { BreadcrumbTrail, PageHeader, WorldShell } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { Card, CardContent, EmptyState } from "@/src/components/ui";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { listVolumes } from "@/src/lib/volume-reader";
@@ -29,15 +29,8 @@ export default async function StudioVolumesPage({ params }: Props) {
   const volumes = await listVolumes(worldSlug);
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(world.name, worldSlug, "Lesen", `/worlds/${worldSlug}/lesen`)}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb items={worldSectionBreadcrumb(world.name, worldSlug, "Lesen", `/worlds/${worldSlug}/lesen`)} />
       <PageHeader
         title="Lesen"
         summary="Kampagnen, Dungeons und Bände am Stück — in der Reihenfolge, in der sie geschrieben wurden."
@@ -67,6 +60,6 @@ export default async function StudioVolumesPage({ params }: Props) {
           ))}
         </div>
       )}
-    </WorldShell>
+    </>
   );
 }

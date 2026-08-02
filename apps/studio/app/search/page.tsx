@@ -24,7 +24,7 @@ import {
   type CanonicalStatus,
 } from "@uwe/database/server";
 import { brainPrisma } from "@uwe/database/brain-client";
-import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { Badge, Card, CardContent } from "@/src/components/ui";
 
 type SearchScope = "admin" | "worlds" | "all";
@@ -115,9 +115,9 @@ export default async function StudioSearchPage({ searchParams }: Props) {
   const hasAnyResults = hasWikiResults || hasAdminResults || hasMediaResults || hasTagResults;
 
   return (
-    <StudioShell
-      breadcrumb={<BreadcrumbTrail items={[{ label: "Globale Suche" }]} />}
-      contextPanel={
+    <>
+      <ShellBreadcrumb items={[{ label: "Globale Suche" }]} />
+      <ShellContextPanel>
         <SidebarSection title="Suchbereiche">
           <ul className="m-0 list-none p-0 text-[0.8rem] text-muted-foreground">
             {SEARCH_ENTITY_FILTERS.map((filter) => (
@@ -142,8 +142,7 @@ export default async function StudioSearchPage({ searchParams }: Props) {
             </Link>
           )}
         </SidebarSection>
-      }
-    >
+      </ShellContextPanel>
       <PageHeader
         title="Globale Suche"
         summary="Durchsuche Wiki-Inhalte und persönliche Admin-Daten — Capture, Projekte, Verträge und mehr."
@@ -338,6 +337,6 @@ export default async function StudioSearchPage({ searchParams }: Props) {
           )}
         </div>
       )}
-    </StudioShell>
+    </>
   );
 }

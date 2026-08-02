@@ -10,7 +10,7 @@ import {
   getAppRepository,
 } from "@uwe/database/server";
 import { createDungeonRoomAction } from "../../../../../../dungeon-actions";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { DungeonSidePages } from "@/src/components/dungeon/DungeonSidePages";
 import { CampaignSidebar } from "@/src/components/wiki";
 import { dungeonBreadcrumb } from "@/src/lib/world-breadcrumbs";
@@ -51,18 +51,14 @@ export default async function StudioDungeonLevelPage({ params, searchParams }: P
   const dungeonHref = `/worlds/${worldSlug}/dungeons/${dungeonSlug}`;
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={dungeonBreadcrumb(world.name, worldSlug, [
-            { label: overview.dungeon.title, href: dungeonHref },
-            { label: overview.level.title },
-          ])}
-        />
-      }
-      contextPanel={
+    <>
+      <ShellBreadcrumb
+        items={dungeonBreadcrumb(world.name, worldSlug, [
+          { label: overview.dungeon.title, href: dungeonHref },
+          { label: overview.level.title },
+        ])}
+      />
+      <ShellContextPanel>
         <CampaignSidebar
           title="Räume"
           items={overview.rooms.map((room) => ({
@@ -70,8 +66,7 @@ export default async function StudioDungeonLevelPage({ params, searchParams }: P
             href: `/worlds/${worldSlug}/dungeons/${dungeonSlug}/ebenen/${levelSlug}/raeume/${room.slug}`,
           }))}
         />
-      }
-    >
+      </ShellContextPanel>
       <PageHeader
         title={overview.level.title}
         summary={`Ebene in „${overview.dungeon.title}“`}
@@ -164,6 +159,6 @@ export default async function StudioDungeonLevelPage({ params, searchParams }: P
           </div>
         </form>
       </section>
-    </WorldShell>
+    </>
   );
 }

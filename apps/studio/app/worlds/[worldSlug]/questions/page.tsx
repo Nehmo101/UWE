@@ -9,7 +9,7 @@ import {
   answerPlayerQuestionAction,
   archivePlayerQuestionAction,
 } from "../questions-actions";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import {
   Badge,
@@ -54,20 +54,15 @@ export default async function StudioPlayerQuestionsPage({ params }: Props) {
   const answered = questions.filter((question) => question.status === "answered");
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(
-            world.name,
-            worldSlug,
-            "Spielerfragen",
-            `/worlds/${worldSlug}/questions`,
-          )}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb
+        items={worldSectionBreadcrumb(
+          world.name,
+          worldSlug,
+          "Spielerfragen",
+          `/worlds/${worldSlug}/questions`,
+        )}
+      />
       <PageHeader
         title="Fragen an den DM"
         summary="Fragen, die deine Spieler im Portal gestellt haben — beantworte sie hier oder archiviere sie."
@@ -156,6 +151,6 @@ export default async function StudioPlayerQuestionsPage({ params }: Props) {
           </div>
         )}
       </section>
-    </WorldShell>
+    </>
   );
 }

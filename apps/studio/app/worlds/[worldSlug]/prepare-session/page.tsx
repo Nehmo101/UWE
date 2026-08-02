@@ -18,7 +18,7 @@ import {
 } from "@uwe/ai-brain";
 import { PrepareSessionPanel } from "@/components/PrepareSessionPanel";
 import { SettingsCollapsiblePanel } from "@/components/SettingsCollapsiblePanel";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { buttonVariants } from "@/src/components/ui";
 
@@ -99,20 +99,15 @@ export default async function PrepareSessionPage({ params }: Props) {
     upcomingSessions[0]?.id ?? referenceSession?.id ?? sessions[0]?.id;
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(
-            world.name,
-            worldSlug,
-            "Session vorbereiten",
-            `/worlds/${worldSlug}/prepare-session`,
-          )}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb
+        items={worldSectionBreadcrumb(
+          world.name,
+          worldSlug,
+          "Session vorbereiten",
+          `/worlds/${worldSlug}/prepare-session`,
+        )}
+      />
       <PageHeader
         title="Session vorbereiten"
         summary="Kommende Sessions im Blick, heuristische Outline-Vorschau und KI-Generator für das nächste Spielabend-Paket."
@@ -218,6 +213,6 @@ export default async function PrepareSessionPage({ params }: Props) {
           rtxEnabled={inference.enabled}
         />
       </SettingsCollapsiblePanel>
-    </WorldShell>
+    </>
   );
 }

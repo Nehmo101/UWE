@@ -15,7 +15,7 @@ import {
   type ItemRarity,
   type MagicItemData,
 } from "@uwe/database/magic-item";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { saveMagicItemAction } from "@/app/magic-item-actions";
 import { Alert, Button, buttonVariants, Input, Label, Textarea } from "@/src/components/ui";
@@ -65,23 +65,18 @@ export default async function MagicItemWorkbenchPage({ params, searchParams }: P
     : null;
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={[
-            ...worldSectionBreadcrumb(
-              world.name,
-              worldSlug,
-              "Magic-Item-Werkbank",
-              `/worlds/${worldSlug}/magic-items`,
-            ),
-            { label: page.title },
-          ]}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb
+        items={[
+          ...worldSectionBreadcrumb(
+            world.name,
+            worldSlug,
+            "Magic-Item-Werkbank",
+            `/worlds/${worldSlug}/magic-items`,
+          ),
+          { label: page.title },
+        ]}
+      />
       <PageHeader
         title={page.title}
         summary="Werkbank für diesen Gegenstand. DM-Felder (Fluch, Geheimnis) erscheinen nie im Spieler-Handout."
@@ -212,6 +207,6 @@ export default async function MagicItemWorkbenchPage({ params, searchParams }: P
       <ExportBlock title="Homebrewery (DM, mit Geheimnis/Fluch)" content={toHomebrewery(page.title, data, true)} />
       <ExportBlock title="Spieler-Handout (player-safe)" content={toPlayerHandout(page.title, data)} />
       <ExportBlock title="5e.tools JSON" content={JSON.stringify(toFiveToolsJson(page.title, data), null, 2)} />
-    </WorldShell>
+    </>
   );
 }

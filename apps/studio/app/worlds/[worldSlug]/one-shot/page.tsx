@@ -7,7 +7,7 @@ import {
   serializeOneShotOutline,
   type OneShotTone,
 } from "@uwe/ai-brain";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { saveOneShotDraftAction } from "@/app/worlds/[worldSlug]/one-shot-actions";
 import { getInferenceStatus } from "@uwe/ai-brain";
@@ -67,15 +67,8 @@ export default async function OneShotPage({ params, searchParams }: Props) {
   const inference = await getInferenceStatus();
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(world.name, worldSlug, "One-Shot-Generator", `/worlds/${worldSlug}/one-shot`)}
-        />
-      }
-    >
+    <>
+      <ShellBreadcrumb items={worldSectionBreadcrumb(world.name, worldSlug, "One-Shot-Generator", `/worlds/${worldSlug}/one-shot`)} />
       <PageHeader
         title="One-Shot-Generator aus Kanon"
         summary="Ort, Ton und bekannte NPCs wählen — UWE baut ein kanon-safes One-Shot-Gerüst mit getrenntem Spieler-Brief und DM-Geheimnissen. Als Quest-Entwurf speicherbar; nichts wird automatisch Kanon."
@@ -212,6 +205,6 @@ export default async function OneShotPage({ params, searchParams }: Props) {
           </form>
         </>
       ) : null}
-    </WorldShell>
+    </>
   );
 }

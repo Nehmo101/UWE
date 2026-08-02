@@ -18,7 +18,7 @@ import {
   deleteWorldEventAction,
 } from "@/app/worlds/[worldSlug]/world-event-actions";
 import { simulateAllFactionsAction } from "@/app/worlds/[worldSlug]/faction-state-actions";
-import { WorldShell, BreadcrumbTrail, PageHeader } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { ChronicleTimeline } from "@/src/components/world/ChronicleTimeline";
 import {
@@ -75,20 +75,16 @@ export default async function WorldChroniclePage({ params, searchParams }: Props
   });
 
   return (
-    <WorldShell
-      worldSlug={worldSlug}
-      worldName={world.name}
-      breadcrumb={
-        <BreadcrumbTrail
-          items={worldSectionBreadcrumb(
-            world.name,
-            worldSlug,
-            "Chronik",
-            `/worlds/${worldSlug}/chronicle`,
-          )}
-        />
-      }
-      contextPanel={
+    <>
+      <ShellBreadcrumb
+        items={worldSectionBreadcrumb(
+          world.name,
+          worldSlug,
+          "Chronik",
+          `/worlds/${worldSlug}/chronicle`,
+        )}
+      />
+      <ShellContextPanel>
         <SidebarSection title="Weltuhr">
           {calendar ? (
             <>
@@ -106,8 +102,7 @@ export default async function WorldChroniclePage({ params, searchParams }: Props
             </p>
           )}
         </SidebarSection>
-      }
-    >
+      </ShellContextPanel>
       <PageHeader
         title="Welt-Chronik"
         summary="Datierte Ereignisse der Kampagne — Grundlage für die Spieler-Timeline im Portal."
@@ -252,6 +247,6 @@ export default async function WorldChroniclePage({ params, searchParams }: Props
           </CardContent>
         </Card>
       </div>
-    </WorldShell>
+    </>
   );
 }

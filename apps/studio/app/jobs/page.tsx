@@ -8,7 +8,7 @@ import {
 } from "@uwe/database/server";
 import { CampaignJobPresetsPanel } from "@/components/CampaignJobPresetsPanel";
 import { JobsWorkspace } from "@/components/JobsWorkspace";
-import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { requireStudioAccess } from "@/src/lib/auth";
 
 export default async function JobsPage() {
@@ -54,9 +54,9 @@ export default async function JobsPage() {
   }
 
   return (
-    <StudioShell
-      breadcrumb={<BreadcrumbTrail items={[{ label: "Jobs" }]} />}
-      contextPanel={
+    <>
+      <ShellBreadcrumb items={[{ label: "Jobs" }]} />
+      <ShellContextPanel>
         <SidebarSection title="Hinweise">
           <ul className="flex list-none flex-col gap-2 text-sm text-muted-foreground">
             <li>
@@ -68,8 +68,7 @@ export default async function JobsPage() {
             <li>Restore-Jobs werden aus Sicherheitsgründen nicht automatisch wiederholt.</li>
           </ul>
         </SidebarSection>
-      }
-    >
+      </ShellContextPanel>
       <PageHeader
         title="Job-Warteschlange"
         summary="System-Jobs (Mail, KI, Import, Backup)."
@@ -87,6 +86,6 @@ export default async function JobsPage() {
         typeLabels={JOB_TYPE_LABELS}
         statusLabels={JOB_STATUS_LABELS}
       />
-    </StudioShell>
+    </>
   );
 }

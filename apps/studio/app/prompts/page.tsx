@@ -6,7 +6,7 @@ import {
   PROMPT_CATEGORY_LABELS,
   type PromptTemplateCategory,
 } from "@uwe/database/prompt-library";
-import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
+import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { requireStudioAccess } from "@/src/lib/auth";
 import { createPromptAction } from "@/app/prompt-actions";
 import {
@@ -51,7 +51,8 @@ export default async function PromptsPage({ searchParams }: Props) {
   });
 
   return (
-    <StudioShell breadcrumb={<BreadcrumbTrail items={[{ label: "Prompt-Bibliothek" }]} />}>
+    <>
+      <ShellBreadcrumb items={[{ label: "Prompt-Bibliothek" }]} />
       <PageHeader
         title="Prompt-Bibliothek"
         summary="Prompts als eigene Objekte mit Kategorie, Tags und Variablen — durchsuchbar, ausfüllbar und kopierbar."
@@ -174,6 +175,6 @@ export default async function PromptsPage({ searchParams }: Props) {
           </form>
         </CardContent>
       </Card>
-    </StudioShell>
+    </>
   );
 }
