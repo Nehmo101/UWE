@@ -9,6 +9,43 @@
   overflow-y: auto;
 }
 
+/* DM-Bereich (`:::dm … :::`). Bewusst nur hier und nicht in der geteilten
+   Basis-CSS: Dieses Markup entsteht ausschließlich im Studio. Im Portal kommt
+   der Bereich gar nicht erst an — er wird serverseitig herausgeschnitten
+   (`filterBlocksForViewer`), es gibt dort also nichts zu gestalten. Eine Regel
+   im Portal-Stylesheet würde das Gegenteil suggerieren. */
+.wiki-content .wiki-dm-section {
+  margin: 1.5rem 0;
+  padding: 0.85rem 1rem 0.35rem;
+  border: 1px dashed color-mix(in srgb, var(--uwe-warning, #f59e0b) 55%, transparent);
+  border-left-width: 3px;
+  border-left-style: solid;
+  border-radius: 0 0.5rem 0.5rem 0;
+  background: color-mix(in srgb, var(--uwe-warning, #f59e0b) 8%, transparent);
+}
+
+.wiki-content .wiki-dm-section-label {
+  margin: 0 0 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--uwe-warning, #f59e0b) 80%, var(--uwe-fg, #e2e8f0));
+}
+
+.wiki-content .wiki-dm-section > :last-child {
+  margin-bottom: 0.5rem;
+}
+
+@media print {
+  /* Am Spieltisch wird der Bildschirm herumgereicht, ein Ausdruck auch. Der
+     Rahmen muss deshalb auf Papier bleiben, wo Hintergrundfarben wegfallen. */
+  .wiki-content .wiki-dm-section {
+    border: 1px dashed #000;
+    background: none;
+  }
+}
+
 .wiki-content a.wiki-link {
   color: var(--uwe-wiki-link, #38bdf8);
   text-decoration: none;

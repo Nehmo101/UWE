@@ -1,3 +1,4 @@
+import { stripDmSections } from "@uwe/auth/dm-section";
 import type { ContentBlock, ContentBlockType, Page } from "./generated/prisma/client";
 
 /** Admin / internal metadata keys stripped from player responses. */
@@ -72,9 +73,12 @@ export interface SanitizeForPlayerOptions {
  * Strips internal IDs and admin metadata from page content before it is
  * returned through player APIs or previews.
  *
- * Content itself is no longer filtered here: per-item visibility is gone, so
- * whoever is assigned to the world sees every block of every page in it. What
- * is left is the bookkeeping that was never meant to leave the server.
+ * Ganze Blöcke werden hier nicht mehr gefiltert: die Sichtbarkeit pro Element
+ * ist weg, wer der Welt zugeordnet ist, sieht jeden Block jeder Seite darin.
+ * Was bleibt, ist die Buchhaltung, die den Server nie verlassen sollte — und
+ * der DM-Bereich mitten im Text (`:::dm … :::`), der hier bedingungslos fällt:
+ * Die Funktion heißt „für Spieler", also gibt es hier keinen Fall, in dem er
+ * bleiben dürfte.
  */
 export function sanitizeForPlayer(
   page: Page & { contentBlocks: ContentBlock[] },
@@ -87,14 +91,14 @@ export function sanitizeForPlayer(
     title: page.title,
     slug: page.slug,
     type: page.type,
-    summary: page.summary,
+    summary: page.summary === null ? null : stripDmSections(page.summary),
     tags: options?.tags ?? [],
     aliases: options?.aliases ?? [],
     contentBlocks: page.contentBlocks.map((block) => ({
       id: block.id,
       type: block.type,
       sortOrder: block.sortOrder,
-      content: block.content,
+      content: stripDmSections(block.content),
       assetId: block.assetId,
       metadata: stripAdminMetadata(block.metadata),
     })),

@@ -11,15 +11,25 @@ type BlockExpectation = "all" | "none";
  * The access matrix after visibility was removed (Notiz Lasse, 2026-07-26).
  *
  * There is exactly one content rule left: whoever is assigned to a world sees
- * everything in it. So the matrix only distinguishes two things any more —
- * whether the viewer is signed in at all, and whether they belong to the world.
- * An anonymous visitor gets nothing even in a guest-mode world; a player gets
- * the full public world but nothing from the private world they are not in.
+ * everything in it. So the matrix distinguishes three things — whether the
+ * viewer is signed in at all, whether they belong to the world, and whether
+ * they hold the Studio checkbox. An anonymous visitor gets nothing even in a
+ * guest-mode world; a player gets the full public world but nothing from the
+ * private world they are not in.
+ *
+ * Das Studio-Häkchen entscheidet nur noch über eine einzige Sache am Inhalt:
+ * den DM-Bereich mitten im Wikitext (`:::dm … :::`). Ganze Seiten, Blöcke und
+ * Bilder kennen keine Abstufung mehr.
  */
 interface RoleExpectations {
   publicPage: PageExpectation;
   playerVisiblePage: PageExpectation;
   playerVisibleBlocks: BlockExpectation;
+  /**
+   * Der DM-Bereich mitten im Block (`:::dm … :::`). Die einzige Abstufung, die
+   * die Welt-Zuordnung NICHT mitbringt — dafür braucht es das Studio-Häkchen.
+   */
+  dmSection: PageExpectation;
   dmOnlyPage: PageExpectation;
   hiddenSecretPage: PageExpectation;
   revealedSecretPage: PageExpectation;
@@ -32,6 +42,7 @@ const ANONYMOUS: RoleExpectations = {
   publicPage: "hidden",
   playerVisiblePage: "hidden",
   playerVisibleBlocks: "none",
+  dmSection: "hidden",
   dmOnlyPage: "hidden",
   hiddenSecretPage: "hidden",
   revealedSecretPage: "hidden",
@@ -45,6 +56,8 @@ const WORLD_MEMBER: RoleExpectations = {
   publicPage: "visible",
   playerVisiblePage: "visible",
   playerVisibleBlocks: "all",
+  // Zugeordnet sein reicht für alles — außer für den DM-Bereich im Text.
+  dmSection: "hidden",
   dmOnlyPage: "visible",
   hiddenSecretPage: "visible",
   revealedSecretPage: "visible",
@@ -53,8 +66,12 @@ const WORLD_MEMBER: RoleExpectations = {
   privateWorldDmPage: "hidden",
 };
 
-/** Staff reads every world. */
-const STAFF: RoleExpectations = { ...WORLD_MEMBER, privateWorldDmPage: "visible" };
+/** Staff reads every world — und als einzige den DM-Bereich im Wikitext. */
+const STAFF: RoleExpectations = {
+  ...WORLD_MEMBER,
+  dmSection: "visible",
+  privateWorldDmPage: "visible",
+};
 
 const ROLE_MATRIX: Record<SecurityTestRole, RoleExpectations> = {
   anonymous: ANONYMOUS,
@@ -144,6 +161,21 @@ describe("security role matrix", () => {
           assert.ok(contents.includes(SECURITY_MARKERS.PLAYER_VISIBLE));
         } else {
           assert.equal(page.contentBlocks.length, 0);
+        }
+
+        // Derselbe Block trägt einen DM-Bereich. Er fällt nicht mit dem Block
+        // weg, sondern aus ihm heraus — der Vorlesetext bleibt.
+        if (expectations.dmSection === "visible") {
+          assert.ok(
+            contents.includes(SECURITY_MARKERS.DM_SECTION),
+            `${role} should read the DM section`,
+          );
+        } else {
+          assert.ok(
+            !contents.includes(SECURITY_MARKERS.DM_SECTION),
+            `${role} must not read the DM section`,
+          );
+          assert.ok(!contents.includes(":::"), `${role} must not even see the markers`);
         }
       });
 

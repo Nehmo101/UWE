@@ -3,6 +3,7 @@
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useEffect, useRef } from "react";
+import { DM_SECTION_CLOSE, DM_SECTION_OPEN } from "@uwe/auth/dm-section";
 import { Button } from "@/src/components/ui";
 
 interface RichTextBlockEditorProps {
@@ -89,8 +90,50 @@ export function RichTextBlockEditor({
         >
           1.
         </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          title={`DM-Bereich einfügen — alles zwischen ${DM_SECTION_OPEN} und ${DM_SECTION_CLOSE} sehen nur Studio-Mitglieder`}
+          onClick={() => insertDmSection(editor)}
+        >
+          Nur DM
+        </Button>
       </div>
       <EditorContent editor={editor} />
+      <p className="text-xs text-muted-foreground">
+        <code>{DM_SECTION_OPEN}</code> … <code>{DM_SECTION_CLOSE}</code> markiert einen DM-Bereich.
+        Spieler bekommen ihn gar nicht erst geschickt.
+      </p>
     </div>
   );
+}
+
+/**
+ * Fügt einen leeren DM-Bereich als drei gewöhnliche Absätze ein.
+ *
+ * Bewusst kein eigener TipTap-Knoten: die Marken sollen auch dann überleben,
+ * wenn derselbe Block später über das einfache Textfeld, einen Import oder die
+ * KI bearbeitet wird. Ein Knoten, den nur dieser Editor kennt, ginge dabei
+ * verloren.
+ */
+function insertDmSection(editor: ReturnType<typeof useEditor>): void {
+  if (!editor) return;
+  const selected = editor.state.doc.textBetween(
+    editor.state.selection.from,
+    editor.state.selection.to,
+    "\n",
+  );
+  const body = selected.trim() || "Nur für den DM.";
+  editor
+    .chain()
+    .focus()
+    .insertContent(
+      `<p>${DM_SECTION_OPEN}</p><p>${escapeHtmlText(body)}</p><p>${DM_SECTION_CLOSE}</p>`,
+    )
+    .run();
+}
+
+function escapeHtmlText(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }

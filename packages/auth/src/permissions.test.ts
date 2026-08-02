@@ -4,11 +4,13 @@ import {
   buildAccessContext,
   canEditContent,
   canPreviewAsPlayer,
+  canReadDmSections,
   canViewWorldContent,
   filterBlocksForViewer,
   filterPagesForViewer,
   isDm,
   isOwner,
+  redactDmSectionsForViewer,
 } from "./permissions";
 import type { AreaAccess, AuthUser } from "./types";
 
@@ -112,5 +114,83 @@ describe("permissions", () => {
     assert.deepEqual(filterPagesForViewer(outsiderCtx, pages), []);
     assert.deepEqual(filterBlocksForViewer(dmCtx, pages), pages);
     assert.deepEqual(filterBlocksForViewer(anonymousCtx, pages), []);
+  });
+});
+
+describe("DM-Bereich im Wikitext", () => {
+  const SECRET = "Roderick arbeitet für die Gegenseite.";
+  const CONTENT = `Vorlesetext\n:::dm\n${SECRET}\n:::\nNachher`;
+  const blocks = () => [{ id: "b1", content: CONTENT }];
+
+  it("liest den Bereich, wer das Studio-Häkchen trägt", () => {
+    assert.ok(canReadDmSections(dmCtx));
+    assert.deepEqual(filterBlocksForViewer(dmCtx, blocks()), blocks());
+  });
+
+  it("lässt den Owner durch", () => {
+    assert.ok(canReadDmSections(ownerCtx));
+
+    // Auch ohne Studio-Häkchen: der Owner richtet die Häkchen ein.
+    const ownerWithoutStudio = buildAccessContext({
+      user: user("owner-2", { isOwner: true, access: access({ portal: true }) }),
+      worldMembership: { userId: "owner-2", worldId: "w1", characterName: null },
+    });
+    assert.ok(canReadDmSections(ownerWithoutStudio));
+  });
+
+  it("schneidet ihn für den Spieler heraus — Welt-Zuordnung reicht nicht", () => {
+    assert.equal(canReadDmSections(playerCtx), false);
+
+    const filtered = filterBlocksForViewer(playerCtx, blocks());
+    assert.equal(filtered.length, 1);
+    assert.equal(filtered[0].content.includes(SECRET), false);
+    assert.equal(filtered[0].content, "Vorlesetext\nNachher");
+  });
+
+  it("schneidet ihn auch in der Vorschau als Spieler heraus", () => {
+    const preview = buildAccessContext({
+      user: user("dm-1", { isOwner: true, access: access({ portal: true, studio: true }) }),
+      worldMembership: { userId: "dm-1", worldId: "w1", characterName: null },
+      preview: { previewAsUserId: "p1" },
+    });
+
+    assert.equal(canReadDmSections(preview), false);
+    assert.equal(filterBlocksForViewer(preview, blocks())[0].content.includes(SECRET), false);
+  });
+
+  it("lässt Blöcke ohne Marke unverändert durch — dieselbe Liste, dieselben Objekte", () => {
+    // Der Normalfall. Wer hier eine Kopie zurückgibt, nimmt dem Suchindex-Cache
+    // seinen Identitätsvergleich und alloziert bei jedem Tastendruck neu.
+    const plain = [{ id: "b1", content: "Ganz gewöhnlich" }];
+    assert.equal(filterBlocksForViewer(playerCtx, plain), plain);
+  });
+
+  it("kopiert nur die Blöcke, aus denen wirklich etwas herausfällt", () => {
+    const mixed = [
+      { id: "b1", content: "Ganz gewöhnlich" },
+      { id: "b2", content: CONTENT },
+      { id: "b3", content: "Auch gewöhnlich" },
+    ];
+    const filtered = filterBlocksForViewer(playerCtx, mixed);
+
+    assert.notEqual(filtered, mixed);
+    assert.equal(filtered[0], mixed[0]);
+    assert.notEqual(filtered[1], mixed[1]);
+    assert.equal(filtered[2], mixed[2]);
+    assert.equal(filtered[1].content, "Vorlesetext\nNachher");
+    assert.equal(filtered.length, 3);
+  });
+
+  it("verändert den Ausgangsblock nicht", () => {
+    const input = blocks();
+    filterBlocksForViewer(playerCtx, input);
+    assert.equal(input[0].content, CONTENT);
+  });
+
+  it("schneidet auch einzelne Textfelder", () => {
+    assert.equal(redactDmSectionsForViewer(playerCtx, CONTENT), "Vorlesetext\nNachher");
+    assert.equal(redactDmSectionsForViewer(dmCtx, CONTENT), CONTENT);
+    assert.equal(redactDmSectionsForViewer(playerCtx, null), null);
+    assert.equal(redactDmSectionsForViewer(playerCtx, undefined), undefined);
   });
 });

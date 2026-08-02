@@ -5,6 +5,8 @@
 export const SECURITY_MARKERS = {
   /** dm_only page / block content */
   DM_ONLY: "__DM_ONLY_SECRET_SHOULD_NOT_LEAK__",
+  /** Inside a `:::dm … :::` section — only the Studio checkbox (and the owner) may read it */
+  DM_SECTION: "__DM_SECTION_SECRET_SHOULD_NOT_LEAK__",
   /** unlock_after_session page not yet unlocked */
   HIDDEN_SECRET: "__HIDDEN_SECRET_SHOULD_NOT_LEAK__",
   /** dm_only asset file bytes */
@@ -20,6 +22,7 @@ export const SECURITY_MARKERS = {
 /** Markers that must never appear in anonymous / public portal responses. */
 export const PRIVATE_LEAK_MARKERS = [
   SECURITY_MARKERS.DM_ONLY,
+  SECURITY_MARKERS.DM_SECTION,
   SECURITY_MARKERS.HIDDEN_SECRET,
   SECURITY_MARKERS.PRIVATE_MEDIA,
 ] as const;

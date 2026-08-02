@@ -107,3 +107,53 @@ test("combines headings, lists and paragraphs with wikilinks", () => {
       "<p>Ende.</p>",
   );
 });
+
+test("rendert den DM-Bereich als eigenen Kasten", () => {
+  const content = "Vorlesetext\n:::dm\nRoderick ist der Verräter.\n:::\nWeiter";
+  assert.equal(
+    renderContentHtml(content, NO_LINKS),
+    "<p>Vorlesetext</p>" +
+      '<section class="wiki-dm-section" data-uwe-dm="1" aria-label="DM-Bereich">' +
+      '<p class="wiki-dm-section-label">Nur für den DM</p>' +
+      "<p>Roderick ist der Verräter.</p></section>" +
+      "<p>Weiter</p>",
+  );
+});
+
+test("nimmt den Titel der DM-Marke in die Beschriftung auf", () => {
+  const rendered = renderContentHtml(":::dm Der wahre Verräter\nRoderick\n:::", NO_LINKS);
+  assert.ok(rendered.includes('<p class="wiki-dm-section-label">Nur für den DM — Der wahre Verräter</p>'));
+  assert.ok(rendered.includes('aria-label="DM-Bereich: Der wahre Verräter"'));
+});
+
+test("maskiert Sonderzeichen im Titel der DM-Marke", () => {
+  const rendered = renderContentHtml(':::dm Plan "B" & Co\nGeheim\n:::', NO_LINKS);
+  assert.ok(
+    rendered.includes('<p class="wiki-dm-section-label">Nur für den DM — Plan &quot;B&quot; &amp; Co</p>'),
+  );
+  assert.ok(rendered.includes('aria-label="DM-Bereich: Plan &quot;B&quot; &amp; Co"'));
+});
+
+test("löst Wikilinks in beiden Abschnitten an der richtigen Stelle auf", () => {
+  const content = "Siehe [[Aman]]\n:::dm\nFragt [[Roderick]]\n:::\nEnde";
+  const links: PageViewLink[] = [
+    { displayText: "Aman", href: "/aman", status: "resolved" },
+    { displayText: "Roderick", href: "/roderick", status: "resolved" },
+  ];
+  const rendered = renderContentHtml(content, links);
+  assert.ok(rendered.includes('<p>Siehe <a href="/aman" class="wiki-link">Aman</a></p>'));
+  assert.ok(rendered.includes('<p>Fragt <a href="/roderick" class="wiki-link">Roderick</a></p>'));
+});
+
+test("rendert den DM-Bereich auch im Rich-Text-HTML des Editors", () => {
+  const content = "<p>Vorlesetext</p><p>:::dm</p><p>Geheim</p><p>:::</p><p>Weiter</p>";
+  const rendered = renderContentHtml(content, NO_LINKS);
+  assert.ok(rendered.startsWith("<p>Vorlesetext</p><section class=\"wiki-dm-section\""));
+  assert.ok(rendered.endsWith("</section><p>Weiter</p>"));
+  assert.ok(rendered.includes("<p>Geheim</p>"));
+  assert.ok(!rendered.includes(":::"), "die Marken selbst dürfen nicht im HTML landen");
+});
+
+test("lässt Inhalt ohne DM-Marke unverändert durch den alten Pfad laufen", () => {
+  assert.equal(renderContentHtml("Nur Text", NO_LINKS), "<p>Nur Text</p>");
+});

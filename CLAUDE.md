@@ -58,6 +58,8 @@ Kernregeln: keine Secrets in Source; Zugang = vier Häkchen pro E-Mail (`package
 
 **Zugangsmodell in einem Satz:** Das Häkchen sagt, welche App (Portal / Studio / Brain / Family). Die Welt-Zuordnung sagt, welche Welt. Sonst nichts. `owner` ist die einzige verbliebene Rolle — für Betrieb, Restore und das Command Center.
 
+**Eine Ausnahme davon:** der DM-Bereich im Wikitext (`:::dm … :::`). Diese Zeilen liest nur, wer das Studio-Häkchen trägt (Owner geht mit durch) — Welt-Zuordnung reicht nicht, Vorschau-als-Spieler fällt heraus. Der Bereich wird serverseitig aus dem Text geschnitten, nicht ausgeblendet: `canReadDmSections` / `filterBlocksForViewer` (`packages/auth`), Parser in `packages/auth/src/dm-section.ts`.
+
 **Ein Flag daneben:** `User.aiAccess` — darf diese Adresse die RTX-KI benutzen. Kein fünftes App-Häkchen, sondern eine Fähigkeit des Kontos; einstellbar im Command Center, Owner geht immer durch (`canUseRtxAi`). Durchgesetzt zentral: Pfadregel für KI-API-Routen, `require*AiActionAuth` für KI-Server-Actions. Details: [docs/engineering/access-model.md](docs/engineering/access-model.md).
 
 ## TypeScript / React Konventionen

@@ -44,6 +44,7 @@ export {
   buildAccessContext,
   canEditContent as canEditContentRole,
   canPreviewAsPlayer,
+  canReadDmSections,
   canViewAuditLog,
   canViewWorldContent,
   filterAssetsForViewer,
@@ -51,7 +52,20 @@ export {
   filterPagesForViewer,
   isDm,
   isOwner as isContextOwner,
+  redactDmSectionsForViewer,
 } from "./permissions";
+
+export type { DmSectionRange, DmSegment } from "./dm-section";
+export {
+  DM_SECTION_CLOSE,
+  DM_SECTION_OPEN,
+  extractDmSections,
+  findDmSections,
+  hasDmSection,
+  preserveDmSections,
+  splitDmSegments,
+  stripDmSections,
+} from "./dm-section";
 
 export type {
   AIUsageContext,

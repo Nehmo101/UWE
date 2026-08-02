@@ -51,7 +51,7 @@ regardless.
 
 Findings that break one of UWE's core invariants carry the most weight:
 
-- `dm_only` content reaching the **Portal**
+- A `:::dm` section reaching the **Portal** or anyone without the Studio checkbox
 - `owner_private_local` content leaving the **host**
 - Bypassing the four-checkbox area access (`packages/auth/src/area-access.ts`)
   or the world assignment (`packages/auth/src/permissions.ts`)
@@ -157,16 +157,37 @@ Full matrix: [docs/SECURITY_QA_MATRIX.md](docs/SECURITY_QA_MATRIX.md).
 
 Per-item visibility is gone. There is exactly one content rule left:
 
-> **Whoever is assigned to a world sees everything in it.**
+> **Whoever is assigned to a world sees everything in it — except a DM section
+> inside the wiki text.**
 
-No `dm_only`, no `player_visible`, no draft state, no per-page grant, no share
-link, no guest mode. What still has to hold:
+No `dm_only` flag on pages, blocks or assets, no `player_visible`, no draft
+state, no per-page grant, no share link, no guest mode. The one exception is
+authored inside the text itself:
+
+```
+:::dm
+Only readers with the Studio checkbox (and the owner) ever receive this.
+:::
+```
+
+It is cut out server-side before rendering — not hidden client-side — at
+`filterBlocksForViewer`, `renderBlockContentForViewer`, `searchForAuthContext`
+and `sanitizeForPlayer`. The rule is `canReadDmSections`
+(`packages/auth/src/permissions.ts`); world assignment alone does **not**
+qualify, and previewing as a player drops it. Details:
+[docs/engineering/access-model.md](docs/engineering/access-model.md).
+
+What still has to hold:
 
 - The world boundary itself — `scopeFromAccessContext` only carries a membership
   over when it belongs to *that* world. Without it, a member of world A could
   read world B.
 - An anonymous visitor gets nothing at all; every route needs a session.
+- A DM section never reaches a reader without the Studio checkbox — not in the
+  page, not in the rendered HTML, not in a search hit or its snippet.
 - Hard regression tests: `packages/auth/src/security/authz.test.ts`,
+  `packages/auth/src/dm-section.test.ts`,
+  `packages/database/src/dm-section-access.test.ts`,
   `apps/portal/src/lib/world-access.test.ts`, `pnpm test:security`
 - Studio **World Inspector** still audits content quality (broken wikilinks,
   unassigned pages) — its exposure half is gone with visibility.

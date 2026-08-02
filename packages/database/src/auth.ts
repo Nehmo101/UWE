@@ -16,6 +16,8 @@ import {
   filterPagesForViewer,
   filterPlayerNotesForViewer,
   isDm,
+  preserveDmSections,
+  redactDmSectionsForViewer,
   scopeFromAccessContext,
   sessionExpiresAt,
   canEditPlayerCharacterBlock,
@@ -757,6 +759,9 @@ export class AuthService {
 
     return {
       ...page,
+      // Die Kurzbeschreibung ist auch Wikitext — eine dort hingeschriebene
+      // `:::dm`-Marke muss genauso greifen wie im Block.
+      summary: redactDmSectionsForViewer(ctx, page.summary),
       contentBlocks: filterBlocksForViewer(ctx, page.contentBlocks),
     };
   }
@@ -793,8 +798,13 @@ export class AuthService {
     });
 
     // filterPagesForViewer stays as the single gate: it returns nothing for an
-    // anonymous guest and everything for anyone assigned to the world.
-    return filterPagesForViewer(ctx, pages);
+    // anonymous guest and everything for anyone assigned to the world. Nur die
+    // Kurzbeschreibung geht noch durch den DM-Schnitt — sie ist Wikitext und
+    // steht in dieser Liste unter jedem Seitentitel.
+    return filterPagesForViewer(ctx, pages).map((page) => {
+      const summary = redactDmSectionsForViewer(ctx, page.summary);
+      return summary === page.summary ? page : { ...page, summary };
+    });
   }
 
   /**
@@ -844,13 +854,18 @@ export class AuthService {
    * authenticated portal. Pass a `renderCtx`
    * from {@link buildViewerRenderContext} to reuse one page-index query across
    * all blocks; omit it to build the lookup for this block only.
+   *
+   * Der DM-Bereich (`:::dm … :::`) fällt hier ein zweites Mal heraus. Die
+   * Blöcke kommen bereits geschnitten aus `filterBlocksForViewer`; diese Zeile
+   * deckt die Aufrufer ab, die den Inhalt anderswo herbekommen haben.
    */
   async renderBlockContentForViewer(
     worldSlug: string,
-    content: string,
+    rawContent: string,
     ctx: AccessContext,
     renderCtx?: Awaited<ReturnType<AuthService["buildViewerRenderContext"]>>,
   ): Promise<string> {
+    const content = redactDmSectionsForViewer(ctx, rawContent);
     const parsed = parseWikiLinks(content);
     if (parsed.length === 0) {
       return renderContentHtml(content, []);
@@ -1441,9 +1456,13 @@ export class AuthService {
       return null;
     }
 
+    // Der Spieler hat den Block ohne die DM-Bereiche zu sehen bekommen. Würde
+    // sein Stand einfach überschreiben, wären die Notizen des DM beim ersten
+    // Speichern weg — sie werden deshalb aus dem gespeicherten Stand
+    // übernommen. Neue Marken aus dieser Eingabe verwirft `preserveDmSections`.
     await this.db.contentBlock.update({
       where: { id: blockId },
-      data: { content: content.trim() },
+      data: { content: preserveDmSections(block.content, content.trim()) },
     });
 
     return this.getPageForViewer(worldSlug, pageSlug, ctx);
