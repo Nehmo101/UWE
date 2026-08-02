@@ -597,16 +597,22 @@ pub fn kill_tracked_service_processes() {
     }
 }
 
+/// Beendet den Dienst hinter `pid`.
+///
+/// Auf Windows bewusst über die Win32-API statt über `taskkill`: Diese Funktion
+/// läuft auch, während Windows herunterfährt, und dort lässt sich kein neuer
+/// Prozess mehr zuverlässig starten. `taskkill.exe` scheiterte dann an der
+/// DLL-Initialisierung (`0xc0000142`) und zeigte pro Dienst einen Fehlerdialog,
+/// der das Herunterfahren blockierte, bis jemand ihn wegklickte.
+/// `TerminateProcess` braucht keinen Prozessstart und kann so nicht scheitern.
+///
+/// Dass damit `taskkill /T` (ganzer Prozessbaum) entfällt, ist unkritisch: die
+/// Dienste und ihre Kinder hängen im Job Object aus `process_guard`, das sie
+/// spätestens mit dem Command-Center-Prozess abräumt.
 fn kill_process_tree(pid: u32) {
     #[cfg(target_os = "windows")]
     {
-        let mut command = Command::new("taskkill");
-        configure_hidden_process(&mut command);
-        let _ = command
-            .args(["/PID", &pid.to_string(), "/T", "/F"])
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status();
+        windows_kill::terminate(pid);
     }
     #[cfg(not(target_os = "windows"))]
     {
@@ -615,6 +621,40 @@ fn kill_process_tree(pid: u32) {
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status();
+    }
+}
+
+/// `TerminateProcess` von Hand deklariert — dieselbe Konvention wie in
+/// `process_guard`, damit für zwei Aufrufe keine Windows-Crate nötig wird.
+#[cfg(target_os = "windows")]
+mod windows_kill {
+    use std::ffi::c_void;
+
+    type Handle = *mut c_void;
+
+    /// `PROCESS_TERMINATE`
+    const PROCESS_TERMINATE: u32 = 0x0001;
+
+    extern "system" {
+        fn OpenProcess(access: u32, inherit_handle: i32, pid: u32) -> Handle;
+        fn TerminateProcess(process: Handle, exit_code: u32) -> i32;
+        fn CloseHandle(handle: Handle) -> i32;
+    }
+
+    /// Fehlschläge bleiben still: ein längst beendeter Dienst liefert schlicht
+    /// ein Null-Handle, und auf dem Beenden-Pfad gibt es niemanden mehr, der
+    /// eine Meldung lesen könnte.
+    pub fn terminate(pid: u32) {
+        // SAFETY: reine Win32-Aufrufe. Das Handle stammt aus `OpenProcess`, wird
+        // nur bei Erfolg benutzt und auf jedem Pfad wieder geschlossen.
+        unsafe {
+            let handle = OpenProcess(PROCESS_TERMINATE, 0, pid);
+            if handle.is_null() {
+                return;
+            }
+            TerminateProcess(handle, 1);
+            CloseHandle(handle);
+        }
     }
 }
 

@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -84,7 +84,16 @@ function readStdin(): Promise<string> {
 
 function stopProcess(pid: number): void {
   if (process.platform === "win32") {
-    spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { windowsHide: true });
+    // Kein `taskkill`: der Beenden-Pfad läuft auch, während Windows
+    // herunterfährt, und dort startet kein neuer Prozess mehr zuverlässig —
+    // `taskkill.exe` scheiterte an der DLL-Initialisierung (0xc0000142) und
+    // blockierte das Herunterfahren mit einem Fehlerdialog. `process.kill` ruft
+    // intern `TerminateProcess` auf, ohne einen Prozess zu starten.
+    try {
+      process.kill(pid);
+    } catch {
+      // already gone
+    }
   } else {
     try {
       process.kill(pid, "SIGTERM");

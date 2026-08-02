@@ -194,7 +194,13 @@ export function processRunning(pid: number | null): boolean {
 export function stopProcess(pid: number): void {
   if (!processRunning(pid)) return;
   if (process.platform === "win32") {
-    spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { windowsHide: true });
+    // Kein `taskkill`: der Beenden-Pfad läuft auch, während Windows
+    // herunterfährt, und dort startet kein neuer Prozess mehr zuverlässig —
+    // `taskkill.exe` scheiterte an der DLL-Initialisierung (0xc0000142) und
+    // blockierte das Herunterfahren mit einem Fehlerdialog pro Dienst.
+    // `process.kill` ruft intern `TerminateProcess` auf, ohne einen Prozess zu
+    // starten; die Kinder nimmt das Job Object des Command Centers mit.
+    try { process.kill(pid); } catch { /* schon beendet */ }
   } else {
     try { process.kill(-pid, "SIGTERM"); } catch { process.kill(pid, "SIGTERM"); }
   }
