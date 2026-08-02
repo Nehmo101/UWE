@@ -7,6 +7,16 @@
 > Vorbild für Form und Anspruch ist
 > [`terra-runde-j-atlas-abbau.md`](terra-runde-j-atlas-abbau.md) — erst
 > inventarisieren, dann entscheiden.
+>
+> **Nachtrag 02.08.2026:** Der in § 9 vorgeschlagene Spike ist gebaut und
+> gemessen — [`terra-godot-spike-messung.md`](terra-godot-spike-messung.md).
+> Die Empfehlung bleibt, zwei Befunde dieses Dokuments sind aber überholt:
+> **§ 5.2 ist widerlegt** (der einfädige Export braucht kein COEP, YouTube und
+> Turnstile sind nicht in Gefahr), und die Analyse hat einen Kostenpunkt
+> übersehen, der schwerer wiegt als alle vier hier genannten: der portierte
+> Generator läuft in GDScript **rund 197× langsamer** als in JavaScript, bei
+> einer Rechnung, die das Dateiformat bei jedem Kartenladen erzwingt. § 5.1
+> und § 5.3 sind durch die Messung bestätigt.
 
 ---
 
@@ -249,6 +259,11 @@ heute einhält.
 
 ### 5.1 Die CSP verbietet WASM in Produktion — und *nur* dort
 
+> **Gemessen und bestätigt** ([Messung](terra-godot-spike-messung.md) § 2):
+> exakt dieser Fehler, exakt dieses Bild. `'wasm-unsafe-eval'` genügt als
+> Behebung — auch für Godots Brücke zur Seite, sofern sie über
+> `JavaScriptBridge.get_interface` statt über `eval` geht.
+
 `packages/auth/src/security-headers.ts:50-53`:
 
 ```ts
@@ -273,6 +288,12 @@ schwächen." Das ist machbar, aber es ist eine bewusste Entscheidung, kein
 Nebeneffekt.
 
 ### 5.2 Threads brauchen Cross-Origin-Isolation — und die bricht zwei Features
+
+> **WIDERLEGT** ([Messung](terra-godot-spike-messung.md) § 3). Der einfädige
+> Export (`thread_support=false`) läuft ohne `SharedArrayBuffer`, also ohne
+> COEP und ohne Cross-Origin-Isolation. YouTube-Einbettungen und Turnstile
+> bleiben unberührt. Der Abschnitt bleibt als Protokoll stehen; er beschreibt
+> eine Kollision, die es nicht gibt.
 
 Godots Web-Export nutzt für Threads `SharedArrayBuffer`. Der ist nur
 verfügbar, wenn das Dokument **cross-origin-isoliert** ist:
@@ -306,6 +327,10 @@ führt: wenn Leistung der Anlass war, ist der einzige Weg, der die
 Sicherheitsarchitektur unangetastet lässt, ausgerechnet der langsame.
 
 ### 5.3 Auslieferungsgröße
+
+> **Gemessen** ([Messung](terra-godot-spike-messung.md) § 4): 38,9 MB roh,
+> 9,7 MB gzip gegen Terras 4,39 MB / 1,18 MB — Faktor 8,2× über die Leitung.
+> Die Schätzung „25–40 MB" traf.
 
 Ein Godot-4-Web-Export liegt auch für ein triviales Projekt bei grob
 25–40 MB (`.wasm` + `.pck`), gegenüber Terras 2,1 MB Vendor plus ~250 KB
