@@ -641,9 +641,9 @@ function redactDmSectionsInPages(
   return pages.map((page) => {
     const summary = redactDmSectionsForViewer(context, page.summary);
     const contentBlocks = filterBlocksForViewer(context, page.contentBlocks);
-    const changed =
-      summary !== page.summary ||
-      contentBlocks.some((block, index) => block !== page.contentBlocks[index]);
+    // Beide Helfer geben bei markenlosem Inhalt dasselbe Objekt zurück, nicht
+    // nur ein gleiches — Identitätsvergleich reicht also aus.
+    const changed = summary !== page.summary || contentBlocks !== page.contentBlocks;
     return changed ? { ...page, summary, contentBlocks } : page;
   });
 }

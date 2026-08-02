@@ -1,4 +1,4 @@
-import { hasDmSection, stripDmSections } from "./dm-section";
+import { stripDmSections } from "./dm-section";
 import type {
   AccessContext,
   AuthUser,
@@ -110,23 +110,38 @@ export function filterBlocksForViewer<T>(ctx: AccessContext, blocks: T[]): T[] {
   if (canReadDmSections(ctx)) {
     return blocks;
   }
-  return blocks.map(redactBlockContent);
+
+  // Kopiert wird erst, wenn wirklich etwas herausfällt — Block wie Liste. Der
+  // Normalfall ist, dass keine Marke im Text steht; dann muss dieser Pfad
+  // nichts allozieren und der Aufrufer behält seine Identitäten (der
+  // Suchindex-Cache prüft genau darauf).
+  let redacted: T[] | null = null;
+  for (let index = 0; index < blocks.length; index += 1) {
+    const block = redactBlockContent(blocks[index]);
+    if (block === blocks[index]) {
+      redacted?.push(block);
+      continue;
+    }
+    redacted ??= blocks.slice(0, index);
+    redacted.push(block);
+  }
+
+  return redacted ?? blocks;
 }
 
-/**
- * Kopiert einen Block nur dann, wenn wirklich etwas herausfällt — sonst kämen
- * aus jedem Lesepfad neue Objekte, und der Suchindex-Cache verlöre seine
- * Identitäts-Annahmen.
- */
+/** Gibt denselben Block zurück, wenn nichts herausfällt. */
 function redactBlockContent<T>(block: T): T {
   if (!block || typeof block !== "object") {
     return block;
   }
   const content = (block as { content?: unknown }).content;
-  if (typeof content !== "string" || !hasDmSection(content)) {
+  if (typeof content !== "string") {
     return block;
   }
-  return { ...block, content: stripDmSections(content) };
+  // Ein Durchgang, nicht zwei: `stripDmSections` gibt bei markenlosem Text
+  // denselben String zurück, nicht nur einen gleichen.
+  const stripped = stripDmSections(content);
+  return stripped === content ? block : { ...block, content: stripped };
 }
 
 export function filterAssetsForViewer<T>(ctx: AccessContext, assets: T[]): T[] {

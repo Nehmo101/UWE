@@ -126,7 +126,7 @@ test("nimmt den Titel der DM-Marke in die Beschriftung auf", () => {
   assert.ok(rendered.includes('aria-label="DM-Bereich: Der wahre Verräter"'));
 });
 
-test("escapt den Titel der DM-Marke", () => {
+test("maskiert Sonderzeichen im Titel der DM-Marke", () => {
   const rendered = renderContentHtml(':::dm Plan "B" & Co\nGeheim\n:::', NO_LINKS);
   assert.ok(
     rendered.includes('<p class="wiki-dm-section-label">Nur für den DM — Plan &quot;B&quot; &amp; Co</p>'),

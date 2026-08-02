@@ -158,10 +158,27 @@ describe("DM-Bereich im Wikitext", () => {
     assert.equal(filterBlocksForViewer(preview, blocks())[0].content.includes(SECRET), false);
   });
 
-  it("lässt Blöcke ohne Marke unverändert durch — dieselben Objekte", () => {
+  it("lässt Blöcke ohne Marke unverändert durch — dieselbe Liste, dieselben Objekte", () => {
+    // Der Normalfall. Wer hier eine Kopie zurückgibt, nimmt dem Suchindex-Cache
+    // seinen Identitätsvergleich und alloziert bei jedem Tastendruck neu.
     const plain = [{ id: "b1", content: "Ganz gewöhnlich" }];
-    const filtered = filterBlocksForViewer(playerCtx, plain);
-    assert.equal(filtered[0], plain[0]);
+    assert.equal(filterBlocksForViewer(playerCtx, plain), plain);
+  });
+
+  it("kopiert nur die Blöcke, aus denen wirklich etwas herausfällt", () => {
+    const mixed = [
+      { id: "b1", content: "Ganz gewöhnlich" },
+      { id: "b2", content: CONTENT },
+      { id: "b3", content: "Auch gewöhnlich" },
+    ];
+    const filtered = filterBlocksForViewer(playerCtx, mixed);
+
+    assert.notEqual(filtered, mixed);
+    assert.equal(filtered[0], mixed[0]);
+    assert.notEqual(filtered[1], mixed[1]);
+    assert.equal(filtered[2], mixed[2]);
+    assert.equal(filtered[1].content, "Vorlesetext\nNachher");
+    assert.equal(filtered.length, 3);
   });
 
   it("verändert den Ausgangsblock nicht", () => {
