@@ -5,6 +5,10 @@ import { stripCanonMarkers } from "./canonical-status";
 import { buildDocumentTree, normalizeBodyHeadings } from "./doc-tree";
 import { markdownToWikiHtml } from "./markdown-html";
 import { collectWikiLinkTargets } from "./relations";
+import { extractDefinitionBullets, extractLabelledBlocks } from "./semantic/blocks";
+import { linkEntityNames } from "./semantic/crosslink";
+import { tidyHeadingText } from "./semantic/headings";
+import { shiftHeadings } from "./semantic/fold";
 
 /**
  * Regressionstest gegen quadratisches Zurücksetzen in den Mustern dieses Packages.
@@ -93,6 +97,55 @@ describe("Muster bleiben linear", () => {
     // `a < b` ist Text. Früher fraß der Tag-Entferner den Rest der Zeile.
     const mit = markdownToWikiHtml("# Wenn a < b gilt\n\nText.");
     assert.match(mit, /<h1 id="wenn-a-lt-b-gilt">/);
+  });
+
+  it("verkraftet ein Etikett ohne schließende Fettschrift", () => {
+    // `^\*\*\s*(…)\s*\*\*` ließ die beiden `\s*` und die Gruppe dazwischen um
+    // dieselben Leerzeichen streiten; ohne Abschluss wurde jede Aufteilung
+    // durchprobiert.
+    const line = `**${" ".repeat(SIZE)}`;
+
+    within("extractLabelledBlocks", () => {
+      assert.equal(extractLabelledBlocks(line).blocks.length, 0);
+    });
+
+    within("extractDefinitionBullets", () => {
+      assert.equal(extractDefinitionBullets(`- **${" ".repeat(SIZE)}`).blocks.length, 0);
+    });
+  });
+
+  it("verkraftet einen Text aus lauter offenen Klammerpaaren beim Verlinken", () => {
+    // `\[\[[^\]]*\]\]` und `\]\([^)]*\)` setzten bei jedem Anfang neu an und
+    // liefen von dort bis zum Textende.
+    const targets = [{ title: "Nepurga" }];
+
+    within("linkEntityNames ([[)", () => {
+      assert.ok(typeof linkEntityNames("[[".repeat(SIZE / 2), targets) === "string");
+    });
+
+    within("linkEntityNames (](", () => {
+      assert.ok(typeof linkEntityNames("](".repeat(SIZE / 2), targets) === "string");
+    });
+  });
+
+  it("verkraftet einen Titel aus lauter Satzzeichen und Leerraum", () => {
+    // `[\s—–\-:,;]+$` und `\s*\(…\)\s*$` werden an jeder Position neu angesetzt.
+    within("tidyHeadingText (Satzzeichen)", () => {
+      assert.equal(tidyHeadingText(`Turm${",".repeat(SIZE)}`), "Turm");
+    });
+
+    within("tidyHeadingText (offene Klammer)", () => {
+      const title = `Turm (${" ".repeat(SIZE)}`;
+      assert.ok(tidyHeadingText(title).startsWith("Turm"));
+    });
+  });
+
+  it("verkraftet das Verschieben einer Überschrift aus lauter Leerraum", () => {
+    const line = `#${"\t".repeat(SIZE)}`;
+
+    within("shiftHeadings", () => {
+      assert.equal(shiftHeadings(line, 1), line);
+    });
   });
 
   it("gibt Überschriften weiterhin ihre id — auch verschachtelt und doppelt", () => {

@@ -17,6 +17,8 @@
  * verlinkt sich selbst.
  */
 
+import { findDelimitedRanges } from "./scan";
+
 const FENCE = /^(?:```|~~~)/;
 
 export interface LinkTarget {
@@ -116,13 +118,12 @@ function blockedRanges(markdown: string): Array<[number, number]> {
     offset += line.length + 1;
   }
 
-  const push = (match: RegExpMatchArray) => {
-    if (typeof match.index === "number") ranges.push([match.index, match.index + match[0].length]);
-  };
-
-  for (const match of markdown.matchAll(/\[\[[^\]]*\]\]/g)) push(match);
+  // Von Hand gesucht, nicht per Muster: `\[\[[^\]]*\]\]` setzt bei jedem `[[` ohne
+  // Gegenstück neu an und läuft von dort bis zum Textende — quadratisch auf
+  // einem Dokument voller offener Klammern.
+  ranges.push(...findDelimitedRanges(markdown, "[[", "]]"));
   // Markdown-Links: der sichtbare Text darf verlinkt werden, das Ziel nicht.
-  for (const match of markdown.matchAll(/\]\([^)]*\)/g)) push(match);
+  ranges.push(...findDelimitedRanges(markdown, "](", ")"));
 
   return ranges;
 }

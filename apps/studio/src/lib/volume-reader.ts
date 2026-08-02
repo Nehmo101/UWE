@@ -104,6 +104,18 @@ export async function buildVolumeReaderView(
     graph.pageIndex.filter((page) => hasSourceTag(page.tags)).map((page) => page.id),
   );
 
+  const exclude = (page: ReadingPage) => sourceIds.has(page.id);
+
+  // Erst den Band **ohne** HTML bestimmen: `buildVolume` ist ein reiner
+  // Baumdurchlauf und kostet nichts. Erst danach wird gerendert — und zwar nur
+  // für die Abschnitte, die wirklich im Band stehen. Über alle Seiten der Welt
+  // zu rendern hieße bei 500 Seiten und einem 55-seitigen Band: 445-mal HTML,
+  // das niemand ansieht.
+  const outline = buildVolume(pages, root.id, { htmlById: new Map(), exclude });
+  if (!outline) return null;
+
+  const inVolume = new Set(outline.sections.map((section) => section.id));
+
   const wikiIndex: WikiPageNode[] = graph.pages.map((page) => pageToWikiNode(worldSlug, page));
   // `renderPageContentHtml` baut den Lookup-Index bei jedem Aufruf neu. Für eine
   // einzelne Wiki-Seite ist das egal; für einen Band mit 55 Abschnitten wäre es
@@ -113,18 +125,13 @@ export async function buildVolumeReaderView(
 
   const htmlById = new Map<string, string>();
   for (const page of graph.pages) {
-    if (sourceIds.has(page.id)) continue;
+    if (!inVolume.has(page.id)) continue;
     const content = combineBlockContent(page.contentBlocks);
     htmlById.set(page.id, renderContentHtml(content, resolveLinksInContent(content, lookup)));
   }
 
-  const volume = buildVolume(pages, root.id, {
-    htmlById,
-    exclude: (page) => sourceIds.has(page.id),
-  });
+  const volume = buildVolume(pages, root.id, { htmlById, exclude });
   if (!volume) return null;
-
-  const inVolume = new Set(volume.sections.map((section) => section.id));
 
   return {
     volume,

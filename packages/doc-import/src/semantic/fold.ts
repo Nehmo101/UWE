@@ -16,11 +16,11 @@
 import type { DocumentNode, SectionRole } from "../types";
 import type { Counters } from "./counters";
 import { isPageRole } from "./roles";
+import { readHeadingLine } from "./scan";
 
 /** Ab dieser Rumpflänge lohnt eine eigene Seite auch ohne Gegenstandsrolle. */
 const STANDALONE_BODY_LENGTH = 1_400;
 
-const HEADING = /^(#{1,6})(\s+)(.*)$/;
 const FENCE = /^(?:```|~~~)/;
 
 /** Verschiebt alle Überschriften eines Rumpfs um `by` Ebenen nach unten. */
@@ -34,10 +34,12 @@ export function shiftHeadings(body: string, by: number): string {
       if (FENCE.test(line.trim())) inFence = !inFence;
       if (inFence) return line;
 
-      const match = HEADING.exec(line);
-      if (!match) return line;
+      // `^(#{1,6})(\s+)(.*)$` lässt `\s+` und `.*` um dieselben Leerzeichen
+      // streiten — auf einer Zeile aus lauter Leerraum wird das quadratisch.
+      const heading = readHeadingLine(line);
+      if (!heading) return line;
 
-      return `${"#".repeat(Math.min(6, match[1].length + by))}${match[2]}${match[3]}`;
+      return `${"#".repeat(Math.min(6, heading.level + by))}${heading.gap}${heading.title}`;
     })
     .join("\n");
 }

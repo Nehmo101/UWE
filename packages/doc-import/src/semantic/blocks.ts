@@ -26,13 +26,24 @@
  * Nummernblock am Anfang ist Pflicht. Ohne beides bleibt der Rumpf, wie er ist.
  */
 
+import { collapseBlanks, isBlank, readDelimited, trimEndWhere, trimStartWhere } from "./scan";
+
 const FENCE = /^(?:```|~~~)/;
 
-/** `**F.2 Bannläufer** (3 in C.1.3) — …` → Etikett `F.2`, Titel `Bannläufer`. */
-const LABELLED_BOLD = /^\*\*\s*([A-Za-zÄÖÜ]{0,2}\.?\s?\d+(?:\.\d+){0,2})\s*[—–\-:.]?\s*([^*]*?)\s*\*\*(.*)$/;
+/**
+ * Die Gliederungsnummer am Anfang eines fetten Etiketts: `F.2 Bannläufer`.
+ *
+ * Angesetzt wird sie nur auf den bereits herausgelösten Fettschrift-Inhalt, nie
+ * auf die ganze Zeile — der Ausdruck ist am Anfang verankert und läuft damit
+ * einmal, nicht an jeder Position neu.
+ */
+const ENUMERATOR = /^([A-Za-zÄÖÜ]{0,2}\.?[ ]?\d+(?:\.\d+){0,2})(?=$|[^\d])/;
 
-/** `- **Der Ring:** Das Foyer …` → Titel `Der Ring`, Rest als Rumpf. */
-const DEFINITION_BULLET = /^\s*[-*+]\s+\*\*\s*([^*]+?)\s*\*\*\s*[:—–\-]?\s*(.*)$/;
+/** Trennzeichen zwischen Nummer und Namen: `F.2 — Bannläufer`. */
+const SEPARATORS = new Set(["—", "–", "-", ":", "."]);
+
+/** Aufzählungszeichen, hinter denen ein fettes Stichwort stehen darf. */
+const BULLETS = new Set(["-", "*", "+"]);
 
 export interface ExtractedBlock {
   /** Gliederungsnummer, unter der das Dokument auf den Block verweist. */
@@ -48,6 +59,12 @@ export interface ExtractBlocksResult {
   blocks: ExtractedBlock[];
 }
 
+function stripSeparator(value: string): string {
+  const trimmed = trimStartWhere(value, isBlank);
+  const rest = SEPARATORS.has(trimmed[0]) ? trimmed.slice(1) : trimmed;
+  return trimStartWhere(rest, isBlank);
+}
+
 export function trimBlank(lines: string[]): string {
   const copy = [...lines];
   while (copy.length > 0 && !copy[0].trim()) copy.shift();
@@ -55,9 +72,53 @@ export function trimBlank(lines: string[]): string {
   return copy.join("\n");
 }
 
+const TITLE_TAIL = new Set([".", ",", ";", ":"]);
+
 /** Satzpunkt am Ende eines Handout-Titels weg: `Die Kanzleimappe.` → `Die Kanzleimappe`. */
 function tidyTitle(value: string): string {
-  return value.replace(/\s+/g, " ").replace(/[.,;:]+$/, "").trim();
+  return trimEndWhere(collapseBlanks(value), (char) => TITLE_TAIL.has(char)).trim();
+}
+
+/**
+ * Liest eine Etikettzeile: `**F.2 Bannläufer** (3 in C.1.3) — …`.
+ *
+ * Von Hand statt per Muster. Ein Ausdruck wie `^\*\*\s*(…)\s*\*\*` lässt die
+ * beiden `\s*` und die Gruppe dazwischen um dieselben Leerzeichen streiten;
+ * fehlt der Abschluss, probiert die Maschine jede Aufteilung durch. Hier wird
+ * einmal nach dem schließenden `**` gesucht — findet sich keines, ist Schluss.
+ */
+function readLabelledBold(line: string): { label: string; title: string; rest: string } | null {
+  const bold = readDelimited(line, "**", "**");
+  if (!bold) return null;
+
+  const inner = trimStartWhere(bold.inner, isBlank);
+  const enumerated = ENUMERATOR.exec(inner);
+  if (!enumerated) return null;
+
+  return {
+    label: enumerated[1].replace(/ /g, ""),
+    title: tidyTitle(stripSeparator(inner.slice(enumerated[1].length))),
+    rest: bold.rest.trim(),
+  };
+}
+
+/**
+ * Liest eine Aufzählung mit fettem Stichwort: `- **Der Ring:** Das Foyer …`.
+ *
+ * Derselbe Grund für dieselbe Handarbeit wie oben.
+ */
+function readDefinitionBullet(line: string): { title: string; rest: string } | null {
+  const withoutIndent = trimStartWhere(line, isBlank);
+  if (!BULLETS.has(withoutIndent[0])) return null;
+
+  const afterBullet = trimStartWhere(withoutIndent.slice(1), isBlank);
+  if (afterBullet.length === withoutIndent.length - 1) return null; // kein Leerraum dahinter
+
+  const bold = readDelimited(afterBullet, "**", "**");
+  if (!bold) return null;
+
+  const title = tidyTitle(bold.inner);
+  return title ? { title, rest: stripSeparator(bold.rest) } : null;
 }
 
 /**
@@ -77,23 +138,19 @@ export function extractLabelledBlocks(markdown: string): ExtractBlocksResult {
   for (const line of lines) {
     if (FENCE.test(line.trim())) inFence = !inFence;
 
-    const match = inFence ? null : LABELLED_BOLD.exec(line);
+    const match = inFence ? null : readLabelledBold(line);
 
     if (match) {
       if (current) blocks.push(finish(current));
 
-      const label = match[1].replace(/\s+/g, "");
-      const title = tidyTitle(match[2]);
-      const rest = match[3].trim();
-
       // `**F.2**` ohne Namen dahinter ist kein Gegenstand, sondern Auszeichnung.
-      if (!title) {
+      if (!match.title) {
         current = null;
         lead.push(line);
         continue;
       }
 
-      current = { label, title, lines: rest ? [rest] : [] };
+      current = { label: match.label, title: match.title, lines: match.rest ? [match.rest] : [] };
       continue;
     }
 
@@ -127,17 +184,11 @@ export function extractDefinitionBullets(markdown: string): ExtractBlocksResult 
   for (const line of lines) {
     if (FENCE.test(line.trim())) inFence = !inFence;
 
-    const match = inFence ? null : DEFINITION_BULLET.exec(line);
+    const match = inFence ? null : readDefinitionBullet(line);
 
     if (match) {
       if (current) blocks.push({ label: null, title: current.title, body: trimBlank(current.lines) });
-      const title = tidyTitle(match[1]);
-      if (!title) {
-        current = null;
-        lead.push(line);
-        continue;
-      }
-      current = { title, lines: match[2].trim() ? [match[2].trim()] : [] };
+      current = { title: match.title, lines: match.rest ? [match.rest] : [] };
       continue;
     }
 

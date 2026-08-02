@@ -9,6 +9,8 @@
  * und für den Titel Rauschen.
  */
 
+import { collapseBlanks, isBlank, trimEndWhere } from "./scan";
+
 /**
  * Gliederungsnummer am Anfang einer Überschrift.
  *
@@ -69,7 +71,7 @@ export function isPartHeading(title: string): boolean {
  * `Die Wachstube (Ost)` dagegen ist Ortsangabe und bleibt: Nur Klammern mit
  * einem der Redaktionswörter fallen weg.
  */
-const TRAILING_PAREN = /\s*\(([^()]{0,80})\)\s*$/;
+const MAX_PAREN_LENGTH = 80;
 const EDITORIAL_WORDS =
   /(optional|empfohlen|vermeidbar|\bmodul\b|begegnung|r(ä|ae)tsel|\bfalle\b|\buhr\s*[−+\-]|variante|abh(ä|ae)ngig|siehe\s|nur\s+wenn)/i;
 
@@ -107,20 +109,48 @@ function deshout(title: string): string {
     .join("");
 }
 
+/**
+ * Liest eine Klammer am Zeilenende — von Hand.
+ *
+ * `/\s*\(([^()]{0,80})\)\s*$/` wird an jeder Position neu angesetzt und läuft
+ * von dort bis zum Ende; auf einem langen Titel ist das quadratisch. Rückwärts
+ * gelesen ist es ein Blick auf das letzte Zeichen und eine begrenzte Suche.
+ */
+function readTrailingParen(text: string): { inner: string; start: number } | null {
+  const end = trimEndWhere(text, isBlank);
+  if (!end.endsWith(")")) return null;
+
+  const open = end.lastIndexOf("(", end.length - 2);
+  if (open < 0) return null;
+
+  const inner = end.slice(open + 1, end.length - 1);
+  // Keine geschachtelten Klammern, und nicht beliebig lang.
+  if (inner.length > MAX_PAREN_LENGTH || inner.includes("(") || inner.includes(")")) return null;
+
+  return { inner, start: open };
+}
+
+/** Zeichen, die am Ende eines Seitentitels nichts verloren haben. */
+const TITLE_TAIL = new Set([" ", "\t", "—", "–", "-", ":", ",", ";"]);
+
 /** Macht aus einer Überschrift einen Seitentitel. */
 export function tidyHeadingText(title: string): string {
   let text = title.trim();
 
-  const paren = TRAILING_PAREN.exec(text);
-  if (paren && EDITORIAL_WORDS.test(paren[1])) {
-    const stripped = text.slice(0, paren.index).trim();
+  const paren = readTrailingParen(text);
+  if (paren && EDITORIAL_WORDS.test(paren.inner)) {
+    const stripped = text.slice(0, paren.start).trim();
     if (stripped.length >= 3) text = stripped;
   }
 
-  const letters = text.replace(/[^\p{L}]/gu, "");
-  if (letters.length >= 2 && text === text.toLocaleUpperCase("de")) {
+  let letters = 0;
+  for (const char of text) {
+    if (/\p{L}/u.test(char)) letters += 1;
+  }
+  if (letters >= 2 && text === text.toLocaleUpperCase("de")) {
     text = deshout(text);
   }
 
-  return text.replace(/\s+/g, " ").replace(/[\s—–\-:,;]+$/, "").trim() || title.trim();
+  const tidied = trimEndWhere(collapseBlanks(text), (char) => TITLE_TAIL.has(char)).trim();
+  return tidied || title.trim();
 }

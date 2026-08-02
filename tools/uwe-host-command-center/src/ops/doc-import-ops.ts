@@ -202,14 +202,23 @@ interface RoleHintResult {
  * Urteil deshalb im Import-Job ab; hier gibt es keinen Job — aber es gibt genau
  * einen Prozess und genau ein Panel davor, also genügt ein Merkposten.
  *
- * Passt der Schlüssel nicht (Ausführen ohne vorherige Vorschau, geänderter
- * Pfad), wird neu gefragt. Falsch wäre nur, stillschweigend etwas anderes zu
+ * Passt der Schlüssel nicht, wird neu gefragt. Er umfasst deshalb nicht nur die
+ * Anfrage, sondern auch die **gelesenen Dateien**: Unter demselben Pfad kann
+ * zwischen Vorschau und Ausführung eine andere Datei liegen, und alte Hinweise
+ * auf eine neue Gliederung zu legen hieße, stillschweigend etwas anderes zu
  * bauen als das Bestätigte.
  */
 let lastRoleHints: { key: string; result: RoleHintResult } | null = null;
 
-function requestKey(request: DocImportRequest): string {
-  return JSON.stringify([request.path, request.worldSlug, request.mode, request.profile, request.useAi]);
+function requestKey(request: DocImportRequest, files: DocImportSourceFile[]): string {
+  return JSON.stringify([
+    request.path,
+    request.worldSlug,
+    request.mode,
+    request.profile,
+    request.useAi,
+    files.map((file) => [file.fileName, file.content.length]),
+  ]);
 }
 
 /**
@@ -228,7 +237,7 @@ async function loadRoleHints(
 ): Promise<RoleHintResult> {
   if (!request.useAi) return { hints: new Map(), warnings: [] };
 
-  const key = requestKey(request);
+  const key = requestKey(request, files);
   if (lastRoleHints?.key === key) return lastRoleHints.result;
 
   let result: RoleHintResult;
@@ -417,6 +426,12 @@ export async function executeDocImport(
  * Scheitert das Protokollieren, scheitert nicht der Import: Die Seiten sind
  * angelegt, und ein fehlender Rückbau-Eintrag ist ein kleineres Übel als eine
  * Fehlermeldung nach getaner Arbeit.
+ *
+ * Die drei Schritte hängen deshalb **nicht** aneinander. Scheiterte der
+ * Rückbau-Eintrag und risse den Abschluss mit, bliebe der Job für immer im
+ * Anfangszustand stehen — ein Eintrag im Protokoll, der behauptet, der Import
+ * laufe noch, obwohl die Seiten längst da sind. Der Job wird also auch ohne
+ * Rückbau-Eintrag abgeschlossen; dass keiner entstand, sagt das Panel.
  */
 async function recordImportRun(
   db: Db,
@@ -428,8 +443,10 @@ async function recordImportRun(
     resultSummary: Record<string, number>;
   },
 ): Promise<string | null> {
+  const jobs = createImportJobService(db);
+
+  let jobId: string;
   try {
-    const jobs = createImportJobService(db);
     const job = await jobs.createJob({
       sourceType: "markdown",
       targetType: "world",
@@ -445,20 +462,32 @@ async function recordImportRun(
         fileCount: input.fileCount,
       },
     });
+    jobId = job.id;
+  } catch {
+    return null;
+  }
 
+  let undoToken: string | null = null;
+  try {
     // PageLinks hängen per Cascade an ihrer Quellseite — das Löschen der
     // erzeugten Seiten räumt sie mit ab.
     const undoEntry = await createUndoService(brainPrisma, db).captureImportExecute({
       worldId: input.worldId,
-      jobId: job.id,
+      jobId,
       createdPageIds: input.createdPageIds,
       updatedPages: [],
     });
-
-    const undoToken = undoEntry?.id ?? null;
-    await jobs.markCompleted(job.id, input.resultSummary, undoToken);
-    return undoToken;
+    undoToken = undoEntry?.id ?? null;
   } catch {
-    return null;
+    undoToken = null;
   }
+
+  try {
+    await jobs.markCompleted(jobId, input.resultSummary, undoToken);
+  } catch {
+    // Der Import ist durch; ein unvollständiger Protokolleintrag ändert daran
+    // nichts und darf den Rückgabewert nicht verfälschen.
+  }
+
+  return undoToken;
 }
