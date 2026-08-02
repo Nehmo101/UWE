@@ -237,6 +237,18 @@
   font: inherit;
 }
 
+/* Die Ort-Wahl steht über dem Prompt-Feld und darf die volle Breite nehmen —
+   Seitentitel sind länger als die 9rem der schmalen Felder in der Zeile. */
+.terra-entwurf-ortwahl {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.terra-entwurf-ortwahl > span {
+  font-weight: 600;
+}
+
 .terra-entwurf-zeile {
   display: flex;
   align-items: end;
