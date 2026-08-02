@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  decodeWorldSlugCookie,
   isWorldSlugShape,
   liveSessionIdFromPathname,
   pickKnownWorldSlug,
@@ -79,6 +80,19 @@ describe("active world — Cookie", () => {
     assert.equal(readActiveWorldCookie("weg", KNOWN), null);
     assert.equal(readActiveWorldCookie("%E0%A4%A", KNOWN), null);
     assert.equal(readActiveWorldCookie(undefined, KNOWN), null);
+  });
+
+  it("prüft die Slug-Form auch ohne Weltliste (/portal-Redirect)", () => {
+    assert.equal(decodeWorldSlugCookie(encodeURIComponent("terra")), "terra");
+    // Ohne Weltliste bleibt die Existenzprüfung dem Aufrufer überlassen — die
+    // Form muss aber stimmen, sonst geht jeder Cookie-Inhalt an die Datenbank.
+    assert.equal(decodeWorldSlugCookie("noch-nicht-geladen"), "noch-nicht-geladen");
+    assert.equal(decodeWorldSlugCookie("../../etc/passwd"), null);
+    assert.equal(decodeWorldSlugCookie("Terra"), null);
+    assert.equal(decodeWorldSlugCookie("a".repeat(200)), null);
+    assert.equal(decodeWorldSlugCookie("%E0%A4%A"), null);
+    assert.equal(decodeWorldSlugCookie(""), null);
+    assert.equal(decodeWorldSlugCookie(undefined), null);
   });
 });
 

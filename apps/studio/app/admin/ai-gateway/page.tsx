@@ -1,4 +1,3 @@
-import { STUDIO_SESSION_ENTRY_PATH } from "@uwe/auth";
 import { AiGatewayWizard } from "@/components/AiGatewayWizard";
 import type { GatewayDashboard } from "@/components/ai-gateway/types";
 import { requireOwner } from "@/src/lib/auth";
@@ -16,7 +15,7 @@ export default async function AiGatewayAdminPage() {
     <>
       <ShellBreadcrumb
         items={[
-          { label: "Dashboard", href: STUDIO_SESSION_ENTRY_PATH },
+          { label: "Admin", href: "/admin" },
           { label: "KI & RTX Fallback" },
         ]}
       />

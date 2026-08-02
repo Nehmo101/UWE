@@ -69,17 +69,30 @@ export function pickKnownWorldSlug(
   return knownSlugs.includes(candidate) ? candidate : null;
 }
 
-/** Cookie-Wert → geprüfter Slug. Für den Server-Teil des Shells. */
+/**
+ * Roher Cookie-Wert → dekodierter Slug in gültiger Form, sonst `null`.
+ *
+ * Der Cookie ist Client-Eingabe. Wer ihn ohne Weltliste auswertet (etwa der
+ * `/portal`-Redirect), soll wenigstens nicht für beliebigen Inhalt eine
+ * Datenbankabfrage absetzen.
+ */
+export function decodeWorldSlugCookie(cookieValue: string | null | undefined): string | null {
+  if (!cookieValue) return null;
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(cookieValue);
+  } catch {
+    return null;
+  }
+  return isWorldSlugShape(decoded) ? decoded : null;
+}
+
+/** Cookie-Wert → geprüfter Slug einer existierenden Welt. Für den Shell. */
 export function readActiveWorldCookie(
   cookieValue: string | null | undefined,
   knownSlugs: readonly string[],
 ): string | null {
-  if (!cookieValue) return null;
-  try {
-    return pickKnownWorldSlug(decodeURIComponent(cookieValue), knownSlugs);
-  } catch {
-    return null;
-  }
+  return pickKnownWorldSlug(decodeWorldSlugCookie(cookieValue), knownSlugs);
 }
 
 export interface ResolveActiveWorldOptions {
