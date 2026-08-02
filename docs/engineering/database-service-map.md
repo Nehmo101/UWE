@@ -17,7 +17,7 @@ Compact index for agents — **import from `@uwe/database/server`** (canonical b
 | **Labels / print** | `label-service.ts`, `label-print-queue-service.ts`, `label-workshop-service.ts`, `label-export.ts` |
 | **Portal / player** | `portal-access-service.ts`, `portal-dashboard-service.ts`, `player-note-service.ts`, `share-link-service.ts` |
 | **Security / audit** | `studio-security.ts`, `security-dashboard.ts`, `audit-log-service.ts`, `public-leak-scanner.ts`, `production-safety.ts` |
-| **Connector / jobs** | `connector-service.ts`, `connector-workflow-service.ts`, `job-service.ts`, `agent-job-service.ts` |
+| **Connector / jobs** | `connector-service.ts`, `connector-workflow-service.ts`, `job-service.ts` |
 | **Integrations** | `integrations-service.ts`, `spotify-connection-service.ts`, `soundboard.ts` |
 | **Settings / admin** | `settings-service.ts`, `settings-validation.ts`, `admin-status.ts`, `system-status.ts`, `homelab-cockpit.ts` |
 | **Assets** | `asset-repository.ts`, `asset-link-service.ts` |

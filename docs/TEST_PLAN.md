@@ -42,11 +42,11 @@
 2. D&D Beyond Link speichern (URL mit dndbeyond.com)
 3. Cache-Hit bei wiederholter Suche
 
-### Agent Jobs
-1. `AGENT_JOBS_ENABLED=true`, Token + Repo setzen
-2. `/admin/agent-jobs` → Job erstellen
-3. GitHub Actions Run prüfen
-4. Draft-PR erscheint (kein Merge)
+### GitHub-Issues aus dem Bug-Center
+1. `GITHUB_ISSUE_REPO=owner/repo` + `GITHUB_TOKEN` setzen
+2. `/bugs` → Bug-Report öffnen → „Als GitHub-Issue erstellen"
+3. Issue im Repo prüfen, Link steht am Report
+4. Zweiter Klick meldet 409 (Issue schon verknüpft)
 
 ## CI Pipeline
 
@@ -65,7 +65,6 @@ pnpm build
 - [ ] `.env.example` auf Host aktualisiert
 - [ ] RTX `/v1/images` Endpoint (optional)
 - [ ] FamilyWall iCal URL getestet
-- [ ] Agent Job Draft-PR Workflow
 
 ## Auth UI (Landing, Login, Passwort-Reset)
 

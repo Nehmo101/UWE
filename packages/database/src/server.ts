@@ -1786,25 +1786,6 @@ export type {
 } from "./calendar-aggregation-service";
 
 export {
-  createDevAgentJobService,
-  DevAgentJobService,
-  resolveAgentJobsConfig,
-  DEV_AGENT_JOB_STATUS_LABELS,
-  DEV_AGENT_JOB_PROVIDER_LABELS,
-  DevAgentJobStatusEnum,
-  DevAgentJobProviderEnum,
-} from "./agent-job-service";
-
-export type {
-  CreateDevAgentJobInput,
-  UpdateDevAgentJobInput,
-  DevAgentJob,
-  DevAgentJobStatus,
-  DevAgentJobProvider,
-  AgentJobsConfig,
-} from "./agent-job-service";
-
-export {
   createDevIdeaService,
   DevIdeaService,
   parseDevIdeaTranscript,

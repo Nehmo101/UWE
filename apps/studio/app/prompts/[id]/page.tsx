@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@uwe/database/server";
 import {
@@ -14,7 +13,6 @@ import { PromptBodyField } from "@/app/prompts/PromptBodyField";
 import {
   Alert,
   Button,
-  buttonVariants,
   Card,
   CardContent,
   CardHeader,
@@ -54,11 +52,6 @@ export default async function PromptDetailPage({ params, searchParams }: Props) 
       <PageHeader
         title={prompt.title}
         summary={PROMPT_CATEGORY_LABELS[prompt.category]}
-        actions={
-          <Link href="/admin/agent-jobs" className={buttonVariants({ variant: "secondary" })}>
-            Als Agent Job starten →
-          </Link>
-        }
       />
 
       {saved ? <Alert tone="success" icon="check" title="Gespeichert." className="mb-4" /> : null}

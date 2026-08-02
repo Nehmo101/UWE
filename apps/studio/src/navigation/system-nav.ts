@@ -20,7 +20,6 @@ export const ADMIN_HUB_SECTIONS = [
     title: "Content & KI",
     links: [
       { href: "/admin/ai-gateway", label: "KI-Gateway" },
-      { href: "/admin/agent-jobs", label: "Agent Jobs" },
       { href: "/admin/ai-prompt", label: "AI-Prompt" },
     ],
   },

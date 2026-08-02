@@ -200,7 +200,7 @@ export const TOOLS_NAV: NavGroup[] = [
         permission: ["owner", "admin", "dm"],
         status: "active",
         source: "studio",
-        keywords: ["prompt", "bibliothek", "vorlage", "agent", "cursor", "claude"],
+        keywords: ["prompt", "bibliothek", "vorlage"],
       },
       {
         id: "tools-image-studio",
@@ -232,18 +232,6 @@ export const TOOLS_NAV: NavGroup[] = [
     id: "tools-automation",
     title: TOOLS_AUTOMATION,
     items: [
-      {
-        id: "tools-agent-jobs",
-        label: "Cursor Agent Jobs",
-        href: "/admin/agent-jobs",
-        icon: "bot",
-        group: TOOLS_AUTOMATION,
-        section: TOOLS,
-        permission: ["owner", "admin"],
-        status: "active",
-        source: "studio",
-        keywords: ["agent", "jobs"],
-      },
       {
         id: "tools-jobs",
         label: "Hintergrund-Jobs",

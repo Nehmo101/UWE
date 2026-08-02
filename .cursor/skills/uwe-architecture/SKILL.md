@@ -27,7 +27,7 @@ UWE is a pnpm + Turborepo monorepo with **thin Next.js apps** and **fat shared p
 | `@uwe/assets` | Upload paths, MIME validation, storage keys |
 | `@uwe/shared-ui` | Cross-app React components (AppShell, nav) |
 | `@uwe/wiki-engine` | Wikilink parsing (test package) |
-| Feature packages | `backup`, `calendar`, `mail`, `dnd-api`, `image-studio`, `agent-jobs` |
+| Feature packages | `backup`, `calendar`, `mail`, `dnd-api`, `image-studio`, `github-issues` |
 
 Import apps from packages — **never cross-app** (`apps/studio` must not import from `apps/portal`).
 

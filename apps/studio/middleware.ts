@@ -24,7 +24,6 @@ const PUBLIC_PATH_PREFIXES = [
   "/api/auth",
   "/api/health",
   "/api/maintenance",
-  "/api/agent-jobs/callback",
   // Maschinenraum authenticates with its own token in the route handler.
   "/api/connectors",
 ];

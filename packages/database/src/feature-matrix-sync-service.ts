@@ -32,7 +32,8 @@ export interface FeatureMatrixSyncResult {
   titles: string[];
 }
 
-/** Curated module + maturity for overview rows 1–15 (see docs/FEATURE_MATURITY_MATRIX.md). */
+/** Curated module + maturity per overview row (see docs/FEATURE_MATURITY_MATRIX.md).
+ *  #4 (Agent Jobs) ist entfallen — die Nummerierung hat dort bewusst eine Lücke. */
 export const FEATURE_MATRIX_ENRICHMENT: Record<
   number,
   { module: string; maturityLevel: string }
@@ -40,7 +41,6 @@ export const FEATURE_MATRIX_ENRICHMENT: Record<
   1: { module: "media", maturityLevel: "lab" },
   2: { module: "integrations", maturityLevel: "beta" },
   3: { module: "dnd", maturityLevel: "stable" },
-  4: { module: "generators", maturityLevel: "beta" },
   5: { module: "daily_admin", maturityLevel: "beta" },
   6: { module: "studio", maturityLevel: "beta" },
   7: { module: "auth", maturityLevel: "stable" },

@@ -6,7 +6,6 @@ import {
 } from "@uwe/assets";
 import {
   createCalendarService,
-  createDevAgentJobService,
   createImageStudioService,
   createPrismaClient,
   createResearchService,
@@ -18,7 +17,6 @@ import {
 } from "@uwe/database/server";
 import { brainPrisma } from "@uwe/database/brain-client";
 import { familyPrisma } from "@uwe/database/family-client";
-import { dispatchAgentJob, resolveAgentJobsDispatchConfig } from "@uwe/agent-jobs";
 import { fetchIcalFeed, parseIcalEvents, putCalDavEvent, syncCalDavCollection } from "@uwe/calendar";
 import {
   executeAiGatewayImageRequest,
@@ -157,60 +155,6 @@ export async function runImageStudioJob(ctx: JobRunnerContext): Promise<Record<s
   } finally {
     await db.$disconnect();
   }
-}
-
-export async function runAgentJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
-  const payload = (ctx.job.payload ?? {}) as { devAgentJobId?: string };
-  if (!payload.devAgentJobId) {
-    throw new Error("Agent-Job: devAgentJobId fehlt.");
-  }
-
-  const db = createPrismaClient();
-  const agentJobs = createDevAgentJobService(db);
-  const job = await agentJobs.getJob(payload.devAgentJobId);
-  if (!job) {
-    await db.$disconnect();
-    throw new Error("DevAgentJob nicht gefunden.");
-  }
-
-  await agentJobs.updateJob(job.id, { status: "dispatched" });
-  await ctx.jobs.updateProgress(ctx.jobId, 30, "Agent dispatch");
-
-  const dispatch = await dispatchAgentJob(
-    {
-      jobId: job.id,
-      title: job.title,
-      prompt: job.prompt,
-      provider: job.provider,
-    },
-    resolveAgentJobsDispatchConfig(),
-  );
-
-  if (!dispatch.success) {
-    await agentJobs.updateJob(job.id, {
-      status: "failed",
-      errorMessage: dispatch.error ?? "Dispatch fehlgeschlagen",
-      completedAt: new Date(),
-    });
-    await db.$disconnect();
-    throw new Error(dispatch.error ?? "Agent dispatch fehlgeschlagen.");
-  }
-
-  await agentJobs.updateJob(job.id, {
-    status: "running",
-    branchName: dispatch.branchName ?? null,
-    githubRunId: dispatch.githubRunId ?? null,
-    cursorJobId: dispatch.cursorJobId ?? null,
-    prUrl: dispatch.prUrl ?? null,
-  });
-
-  await db.$disconnect();
-  return {
-    devAgentJobId: job.id,
-    branchName: dispatch.branchName,
-    githubRunId: dispatch.githubRunId,
-    cursorJobId: dispatch.cursorJobId,
-  };
 }
 
 export async function runMailSyncJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {

@@ -41,11 +41,10 @@ describe("Studio restore route uses owner guard", () => {
 });
 
 describe("Studio auth guard pattern completeness", () => {
-  it("includes restore, health, agent callback, and connector guards", () => {
+  it("includes restore, health, and connector guards", () => {
     const pattern = STUDIO_AUTH_GUARD_PATTERN.source;
     assert.match(pattern, /requireRestoreOwnerAuth/);
     assert.match(pattern, /requirePrivateHealthAuth/);
-    assert.match(pattern, /requireAgentJobCallbackAuth/);
     assert.match(pattern, /authenticateConnector/);
   });
 });

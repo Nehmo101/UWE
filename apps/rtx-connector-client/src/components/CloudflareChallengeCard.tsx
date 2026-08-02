@@ -135,9 +135,9 @@ export function CloudflareChallengeCard() {
           <p className="connector-muted">
             Ganzseitige Cloudflare-Prüfung vor den öffentlichen UWE-Adressen. Standard aus — ein
             Speichern wendet die Regel sofort in der Zone an. <code>/api/health</code>,{" "}
-            <code>/api/internal</code>, <code>/api/agent-jobs</code> und{" "}
-            <code>/api/connectors</code> bleiben immer ausgenommen: Tunnel-Probes, Job-Callbacks und
-            der RTX-Connector sind Maschinen — eine Challenge-Seite käme dort als Ausfall an.
+            <code>/api/internal</code> und <code>/api/connectors</code> bleiben immer
+            ausgenommen: Tunnel-Probes und der RTX-Connector sind Maschinen — eine
+            Challenge-Seite käme dort als Ausfall an.
           </p>
           {edge ? (
             <p className="connector-muted">

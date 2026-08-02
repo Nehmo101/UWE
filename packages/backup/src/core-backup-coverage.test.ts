@@ -34,7 +34,7 @@ const BACKED_UP_CORE_MODELS = new Set([
 const CORE_MODELS_NOT_BACKED_UP = new Set([
   // flüchtig / ableitbar / operativ
   "ActivityLog", "AiApplyLog", "AiRun", "AiUsageLog", "ApiTokenUsageLog", "AuditLog",
-  "AuthIdentity", "BugReport", "Connector", "ConnectorJob", "DevAgentJob",
+  "AuthIdentity", "BugReport", "Connector", "ConnectorJob",
   "DndApiCacheEntry", "ImportJob", "Job", "JobLog", "PageVersion", "SecurityWarning",
   "SeedHistory", "Session", "TwoFactorChallenge", "UndoEntry", "WebAuthnChallenge",
   "WebhookDelivery",

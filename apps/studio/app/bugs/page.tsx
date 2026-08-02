@@ -4,10 +4,10 @@ import {
   BugReportStatusEnum,
   createBugReportService,
   prisma,
-  resolveAgentJobsConfig,
   type BugReportSeverity,
   type BugReportStatus,
 } from "@uwe/database/server";
+import { resolveGitHubIssueConfig } from "@uwe/github-issues";
 import { StudioShell, PageHeader, BreadcrumbTrail } from "@/src/components/shell";
 import { getCurrentAuthUser, requireStudioAccess } from "@/src/lib/auth";
 import { BugWorkspaceClient, type BugReportDto } from "./BugWorkspaceClient";
@@ -81,11 +81,11 @@ export default async function BugsPage({ searchParams }: BugsPageProps) {
   const reports: BugReportDto[] = reportRows.map(toDto);
 
   const user = await getCurrentAuthUser();
-  const agentJobsConfig = resolveAgentJobsConfig();
+  const githubIssueConfig = resolveGitHubIssueConfig();
   const githubIssueSync = {
     canCreate: user?.isOwner === true,
-    tokenConfigured: agentJobsConfig.githubTokenConfigured,
-    githubRepo: agentJobsConfig.githubRepo,
+    tokenConfigured: Boolean(githubIssueConfig.token),
+    githubRepo: githubIssueConfig.repo,
   };
 
   return (

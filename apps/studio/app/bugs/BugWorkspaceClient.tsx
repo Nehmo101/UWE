@@ -262,9 +262,9 @@ function CreateBugGithubIssueButton({
   const disabled = busy || !ready;
 
   const title = !githubIssueSync.tokenConfigured
-    ? "GITHUB_TOKEN oder AGENT_JOBS_GITHUB_TOKEN fehlt."
+    ? "GITHUB_TOKEN oder GITHUB_ISSUE_TOKEN fehlt."
     : !githubIssueSync.githubRepo
-      ? "AGENT_JOBS_GITHUB_REPO fehlt (Format: owner/repo)."
+      ? "GITHUB_ISSUE_REPO fehlt (Format: owner/repo)."
       : undefined;
 
   async function createIssue() {
@@ -305,9 +305,8 @@ function CreateBugGithubIssueButton({
       {!ready ? (
         <p className="text-sm text-muted-foreground">
           GitHub-Sync nicht konfiguriert — setze{" "}
-          <code>AGENT_JOBS_GITHUB_REPO=owner/repo</code> und einen Server-Token (
-          <code>GITHUB_TOKEN</code> oder <code>AGENT_JOBS_GITHUB_TOKEN</code>).{" "}
-          <Link href="/admin/agent-jobs">Agent Jobs</Link>
+          <code>GITHUB_ISSUE_REPO=owner/repo</code> und einen Server-Token (
+          <code>GITHUB_TOKEN</code> oder <code>GITHUB_ISSUE_TOKEN</code>).
         </p>
       ) : null}
       {error ? <Alert tone="danger">{error}</Alert> : null}

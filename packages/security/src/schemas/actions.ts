@@ -173,12 +173,6 @@ export const imageStudioJobSchema = z.object({
   providerMode: optionalString,
 });
 
-export const agentJobSchema = z.object({
-  title: nonEmptyString.max(500),
-  prompt: nonEmptyString.max(32_000),
-  provider: z.enum(["github_actions", "cursor_cloud", "cursor_cli_local"]).optional(),
-});
-
 export const calendarEventSchema = z.object({
   title: nonEmptyString.max(500),
   description: z.string().max(10_000).optional(),

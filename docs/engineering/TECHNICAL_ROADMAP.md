@@ -111,7 +111,7 @@ Siehe [ROADMAP.md](../ROADMAP.md) und Skill `hardware-homelab`:
 | API Routes | `api-routes` |
 | React/Next UI | `react-next-ui` |
 | Auth/Zugänge | `auth-access` |
-| AI / Agent Jobs / Proposals | `ai-agent-proposal-workflow` |
+| AI / Proposals | `ai-agent-proposal-workflow` |
 | Local-first / Datenschutz | `local-first-privacy` |
 | DnD + Life Brain | `uwe-brain` |
 | DnD Content QA | `dnd-content-consistency-check` |

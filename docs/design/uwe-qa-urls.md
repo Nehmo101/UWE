@@ -91,7 +91,6 @@ Nach Login: Sidebar zeigt **Heute · Welten · Leben · Werkstatt · Wissen · M
 | 71 | `/admin/ai-prompt` | Redirect → `/ai` (Query `?world=` & `?page=` erhalten) |
 | 72 | `/admin/ai-prompt?world=terra&page=example` | Redirect → `/ai?world=terra&page=example` |
 | 73 | `/admin/reviews` | AI Reviews |
-| 74 | `/admin/agent-jobs` | Agent Jobs |
 
 ### System
 

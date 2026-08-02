@@ -62,7 +62,7 @@ export const STUDIO_PUBLIC_READ_API_ROUTES = new Set([
 ]);
 
 export const STUDIO_AUTH_GUARD_PATTERN =
-  /requireStudioApiAuth|requireAdminApiAuth|guardStudioMutation|guardStudioApiRequest|guardStudioApiMutation|guardStudioAdminApiRequest|requireRestoreOwnerAuth|requireOwnerApiAuth|requirePrivateHealthAuth|requireAdminMailApi|requireAdminMailMutation|requireAgentJobCallbackAuth|authenticateConnector/;
+  /requireStudioApiAuth|requireAdminApiAuth|guardStudioMutation|guardStudioApiRequest|guardStudioApiMutation|guardStudioAdminApiRequest|requireRestoreOwnerAuth|requireOwnerApiAuth|requirePrivateHealthAuth|requireAdminMailApi|requireAdminMailMutation|authenticateConnector/;
 
 export function listStudioApiRouteFiles(repoRoot: string): string[] {
   return listApiRouteFiles(path.join(repoRoot, STUDIO_API_ROOT));

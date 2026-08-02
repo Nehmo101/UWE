@@ -62,9 +62,7 @@ const FORBIDDEN_CLIENT_SECRET_PATTERNS = [
   /process\.env\.STUDIO_API_TOKEN/,
   /process\.env\.SMTP_PASSWORD/,
   /process\.env\.OPENAI_API_KEY/,
-  /process\.env\.CURSOR_CLOUD_API_KEY/,
   /process\.env\.CALDAV_PASSWORD/,
-  /process\.env\.AGENT_JOBS_GITHUB_TOKEN/,
 ];
 
 describe("integration smoke — core Studio routes", () => {
@@ -356,23 +354,18 @@ describe("integration smoke — security test coverage", () => {
   }
 });
 
-describe("integration smoke — Media, Calendar, DnD & Agent routes", () => {
+describe("integration smoke — Media, Calendar & DnD routes", () => {
   const integrationRoutes = [
     "apps/studio/app/image-studio/page.tsx",
     "apps/family/app/calendar/page.tsx",
-    "apps/studio/app/admin/agent-jobs/page.tsx",
     "apps/studio/app/worlds/[worldSlug]/dnd-api/page.tsx",
     "apps/studio/app/api/image-studio/route.ts",
     "apps/studio/app/api/calendar/events/route.ts",
     "apps/studio/app/api/calendar/feeds/route.ts",
-    "apps/studio/app/api/agent-jobs/route.ts",
-    "apps/studio/app/api/agent-jobs/callback/route.ts",
     "apps/studio/app/api/dnd-api/route.ts",
     "packages/calendar/src/index.ts",
     "packages/dnd-api/src/index.ts",
     "packages/image-studio/src/index.ts",
-    "packages/agent-jobs/src/index.ts",
-    ".github/workflows/cursor-agent.yml",
   ];
 
   for (const route of integrationRoutes) {
@@ -391,7 +384,6 @@ describe("integration smoke — documentation", () => {
     "docs/FEATURE_MATURITY_MATRIX.md",
     "docs/engineering/performance.md",
     "docs/engineering/tag-taxonomy.md",
-    "docs/AGENT_JOBS.md",
     "docs/IMAGE_STUDIO.md",
     "docs/CALENDAR_INTEGRATION.md",
     "docs/DND_API_INTEGRATION.md",
@@ -523,15 +515,6 @@ describe("integration smoke — agent CI quality gate", () => {
     const ci = read(".github/workflows/ci.yml");
     assert.doesNotMatch(ci, /docker-build:/);
     assert.doesNotMatch(ci, /docker\/build-push-action/);
-  });
-
-  it("runs light gate in cursor-agent workflow before push", () => {
-    const workflow = read(".github/workflows/cursor-agent.yml");
-    assert.match(workflow, /pnpm ci:light/);
-    const gateIndex = workflow.indexOf("pnpm ci:light");
-    const pushIndex = workflow.indexOf("git push");
-    assert.ok(gateIndex >= 0 && pushIndex >= 0);
-    assert.ok(gateIndex < pushIndex, "ci:light must run before push");
   });
 });
 

@@ -48,6 +48,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dienste enden mit dem Command Center** — Beenden der App (Dialog *und* Tray-„Beenden") stoppt Studio, Portal, Brain, Familie, Startseite und trennt den Cloudflare-Tunnel; die öffentliche Seite bleibt nicht länger ohne laufende Steuerungs-App erreichbar. Neue Einstellung `stopServicesOnExit` (Standard **an**, auch für bestehende Konfigurationsdateien) macht das alte Verhalten bewusst wählbar. Als Absicherung gegen Absturz und `taskkill` hängen alle Kindprozesse in einem Windows Job Object mit `KILL_ON_JOB_CLOSE`; „Im Browser öffnen" bricht per `CREATE_BREAKAWAY_FROM_JOB` daraus aus. „Alles stoppen" schließt jetzt den Tunnel mit ein
 - **Visibility labels sharpened** — `player_visible` is now labeled "Portal (ohne Login)" and `public` "Öffentlich (Share-Link)" across Studio; badges carry explanatory tooltips and the page editors show a hint that these contents are readable on `/worlds/*` without login once published (internal enum semantics unchanged)
 
+### Removed
+
+- **Cursor Agent Jobs** — UWE verschickt keine Entwicklungs-Prompts mehr an GitHub Actions, an die Cursor-Cloud-Agents-API oder an die lokale Cursor-CLI. Weg sind `/admin/agent-jobs`, `/api/agent-jobs/*`, der Callback-Endpunkt, `@uwe/agent-jobs`, der Workflow `cursor-agent.yml`, der Job-Typ `agent_job` und das Modell `DevAgentJob`. Entwicklung läuft über GitHub, nicht über UWE. **ENV, die entfällt:** `AGENT_JOBS_*`, `CURSOR_CLOUD_API_KEY`, `CURSOR_API_KEY`
+- **„An Cursor übergeben" im Ideen-Management** — Ideen, KI-Chat, erzeugter Prompt und die Claude-Übergabe bleiben unverändert; nur der Absende-Knopf und das Cursor-Statuspanel sind weg, der Prompt wird kopiert statt abgeschickt
+
+### Changed (Bug-Center)
+
+- **GitHub-Issues aus Bug-Reports** bleiben erhalten, hängen aber nicht mehr an der Agent-Jobs-Konfiguration: neues Paket `@uwe/github-issues`, neue ENV `GITHUB_ISSUE_REPO` und `GITHUB_TOKEN` / `GITHUB_ISSUE_TOKEN` statt `AGENT_JOBS_GITHUB_REPO` / `AGENT_JOBS_GITHUB_TOKEN`. **Wer die Funktion nutzt, muss die beiden Werte umbenennen** — sonst meldet der Knopf „nicht konfiguriert"
+
 ## [0.1.0] - 2026-06-11
 
 First usable self-hosted release of UWE.

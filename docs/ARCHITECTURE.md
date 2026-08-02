@@ -138,7 +138,7 @@ graph TD
   Packages --> StaticExportPkg["static-export<br/>HTML-Export"]
   Packages --> SoundboardPkg["soundboard<br/>Audio, YouTube, Spotify"]
   Packages --> AIBrainPkg["ai-brain<br/>Router, Privacy, Connector/RTX"]
-  Packages --> FeaturePkgs["Feature-Pakete<br/>backup, calendar, mail, dnd-api,<br/>image-studio, knoteforge-import, agent-jobs"]
+  Packages --> FeaturePkgs["Feature-Pakete<br/>backup, calendar, mail, dnd-api,<br/>image-studio, knoteforge-import, github-issues"]
 
   Repo --> Tools["tools/"]
   Tools --> RtxConnector["uwe-rtx-connector<br/>optionaler outbound Worker (aktiv)"]
@@ -168,9 +168,9 @@ graph TD
 | `@uwe/mcp` | MCP-Server für Studio, Portal und Brain |
 | `@uwe/assets` | Upload-Pfade, MIME-Validierung |
 
-Fachliche Feature-Pakete: `agent-jobs`, `backup`, `brain-assistant`,
+Fachliche Feature-Pakete: `backup`, `brain-assistant`,
 `calendar`, `cloudflare-edge`, `connector`, `cookbook`, `daily-cockpit`,
-`dnd-api`, `host-cockpit`, `host-monitor`, `image-studio`, `kitchen`,
+`dnd-api`, `github-issues`, `host-cockpit`, `host-monitor`, `image-studio`, `kitchen`,
 `knoteforge-import`, `mail`, `mail-core`, `passkeys`, `pdf-campaign-import`,
 `pdf-ocr`, `player-hub`, `roll-tables`, `scan-inbox`, `soundboard`,
 `static-export`, `theme-studio`, `web-search`.

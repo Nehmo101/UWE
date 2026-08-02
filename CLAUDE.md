@@ -30,7 +30,7 @@ packages/*    → Alle Business-Logik, nie in Route Handlers oder Komponenten
 | `@uwe/pdf-ocr` | Layout-treues PDF-Parsing über lokales Unlimited-OCR (Rendern, Seitenplanung, Marker) |
 | `@uwe/doc-import` | Markdown-Import: deutscher Frontmatter-Dialekt, Markdown→HTML, Überschriftenbaum, Welt-Übernahme |
 | `@uwe/session-runner` | Lesereihenfolge im Seitenbaum und Lesezeichen für den Spielabend |
-| Feature-Packages | `backup`, `calendar`, `mail`, `dnd-api`, `image-studio`, `agent-jobs`, `brain-assistant` |
+| Feature-Packages | `backup`, `calendar`, `mail`, `dnd-api`, `image-studio`, `github-issues`, `brain-assistant` |
 
 ### Neuen Code platzieren
 

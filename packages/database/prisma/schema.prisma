@@ -247,7 +247,6 @@ enum JobType {
   backup_restore
   canon_check
   image_studio
-  agent_job
   calendar_sync
   research
   briefing
@@ -1936,21 +1935,6 @@ enum CalendarFeedDirection {
   read_write
 }
 
-enum DevAgentJobStatus {
-  pending
-  dispatched
-  running
-  completed
-  failed
-  cancelled
-}
-
-enum DevAgentJobProvider {
-  github_actions
-  cursor_cloud
-  cursor_cli_local
-}
-
 enum DndApiProvider {
   open5e
   dnd5e_srd
@@ -2005,27 +1989,6 @@ model ImageStudioLink {
   @@unique([projectId, targetType, targetId])
   @@index([targetType, targetId])
   @@map("image_studio_links")
-}
-
-model DevAgentJob {
-  id           String              @id @default(cuid())
-  title        String
-  prompt       String
-  status       DevAgentJobStatus   @default(pending)
-  provider     DevAgentJobProvider @default(github_actions)
-  branchName   String?             @map("branch_name")
-  prUrl        String?             @map("pr_url")
-  issueUrl     String?             @map("issue_url")
-  githubRunId  String?             @map("github_run_id")
-  cursorJobId  String?             @map("cursor_job_id")
-  result       Json?
-  errorMessage String?             @map("error_message")
-  createdAt    DateTime            @default(now()) @map("created_at")
-  updatedAt    DateTime            @updatedAt @map("updated_at")
-  completedAt  DateTime?           @map("completed_at")
-
-  @@index([status, createdAt])
-  @@map("dev_agent_jobs")
 }
 
 enum DevIdeaStatus {
@@ -2111,7 +2074,6 @@ model DevIdea {
   maturityLevel   String?          @map("maturity_level")
   chatTranscript  Json?            @map("chat_transcript")
   generatedPrompt String?          @map("generated_prompt")
-  devAgentJobId   String?          @map("dev_agent_job_id")
   attachments     Json?
   metadata        Json?
   createdAt       DateTime         @default(now()) @map("created_at")

@@ -146,7 +146,6 @@ const PUBLIC_STUDIO_API_PREFIXES = [
   "/api/auth/reset-password",
   "/api/auth/two-factor/verify",
   "/api/spotify/callback",
-  "/api/agent-jobs/callback",
   "/api/connectors/",
 ] as const;
 

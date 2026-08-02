@@ -100,7 +100,7 @@ Portal verlinkt optional auf Studio (nur für Admin-Rollen). Studio verlinkt nic
 | Welten & Kampagnen | Welten, Globale Suche, Brain Store, Templates |
 | Daily Admin OS | Capture, Projekte, Werkstatt, Verträge, Hardware, Life Brain |
 | Inhalte & Medien | Image Studio, Mail Center, Kalender |
-| KI-Werkzeuge | KI-Chat, KI-Prompt, KI-Gateway, Reviews, Agent Jobs |
+| KI-Werkzeuge | KI-Chat, KI-Prompt, KI-Gateway, Reviews |
 | Integrationen | Einstellungen → Integrationen |
 | Benutzer & Rollen | Benutzer, API Tokens, Webhooks |
 | Admin | Admin Übersicht, Security, Audit Log, Tags, Cookbook |

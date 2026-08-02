@@ -18,7 +18,6 @@ const SECTIONS = [
     title: "Admin & Jobs",
     links: [
       { href: "/admin/ai-gateway", label: "KI-Gateway" },
-      { href: "/admin/agent-jobs", label: "Agent Jobs" },
       { href: "/jobs", label: "Job-Warteschlange" },
     ],
   },

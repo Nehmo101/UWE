@@ -32,7 +32,6 @@ Siehe auch: [ci.md](ci.md) (aktive Workflows), [cursor-workflow.md](cursor-workf
 | **Push `main`** | `ci.yml` | `pnpm quality` + Postgres-Smoke | mittel (~10–15 Min.) |
 | **Sonntag 03:00 UTC / Manuell** | `ci.yml` | E2E + Performance-Budget | teuer (~15–25 Min.) |
 | **Montag 06:00 UTC / Manuell** | `security.yml` | Audit + Security Tests | mittel |
-| **Manuell** | `cursor-agent.yml` | Agent + `ci:light` | mittel |
 
 ### Was auf PRs **nicht** mehr läuft
 
@@ -80,7 +79,7 @@ Empfohlene Zuordnung:
 | Runner | Workflows |
 |--------|-----------|
 | Schwacher Runner (4–8 GB) | `pr-check.yml` (`pnpm ci:light`) |
-| Starker Runner (16+ GB) | `ci.yml` auf `main`, optional `cursor-agent.yml` |
+| Starker Runner (16+ GB) | `ci.yml` auf `main` |
 
 ### Option B — GitHub Actions deaktivieren, nur lokal
 
@@ -91,7 +90,6 @@ pnpm quality    # vor Merge
 ```
 
 - Branch protection: Required status checks **entfernen** oder durch lokale Hooks ersetzen
-- Agent Jobs: `AGENT_JOBS_DEFAULT_PROVIDER=cursor_cli_local` statt `github_actions`
 
 ### Option C — Öffentliches Repo
 
@@ -281,15 +279,6 @@ wieder online ist — danach wird automatisch deployt (kein harter Fehlschlag).
    - Starke Runner oder nur `main`: volles `ci.yml`
 6. Branch protection: nur `fast-checks` als required check
 7. `docs/engineering/ci.md` aktualisieren
-
-### Agent Jobs
-
-`cursor-agent.yml` nutzt heute GitHub-hosted Runner mit `pnpm ci:light`. Für Self-hosted:
-
-- Runner mit ausreichend RAM für `pnpm ci:light` (oder `pnpm quality` wenn gewünscht)
-- **Bevorzugt:** `AGENT_JOBS_DEFAULT_PROVIDER=cursor_cli_local` in Studio-ENV — Agent läuft lokal, PR-Gate übernimmt `pr-check.yml`
-
----
 
 ## Billing kurz freischalten (falls Limit erreicht)
 

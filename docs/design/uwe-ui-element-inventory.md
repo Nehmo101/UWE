@@ -158,7 +158,6 @@
 | `/admin/ai-prompt` | Redirect → `/ai` | — | — | — | — | — |
 | `/admin/ai-prompt?world=…` | Redirect → `/ai?world=…` | — | — | — | — | — |
 | `/admin/reviews` | AdminModuleShell | Sidebar KI/Admin | Review-Liste | Empty | Ja | — |
-| `/admin/agent-jobs` | AdminModuleShell | Sidebar KI | Jobs-Tabelle, Status | Empty | Ja | — |
 
 ---
 
