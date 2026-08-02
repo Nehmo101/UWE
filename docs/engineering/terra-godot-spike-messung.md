@@ -3,9 +3,24 @@
 > Ergebnis des in [`terra-godot-mcp-analyse.md`](terra-godot-mcp-analyse.md) § 9
 > vorgeschlagenen Spikes. **Terra ist unverändert** und läuft weiter auf
 > Three.js (`pnpm test:terra`: 682 Tests, 681 grün, 0 Fehler, 1 übersprungen).
-> Der Spike liegt in [`terra-godot/`](../../terra-godot/) und ist wegwerfbar.
 >
 > Gemessen am 02.08.2026, Godot 4.5.stable, Chromium 1194, Node 22.22.
+>
+> **Der Spike-Code wurde nach der Messung bewusst entfernt.** Er war das
+> Messgerät, nicht das Ergebnis — das Ergebnis ist dieses Dokument. Entfernt
+> zu werden war von Anfang an sein Zweck; ein Baum, der nach der Messung
+> liegen bleibt, wird gepflegt, ohne benutzt zu werden.
+>
+> In der Historie steht er vollständig und ist jederzeit zurückzuholen:
+>
+> | Commit | Inhalt |
+> |---|---|
+> | `472b537` | Determinismus-Parität: `rng.gd`, `hoehen.gd`, beide Dump-Werkzeuge, `parity.gd`, `terrain-parity.gd` |
+> | `0634c21` | Web-Export, Messbühne (`schau.gd`, `gelaende.gd`, `kartenbaum.gd`), `bank.gd`, `messen.mjs` |
+>
+> ```bash
+> git checkout 0634c21 -- terra-godot/
+> ```
 
 ## Kurzfassung
 
@@ -226,7 +241,12 @@ ein Terrain gezeichnet, sonst nichts.
 
 ## Nachvollziehen
 
+Der Spike-Baum liegt nicht mehr im Arbeitsverzeichnis (siehe Kopfnotiz). Erst
+zurückholen, dann messen:
+
 ```bash
+git checkout 0634c21 -- terra-godot/
+
 GODOT=/pfad/zu/Godot_v4.5-stable_linux.x86_64
 
 node terra-godot/werkzeug/golden-dump.mjs  > terra-godot/test/golden.json
@@ -241,4 +261,13 @@ node terra-godot/werkzeug/terrain-dump.mjs > terra-godot/test/terrain.json
 node terra-godot/werkzeug/messen.mjs      # Rohwerte: terra-godot/export/messung.json
 ```
 
-Godot-Binary und Export-Templates liegen **nicht** im Repo (66 MB + 1,3 GB).
+Zwei Dinge, die auch damals nicht im Repo lagen und neu zu beschaffen sind:
+**Godot-Binary und Export-Templates** (66 MB + 1,3 GB). Die Referenzdaten
+`test/golden.json` und `test/terrain.json` stecken zwar im Commit, werden von
+den beiden Dump-Werkzeugen aber ohnehin aus Terras Quelldateien neu erzeugt —
+genau das ist ihr Sinn.
+
+Die Dump-Werkzeuge importieren `terra/src/core/rng.js` und
+`terra/src/world/terrain.js` direkt. Ändert sich dort etwas, fällt eine
+Wiederholung der Messung entsprechend anders aus — und das wäre dann ein
+Befund, kein Fehler.
