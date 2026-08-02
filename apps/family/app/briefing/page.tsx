@@ -1,15 +1,9 @@
 import { createCalendarService, prisma } from "@uwe/database/server";
 import { familyPrisma } from "@uwe/database/family-client";
 import {
-  attachMembersToEvents,
   buildBriefingContext,
-  createFamilyHealthService,
-  createFamilyMemberService,
-  expandAnniversaries,
   hasBriefingContent,
-  resolveMemberColour,
-  weekRange,
-  type BriefingContract,
+  loadWeekBriefingInput,
 } from "@uwe/family-core";
 import { getFamilyUser } from "@/src/lib/page-family";
 import { FamilyShell, FamilyDenied } from "@/src/components/FamilyShell";
@@ -34,51 +28,10 @@ export default async function FamilyBriefingPage() {
     );
   }
 
-  const { from, to } = weekRange(new Date());
-
-  const calendar = createCalendarService(familyPrisma, prisma);
-  const [rawEvents, members, healthDue, contractRows] = await Promise.all([
-    calendar.listEvents({ from, to, limit: 300 }),
-    createFamilyMemberService(familyPrisma).listMembers(),
-    createFamilyHealthService(familyPrisma).listDueUntil(to, from),
-    familyPrisma.contractExpense.findMany({
-      where: { status: "active", cancelByDate: { gte: from, lte: to } },
-      select: { name: true, cancelByDate: true },
-    }),
-  ]);
-
-  const enriched = await attachMembersToEvents(familyPrisma, rawEvents);
-
-  const contracts: BriefingContract[] = contractRows.flatMap((row) =>
-    row.cancelByDate ? [{ name: row.name, endsOn: row.cancelByDate }] : [],
-  );
-
-  const input = {
-    from,
-    to,
-    memberNames: members.map((member) => member.displayName),
-    events: enriched.map((event) => ({
-      title: event.title,
-      startAt: event.startAt,
-      allDay: event.allDay,
-      location: event.location,
-      memberNames: event.members.map((member) => member.displayName),
-    })),
-    anniversaries: expandAnniversaries(members, { from, to, colourOf: resolveMemberColour }),
-    healthDue: healthDue.flatMap((record) =>
-      record.nextDueOn
-        ? [
-            {
-              memberName: record.member.displayName,
-              kind: record.kind,
-              title: record.title,
-              nextDueOn: record.nextDueOn,
-            },
-          ]
-        : [],
-    ),
-    contracts,
-  };
+  const input = await loadWeekBriefingInput({
+    familyDb: familyPrisma,
+    calendar: createCalendarService(familyPrisma, prisma),
+  });
 
   const overview = buildBriefingContext(input);
   const quiet = !hasBriefingContent(input);

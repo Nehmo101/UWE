@@ -35,6 +35,12 @@ export interface CreatePlayerNoteInput {
   gameSessionId?: string | null;
   visibility?: PlayerNoteVisibility;
   status?: PlayerNoteStatus;
+  /**
+   * Vom Client vergebene Kennung für offline entstandene Notizen. Ist sie
+   * gesetzt und schon bekannt, wird die vorhandene Notiz zurückgegeben statt
+   * einer zweiten — ein wiederholter Sync darf nichts verdoppeln.
+   */
+  clientRef?: string | null;
 }
 
 export interface UpdatePlayerNoteInput {
@@ -235,6 +241,21 @@ export class PlayerNoteService {
   async create(input: CreatePlayerNoteInput): Promise<PlayerNoteWithRelations> {
     await this.validateScope(input.worldId, input.campaignId, input.pageId, input.gameSessionId);
 
+    const clientRef = input.clientRef?.trim() || null;
+
+    // Zweiter Anlauf desselben Offline-Eintrags: die Notiz gibt es schon.
+    // Vorab nachsehen statt den Unique-Fehler abzufangen — so bleibt der
+    // Rückgabetyp gleich und der Aufrufer merkt vom Retry nichts.
+    if (clientRef) {
+      const existing = await this.db.playerNote.findUnique({
+        where: { userId_clientRef: { userId: input.userId, clientRef } },
+        include: noteInclude(),
+      });
+      if (existing) {
+        return existing;
+      }
+    }
+
     return this.db.playerNote.create({
       data: {
         worldId: input.worldId,
@@ -245,6 +266,7 @@ export class PlayerNoteService {
         gameSessionId: input.gameSessionId ?? null,
         visibility: input.visibility ?? "private",
         status: input.status ?? "draft",
+        clientRef,
       },
       include: noteInclude(),
     });

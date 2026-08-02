@@ -19,6 +19,8 @@ import "./globals.css";
 import "./wiki.css";
 import { PortalThemeSyncProvider } from "../components/PortalThemeSyncProvider";
 import { PortalSessionChrome } from "../components/PortalSessionChrome";
+import { ServiceWorkerRegistrar } from "@/src/components/ServiceWorkerRegistrar";
+import { portalBasePath } from "@/src/lib/base-path";
 import { enforcePortalMaintenance } from "@/src/lib/maintenance";
 
 const spaceMono = Space_Mono({
@@ -41,7 +43,8 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "UWE Portal",
   description: "Universeller Welten-Editor — player portal",
-  manifest: "/manifest.webmanifest",
+  // Läuft das Portal unter einem Unterpfad, muss auch das Manifest dort liegen.
+  manifest: `${portalBasePath()}/manifest.webmanifest`,
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -105,6 +108,8 @@ export default async function RootLayout({
             <AppUrlsProvider value={resolveCrossAppUrls()}>
               {children}
               <PortalSessionChrome />
+              {/* Hält die Hülle des Tischmodus offline verfügbar. */}
+              <ServiceWorkerRegistrar basePath={portalBasePath()} />
             </AppUrlsProvider>
           ) : (
             <main className="page">

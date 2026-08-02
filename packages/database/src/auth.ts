@@ -1247,6 +1247,8 @@ export class AuthService {
       content: string;
       pageId?: string | null;
       gameSessionId?: string | null;
+      /** Offline vergebene Kennung; verhindert Duplikate beim Nachsyncen. */
+      clientRef?: string | null;
     },
   ): Promise<PortalPlayerNoteView | null> {
     const world = await this.db.world.findUnique({
@@ -1264,6 +1266,7 @@ export class AuthService {
       content: input.content,
       pageId: input.pageId,
       gameSessionId: input.gameSessionId,
+      clientRef: input.clientRef,
     });
 
     return toPortalPlayerNoteView(note);

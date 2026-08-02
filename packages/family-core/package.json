@@ -16,7 +16,8 @@
     "@uwe/auth": "workspace:*",
     "@uwe/calendar": "workspace:*",
     "@uwe/connector": "workspace:*",
-    "@uwe/database": "workspace:*"
+    "@uwe/database": "workspace:*",
+    "@uwe/kitchen": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.32",

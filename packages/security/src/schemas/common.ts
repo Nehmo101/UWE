@@ -290,6 +290,43 @@ export const playerNoteUpdateSchema = playerNoteIdSchema.extend({
   content: nonEmptyString.max(20_000),
 });
 
+/**
+ * Nachtrag aus dem Tischmodus: was offline entstanden ist, kommt gebündelt
+ * zurück. `clientRef` ist die vom Gerät vergebene Kennung, an der der Server
+ * einen Wiederholungsversuch erkennt; `baseUpdatedAt` der Stand, auf dem ein
+ * Offline-Edit aufsetzt — fehlt er oder ist der Server weiter, gilt der
+ * Eintrag als Konflikt statt als Überschreiben.
+ */
+const playerNoteSyncOperationSchema = z.discriminatedUnion("op", [
+  z.object({
+    op: z.literal("create"),
+    clientRef: idSchema,
+    campaignId: idSchema,
+    content: nonEmptyString.max(20_000),
+    // JSON statt FormData: fehlende Bezüge kommen als `null` oder gar nicht —
+    // beides wird hier zu `null`, damit der Typ eindeutig bleibt.
+    pageId: idSchema.nullish().transform((value) => value ?? null),
+    gameSessionId: idSchema.nullish().transform((value) => value ?? null),
+    clientUpdatedAt: z.string().trim().min(1).max(40),
+  }),
+  z.object({
+    op: z.literal("update"),
+    clientRef: idSchema,
+    campaignId: idSchema,
+    noteId: idSchema,
+    content: nonEmptyString.max(20_000),
+    baseUpdatedAt: z.string().trim().max(40).nullable(),
+    clientUpdatedAt: z.string().trim().min(1).max(40),
+  }),
+]);
+
+/** Höchstzahl Einträge je Abgleich — eine Warteschlange ist kein Massenimport. */
+export const PLAYER_NOTE_SYNC_MAX_OPERATIONS = 50;
+
+export const playerNoteSyncSchema = z.object({
+  operations: z.array(playerNoteSyncOperationSchema).min(1).max(PLAYER_NOTE_SYNC_MAX_OPERATIONS),
+});
+
 export const playerCharacterBlockSchema = z.object({
   worldSlug: slugSchema,
   pageSlug: slugSchema,

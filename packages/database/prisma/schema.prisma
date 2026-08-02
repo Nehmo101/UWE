@@ -1167,6 +1167,10 @@ model PlayerNote {
   content       String
   visibility    PlayerNoteVisibility @default(private)
   status        PlayerNoteStatus     @default(draft)
+  /// Kennung, die der Tischmodus offline vergibt. Bricht die Verbindung nach
+  /// dem Speichern, aber vor der Antwort ab, erkennt der zweite Versuch daran
+  /// dieselbe Notiz wieder — sonst entstünde bei jedem Retry ein Duplikat.
+  clientRef     String?              @map("client_ref")
   createdAt     DateTime             @default(now()) @map("created_at")
   updatedAt     DateTime             @updatedAt @map("updated_at")
 
@@ -1176,6 +1180,7 @@ model PlayerNote {
   gameSession GameSession? @relation(fields: [gameSessionId], references: [id], onDelete: SetNull)
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, clientRef])
   @@index([worldId, status])
   @@index([worldId, campaignId])
   @@index([userId, worldId])
