@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import type { TerraWorldDraft } from "@uwe/ai-brain/proposal-validators";
+import type { TerraOrtQuelle } from "@uwe/ai-brain/terra";
 import { speichereTerraKarteAction } from "@/app/terra-actions";
 import { TerraEntwurfPanel, type TerraEntwurfErgebnis } from "./TerraEntwurfPanel";
 import { TerraTextPanel } from "./TerraTextPanel";
@@ -21,6 +22,12 @@ export interface TerraRahmenProps {
   quelle?: string;
   /** Schlanke, geschützte Pop-out-Route ohne WorldShell und KI-Panels. */
   fensterModus?: boolean;
+  /**
+   * Ort-Wikis der Welt für die Vorgenerierung. Geladen von der Seite, die
+   * ohnehin unter den Studio-Guards läuft — der Frame bekommt sie nie zu
+   * sehen, sie gehören dem Bedienfeld daneben.
+   */
+  orte?: TerraOrtQuelle[];
 }
 
 const ENTPRELLUNG_MS = 1200;
@@ -102,6 +109,7 @@ export function TerraRahmen({
   daten,
   quelle,
   fensterModus = false,
+  orte = [],
 }: TerraRahmenProps) {
   const rahmenRef = useRef<HTMLIFrameElement | null>(null);
   const versionRef = useRef(version);
@@ -465,7 +473,12 @@ export function TerraRahmen({
       </div>
       {!fensterModus ? (
         <>
-          <TerraEntwurfPanel worldSlug={worldSlug} sende={sendeVorgabe} ergebnis={entwurfErgebnis} />
+          <TerraEntwurfPanel
+            worldSlug={worldSlug}
+            orte={orte}
+            sende={sendeVorgabe}
+            ergebnis={entwurfErgebnis}
+          />
           <TerraTextPanel worldSlug={worldSlug} />
         </>
       ) : null}

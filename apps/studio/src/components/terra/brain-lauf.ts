@@ -60,6 +60,17 @@ export async function starteBrainLauf(input: {
   actionId: string;
   worldSlug: string;
   userPrompt: string;
+  /**
+   * Ankerseite des Laufs — der Slug eines Ort-Wikis, wenn die Vorgenerierung
+   * von einer Wiki-Seite ausgeht.
+   *
+   * Mehr als eine Zeile im Body ist das nicht, und trotzdem hängt daran die
+   * ganze Übergabe: `runBrainAction` macht daraus die Ankerseite, und
+   * `buildContext` legt Inhaltsblöcke, verknüpfte Seiten und Rückverweise
+   * dazu. Ohne den Slug sucht sich der Lauf irgendeine erste Seite der Welt
+   * (`resolveAnchorPageSlug`) — der Kontext ist dann Zufall statt Absicht.
+   */
+  pageSlug?: string;
 }): Promise<BrainLaufErgebnis> {
   const leer: BrainLaufErgebnis = { ok: false, inhalt: null, notizen: [], laufId: null, meldung: null };
 
@@ -73,6 +84,9 @@ export async function starteBrainLauf(input: {
         providerId: TERRA_BRAIN_PROVIDER,
         model: TERRA_BRAIN_MODELL,
         userPrompt: input.userPrompt.slice(0, TERRA_PROMPT_MAX),
+        /* Ohne Ort bleibt das Feld weg statt null zu sein: `brainRunBodySchema`
+           lässt es optional zu, aber nicht leer. */
+        ...(input.pageSlug ? { pageSlug: input.pageSlug } : {}),
       }),
     });
     const daten = (await antwort.json()) as JobAntwort;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   TERRA_BIOME,
   TERRA_KARTEN_GROESSEN,
@@ -12,7 +12,13 @@ import {
   validateTerraWorldDraft,
 } from "@uwe/ai-brain/proposal-validators";
 import type { TerraWorldDraft } from "@uwe/ai-brain/proposal-validators";
+import {
+  baueTerraOrtPrompt,
+  promptNachOrtwechsel,
+  type TerraOrtQuelle,
+} from "@uwe/ai-brain/terra";
 import { starteBrainLauf, TERRA_PROMPT_MAX } from "./brain-lauf";
+import { TerraOrtWahl } from "./TerraOrtWahl";
 
 /**
  * „Karte beschreiben" (J4) — die Bedienung der KI-Vorgenerierung.
@@ -37,10 +43,30 @@ import { starteBrainLauf, TERRA_PROMPT_MAX } from "./brain-lauf";
  * Der Prompt geht an die Brain-Aktion und wird dort mit dem Lauf gespeichert
  * (`AiRun.userPrompt`, unter den vorhandenen Rechten). In die Karte wandert er
  * NICHT — Begründung in terra/src/generators/welt-vorgabe.js.
+ *
+ * ------------------------------------------------------------------------
+ * ORT-WIKIS ALS GRUNDLAGE
+ *
+ * Über dem Textfeld steht die Auswahl der Ort-Wikis dieser Welt. Wer eine
+ * Seite wählt, übergibt sie an die Vorgenerierung — auf zwei Wegen, die sich
+ * ergänzen und nicht doppeln:
+ *
+ *   SICHTBAR   Eine kurze Vorlage (Titel, Typ, Schlagworte, Zusammenfassung)
+ *              landet im Prompt-Feld. Sie ist Text wie jeder andere: lesbar,
+ *              änderbar, erweiterbar, bevor gefragt wird.
+ *   UNSICHTBAR Der Slug reist als Ankerseite mit. `buildContext` legt daraufhin
+ *              Inhaltsblöcke, verknüpfte Seiten und Rückverweise in den
+ *              Kontext — mehr, als je in ein Textfeld passen würde, und unter
+ *              dem Kontextbudget, das der Kontextbau selbst verwaltet.
+ *
+ * Die Vorlage überschreibt nie, was von Hand getippt wurde: ersetzt wird nur
+ * ein leeres Feld oder die Vorlage des zuvor gewählten Ortes.
  */
 
 export interface TerraEntwurfPanelProps {
   worldSlug: string;
+  /** Ort-Wikis der Welt, als Grundlage der Vorgenerierung wählbar. */
+  orte?: TerraOrtQuelle[];
   /** Schickt die geprüfte Vorgabe in den Frame. Liefert false, wenn der
    *  Frame (noch) nicht erreichbar ist. */
   sende: (vorgabe: TerraWorldDraft, opt: { laufId: string | null; seed: number | null }) => boolean;
@@ -72,7 +98,7 @@ type Lage = "ruhe" | "fragt" | "entwurf" | "baut" | "fehler";
 const eingabe =
   "h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-2 text-sm text-foreground";
 
-export function TerraEntwurfPanel({ worldSlug, sende, ergebnis }: TerraEntwurfPanelProps) {
+export function TerraEntwurfPanel({ worldSlug, orte = [], sende, ergebnis }: TerraEntwurfPanelProps) {
   const [prompt, setPrompt] = useState("");
   const [lage, setLage] = useState<Lage>("ruhe");
   const [meldung, setMeldung] = useState<string | null>(null);
@@ -80,6 +106,36 @@ export function TerraEntwurfPanel({ worldSlug, sende, ergebnis }: TerraEntwurfPa
   const [notizen, setNotizen] = useState<string[]>([]);
   const [laufId, setLaufId] = useState<string | null>(null);
   const [seed, setSeed] = useState("");
+  const [ortSlug, setOrtSlug] = useState("");
+  /** Die zuletzt eingesetzte Vorlage — Maßstab dafür, ob das Feld noch
+   *  automatisch befüllt ist oder inzwischen dem Spielleiter gehört. */
+  const vorlageRef = useRef("");
+
+  const ort = useMemo(
+    () => (ortSlug ? (orte.find((eintrag) => eintrag.slug === ortSlug) ?? null) : null),
+    [ortSlug, orte],
+  );
+
+  /**
+   * Ort wählen heißt: Slug merken und die Vorlage anbieten. Angeboten, nicht
+   * aufgezwungen — ein Feld, in dem etwas Eigenes steht, bleibt stehen. Sonst
+   * kostet ein Fehlgriff im Auswahlfeld drei getippte Sätze.
+   */
+  const waehleOrt = useCallback(
+    (slug: string) => {
+      setOrtSlug(slug);
+      const gewaehlt = slug ? orte.find((eintrag) => eintrag.slug === slug) : undefined;
+      const neueVorlage = gewaehlt ? baueTerraOrtPrompt(gewaehlt) : "";
+      const wechsel = promptNachOrtwechsel({
+        aktuell: prompt,
+        letzteVorlage: vorlageRef.current,
+        neueVorlage,
+      });
+      if (wechsel.vorlageUebernommen) vorlageRef.current = neueVorlage;
+      setPrompt(wechsel.prompt);
+    },
+    [orte, prompt],
+  );
 
   /** Jede Änderung im Formular läuft durch denselben Validator wie die
    *  Modellantwort — ein von Hand eingetragener Unsinn kommt nicht weiter
@@ -107,6 +163,7 @@ export function TerraEntwurfPanel({ worldSlug, sende, ergebnis }: TerraEntwurfPa
       actionId: "terra_world_draft",
       worldSlug,
       userPrompt: text,
+      pageSlug: ort?.slug,
     });
     if (!lauf.ok || !lauf.inhalt) {
       setLage("fehler");
@@ -129,11 +186,32 @@ export function TerraEntwurfPanel({ worldSlug, sende, ergebnis }: TerraEntwurfPa
       );
       return;
     }
-    setEntwurf(geprueft.draft);
-    setNotizen([...lauf.notizen, ...geprueft.notices.map((n) => `${n.path}: ${n.message}`)]);
+    /* Hat das Modell keinen Regionsnamen geliefert, aber es gibt eine
+       Wiki-Seite, heißt die Region wie sie. Der Weg führt durch denselben
+       Validator: ein Seitentitel ist Freitext und muss die Namensregeln
+       (Länge, erlaubte Zeichen) genauso passieren wie eine Modellantwort. */
+    let draft = geprueft.draft;
+    let notizenAusNamen: string[] = [];
+    if (ort && !draft.namen.region) {
+      const mitOrtsnamen = validateTerraWorldDraft({
+        ...draft,
+        namen: { ...draft.namen, region: ort.titel },
+      });
+      if (mitOrtsnamen.ok) {
+        draft = mitOrtsnamen.draft;
+        notizenAusNamen = mitOrtsnamen.notices.map((n) => `${n.path}: ${n.message}`);
+      }
+    }
+
+    setEntwurf(draft);
+    setNotizen([
+      ...lauf.notizen,
+      ...geprueft.notices.map((n) => `${n.path}: ${n.message}`),
+      ...notizenAusNamen,
+    ]);
     setLaufId(lauf.laufId);
     setLage("entwurf");
-  }, [prompt, worldSlug]);
+  }, [ort, prompt, worldSlug]);
 
   const bauen = useCallback(() => {
     if (!entwurf) return;
@@ -166,6 +244,21 @@ export function TerraEntwurfPanel({ worldSlug, sende, ergebnis }: TerraEntwurfPa
 
   return (
     <section className="terra-entwurf" aria-label="Karte beschreiben">
+      <TerraOrtWahl
+        orte={orte}
+        gewaehlt={ortSlug}
+        onWahl={waehleOrt}
+        disabled={lage === "fragt" || lage === "baut"}
+      />
+
+      {ort && (
+        <p className="terra-entwurf-hinweis" data-testid="terra-ort-hinweis">
+          Grundlage ist das Wiki zu &bdquo;{ort.titel}&ldquo; — Inhalt, verknüpfte Seiten und
+          Rückverweise gehen mit in die Frage. Der Text unten ist ein Vorschlag und darf
+          umgeschrieben werden.
+        </p>
+      )}
+
       <label className="terra-entwurf-feld">
         <span>Karte beschreiben</span>
         <textarea

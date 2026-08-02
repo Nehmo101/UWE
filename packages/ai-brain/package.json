@@ -16,6 +16,7 @@
     "./router": "./src/router/index.ts",
     "./cookbook-bridge": "./src/cookbook-bridge.ts",
     "./proposal-validators": "./src/proposal-validators/index.ts",
+    "./terra": "./src/terra/index.ts",
     "./gateway": "./src/gateway/index.ts",
     "./theme-generator": "./src/theme-generator/index.ts",
     "./one-shot": "./src/dnd-generator/one-shot.ts"

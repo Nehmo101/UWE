@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createPrismaClient, getAppRepository } from "@uwe/database/server";
 import { createTerraService } from "@uwe/database/terra";
+import { ortQuellenAusSeiten } from "@uwe/ai-brain/terra";
 import { WorldShell, BreadcrumbTrail } from "@/src/components/shell";
 import { worldDetailBreadcrumb, type BreadcrumbItem } from "@/src/lib/world-breadcrumbs";
 import { TerraRahmen } from "@/src/components/terra";
@@ -24,6 +25,16 @@ export default async function TerraKartePage({ params, searchParams }: Props) {
   if (!karte) notFound();
 
   const fensterModus = suche.terraFenster === "1";
+
+  /* Die Ort-Wikis der Welt als Grundlage der KI-Vorgenerierung. Nur Köpfe
+     (Titel, Typ, Zusammenfassung, Schlagworte) — der Inhalt einer Seite geht
+     erst dann mit, wenn eine gewählt ist, und dann über den Kontextbau der
+     Brain-Aktion, nicht über diese Seite. Im Fenstermodus gibt es kein
+     Bedienfeld, also auch keine Abfrage. */
+  const orte = fensterModus
+    ? []
+    : ortQuellenAusSeiten(await getAppRepository().listPagesByWorld(worldSlug, { navCategory: "orte" }));
+
   const editor = (
     <TerraRahmen
       worldSlug={worldSlug}
@@ -31,6 +42,7 @@ export default async function TerraKartePage({ params, searchParams }: Props) {
       version={karte.version}
       daten={karte.daten ?? null}
       fensterModus={fensterModus}
+      orte={orte}
     />
   );
 

@@ -113,6 +113,50 @@ test.describe("Studio Terra — Kartenliste", () => {
     await page.getByTestId("terra-text-prompt").fill("Wald im Norden, Bucht im Südwesten");
     await expect(page.getByTestId("terra-text-holen")).toBeEnabled();
   });
+
+  test("ein Ort-Wiki lässt sich als Grundlage der Vorgenerierung übergeben", async ({ page }) => {
+    /* Der Lauf wird auch hier NICHT ausgelöst — er braucht ein lokales Modell.
+       Geprüft wird die Kette davor, und die ist die eigentliche Naht: die
+       Seite lädt die Ort-Wikis der Welt, das Auswahlfeld zeigt sie gruppiert,
+       und eine Wahl schreibt die Vorlage ins Prompt-Feld. Was der Slug im
+       Kontext des Laufs anrichtet, prüft `ort-quelle.test.ts` und der
+       Kontextbau — nicht der Browser. */
+    await page.goto(LISTE);
+
+    const eintraege = page.getByTestId("terra-karten-liste").getByRole("link");
+    if ((await eintraege.count()) === 0) {
+      await page.getByTestId("terra-karte-anlegen").click();
+      await expect(page).toHaveURL(new RegExp(`${LISTE}/[a-z0-9]+`, "i"), { timeout: 20_000 });
+    } else {
+      const ziel = await eintraege.first().getAttribute("href");
+      await page.goto(ziel!);
+    }
+
+    const ortwahl = page.getByTestId("terra-ort-wahl");
+    await expect(ortwahl).toBeVisible();
+
+    // Die Seed-Welt hat Ort-Wikis; „— ohne Wiki-Seite —" steht zusätzlich da.
+    const werte = await ortwahl.locator("option").evaluateAll((optionen) =>
+      optionen.map((o) => (o as HTMLOptionElement).value),
+    );
+    expect(werte[0]).toBe("");
+    expect(werte.length).toBeGreaterThan(1);
+
+    const prompt = page.getByTestId("terra-entwurf-prompt");
+    await expect(prompt).toHaveValue("");
+
+    await ortwahl.selectOption(werte[1]);
+    await expect(page.getByTestId("terra-ort-hinweis")).toBeVisible();
+    await expect(prompt).toHaveValue(/Ort aus dem Wiki dieser Welt/);
+    await expect(prompt).toHaveValue(/Was im Wiki steht, gilt/);
+
+    /* Die Vorlage überschreibt nur sich selbst: ein eigener Text übersteht den
+       nächsten Griff ins Auswahlfeld. */
+    await prompt.fill("Selbst getippt: raue Küste im Winter");
+    await ortwahl.selectOption("");
+    await expect(prompt).toHaveValue("Selbst getippt: raue Küste im Winter");
+    await expect(page.getByTestId("terra-ort-hinweis")).toHaveCount(0);
+  });
 });
 
 test.describe("Studio Terra — Rechteprüfung", () => {

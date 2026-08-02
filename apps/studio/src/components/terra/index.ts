@@ -6,4 +6,5 @@ export {
   type TerraEntwurfErgebnis,
 } from "./TerraEntwurfPanel";
 export { TerraTextPanel, type TerraTextPanelProps } from "./TerraTextPanel";
+export { TerraOrtWahl, type TerraOrtWahlProps } from "./TerraOrtWahl";
 export { starteBrainLauf, type BrainLaufErgebnis } from "./brain-lauf";

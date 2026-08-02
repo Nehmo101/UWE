@@ -585,6 +585,67 @@ zwar ohne Einschränkung.
 
 ---
 
+# J6 — Ort-Wikis an die Vorgenerierung übergeben
+
+## Die Lücke
+
+J4 kann eine Karte aus einer Beschreibung bauen — aber nur aus einer, die in
+dem Moment jemand tippt. Das Wiki der Welt stand daneben und wurde ignoriert.
+Wer eine Karte zu „Möwenfurt" wollte, hat Möwenfurt ein zweites Mal
+beschrieben, meist knapper und ungenauer als die Seite, die es schon gab.
+
+## Die Übergabe
+
+Über dem Prompt-Feld steht ein Auswahlfeld mit den **Ort-Wikis dieser Welt**.
+Eine Wahl übergibt die Seite auf zwei Wegen, die sich ergänzen statt zu
+doppeln:
+
+| Weg | Was geht mit | Wer legt es dazu |
+|---|---|---|
+| **sichtbar** | Titel, Typ, Schlagworte, Zusammenfassung — als kurze Vorlage im Prompt-Feld, lesbar und änderbar | `baueTerraOrtPrompt` (`@uwe/ai-brain/terra`) |
+| **unsichtbar** | Inhaltsblöcke, verknüpfte Seiten, Rückverweise | der vorhandene Kontextbau: der Slug reist als `pageSlug` mit und wird in `runBrainAction` zur Ankerseite |
+
+Der zweite Weg ist der eigentliche Gewinn und kostet genau ein Feld im Body von
+`POST /api/brain/run`. `resolveAnchorPageSlug` gab es schon; ohne Slug sucht es
+sich irgendeine erste Seite der Welt — der Kontext war bis hierher also nicht
+etwa leer, sondern Zufall.
+
+## Welche Seiten
+
+Die Navigationskategorie `orte` **ohne** `trap`, `puzzle`, `loot`, `secret` —
+das sind Dinge IN einem Ort, keine Orte mit Ausdehnung. Eine Fallgrube hat kein
+Biom und keine Flussrichtung; sie hier anzubieten wäre ein Versprechen, das der
+Generator nicht halten kann. Bleiben `region`, `location`, `dungeon`,
+`dungeon_level`, `room`, in dieser Reihenfolge sortiert (weiter Raum zuerst).
+
+Die Liste steht als Literal in `ort-quelle.ts`, damit das Modul ohne
+`@uwe/database` auskommt und im Client-Bündel unbedenklich bleibt. Gegen das
+Schema geprüft wird sie im Test: kommt ein neuer Ort-Typ dazu, fällt
+`ort-quelle.test.ts` und jemand entscheidet, statt dass der Typ still fehlt.
+
+## Zwei Regeln der Bedienung
+
+1. **Die Vorlage überschreibt nichts.** Ersetzt wird nur ein leeres Feld oder
+   die Vorlage des zuvor gewählten Ortes. Wer selbst getippt hat, behält seinen
+   Text — ein Fehlgriff im Auswahlfeld darf keine drei Sätze kosten.
+2. **Der Regionsname fällt auf den Seitentitel zurück**, wenn das Modell keinen
+   liefert. Der Weg führt durch `validateTerraWorldDraft`: ein Seitentitel ist
+   Freitext und muss dieselben Namensregeln passieren wie eine Modellantwort.
+
+## Berührte Stellen
+
+| Was | Wo |
+|---|---|
+| Auswahl + Vorlage | `packages/ai-brain/src/terra/ort-quelle.ts` (neu, Subpath `@uwe/ai-brain/terra`) |
+| Ankerseite im Lauf | `pageSlug` in `starteBrainLauf` (`apps/studio/src/components/terra/brain-lauf.ts`) |
+| Bedienung | `TerraOrtWahl` (neu), `TerraEntwurfPanel`, `TerraRahmen` |
+| Seitenladung | `apps/studio/app/worlds/[worldSlug]/karten/[karteId]/page.tsx` |
+
+Nicht berührt: Schema, Migrationen, `/api/brain/run` (das Feld war seit J4
+optional erlaubt), das Portal (dort gibt es keine KI-Bedienfelder).
+
+---
+
 # Reihenfolge Runde J
 
 1. **J3 Namen** — unabhängig von allem, sofort nützlich, und Voraussetzung
