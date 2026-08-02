@@ -1,0 +1,8 @@
+# Godots Import-Cache. Wird bei jedem `--import` neu erzeugt und enthaelt
+# absolute Pfade — gehoert nicht in die Historie.
+.godot/
+
+# Web-Export. Entsteht aus dem Projekt, wird gemessen und weggeworfen.
+# Ein Godot-Web-Export ist zweistellig megabytegross; genau darum geht es in
+# der Messung, im Repo hat er nichts verloren.
+export/
