@@ -10,24 +10,26 @@ export interface PortalAuthChromeProps {
     displayName: string;
     email: string | null;
   } | null;
-  studioUrl?: string | null;
-  canAccessStudio?: boolean;
+  /** Apex-Origin der öffentlichen Startseite (`resolveLandingPublicBaseUrl`). */
+  startUrl?: string | null;
 }
 
-/** Top-bar actions for authenticated Portal shells (Studio link + logout). */
-export function PortalAuthChrome({
-  user,
-  studioUrl,
-  canAccessStudio = false,
-}: PortalAuthChromeProps) {
+/**
+ * Top-bar actions for authenticated Portal shells (UWE Start + logout).
+ *
+ * Statt „Studio öffnen": die Startseite ist der Ort, von dem aus man zwischen
+ * allen Bereichen wechselt — und sie ist öffentlich, braucht also kein
+ * Studio-Häkchen als Bedingung.
+ */
+export function PortalAuthChrome({ user, startUrl }: PortalAuthChromeProps) {
   return (
     <>
-      {canAccessStudio && studioUrl ? (
+      {startUrl ? (
         <a
-          href={studioUrl}
+          href={startUrl}
           className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
         >
-          Studio öffnen
+          UWE Start
         </a>
       ) : null}
       {user ? (

@@ -10,7 +10,9 @@ import {
   isRequestSecure,
   originMatchesTrustedHost,
   rebaseUrlOnPublicOrigin,
+  resolveCrossAppUrls,
   resolveFamilyPublicBaseUrl,
+  resolveLandingPublicBaseUrl,
   resolvePortalSessionHref,
   resolveStudioSessionHref,
   resolveUweAppUrls,
@@ -301,6 +303,63 @@ describe("runtime config", () => {
       { currentApp: "studio" },
     );
     assert.equal(href, "/studio");
+  });
+});
+
+describe("landing link target (UWE Start)", () => {
+  it("falls back to the Studio origin locally, where the landing app is optional", () => {
+    // Studio liefert unter `/` dieselbe Startseite aus — ein Link auf :3103
+    // zeigte auf einen Prozess, den eine lokale Installation nicht starten muss.
+    assert.equal(resolveLandingPublicBaseUrl({}), "http://localhost:3000");
+    assert.equal(
+      resolveLandingPublicBaseUrl({ NEXT_PUBLIC_STUDIO_URL: "http://uwe.fritz.box:3000" }),
+      "http://uwe.fritz.box:3000",
+    );
+  });
+
+  it("uses the apex origin from PUBLIC_APP_URL", () => {
+    assert.equal(
+      resolveLandingPublicBaseUrl({
+        PUBLIC_APP_URL: "https://uwe.example/",
+        NEXT_PUBLIC_PORTAL_URL: "https://portal.uwe.example",
+        NEXT_PUBLIC_STUDIO_URL: "https://studio.uwe.example",
+      }),
+      "https://uwe.example",
+    );
+  });
+
+  it("derives the apex from the sibling hostnames when PUBLIC_APP_URL is unset", () => {
+    // Ohne Ableitung zeigte „UWE Start" von portal.uwe.example auf
+    // localhost:3103 — für einen Tunnel-Besucher unerreichbar.
+    assert.equal(
+      resolveLandingPublicBaseUrl({
+        NEXT_PUBLIC_STUDIO_URL: "https://studio.uwe.example",
+        NEXT_PUBLIC_PORTAL_URL: "https://portal.uwe.example",
+      }),
+      "https://uwe.example",
+    );
+  });
+
+  it("does not derive from port-based layouts", () => {
+    // Ports auf einem Host: der Geschwister-Hostname sagt nichts über den Apex.
+    assert.equal(
+      resolveLandingPublicBaseUrl({
+        NEXT_PUBLIC_STUDIO_URL: "http://studio.fritz.box:3000",
+        NEXT_PUBLIC_PORTAL_URL: "http://portal.fritz.box:3001",
+      }),
+      "http://studio.fritz.box:3000",
+    );
+  });
+
+  it("hands the same landing origin to the cross-app navigation", () => {
+    const urls = resolveCrossAppUrls({
+      PUBLIC_APP_URL: "https://uwe.example",
+      NEXT_PUBLIC_PORTAL_URL: "https://portal.uwe.example",
+      NEXT_PUBLIC_STUDIO_URL: "https://studio.uwe.example",
+    });
+    assert.equal(urls.start, "https://uwe.example");
+    assert.equal(urls.studio, "https://studio.uwe.example");
+    assert.equal(urls.portal, "https://portal.uwe.example");
   });
 });
 

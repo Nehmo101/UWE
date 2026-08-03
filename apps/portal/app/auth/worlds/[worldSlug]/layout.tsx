@@ -6,8 +6,7 @@ import {
 import { PortalWorldVisitTracker } from "@/src/components/PortalWorldVisitTracker";
 import { notFound } from "next/navigation";
 import { getCurrentUser, loadReadableWorld } from "@/src/lib/auth";
-import { resolvePortalStudioOpenHref } from "@/src/lib/studio-link";
-import { canAccessStudio } from "@uwe/auth";
+import { resolveLandingPublicBaseUrl } from "@uwe/auth";
 import type { ReactNode } from "react";
 
 interface Props {
@@ -31,19 +30,13 @@ export default async function AuthWorldLayout({ children, params }: Props) {
   const worldId = world.id;
 
   const user = await getCurrentUser();
-  const studioAccess = user ? canAccessStudio(user) : false;
-  const studioUrl = studioAccess ? resolvePortalStudioOpenHref() : null;
 
   return (
     <PortalShell
       worldSlug={worldSlug}
       worldName={worldName}
       headerActions={
-        <PortalAuthChrome
-          user={user}
-          canAccessStudio={studioAccess}
-          studioUrl={studioUrl}
-        />
+        <PortalAuthChrome user={user} startUrl={resolveLandingPublicBaseUrl()} />
       }
       breadcrumb={
         <BreadcrumbTrail

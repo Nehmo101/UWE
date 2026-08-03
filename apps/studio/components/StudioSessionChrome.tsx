@@ -1,6 +1,6 @@
 import { StudioAuthChrome } from "@/src/components/shell/StudioAuthChrome";
 import { getCurrentUser, getSessionToken, studioAuthRequired } from "@/src/lib/auth";
-import { resolvePortalSessionHref } from "@uwe/auth";
+import { resolveLandingPublicBaseUrl } from "@uwe/auth";
 import { getSystemSettingsSnapshotSafe, resolveSessionInactivityTimeoutMs } from "@uwe/database/settings-service";
 
 const PUBLIC_PREFIXES = [
@@ -38,12 +38,12 @@ export async function StudioSessionChrome() {
   const { settings } = await getSystemSettingsSnapshotSafe();
   const inactivityTimeoutMs = resolveSessionInactivityTimeoutMs(settings);
 
-  const portalHref = resolvePortalSessionHref(undefined, { currentApp: "studio" });
+  const startHref = resolveLandingPublicBaseUrl();
 
   return (
     <StudioAuthChrome
       user={{ displayName: user.displayName }}
-      portalHref={portalHref}
+      startHref={startHref}
       inactivityTimeoutMs={inactivityTimeoutMs}
       logoutRedirect="/login"
     />
