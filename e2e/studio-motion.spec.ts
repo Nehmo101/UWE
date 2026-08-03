@@ -13,29 +13,17 @@ import { loginStudio } from "./helpers/auth";
  *
  * Anders als im Portal trägt Studio die Szene als **Band** am oberen Rand der
  * Arbeitsfläche und nur auf den Einstiegen (`src/lib/studio-scene.ts`). Der
- * dritte Test hält genau diese Grenze fest: hinter einer Arbeitsfläche darf
+ * zweite Test hält genau diese Grenze fest: hinter einer Arbeitsfläche darf
  * kein Hintergrundvideo laufen.
+ *
+ * **Was hier bewusst fehlt:** die Landing. Sie hat seit der Apex-Trennung eine
+ * eigene App (`apps/landing`), und `apps/studio/app/page.tsx` leitet bei
+ * getrennten Hostnamen zum Login weiter — ein Test gegen `/` prüfte hier also
+ * die Anmeldemaske. Der Playwright-Aufbau baut und startet nur Studio und
+ * Portal (playwright.config.ts); Landing, Brain und Family deckt stattdessen
+ * `scripts/scene-motion-coverage.test.ts` statisch ab. Wer sie im Browser
+ * prüfen will, nimmt zuerst die Apps in den Aufbau auf.
  */
-
-test("die Landing lädt ihren Clip", async ({ page }) => {
-  // `/` ist die öffentliche Landing — ohne Anmeldung erreichbar und die
-  // einzige Studio-Route mit der landing-Szene statt der studio-Szene.
-  await page.goto("/");
-
-  const video = page.locator("video").first();
-  await expect(video).toBeAttached({ timeout: 15000 });
-
-  const info = await video.evaluate(async (el: HTMLVideoElement) => {
-    for (let i = 0; i < 60 && el.readyState < 2; i += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 250));
-    }
-    return { src: el.currentSrc, readyState: el.readyState, width: el.videoWidth };
-  });
-
-  expect(info.readyState, `keine Bilddaten geladen (${info.src})`).toBeGreaterThanOrEqual(2);
-  expect(info.width, "Video ohne Bildgröße").toBeGreaterThan(0);
-  expect(info.src).toContain("/scenes/motion/landing-");
-});
 
 test("die Welten-Übersicht trägt das Studio-Band", async ({ page }) => {
   await loginStudio(page);
