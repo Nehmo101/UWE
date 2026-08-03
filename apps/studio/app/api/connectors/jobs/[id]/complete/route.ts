@@ -8,7 +8,7 @@ import { authenticateConnector } from "@/src/lib/connector-auth";
 
 const paramSchema = z.object({ id: idSchema });
 const bodySchema = z.object({
-  result: z.record(z.unknown()).nullable().optional(),
+  result: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
 interface RouteContext {
