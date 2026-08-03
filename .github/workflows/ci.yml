@@ -223,7 +223,9 @@ jobs:
     # Skipped jobs do not fail the workflow.
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # 30 -> 45: der Aufbau baut seit den Bühnen-Tests vier Apps statt zwei
+    # (Studio, Portal, Brain, Family — scripts/e2e-servers.mjs).
+    timeout-minutes: 45
     needs: quality
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -334,6 +336,11 @@ jobs:
         run: pnpm test:e2e e2e/studio-auth.spec.ts e2e/portal-auth.spec.ts
         env:
           CI: true
+          # Dieser Job läuft bei jedem Push auf main und prüft Studio und
+          # Portal. Ohne die Einschränkung bauten die Testserver seit den
+          # Bühnen-Tests auch Brain und Family — zwei Builds, die hier kein
+          # Test anfasst.
+          E2E_APPS: studio,portal
 
       - name: Save Playwright browsers
         if: always() && steps.playwright-cache.outputs.cache-hit != 'true'

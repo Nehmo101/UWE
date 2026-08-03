@@ -1152,6 +1152,34 @@ body {
   }
 }
 
+/* ── Gemalte Bühne als Band ──
+   Studio zeigt die Szene nicht als Vollbild, sondern als Streifen am oberen
+   Rand der Arbeitsfläche — „Landschaft oben, Arbeit unten", nur flacher als in
+   Portal, Brain und Family. Sie sitzt im Scroll-Container und scrollt deshalb
+   mit dem Inhalt weg, statt als fixe Tapete stehen zu bleiben.
+
+   z-index -1 im isolierten Stacking-Context von `<main>` (siehe AppShell):
+   hinter allem Seiteninhalt, aber vor dem Grund des Rahmens. Der Inhalt
+   braucht dadurch weder Wrapper noch eigene z-index-Angabe.
+
+   Die Ränder: absolut positionierte Kinder beziehen sich auf die Padding-Box,
+   das Band läuft also unter dem Innenabstand von `<main>` durch bis an die
+   Kanten — sonst stünde die Landschaft in einem sichtbaren Rahmen. */
+.studio-scene-band {
+  position: absolute;
+  inset: 0 0 auto;
+  height: clamp(200px, 30vh, 340px);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Beim Drucken ist die Kulisse nur ein leeres Rechteck über dem Papier. */
+@media print {
+  .studio-scene-band {
+    display: none;
+  }
+}
+
 /* ── Projekte: Schritte-Checkliste ── */
 
 .uwe-project-steps {

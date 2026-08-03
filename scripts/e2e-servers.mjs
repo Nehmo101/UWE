@@ -1,6 +1,13 @@
 #!/usr/bin/env node
 /**
- * Starts Studio + Portal against a shared isolated DB for Playwright E2E.
+ * Starts Studio + Portal + Brain + Family against a shared isolated DB for
+ * Playwright E2E.
+ *
+ * Brain und Family kamen nach: die bewegte Bühne war in beiden Apps nicht
+ * eingebunden, und niemand hat es gemerkt, weil der Aufbau sie gar nicht
+ * kannte. Sie bringen je eine eigene Datenbank mit (siehe
+ * provisionSplitDatabase) und teilen sich das Sitzungs-Cookie mit Studio —
+ * ein eigenes Anmeldeformular haben sie bewusst nicht.
  *
  * Portal login-first tests (no session → redirect /login) are in:
  *   e2e/portal-auth.spec.ts — "Portal login-first — unauthenticated redirect policy"
@@ -34,50 +41,78 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const studioPort = process.env.E2E_STUDIO_PORT ?? "3199";
 const portalPort = process.env.E2E_PORTAL_PORT ?? "3200";
+const brainPort = process.env.E2E_BRAIN_PORT ?? "3201";
+const familyPort = process.env.E2E_FAMILY_PORT ?? "3202";
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "uwe-e2e-"));
 const databaseUrl = `file:${path.join(tempDir, "e2e.db")}`;
 const brainDatabasePath = path.join(tempDir, "e2e-brain.db");
 const brainDatabaseUrl = `file:${brainDatabasePath}`;
+const familyDatabasePath = path.join(tempDir, "e2e-family.db");
+const familyDatabaseUrl = `file:${familyDatabasePath}`;
 const stateFile = path.join(tempDir, "e2e-state.json");
 
 /**
- * Provision the owner-private Brain database (PR #783 split it out of uwe.db).
+ * Welche Apps dieser Lauf baut und startet.
+ *
+ * Vier Builds kosten auf einem GitHub-Runner spürbar Zeit, und nicht jeder
+ * Lauf braucht alle vier: der Auth-Smoke bei jedem Push auf main prüft Studio
+ * und Portal und sonst nichts. `E2E_APPS=studio,portal` schneidet die anderen
+ * beiden dann samt Build weg. Ohne die Variable läuft alles — ein Lauf, der
+ * still weniger prüft als erwartet, wäre die schlechtere Voreinstellung.
+ *
+ * Studio ist nicht abwählbar: `playwright.config.ts` wartet auf dessen
+ * `/login`, und Brain wie Family holen sich ihre Sitzung von dort.
+ */
+const ALL_APPS = ["studio", "portal", "brain", "family"];
+const requestedApps = (process.env.E2E_APPS ?? "")
+  .split(",")
+  .map((entry) => entry.trim())
+  .filter(Boolean);
+
+for (const app of requestedApps) {
+  if (!ALL_APPS.includes(app)) {
+    console.error(`[e2e] Unbekannte App in E2E_APPS: "${app}" (erlaubt: ${ALL_APPS.join(", ")})`);
+    process.exit(1);
+  }
+}
+
+const apps = requestedApps.length > 0 ? [...new Set(["studio", ...requestedApps])] : ALL_APPS;
+
+/**
+ * Provision one of the split databases (PR #783 split Brain out of uwe.db,
+ * Family followed with its own).
+ *
  * `prisma migrate deploy` below only covers DATABASE_URL; without a migrated
  * Brain DB the seed dies in ensureSystemMailTemplates() with
  * `no such table: main.mail_templates`, because the `brainPrisma` singleton
  * would fall back to packages/database/data/uwe-brain.db (absent in CI, the
- * developer's real DB locally — both wrong for E2E). Applies the SQL
- * migrations via node:sqlite so no sqlite3 CLI is needed and FTS5 works —
- * same approach as scripts/run-node-tests.mjs.
+ * developer's real DB locally — both wrong for E2E). The same holds for
+ * `familyPrisma`: the Family app would otherwise serve the developer's own
+ * household data. Applies the SQL migrations via node:sqlite so no sqlite3 CLI
+ * is needed and FTS5 works — same approach as scripts/run-node-tests.mjs.
  */
-function provisionBrainDatabase() {
-  const brainMigrationsDir = path.join(
-    root,
-    "packages",
-    "database",
-    "prisma",
-    "brain",
-    "migrations",
-  );
+function provisionSplitDatabase(name, databasePath, url) {
+  const migrationsDir = path.join(root, "packages", "database", "prisma", name, "migrations");
   const migrations = fs
-    .readdirSync(brainMigrationsDir, { withFileTypes: true })
+    .readdirSync(migrationsDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
-    .map((entry) => path.join(brainMigrationsDir, entry.name, "migration.sql"))
+    .map((entry) => path.join(migrationsDir, entry.name, "migration.sql"))
     .filter((sqlPath) => fs.existsSync(sqlPath))
     .sort();
-  const db = new DatabaseSync(brainDatabasePath);
+  const db = new DatabaseSync(databasePath);
   try {
     for (const sqlPath of migrations) db.exec(fs.readFileSync(sqlPath, "utf8"));
   } finally {
     db.close();
   }
-  console.log(`[e2e] Brain database ready (${migrations.length} migrations) at ${brainDatabaseUrl}`);
+  console.log(`[e2e] ${name} database ready (${migrations.length} migrations) at ${url}`);
 }
 
 const env = {
   ...process.env,
   DATABASE_URL: databaseUrl,
   BRAIN_DATABASE_URL: brainDatabaseUrl,
+  FAMILY_DATABASE_URL: familyDatabaseUrl,
   SESSION_SECRET: `e2e-${"x".repeat(28)}`,
   UWE_SETUP_TOKEN: `setup-${"y".repeat(28)}`,
   STUDIO_API_TOKEN: `e2e-studio-api-${"z".repeat(20)}`,
@@ -96,8 +131,17 @@ const env = {
   UWE_ALLOW_PROD_SEED: "1",
   NEXT_PUBLIC_STUDIO_URL: `http://127.0.0.1:${studioPort}`,
   NEXT_PUBLIC_PORTAL_URL: `http://127.0.0.1:${portalPort}`,
+  // Brain und Family haben kein eigenes Anmeldeformular: ihre Login-Seiten
+  // verlinken auf die Studio-Origin, und die Sitzung trägt über das gemeinsame
+  // Cookie herüber (Cookies sind host-, nicht port-gebunden). Ohne diese
+  // beiden Adressen zeigten Cross-App-Navigation und Bottom-Nav auf die
+  // Entwicklungsports 3002/3004 statt auf die Testserver.
+  NEXT_PUBLIC_BRAIN_URL: `http://127.0.0.1:${brainPort}`,
+  NEXT_PUBLIC_FAMILY_URL: `http://127.0.0.1:${familyPort}`,
   STUDIO_PORT: studioPort,
   PORTAL_PORT: portalPort,
+  BRAIN_PORT: brainPort,
+  FAMILY_PORT: familyPort,
   E2E_STATE_FILE: stateFile,
 };
 
@@ -112,25 +156,45 @@ function run(command, args, cwd) {
 
 console.log(`[e2e] Preparing shared database at ${databaseUrl}`);
 run("npx", ["prisma", "migrate", "deploy"], path.join(root, "packages/database"));
-provisionBrainDatabase();
+provisionSplitDatabase("brain", brainDatabasePath, brainDatabaseUrl);
+provisionSplitDatabase("family", familyDatabasePath, familyDatabaseUrl);
 
 if (process.env.E2E_NO_SEED !== "1") {
   run("pnpm", ["exec", "tsx", "prisma/seed.ts"], path.join(root, "packages/database"));
+  // Der Seed vergibt bewusst nur Portal und Studio. Brain und Family kommen
+  // hier dazu, damit die beiden Apps überhaupt betretbar sind — auf einer
+  // weggeworfenen Datenbank, nicht im Dev-Seed. Siehe e2e-grant-areas.ts.
+  run("node", ["--import", "tsx", "scripts/e2e-grant-areas.ts"], root);
 }
 
 fs.writeFileSync(
   stateFile,
-  JSON.stringify({ databaseUrl, brainDatabaseUrl, studioPort, portalPort }, null, 2),
+  JSON.stringify(
+    {
+      databaseUrl,
+      brainDatabaseUrl,
+      familyDatabaseUrl,
+      studioPort,
+      portalPort,
+      brainPort,
+      familyPort,
+    },
+    null,
+    2,
+  ),
   "utf8",
 );
 
-console.log("[e2e] Building Studio and Portal…");
+console.log(`[e2e] Building ${apps.join(", ")}…`);
 // Via each app's `build` script, NOT `next build` directly: the script first
 // runs copy-scenes and copy-terra (scripts/copy-terra.mjs), which materialize
 // public/scenes and public/terra. Skipping them ships a Studio/Portal without
-// /terra/index.html — the Terra specs would then fail on a black frame.
-run("pnpm", ["run", "build"], path.join(root, "apps/studio"));
-run("pnpm", ["run", "build"], path.join(root, "apps/portal"));
+// /terra/index.html — the Terra specs would then fail on a black frame. Für
+// Brain und Family gilt dasselbe für `public/scenes`: ohne copy-scenes fehlen
+// Standbilder *und* Clips, und die Bühnen-Tests liefen ins Leere.
+for (const app of apps) {
+  run("pnpm", ["run", "build"], path.join(root, "apps", app));
+}
 
 /**
  * Resolve the `next` CLI entry point for an app and spawn it with the current
@@ -149,14 +213,17 @@ function spawnNext(app, args, extraEnv) {
   });
 }
 
-const children = [
-  spawnNext("studio", ["start", "--port", studioPort], {
-    PUBLIC_BASE_URL: env.NEXT_PUBLIC_STUDIO_URL,
-  }),
-  spawnNext("portal", ["start", "--port", portalPort], {
-    PUBLIC_BASE_URL: env.NEXT_PUBLIC_PORTAL_URL,
-  }),
-];
+const SERVERS = {
+  studio: [studioPort, env.NEXT_PUBLIC_STUDIO_URL],
+  portal: [portalPort, env.NEXT_PUBLIC_PORTAL_URL],
+  brain: [brainPort, env.NEXT_PUBLIC_BRAIN_URL],
+  family: [familyPort, env.NEXT_PUBLIC_FAMILY_URL],
+};
+
+const children = apps.map((app) => {
+  const [port, baseUrl] = SERVERS[app];
+  return spawnNext(app, ["start", "--port", port], { PUBLIC_BASE_URL: baseUrl });
+});
 
 function cleanup() {
   for (const child of children) {
