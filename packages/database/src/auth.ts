@@ -793,6 +793,9 @@ export class AuthService {
         summary: true,
         questStatus: true,
         updatedAt: true,
+        // Muss mit: `filterPagesForViewer` ist fail-closed und wirft ohne dieses
+        // Feld jede Seite heraus.
+        portalReleased: true,
       },
       orderBy: [{ title: "asc" }],
     });

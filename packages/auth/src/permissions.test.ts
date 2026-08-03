@@ -7,6 +7,7 @@ import {
   canReadDmSections,
   canViewWorldContent,
   filterBlocksForViewer,
+  canSeeUnreleasedPages,
   filterPagesForViewer,
   isDm,
   isOwner,
@@ -109,11 +110,48 @@ describe("permissions", () => {
   });
 
   it("filters lists by the same single rule", () => {
-    const pages = [{ id: "a" }, { id: "b" }];
+    const pages = [{ id: "a", portalReleased: true }, { id: "b", portalReleased: true }];
     assert.deepEqual(filterPagesForViewer(playerCtx, pages), pages);
     assert.deepEqual(filterPagesForViewer(outsiderCtx, pages), []);
     assert.deepEqual(filterBlocksForViewer(dmCtx, pages), pages);
     assert.deepEqual(filterBlocksForViewer(anonymousCtx, pages), []);
+  });
+});
+
+describe("Portal-Freigabe je Seite", () => {
+  const frei = { id: "frei", portalReleased: true };
+  const gesperrt = { id: "gesperrt", portalReleased: false };
+  const pages = [frei, gesperrt];
+
+  it("zeigt einem Spieler nur die freigegebenen Seiten", () => {
+    assert.deepEqual(filterPagesForViewer(playerCtx, pages), [frei]);
+  });
+
+  it("zeigt dem Studio-Häkchen alles, freigegeben oder nicht", () => {
+    assert.deepEqual(filterPagesForViewer(dmCtx, pages), pages);
+    assert.deepEqual(filterPagesForViewer(ownerCtx, pages), pages);
+  });
+
+  it("nimmt in der Spieler-Vorschau die Freigabe ernst", () => {
+    const preview = buildAccessContext({
+      user: user("dm-1", { access: access({ portal: true, studio: true }) }),
+      worldMembership: { userId: "dm-1", worldId: "w1", characterName: null },
+      preview: { previewAsUserId: "p1" },
+    });
+    assert.equal(canSeeUnreleasedPages(preview), false);
+    assert.deepEqual(filterPagesForViewer(preview, pages), [frei]);
+  });
+
+  it("hält eine Seite ohne das Feld zurück — fail-closed", () => {
+    // Genau der Fall, den eine vergessene `select`-Zeile erzeugt. Die Liste
+    // bleibt dann leer; das faellt auf. Die Gegenrichtung faellt nicht auf.
+    assert.deepEqual(filterPagesForViewer(playerCtx, [{ id: "ohne-feld" }]), []);
+    assert.deepEqual(filterPagesForViewer(playerCtx, [{ id: "x", portalReleased: "ja" }]), []);
+  });
+
+  it("lässt die Welt-Zuordnung vorgehen: ohne sie gibt es gar nichts", () => {
+    assert.deepEqual(filterPagesForViewer(outsiderCtx, pages), []);
+    assert.deepEqual(filterPagesForViewer(anonymousCtx, pages), []);
   });
 });
 
