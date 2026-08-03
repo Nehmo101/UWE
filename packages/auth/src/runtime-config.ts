@@ -162,21 +162,19 @@ export function resolveBrainPublicBaseUrl(env: NodeJS.ProcessEnv = process.env):
 const APP_SUBDOMAIN_LABELS = ["portal", "studio", "brain"] as const;
 
 /**
- * Leitet die Family-Origin aus einer Geschwister-App ab, solange
- * `NEXT_PUBLIC_FAMILY_URL` fehlt.
+ * Leitet den Apex-Origin aus einer Geschwister-App ab (nur Split-Hostname).
  *
- * Warum überhaupt raten: In einem Split-Hostname-Deployment ist der
- * Loopback-Standard garantiert falsch — ein Besucher von
- * `portal.uwe.example` kann `http://localhost:3004` nie erreichen. Läuft
- * Portal (oder Studio) unter `portal.<apex>` ohne eigenen Port, dann ist
- * `family.<apex>` die dokumentierte Konvention derselben Installation
- * (deploy/cloudflare/config.yml.example) und damit die einzig sinnvolle
- * Vorgabe. Ein explizit gesetzter Wert gewinnt immer.
- *
- * Bewusst nicht für Brain: dessen Erreichbarkeit ist eine ausdrückliche
- * Owner-Entscheidung (ADR 004/007), Family hängt dagegen am Häkchen.
+ * Warum überhaupt raten: In einem Split-Hostname-Deployment ist ein
+ * Loopback-Standard garantiert falsch — ein Besucher von `portal.uwe.example`
+ * kann `http://localhost:3004` nie erreichen. Läuft Portal (oder Studio) unter
+ * `portal.<apex>` ohne eigenen Port, dann ist `<apex>` die dokumentierte
+ * Konvention derselben Installation (deploy/cloudflare/config.yml.example) und
+ * damit die einzig sinnvolle Vorgabe. Ein explizit gesetzter Wert gewinnt
+ * immer.
  */
-function deriveFamilyUrlFromSiblings(env: NodeJS.ProcessEnv): string | null {
+function deriveApexOriginFromSiblings(
+  env: NodeJS.ProcessEnv,
+): { protocol: string; host: string } | null {
   if (!isSplitHostnameDeployment(env)) {
     return null;
   }
@@ -189,28 +187,43 @@ function deriveFamilyUrlFromSiblings(env: NodeJS.ProcessEnv): string | null {
     try {
       const url = new URL(trimmed);
       // Eigener Port = kein Reverse-Proxy-Layout, sondern Ports auf einem Host.
-      // Dann sagt der Geschwister-Hostname nichts über die Family-Adresse aus.
+      // Dann sagt der Geschwister-Hostname nichts über den Apex aus.
       if (url.port) {
         continue;
       }
-      const host = url.hostname.toLowerCase();
-      const label = APP_SUBDOMAIN_LABELS.find((entry) => host.startsWith(`${entry}.`));
-      if (!label) {
+      // Labelweise zerlegen und das erste Label **exakt** vergleichen. Ein
+      // Präfix-Test auf der ganzen Adresse (`startsWith("portal.")`) täte hier
+      // dasselbe, liest sich für einen Prüfer aber wie eine unvollständige
+      // URL-Prüfung — und genau die ist der klassische Weg, an einer
+      // Hostnamen-Prüfung vorbeizukommen.
+      const [subdomain, ...apexLabels] = url.hostname.toLowerCase().split(".");
+      if (!subdomain || !APP_SUBDOMAIN_LABELS.some((entry) => entry === subdomain)) {
         continue;
       }
-      const apex = host.slice(label.length + 1);
-      // Ein Apex ohne Punkt wäre ein reiner Hostname (LAN) — dort gibt es keine
-      // Subdomain-Konvention, auf die man sich verlassen könnte.
-      if (!apex.includes(".")) {
+      // Weniger als zwei Labels wäre ein reiner Hostname (LAN) — dort gibt es
+      // keine Subdomain-Konvention, auf die man sich verlassen könnte.
+      if (apexLabels.length < 2) {
         continue;
       }
-      return `${url.protocol}//family.${apex}`;
+      return { protocol: url.protocol, host: apexLabels.join(".") };
     } catch {
       // Ungültige Geschwister-URL — nächste Quelle versuchen.
     }
   }
 
   return null;
+}
+
+/**
+ * Leitet die Family-Origin aus einer Geschwister-App ab, solange
+ * `NEXT_PUBLIC_FAMILY_URL` fehlt: `family.<apex>`.
+ *
+ * Bewusst nicht für Brain: dessen Erreichbarkeit ist eine ausdrückliche
+ * Owner-Entscheidung (ADR 004/007), Family hängt dagegen am Häkchen.
+ */
+function deriveFamilyUrlFromSiblings(env: NodeJS.ProcessEnv): string | null {
+  const apex = deriveApexOriginFromSiblings(env);
+  return apex ? `${apex.protocol}//family.${apex.host}` : null;
 }
 
 /**
@@ -232,9 +245,41 @@ export function resolveFamilyPublicBaseUrl(env: NodeJS.ProcessEnv = process.env)
   return deriveFamilyUrlFromSiblings(effective) ?? DEV_FAMILY_URL;
 }
 
+/**
+ * Public base URL der öffentlichen Startseite — Ziel des „UWE Start"-Knopfs in
+ * Studio, Portal, Brain und Family.
+ *
+ * Die Startseite hat bewusst keine eigene `NEXT_PUBLIC_*`-Adresse: sie *ist*
+ * der Apex-Origin, den `PUBLIC_BASE_URL` / `PUBLIC_APP_URL` benennt (siehe
+ * .env.example und deploy/cloudflare/config.yml.example). Fehlt der Wert,
+ * bleibt im Split-Hostname-Layout noch der aus den Geschwister-Subdomains
+ * abgeleitete Apex.
+ *
+ * Ohne beides — die rein lokale Installation — zeigt der Knopf auf die
+ * Studio-Origin und **nicht** auf `localhost:3103`: der eigene
+ * Startseiten-Prozess (`apps/landing`) ist im Einrichtungs-Assistenten optional
+ * („nur nötig, wenn UWE öffentlich erreichbar sein soll"), Studio liefert unter
+ * `/` aber dieselbe Startseite aus. Ein Link auf einen Port, den diese
+ * Installation vielleicht nie startet, wäre die schlechtere Vorgabe.
+ */
+export function resolveLandingPublicBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
+  const effective = withRuntimeEnvOverrides(env);
+  const publicAppUrl = getUweRuntimeConfig(effective).publicAppUrl?.replace(/\/$/, "");
+  if (publicAppUrl) {
+    return publicAppUrl;
+  }
+
+  const apex = deriveApexOriginFromSiblings(effective);
+  if (apex) {
+    return `${apex.protocol}//${apex.host}`;
+  }
+
+  return resolveStudioPublicBaseUrl(effective);
+}
+
 /** Origins der app-übergreifenden Navigation (Bottom-Nav, Landing-Kacheln). */
 export interface UweCrossAppUrls {
-  /** Apex-/Landing-Origin — dieselbe Herkunft wie Studio, sofern nicht getrennt. */
+  /** Apex-Origin der öffentlichen Startseite (`apps/landing`). */
   start: string;
   studio: string;
   portal: string;
@@ -252,10 +297,9 @@ export interface UweCrossAppUrls {
  * Split-Hostname-Layout abgeleiteten Family-Origin.
  */
 export function resolveCrossAppUrls(env: NodeJS.ProcessEnv = process.env): UweCrossAppUrls {
-  const studio = resolveStudioPublicBaseUrl(env);
   return {
-    start: studio,
-    studio,
+    start: resolveLandingPublicBaseUrl(env),
+    studio: resolveStudioPublicBaseUrl(env),
     portal: resolvePortalPublicBaseUrl(env),
     brain: resolveBrainPublicBaseUrl(env),
     family: resolveFamilyPublicBaseUrl(env),

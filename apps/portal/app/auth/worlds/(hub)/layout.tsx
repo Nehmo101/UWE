@@ -5,23 +5,16 @@ import {
   PortalShell,
 } from "@/src/components/shell";
 import { getCurrentUser } from "@/src/lib/auth";
-import { resolvePortalStudioOpenHref } from "@/src/lib/studio-link";
-import { canAccessStudio } from "@uwe/auth";
+import { resolveLandingPublicBaseUrl } from "@uwe/auth";
 import type { ReactNode } from "react";
 
 export default async function AuthWorldsHubLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();
-  const studioAccess = user ? canAccessStudio(user) : false;
-  const studioUrl = studioAccess ? resolvePortalStudioOpenHref() : null;
 
   return (
     <PortalShell
       headerActions={
-        <PortalAuthChrome
-          user={user}
-          canAccessStudio={studioAccess}
-          studioUrl={studioUrl}
-        />
+        <PortalAuthChrome user={user} startUrl={resolveLandingPublicBaseUrl()} />
       }
       breadcrumb={<BreadcrumbTrail items={[{ label: "Meine Welten" }]} />}
     >

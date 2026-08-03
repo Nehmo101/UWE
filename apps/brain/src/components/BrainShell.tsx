@@ -80,6 +80,11 @@ export function BrainShell({
           </Link>
           <BrainNavSearch />
           <span className="uwe-topbar-end">
+            {/* Wie in Studio, Portal und Family: ein Knopf zurück auf die
+                öffentliche Startseite — von dort geht es in jeden Bereich. */}
+            <a className="brain-btn brain-btn-ghost brain-btn-sm" href={urls.start}>
+              UWE Start
+            </a>
             <span className="brain-owner-badge">Nur Owner</span>
             <ThemeModeToggle />
           </span>
