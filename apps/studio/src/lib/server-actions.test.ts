@@ -35,7 +35,7 @@ const AI_ACTION_GUARDS: Record<string, string> = {
 };
 
 /**
- * Importe, deren Aufruf den RTX-Host beschäftigt. Ein Action-Modul, das eines
+ * Importe, deren Aufruf den Maschinenraum-Host beschäftigt. Ein Action-Modul, das eines
  * davon nennt, muss den KI-Guard nennen — welche seiner Actions ihn bekommen,
  * entscheidet weiterhin der Autor, aber er muss die Frage stellen.
  *
@@ -399,7 +399,7 @@ describe("family server actions", () => {
 });
 
 /**
- * G-KI — wer den RTX-Host beschäftigen darf, ist im Command Center einstellbar
+ * G-KI — wer den Maschinenraum-Host beschäftigen darf, ist im Command Center einstellbar
  * (`User.aiAccess`). Bei den API-Routen trägt eine zentrale Pfadregel diese
  * Prüfung (`getRequiredAccessForApiPath` → `"ai"`); eine Server Action kennt
  * ihren Pfad zur Laufzeit aber nicht und muss sich selbst melden.
@@ -413,7 +413,7 @@ describe("family server actions", () => {
  * KI-Paket, muss es den KI-Guard nennen. Welche seiner Actions ihn bekommen,
  * bleibt die Entscheidung des Autors — die Frage stellen muss er trotzdem.
  */
-describe("RTX-KI guards", () => {
+describe("Maschinenraum-KI guards", () => {
   const APPS: Array<{ label: string; root: string; guard: string }> = [
     { label: "Studio", root: studioRoot, guard: AI_ACTION_GUARDS[STUDIO_ACTION_GUARD]! },
     { label: "Brain", root: brainRoot, guard: AI_ACTION_GUARDS[BRAIN_ACTION_GUARD]! },
@@ -421,7 +421,7 @@ describe("RTX-KI guards", () => {
   ];
 
   /**
-   * Nennt dieses Modul einen Import, der den RTX-Host beschäftigt? Direkt —
+   * Nennt dieses Modul einen Import, der den Maschinenraum-Host beschäftigt? Direkt —
    * siehe die Begründung an AI_IMPORT_PATTERNS.
    */
   function usesAiImport(source: string): boolean {
@@ -450,7 +450,7 @@ describe("RTX-KI guards", () => {
       assert.equal(
         missing.length,
         0,
-        `${app.label}-Action-Module, die den RTX-Host beschäftigen, aber ${app.guard} nicht nennen. ` +
+        `${app.label}-Action-Module, die den Maschinenraum-Host beschäftigen, aber ${app.guard} nicht nennen. ` +
           `Entweder den Guard auf die KI-Actions setzen, oder das Modul mit Begründung in ` +
           `AI_GUARD_EXEMPTIONS eintragen:\n  ${missing.join("\n  ")}`,
       );

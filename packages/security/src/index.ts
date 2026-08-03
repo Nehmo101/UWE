@@ -116,17 +116,17 @@ export {
 
 export {
   rejectClientWorkerUrl,
-  resolveRtxBaseUrl,
-  resolveRtxWorkerBoundary,
-  buildRtxWorkerAuthHeaders,
-  verifyRtxHmacSignature,
-  fetchRtxWorker,
-  toRtxWorkerConfig,
-  toRtxAgentConfig,
-  RtxBoundaryError,
-  type RtxWorkerBoundaryConfig,
-  type RtxWorkerRequestOptions,
-} from "./security/rtx-boundary";
+  resolveEngineBaseUrl,
+  resolveEngineWorkerBoundary,
+  buildEngineWorkerAuthHeaders,
+  verifyEngineHmacSignature,
+  fetchEngineWorker,
+  toEngineWorkerConfig,
+  toEngineAgentConfig,
+  EngineBoundaryError,
+  type EngineWorkerBoundaryConfig,
+  type EngineWorkerRequestOptions,
+} from "./security/engine-boundary";
 
 export { AiAccessDeniedError, AiPolicyViolationError } from "./security/errors";
 

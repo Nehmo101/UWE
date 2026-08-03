@@ -108,7 +108,7 @@ export default async function PrintCenterPage({ params }: Props) {
         <section className="flex flex-col gap-3">
           <h2 className="text-lg font-semibold tracking-tight">Druckwarteschlange</h2>
           <p className="text-sm text-muted-foreground">
-            Laufende RTX-Druckjobs aktualisieren sich automatisch.
+            Laufende Maschinenraum-Druckjobs aktualisieren sich automatisch.
           </p>
           <PrintQueuePanel worldSlug={worldSlug} initialJobs={initialJobs} labelsHref={labelsHref} />
         </section>
@@ -126,7 +126,7 @@ export default async function PrintCenterPage({ params }: Props) {
               Drucklisten
             </Link>
             <Link className={buttonVariants({ variant: "outline" })} href={labelsHref}>
-              RTX-Druck
+              Maschinenraum-Druck
             </Link>
             <Link
               className={buttonVariants({ variant: "outline" })}

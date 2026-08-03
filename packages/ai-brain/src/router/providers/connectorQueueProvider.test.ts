@@ -234,7 +234,7 @@ describe("connectorQueueProvider", () => {
     ]);
 
     assert.equal(result.success, true);
-    assert.equal(result.providerUsed, "local_rtx");
+    assert.equal(result.providerUsed, "local_engine");
     assert.equal(result.imageBase64, "aGVsbG8=");
     assert.equal(result.mimeType, "image/png");
   });

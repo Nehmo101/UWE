@@ -56,7 +56,7 @@ describe("admin status dashboard sources", () => {
     assert.equal(typeof status.mail.passwordConfigured, "boolean");
     assert.ok(Array.isArray(status.mail.nextSteps));
     assert.equal(typeof status.studioSecurity.level, "string");
-    assert.equal(typeof status.rtxExposure.ok, "boolean");
+    assert.equal(typeof status.engineExposure.ok, "boolean");
     assert.ok(Array.isArray(status.studioSecurity.nextSteps));
   });
 

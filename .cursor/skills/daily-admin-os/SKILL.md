@@ -34,7 +34,7 @@ Source: `docs/daily-admin-os.md`.
 ## Implementation rules
 
 1. **Studio only** — Daily Admin data never exposed via Portal or static export.
-2. **Capture works without RTX** — quick capture must not depend on GPU inference.
+2. **Capture works without Maschinenraum** — quick capture must not depend on GPU inference.
 3. **Cross-links** — use `AdminEntityLink` for Capture → Project/Workshop/Image Studio.
 4. **Mobile-first** — test bottom nav and FAB (`GlobalCaptureFab.tsx`) on narrow viewports.
 5. **No bank APIs** — Contracts are manual tracking only.
@@ -50,7 +50,7 @@ Extend `getTodaySummary()` in `life-admin-service.ts` and `today-dashboard.ts`:
 - Contract alerts (upcoming renewals)
 - Workshop active projects
 - Calendar events (delegate to calendar service)
-- System ampel + RTX status
+- System ampel + Maschinenraum status
 
 ### Capture 2.0
 

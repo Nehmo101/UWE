@@ -1,7 +1,7 @@
 import type { ConnectorSummary, ConnectorView } from "@uwe/database/server";
 
 export const LABEL_PRINT_QUEUE_UNAVAILABLE_MESSAGE =
-  "RTX Label-Druck benötigt einen online verbundenen Connector im Queue- oder Hybrid-Modus.";
+  "Maschinenraum-Label-Druck benötigt einen online verbundenen Connector im Queue- oder Hybrid-Modus.";
 
 function isQueueLabelConnector(connector: ConnectorView): boolean {
   return (

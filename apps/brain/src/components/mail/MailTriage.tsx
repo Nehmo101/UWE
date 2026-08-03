@@ -1,13 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { NavIcon, RtxStatusBadge, type RtxConnectorState } from "@uwe/shared-ui";
+import { NavIcon, EngineStatusBadge, type EngineConnectorState } from "@uwe/shared-ui";
 import { Avatar, Dot, ActionChip } from "./mail-ui";
 import { CATEGORY_COLORS, CATEGORY_LABELS, type MailMessageVM } from "./mail-types";
 
 interface MailTriageProps {
   messages: MailMessageVM[];
-  rtxState: RtxConnectorState;
+  engineState: EngineConnectorState;
   onOpen: (id: string) => void;
   onReplyDraft: (id: string) => void;
   onTask: (id: string) => void;
@@ -15,9 +15,9 @@ interface MailTriageProps {
   onUnsubscribe: (id: string) => void;
 }
 
-export function MailTriage({ messages, rtxState, onOpen, onReplyDraft, onTask, onCapture, onUnsubscribe }: MailTriageProps) {
+export function MailTriage({ messages, engineState, onOpen, onReplyDraft, onTask, onCapture, onUnsubscribe }: MailTriageProps) {
   const items = messages.filter((message) => message.priority);
-  const degraded = rtxState !== "online";
+  const degraded = engineState !== "online";
 
   return (
     <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", background: "var(--uwe-bg)" }}>
@@ -27,11 +27,11 @@ export function MailTriage({ messages, rtxState, onOpen, onReplyDraft, onTask, o
           <h2 style={{ margin: 0, fontFamily: "var(--uwe-font-serif)", fontSize: 20, color: "var(--uwe-fg)" }}>
             KI-Triage
           </h2>
-          <RtxStatusBadge state={rtxState} />
+          <EngineStatusBadge state={engineState} />
         </div>
         <p style={{ margin: "8px 0 0", fontSize: 13, color: "var(--uwe-fg-muted)", lineHeight: 1.55, maxWidth: 640 }}>
-          RTX fasst neue Nachrichten lokal zusammen und schlägt passende Aktionen vor. Nichts verlässt deinen Host —
-          Läuft auf deinem RTX-Host — es gibt keinen Cloud-Anbieter mehr.
+          Maschinenraum fasst neue Nachrichten lokal zusammen und schlägt passende Aktionen vor. Nichts verlässt deinen Host —
+          Läuft auf deinem Maschinenraum-Host — es gibt keinen Cloud-Anbieter mehr.
         </p>
         {degraded ? (
           <div
@@ -49,7 +49,7 @@ export function MailTriage({ messages, rtxState, onOpen, onReplyDraft, onTask, o
             }}
           >
             <NavIcon name="triangle-alert" width={15} height={15} style={{ color: "var(--uwe-warning)", flex: "none" }} />
-            RTX nicht erreichbar — Triage pausiert. Neue Mails werden vorgemerkt.
+            Maschinenraum nicht erreichbar — Triage pausiert. Neue Mails werden vorgemerkt.
           </div>
         ) : null}
       </div>
@@ -59,7 +59,7 @@ export function MailTriage({ messages, rtxState, onOpen, onReplyDraft, onTask, o
           <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--uwe-fg-subtle)" }}>
             <NavIcon name="sparkles" width={26} height={26} style={{ color: "var(--uwe-fg-subtle)" }} />
             <p style={{ marginTop: 12, fontSize: 13.5, lineHeight: 1.6 }}>
-              Noch keine Nachrichten priorisiert. Öffne eine Nachricht im Posteingang und lasse sie von RTX
+              Noch keine Nachrichten priorisiert. Öffne eine Nachricht im Posteingang und lasse sie von Maschinenraum
               zusammenfassen — die Ergebnisse erscheinen hier.
             </p>
           </div>
@@ -129,7 +129,7 @@ export function MailTriage({ messages, rtxState, onOpen, onReplyDraft, onTask, o
                       height={13}
                       style={{ color: "var(--uwe-accent)", marginTop: 3, flex: "none" }}
                     />
-                    <span>{message.priority!.explanation || message.snippet || "Von RTX priorisiert."}</span>
+                    <span>{message.priority!.explanation || message.snippet || "Von Maschinenraum priorisiert."}</span>
                   </div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 11 }}>
                     {message.priority!.category === "newsletter" ? (

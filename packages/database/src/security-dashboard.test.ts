@@ -112,7 +112,7 @@ describe("security dashboard status", () => {
           NODE_ENV: "development",
           AUTH_SECRET: secret,
           UWE_SETUP_TOKEN: secret,
-          RTX_AGENT_TOKEN: secret,
+          ENGINE_AGENT_TOKEN: secret,
           SMTP_PASSWORD: secret,
           SPOTIFY_CLIENT_SECRET: secret,
         },
@@ -121,7 +121,7 @@ describe("security dashboard status", () => {
       assertSecurityDashboardHasNoSecrets(status, {
         AUTH_SECRET: secret,
         UWE_SETUP_TOKEN: secret,
-        RTX_AGENT_TOKEN: secret,
+        ENGINE_AGENT_TOKEN: secret,
         SMTP_PASSWORD: secret,
         SPOTIFY_CLIENT_SECRET: secret,
       });

@@ -110,7 +110,7 @@ export async function tryDispatchSpotifyConnector(
         queued: false,
         delivery: "direct",
         requestId: direct.requestId,
-        via: "rtx-connector",
+        via: "engine-connector",
         message: "Spotify-Aktion direkt an den Maschinenraum übergeben.",
       });
     } catch (error) {
@@ -120,7 +120,7 @@ export async function tryDispatchSpotifyConnector(
           queued: false,
           delivery: "direct",
           requestId: error.requestId ?? null,
-          via: "rtx-connector",
+          via: "engine-connector",
           degraded: true,
           uncertain: true,
           message:
@@ -146,7 +146,7 @@ export async function tryDispatchSpotifyConnector(
     queued: true,
     delivery: "queue",
     jobId: job.id,
-    via: "rtx-connector",
+    via: "engine-connector",
     message: "Spotify-Aktion an die Maschinenraum-Queue übergeben.",
   });
 }

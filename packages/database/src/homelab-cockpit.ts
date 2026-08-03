@@ -1,5 +1,5 @@
 import type { SystemStatus } from "./system-status";
-import type { RtxExposureAssessment, StudioSecurityAssessment } from "./studio-security";
+import type { EngineExposureAssessment, StudioSecurityAssessment } from "./studio-security";
 import { countOpenSetupSteps, type HardwareUrlWarning } from "./hardware-utils";
 import type { AreaAccessCounts } from "./security-dashboard";
 
@@ -8,7 +8,7 @@ export type HomelabServiceId =
   | "portal"
   | "database"
   | "cloudflare_tunnel"
-  | "rtx_connector"
+  | "engine_connector"
   | "ollama"
   | "backup";
 
@@ -75,8 +75,8 @@ export interface HardwareDeviceCardView {
 export interface HomelabHealthInput {
   system: SystemStatus;
   studioSecurity: StudioSecurityAssessment;
-  rtxExposure: RtxExposureAssessment;
-  rtx: {
+  engineExposure: EngineExposureAssessment;
+  engine: {
     ready: boolean;
     online: boolean;
     message: string;
@@ -107,7 +107,7 @@ function severityFromOk(ok: boolean, warnWhenFalse = false): HomelabSeverity {
 }
 
 export function buildHomelabServiceStatuses(input: HomelabHealthInput): HomelabServiceStatus[] {
-  const { system, studioSecurity, rtx, inference, backup, portalProbe } = input;
+  const { system, studioSecurity, engine, inference, backup, portalProbe } = input;
 
   const studioOk = system.ok && system.app.ok;
   const portalOk = portalProbe?.ok ?? false;
@@ -135,11 +135,11 @@ export function buildHomelabServiceStatuses(input: HomelabHealthInput): HomelabS
         : "Cloudflare Tunnel + TRUST_PROXY aktiv"
       : "Öffentliche Erreichbarkeit ohne Tunnel/TRUST_PROXY-Konfiguration";
 
-  const rtxConnectorOk = !inference.enabled || rtx.ready;
-  const rtxConnectorSeverity: HomelabSeverity = !inference.enabled
+  const engineConnectorOk = !inference.enabled || engine.ready;
+  const engineConnectorSeverity: HomelabSeverity = !inference.enabled
     ? "unknown"
-    : rtx.ready
-      ? rtx.connectorDegraded
+    : engine.ready
+      ? engine.connectorDegraded
         ? "warn"
         : "ok"
       : "error";
@@ -149,7 +149,7 @@ export function buildHomelabServiceStatuses(input: HomelabHealthInput): HomelabS
     ? "unknown"
     : ollamaOk
       ? "ok"
-      : rtx.ready
+      : engine.ready
         ? "warn"
         : "error";
 
@@ -190,26 +190,26 @@ export function buildHomelabServiceStatuses(input: HomelabHealthInput): HomelabS
       message: tunnelMessage,
     },
     {
-      id: "rtx_connector",
+      id: "engine_connector",
       label: "Maschinenraum",
-      ok: rtxConnectorOk,
-      severity: rtxConnectorSeverity,
+      ok: engineConnectorOk,
+      severity: engineConnectorSeverity,
       message: !inference.enabled
         ? "KI deaktiviert — Connector optional"
-        : rtx.ready
-          ? rtx.message
-          : rtx.message || "Maschinenraum nicht bereit — im Command Center unter Maschinenraum prüfen",
+        : engine.ready
+          ? engine.message
+          : engine.message || "Maschinenraum nicht bereit — im Command Center unter Maschinenraum prüfen",
     },
     {
       id: "ollama",
       label: "Ollama / Local AI",
-      ok: ollamaOk || (inference.enabled && rtx.ready),
+      ok: ollamaOk || (inference.enabled && engine.ready),
       severity: ollamaSeverity,
       message: !inference.enabled
         ? "Lokale KI deaktiviert"
         : ollamaOk
           ? inference.message
-          : rtx.ready
+          : engine.ready
             ? "Inference über Maschinenraum bereit"
             : inference.message || "Ollama/Inference offline",
     },
@@ -228,7 +228,7 @@ export function buildHomelabRunbooks(): HomelabRunbook[] {
     {
       id: "after_reboot",
       title: "Nach Neustart",
-      summary: "Reihenfolge nach Host- oder RTX-Neustart im Homelab.",
+      summary: "Reihenfolge nach Host- oder Maschinenraum-Neustart im Homelab.",
       steps: [
         {
           order: 1,
@@ -242,7 +242,7 @@ export function buildHomelabRunbooks(): HomelabRunbook[] {
         },
         {
           order: 3,
-          instruction: "RTX-Rechner: Ollama + outbound Maschinenraum starten (Legacy inbound RTX Agent ist deprecated)",
+          instruction: "Maschinenraum-Rechner: Ollama + outbound Maschinenraum starten (Legacy inbound Maschinenraum-Agent ist deprecated)",
         },
         {
           order: 4,
@@ -329,14 +329,14 @@ export function buildHomelabRunbooks(): HomelabRunbook[] {
         },
         {
           order: 4,
-          instruction: "Maschinenraum Logs (oder Legacy RTX Agent Konsole, falls noch genutzt)",
+          instruction: "Maschinenraum Logs (oder Legacy Maschinenraum-Agent Konsole, falls noch genutzt)",
         },
       ],
     },
     {
       id: "check_ssh",
       title: "SSH prüfen",
-      summary: "Remote-Zugriff auf Host und RTX-Rechner.",
+      summary: "Remote-Zugriff auf Host und Maschinenraum-Rechner.",
       steps: [
         {
           order: 1,
@@ -356,12 +356,12 @@ export function buildHomelabRunbooks(): HomelabRunbook[] {
     {
       id: "check_cloudflare",
       title: "Cloudflare prüfen",
-      summary: "Tunnel und „Ich bin ein Mensch“-Prüfung — RTX/Ollama nie im Tunnel.",
+      summary: "Tunnel und „Ich bin ein Mensch“-Prüfung — Maschinenraum/Ollama nie im Tunnel.",
       steps: [
         { order: 1, instruction: "Tunnel-Status", command: "cloudflared tunnel list" },
         {
           order: 2,
-          instruction: "Ingress zeigt nur auf UWE (Studio/Portal) — nicht auf Ollama/RTX",
+          instruction: "Ingress zeigt nur auf UWE (Studio/Portal) — nicht auf Ollama/Maschinenraum",
         },
         {
           order: 3,
@@ -396,13 +396,13 @@ export function buildHomelabRunbooks(): HomelabRunbook[] {
       ],
     },
     {
-      id: "check_rtx_connector",
+      id: "check_engine_connector",
       title: "Maschinenraum prüfen",
-      summary: "Outbound Connector — Token, Heartbeat und lokale Executors auf dem RTX-Rechner.",
+      summary: "Outbound Connector — Token, Heartbeat und lokale Executors auf dem Maschinenraum-Rechner.",
       steps: [
         {
           order: 1,
-          instruction: "Connector auf dem RTX-Rechner starten",
+          instruction: "Connector auf dem Maschinenraum-Rechner starten",
           command: "pnpm connector:start",
         },
         {
@@ -412,11 +412,11 @@ export function buildHomelabRunbooks(): HomelabRunbook[] {
         {
           order: 3,
           instruction: "Ollama erreichbar",
-          command: "curl -s http://<rtx-ip>:11434/api/tags",
+          command: "curl -s http://<engine-ip>:11434/api/tags",
         },
         {
           order: 4,
-          instruction: "Admin-Status: RTX / Lokale KI",
+          instruction: "Admin-Status: Maschinenraum / Lokale KI",
           command: "/system?tab=diagnose",
         },
       ],
@@ -427,7 +427,7 @@ export function buildHomelabRunbooks(): HomelabRunbook[] {
 export function buildHomelabSecurityChecklist(input: {
   system: SystemStatus;
   studioSecurity: StudioSecurityAssessment;
-  rtxExposure: RtxExposureAssessment;
+  engineExposure: EngineExposureAssessment;
   accessCounts: AreaAccessCounts;
   totalUsers: number;
   hardwareUrlWarnings: HardwareUrlWarning[];
@@ -436,8 +436,8 @@ export function buildHomelabSecurityChecklist(input: {
   const env = input.env ?? process.env;
   const sshPort = env.SSH_PORT?.trim() || env.UWE_SSH_PORT?.trim();
   const publicExposure = input.studioSecurity.publicExposureConfigured;
-  const rtxPublic =
-    input.rtxExposure.severity === "critical" ||
+  const enginePublic =
+    input.engineExposure.severity === "critical" ||
     input.hardwareUrlWarnings.some((warning) => warning.field === "publicUrl");
 
   const ownerCount = input.accessCounts.owner;
@@ -478,16 +478,16 @@ export function buildHomelabSecurityChecklist(input: {
       manual: true,
     },
     {
-      id: "no_public_rtx",
-      label: "Keine öffentliche RTX-/Connector-URL",
-      ok: !rtxPublic && input.rtxExposure.severity !== "critical",
-      severity: rtxPublic || input.rtxExposure.severity === "critical" ? "error" : "ok",
+      id: "no_public_engine",
+      label: "Keine öffentliche Maschinenraum-/Connector-URL",
+      ok: !enginePublic && input.engineExposure.severity !== "critical",
+      severity: enginePublic || input.engineExposure.severity === "critical" ? "error" : "ok",
       message:
-        input.rtxExposure.severity === "critical"
-          ? input.rtxExposure.message
-          : rtxPublic
-            ? `${input.hardwareUrlWarnings.length} Hardware-URL-Warnung(en) — RTX nur LAN`
-            : "RTX/Ollama nicht öffentlich exponiert",
+        input.engineExposure.severity === "critical"
+          ? input.engineExposure.message
+          : enginePublic
+            ? `${input.hardwareUrlWarnings.length} Hardware-URL-Warnung(en) — Maschinenraum nur LAN`
+            : "Maschinenraum/Ollama nicht öffentlich exponiert",
       manual: false,
     },
     {

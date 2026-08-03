@@ -123,7 +123,7 @@ Tatsächlich benutzt werden **3 von 37 Exports**:
 |---|---:|---|
 | `./elevation` | 412 | `packages/atlas-3d`: `atlas3d.ts:1`, `billboards.ts:1`, `heightfield.ts:1`, `picking.ts:1`, `scene.ts:1`, `types.ts:1` |
 | `./plot-fill-proposal` | 380 | `packages/ai-brain/src/proposals.ts:1` |
-| `./rtx-asset-proposal` | 693 | `packages/ai-brain/src/proposals.ts:2`, `packages/ai-brain/src/tasks.ts:1` |
+| `./engine-asset-proposal` | 693 | `packages/ai-brain/src/proposals.ts:2`, `packages/ai-brain/src/tasks.ts:1` |
 
 **Das ist die Warnung, um die gebeten wurde.** Die letzte Abschaltung hat ein
 16.000-Zeilen-Paket liegengelassen, dessen 33 Testdateien seither in jeder CI
@@ -153,10 +153,10 @@ Einziger externer Konsument ist `packages/atlas-3d`. Fällt Atlas-3D, fällt
 `elevation.ts` mit. Wichtig für die Reihenfolge: Paket-Löschung **nach**
 Atlas-3D, sonst bricht der Build.
 
-### (c) `packages/atlas/src/plot-fill-proposal.ts` + `rtx-asset-proposal.ts` → **NICHT löschen (jetzt)**
+### (c) `packages/atlas/src/plot-fill-proposal.ts` + `engine-asset-proposal.ts` → **NICHT löschen (jetzt)**
 
 Diese beiden sind **live in Benutzung von `packages/ai-brain`** und haben nichts
-mit Atlas-3D zu tun — sie bedienen den 2D-Weltenbauer bzw. den RTX-Asset-Pfad.
+mit Atlas-3D zu tun — sie bedienen den 2D-Weltenbauer bzw. den Maschinenraum-Asset-Pfad.
 Wer `packages/atlas` blind löscht, bricht Brain. Siehe Abschnitt 6.
 
 ### (d) `AtlasNodeLevel` (Prisma-Enum) → **gemeinsam benutzt, aber nur von Atlas**
@@ -401,9 +401,9 @@ ist generisch und darf bleiben, `"globe"` ist auch das Icon für „Meine Welten
 `docs/artifacts/atlas-3d-prototype.html` (66).
 
 **⚠️ Vier davon sind produktiv referenziert, nicht nur Doku:**
-`packages/atlas/src/rtx-asset-proposal.ts:15-18` definiert
-`RTX_ATLAS_ASSET_STYLEGUIDE_PATH` und `RTX_ATLAS_ASSET_CATALOG_PATH` und schickt
-diese Pfade in den RTX-Prompt. Wer `docs/prompts/atlas-*` löscht, während
+`packages/atlas/src/engine-asset-proposal.ts:15-18` definiert
+`ENGINE_ATLAS_ASSET_STYLEGUIDE_PATH` und `ENGINE_ATLAS_ASSET_CATALOG_PATH` und schickt
+diese Pfade in den Maschinenraum-Prompt. Wer `docs/prompts/atlas-*` löscht, während
 `ai-brain` noch läuft, entwertet den Asset-Prompt.
 
 **Zwei Dokumente sind heute schon irreführend:** `docs/engineering/atlas-3d.md:19-20`
@@ -492,7 +492,7 @@ dem Schema streichen, sonst schlägt `prisma validate` fehl.
 ## 3.2 Datenbestand (gemessen, nur lesend)
 
 DB laut `C:\git\UWE\.env`:
-`C:/Users/lasse/AppData/Local/UWE/rtx-connector-client/host/data/uwe.db`.
+`C:/Users/lasse/AppData/Local/UWE/engine-connector-client/host/data/uwe.db`.
 Ich habe `uwe.db` + `-wal` + `-shm` in den Scratchpad **kopiert** und die Kopie
 mit `node:sqlite` abgefragt — die Originaldatei wurde nicht geöffnet.
 Stand der Kopie: 27.07.2026.
@@ -888,9 +888,9 @@ Terra-Nachfolger stehen. Betrifft `actions.ts:13-16/18-28/132-179`,
 
 ### Schritt 10 — `packages/atlas` (2D) abwickeln
 Erst nach Schritt 9. Behalten werden müssen `plot-fill-proposal.ts` und
-`rtx-asset-proposal.ts` (+ `assets*.ts`, `constants.ts`, `geometry.ts`,
-`prng.ts`, `terrain.ts`, `plot-fill.ts`, `rtx-asset-prompt-context.ts`) samt
-`docs/prompts/atlas-*` — solange die RTX-Asset-Action lebt. Der Rest (30 tote
+`engine-asset-proposal.ts` (+ `assets*.ts`, `constants.ts`, `geometry.ts`,
+`prng.ts`, `terrain.ts`, `plot-fill.ts`, `engine-asset-prompt-context.ts`) samt
+`docs/prompts/atlas-*` — solange die Maschinenraum-Asset-Action lebt. Der Rest (30 tote
 Module, ~11.000 Zeilen, 33 Testdateien) kann weg. Empfehlung: das Verbliebene
 nach `packages/ai-brain/src/proposals/` verschieben und `packages/atlas`
 auflösen.
@@ -918,7 +918,7 @@ Gelöscht wird trotzdem alles — aber nicht vorher.
 ### 6.1 Die KI-Validatoren — das Beste im Repo an strukturierter Ausgabe
 
 `packages/atlas/src/plot-fill-proposal.ts` (380 Z., Test 95 Z.) und
-`rtx-asset-proposal.ts` (693 Z., Test 183 Z.).
+`engine-asset-proposal.ts` (693 Z., Test 183 Z.).
 **Nicht löschen — sie laufen produktiv** (`ai-brain/proposals.ts:1-2`,
 `tasks.ts:1`) und sind zugleich die Vorlage für `terra-welt-entwurf.ts` (J4).
 
@@ -939,7 +939,7 @@ Was sie leisten, konkret:
 - Fehlermodell `{path, code, message}` mit fünf Codes (`:34-45`) und
   `{ok:true, proposal, warnings[]} | {ok:false, errors[]}`.
 
-`rtx-asset-proposal.ts` ergänzt: diskriminierte Union über `outputType`
+`engine-asset-proposal.ts` ergänzt: diskriminierte Union über `outputType`
 (`:22-24`, `:90-98`), sichere Regexe (`:227-230`, `SAFE_PATH` erlaubt nur
 SVG-Pfadkommandos), fixiertes Koordinatensystem (`:63`).
 
@@ -1047,10 +1047,10 @@ der Vorlage.
    **keinen Fehler**. Die Union über neun Dateien ist also nicht so
    compilergeprüft, wie die Planung annimmt.
 
-2. **`packages/atlas/src/{plot-fill-proposal,rtx-asset-proposal}.ts`** — leben in
+2. **`packages/atlas/src/{plot-fill-proposal,engine-asset-proposal}.ts`** — leben in
    einem Paket, das nach „alter 2D-Atlas, kann weg" aussieht, sind aber die
    einzigen produktiven KI-Validatoren des Repos. Ein `rm -rf packages/atlas`
-   bricht Brain sofort. Zusätzlich hängen an `rtx-asset-proposal.ts:15-18` vier
+   bricht Brain sofort. Zusätzlich hängen an `engine-asset-proposal.ts:15-18` vier
    `docs/prompts/atlas-*`-Dateien als Laufzeit-Pfade.
 
 3. **`packages/auth/src/security-headers.ts:63-66, 79-81, 147-149`** — die

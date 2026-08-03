@@ -68,7 +68,7 @@ describe("capture triage service", () => {
 
   it("stores proposal in capture metadata via ensureAiProposal", async () => {
     const capture = await lifeAdmin.createCapture({
-      title: "RTX Server offline",
+      title: "Maschinenraum Server offline",
       content: "NAS antwortet nicht nach Update",
       captureType: "hardware",
     });

@@ -29,7 +29,7 @@ const BRIDGES = [
   "apps/portal/app/globals.css",
   "apps/brain/app/globals.css",
   "apps/family/app/globals.css",
-  "apps/rtx-connector-client/src/styles/globals.css",
+  "apps/engine-connector-client/src/styles/globals.css",
 ] as const;
 
 /** Tokens, die eine gedämpfte TEXTfarbe tragen — nie als Fläche verbrücken. */

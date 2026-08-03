@@ -16,7 +16,7 @@ UWE (Universeller Welten-Editor) is a self-hosted **Alltags- und Hobby-Betriebss
 | **Daily Admin OS** | `apps/studio` (`/today`, `/capture`, …) | Today, Capture, Projects, Workshop, Contracts, Hardware, Life Brain — Studio-only |
 | **Core packages** | `packages/*` | Shared data layer, auth, wiki engine, generators |
 | **DnD worlds** | `packages/database`, `packages/ai-brain` | Canon, visibility, generator tasks |
-| **Life Brain** | `apps/studio/app/life-brain`, `packages/ai-brain` | Personal knowledge — RTX-only retrieval, no Portal |
+| **Life Brain** | `apps/studio/app/life-brain`, `packages/ai-brain` | Personal knowledge — Maschinenraum-only retrieval, no Portal |
 | **Integrations** | `packages/calendar`, `packages/mail` | Calendar feeds, Mail Center (self-hosted SMTP) |
 | **Auth** | `packages/auth`, `packages/security` | Sessions, permissions, route guards |
 | **Media** | `packages/assets`, `packages/image-studio` | Uploads, MIME validation, Image Studio jobs |
@@ -28,7 +28,7 @@ UWE (Universeller Welten-Editor) is a self-hosted **Alltags- und Hobby-Betriebss
 - Business logic lives in `packages/`, not in Next.js route handlers.
 - Studio is write/admin; Portal is read-only player output.
 - Never expose `dm_only` content to Portal or static export.
-- RTX/local inference stays on the home network; cloud AI gets no world/brain/life context.
+- Maschinenraum/local inference stays on the home network; cloud AI gets no world/brain/life context.
 - Daily Admin OS data never reaches Portal or static export.
 - AI outputs are proposals/drafts — never auto-applied to canon or personal brain.
 - Match existing package boundaries (`@uwe/auth`, `@uwe/database`, etc.).

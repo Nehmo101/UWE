@@ -178,7 +178,7 @@ export default async function FamilyRecipeDetailPage({ params }: Props) {
           </button>
         </form>
         <p className="family-muted">
-          Die KI läuft auf dem eigenen Rechner (RTX). Ist er aus, bleibt das Rezept unverändert —
+          Die KI läuft auf dem eigenen Rechner (Maschinenraum). Ist er aus, bleibt das Rezept unverändert —
           drucken lässt es sich trotzdem.
         </p>
       </section>

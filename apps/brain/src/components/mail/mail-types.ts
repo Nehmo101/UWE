@@ -1,4 +1,4 @@
-import type { RtxConnectorState } from "@uwe/shared-ui";
+import type { EngineConnectorState } from "@uwe/shared-ui";
 import { MAIL_PRIORITY_LABELS, type MailPriorityCategory } from "@uwe/mail/portal-types";
 
 /**
@@ -122,7 +122,7 @@ export interface MailCategoryVM {
 }
 
 export interface MailCenterData {
-  rtxState: RtxConnectorState;
+  engineState: EngineConnectorState;
   accounts: MailAccountVM[];
   messages: MailMessageVM[];
   sentMessages: MailMessageVM[];

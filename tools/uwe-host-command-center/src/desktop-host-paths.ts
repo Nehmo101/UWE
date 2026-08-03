@@ -12,13 +12,40 @@ import type { HostPaths, HostServiceId } from "./desktop-host-types.ts";
  * und die Port-Übernahme, ohne die ganze Host-Zustandslogik zu laden.
  */
 
+/** Verzeichnisname vor dem Maschinenraum-Rebranding. */
+const LEGACY_APP_DIR = "rtx-connector-client";
+const APP_DIR = "engine-connector-client";
+
+function vendorRoot(): string {
+  if (process.platform === "win32" && process.env.LOCALAPPDATA) {
+    return path.join(process.env.LOCALAPPDATA, "UWE");
+  }
+  return path.join(os.homedir(), ".local", "share", "UWE");
+}
+
+/**
+ * Wo Datenbanken, Uploads, Backups und Logs dieser Installation liegen.
+ *
+ * Vor dem Rebranding hiess das Verzeichnis `rtx-connector-client`. Das Command
+ * Center benennt es beim Start einmalig um; die CLI kann aber auch ohne die
+ * Desktop-App laufen und wuerde dann neben den Bestandsdaten ein leeres
+ * Verzeichnis anlegen. Deshalb hier ein reiner Lese-Rückfall: existiert nur der
+ * alte Ort, wird er weiter benutzt. Bewusst kein Umbenennen an dieser Stelle —
+ * die Funktion wird auch aufgerufen, waehrend Studio und Portal mit offener
+ * `uwe.db` laufen.
+ */
 export function commandCenterDataRoot(): string {
   const configured = process.env.UWE_COMMAND_CENTER_DATA_DIR?.trim();
   if (configured) return path.resolve(configured);
-  if (process.platform === "win32" && process.env.LOCALAPPDATA) {
-    return path.join(process.env.LOCALAPPDATA, "UWE", "rtx-connector-client", "host");
-  }
-  return path.join(os.homedir(), ".local", "share", "UWE", "rtx-connector-client", "host");
+
+  const vendor = vendorRoot();
+  const current = path.join(vendor, APP_DIR, "host");
+  if (fs.existsSync(current)) return current;
+
+  const legacy = path.join(vendor, LEGACY_APP_DIR, "host");
+  if (fs.existsSync(legacy)) return legacy;
+
+  return current;
 }
 
 export type HostMode = "monorepo" | "bundle";

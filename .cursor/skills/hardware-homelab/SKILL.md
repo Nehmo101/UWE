@@ -1,6 +1,6 @@
 ---
 name: hardware-homelab
-description: Operate UWE on self-hosted hardware — Linux host scripts, Docker, RTX agent isolation, backups, autostart, and homelab CI runners. Use when setting up hosts, troubleshooting local inference, or planning self-hosted CI.
+description: Operate UWE on self-hosted hardware — Linux host scripts, Docker, Maschinenraum agent isolation, backups, autostart, and homelab CI runners. Use when setting up hosts, troubleshooting local inference, or planning self-hosted CI.
 ---
 
 # UWE Hardware / Homelab
@@ -13,7 +13,7 @@ description: Operate UWE on self-hosted hardware — Linux host scripts, Docker,
 | UWE Portal | `:3001` | Cloudflare Tunnel (public wiki) |
 | SQLite DB | `/var/lib/uwe/uwe.db` (production) or `data/uwe.db` (dev/docker) | Local only |
 | Uploads / backups | `/var/lib/uwe/uploads`, `/var/backups/uwe` | Local only |
-| RTX Agent | Private LAN IP | **Never public** |
+| Maschinenraum-Agent | Private LAN IP | **Never public** |
 
 ## Linux production host (official)
 
@@ -41,12 +41,12 @@ Docs: `docs/UWE_HOST_LINUX_STARTUP.md`, `docs/PRODUCTION.md`.
 
 Do not build a new deployment around Docker. Active paths are the Windows UWE Command Center and the Linux systemd host.
 
-## RTX inference (outbound connector)
+## Maschinenraum inference (outbound connector)
 
-- Active package: `tools/uwe-rtx-connector/` (`pnpm connector:start`) — outbound worker, no inbound port
-- Legacy inbound RTX agent (`RTX_AGENT_URL`) is deprecated; the standalone tool was removed
+- Active package: `tools/uwe-engine-connector/` (`pnpm connector:start`) — outbound worker, no inbound port
+- Legacy inbound Maschinenraum agent (`ENGINE_AGENT_URL`) is deprecated; the standalone tool was removed
 - ENV: internal URL only (e.g. `http://192.168.x.x:11434`)
-- Inference only — no UWE DB on RTX machine
+- Inference only — no UWE DB on Maschinenraum machine
 - Skill: `local-first-privacy` for routing rules
 
 ## Backups
@@ -64,16 +64,16 @@ See `docs/BACKUP.md`, `docs/backup-restore.md`. Production backups: `/var/backup
 
 ## Windows UWE Command Center
 
-- Active desktop app: `apps/rtx-connector-client/` (technical path retained for compatibility)
+- Active desktop app: `apps/engine-connector-client/` (technical path retained for compatibility)
 - Host orchestrator: `tools/uwe-host-command-center/src/desktop-host-cli.ts`
 - `pnpm command-center:dev` / `pnpm command-center:build`
-- Persistent data: `%LOCALAPPDATA%\UWE\rtx-connector-client\host`
+- Persistent data: `%LOCALAPPDATA%\UWE\engine-connector-client\host`
 - The removed `tools/windows-installer/` path must not be restored.
 - Full workflow: `docs/command-center.md`
 
 ## Security on homelab
 
-1. Separate VLAN or firewall rule for RTX — no inbound from internet
+1. Separate VLAN or firewall rule for Maschinenraum — no inbound from internet
 2. Strong `AUTH_SECRET`, `AUTH_REQUIRED=true` in prod
 3. Cloudflare Access on Studio admin paths
 4. Run `pnpm test:security` after network changes

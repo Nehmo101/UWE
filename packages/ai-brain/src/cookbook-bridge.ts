@@ -1,16 +1,16 @@
 import type { CookbookRuntimeProbeInput } from "@uwe/cookbook";
 import { prisma } from "@uwe/database/server";
 import { getInferenceStatus } from "./inference";
-import { checkRtxReadiness } from "./router/health/rtxReadiness";
-import { isRtxWorkerConfigured } from "./rtx-worker-config";
+import { checkEngineReadiness } from "./router/health/engineReadiness";
+import { isEngineWorkerConfigured } from "./engine-worker-config";
 
 export async function buildCookbookRuntimeProbe(options?: {
   useMock?: boolean;
   env?: NodeJS.ProcessEnv;
 }): Promise<CookbookRuntimeProbeInput> {
-  const [inference, rtx] = await Promise.all([
+  const [inference, engine] = await Promise.all([
     getInferenceStatus({ useMock: options?.useMock }),
-    checkRtxReadiness({ useMock: options?.useMock, env: options?.env, prisma }),
+    checkEngineReadiness({ useMock: options?.useMock, env: options?.env, prisma }),
   ]);
 
   return {
@@ -24,15 +24,15 @@ export async function buildCookbookRuntimeProbe(options?: {
       urlAllowed: inference.urlAllowed,
       modelCount: inference.modelCount,
     },
-    rtx: {
-      ready: rtx.ready,
-      online: rtx.online,
-      endpoint: rtx.endpoint,
-      defaultModel: rtx.defaultModel,
-      message: rtx.message,
-      urlAllowed: rtx.urlAllowed,
-      modelCount: rtx.modelCount,
-      agentConfigured: isRtxWorkerConfigured(options?.env),
+    engineHost: {
+      ready: engine.ready,
+      online: engine.online,
+      endpoint: engine.endpoint,
+      defaultModel: engine.defaultModel,
+      message: engine.message,
+      urlAllowed: engine.urlAllowed,
+      modelCount: engine.modelCount,
+      agentConfigured: isEngineWorkerConfigured(options?.env),
     },
     skipDocker: options?.useMock,
   };

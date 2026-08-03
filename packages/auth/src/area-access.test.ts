@@ -8,13 +8,13 @@ import {
   canAccessFamily,
   canAccessPortal,
   canAccessStudio,
-  canUseRtxAi,
+  canUseEngineAi,
   getRequiredAccessForApiPath,
   getRequiredAccessForPagePath,
   isOwner,
   requireArea,
   requireOwner,
-  requireRtxAi,
+  requireEngineAi,
   requireUser,
   satisfiesStudioRouteAccess,
   toAreaAccess,
@@ -103,7 +103,7 @@ describe("area access", () => {
 });
 
 /**
- * G-KI — wer darf den RTX-Host beschäftigen.
+ * G-KI — wer darf den Maschinenraum-Host beschäftigen.
  *
  * Der Punkt, an dem hier alles hängt, ist die Trennung: die vier Häkchen sagen
  * WELCHE APP, das KI-Flag sagt, ob jemand darin Inferenz auslösen darf. Wer
@@ -111,27 +111,27 @@ describe("area access", () => {
  * stimmt der Satz „das Häkchen sagt, welche App" nicht mehr) oder gibt jedem
  * mit Studio-Häkchen die KI (dann ist die Einstellung wirkungslos).
  */
-describe("canUseRtxAi", () => {
+describe("canUseEngineAi", () => {
   const dmMitKi = user({ id: "dm-ai", access: { ...NO_AREA_ACCESS, portal: true, studio: true }, aiAccess: true });
 
   it("der Owner darf immer — auch ohne gesetztes Flag", () => {
-    assert.equal(canUseRtxAi(owner), true);
-    assert.equal(canUseRtxAi(user({ isOwner: true, aiAccess: false })), true);
+    assert.equal(canUseEngineAi(owner), true);
+    assert.equal(canUseEngineAi(user({ isOwner: true, aiAccess: false })), true);
   });
 
   it("ein Studio-Konto ohne Flag darf nicht", () => {
-    assert.equal(canUseRtxAi(dm), false);
+    assert.equal(canUseEngineAi(dm), false);
   });
 
   it("mit Flag darf es", () => {
-    assert.equal(canUseRtxAi(dmMitKi), true);
+    assert.equal(canUseEngineAi(dmMitKi), true);
   });
 
-  it("requireRtxAi trennt „nicht angemeldet“ von „nicht freigeschaltet“", () => {
-    assert.throws(() => requireRtxAi(null), AuthRequiredError);
-    assert.throws(() => requireRtxAi(dm), AiAccessDeniedError);
-    assert.doesNotThrow(() => requireRtxAi(dmMitKi));
-    assert.doesNotThrow(() => requireRtxAi(owner));
+  it("requireEngineAi trennt „nicht angemeldet“ von „nicht freigeschaltet“", () => {
+    assert.throws(() => requireEngineAi(null), AuthRequiredError);
+    assert.throws(() => requireEngineAi(dm), AiAccessDeniedError);
+    assert.doesNotThrow(() => requireEngineAi(dmMitKi));
+    assert.doesNotThrow(() => requireEngineAi(owner));
   });
 });
 

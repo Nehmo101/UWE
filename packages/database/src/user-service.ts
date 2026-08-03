@@ -47,7 +47,7 @@ export interface AdminUserView extends SafeUser {
  * Die vier Häkchen plus das KI-Flag, alle optional — der Aufrufer setzt nur,
  * was er meint. `aiAccess` ist bewusst KEIN fünftes Häkchen: die vier sagen,
  * welche App die Adresse betreten darf, `aiAccess` sagt, ob sie darin die
- * RTX-KI auslösen darf.
+ * Maschinenraum-KI auslösen darf.
  */
 export interface AreaAccessInput {
   portalAccess?: boolean;
@@ -594,7 +594,7 @@ function hasAccessChanged(before: AccessSnapshot, after: AccessSnapshot): boolea
   const to = toAreaAccess(after);
   return (
     before.isOwner !== after.isOwner ||
-    // Das KI-Flag gehört ins Audit wie die Häkchen: „wer darf den RTX-Host
+    // Das KI-Flag gehört ins Audit wie die Häkchen: „wer darf den Maschinenraum-Host
     // beschäftigen" ist eine Rechteänderung, keine Einstellung.
     before.aiAccess !== after.aiAccess ||
     (Object.keys(from) as Array<keyof AreaAccess>).some((area) => from[area] !== to[area])

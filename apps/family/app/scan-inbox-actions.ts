@@ -53,7 +53,7 @@ function revalidate(id: string): void {
 
 /**
  * Primärer, immer verfügbarer Weg: manuell (oder per Auto-OCR) beschaffter Text
- * wird analysiert und ein Ablage-Vorschlag gebaut. Funktioniert ohne RTX.
+ * wird analysiert und ein Ablage-Vorschlag gebaut. Funktioniert ohne Maschinenraum.
  */
 export async function analyzeWithTextAction(formData: FormData): Promise<void> {
   await requireFamilyActionAuth();
@@ -65,7 +65,7 @@ export async function analyzeWithTextAction(formData: FormData): Promise<void> {
 
 /**
  * Best-effort Auto-OCR: PDF-Textlayer wenn möglich, sonst Connector-Vision.
- * Ohne Online-Vision-Connector wird der Scan auf `waiting_for_rtx` gesetzt.
+ * Ohne Online-Vision-Connector wird der Scan auf `waiting_for_engine` gesetzt.
  */
 export async function autoAnalyzeAction(formData: FormData): Promise<void> {
   await requireFamilyAiActionAuth();
@@ -91,14 +91,14 @@ export async function autoAnalyzeAction(formData: FormData): Promise<void> {
 
   const summary = await createConnectorService(prisma).summarize();
   if (summary.onlineCount === 0 || !summary.availableCapabilities.includes("vision_local")) {
-    await service().markWaitingForRtx(id, "Kein Vision-Connector online");
+    await service().markWaitingForEngine(id, "Kein Vision-Connector online");
     revalidate(id);
     return;
   }
 
   const buffer = await readScanFileBuffer(id);
   if (!buffer) {
-    await service().markWaitingForRtx(id, "Scan-Datei nicht lesbar");
+    await service().markWaitingForEngine(id, "Scan-Datei nicht lesbar");
     revalidate(id);
     return;
   }

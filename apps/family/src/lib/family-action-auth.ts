@@ -1,4 +1,4 @@
-import { canUseRtxAi } from "@uwe/auth";
+import { canUseEngineAi } from "@uwe/auth";
 import { getFamilyUser } from "./page-family";
 
 /** Thrown when someone without the family checkbox reaches a mutating action. */
@@ -24,15 +24,15 @@ export async function requireFamilyActionAuth() {
 }
 
 /**
- * Family-Action, die den RTX-Host beschäftigt (G-KI) — die Beleg-Analyse im
+ * Family-Action, die den Maschinenraum-Host beschäftigt (G-KI) — die Beleg-Analyse im
  * Scan-Postfach. Das Family-Häkchen bringt jemanden in den Bereich; ob er
  * darin Inferenz auslösen darf, sagt das KI-Flag. Der Owner geht durch.
  */
 export async function requireFamilyAiActionAuth() {
   const user = await requireFamilyActionAuth();
-  if (!canUseRtxAi(user)) {
+  if (!canUseEngineAi(user)) {
     throw new FamilyActionAuthError(
-      "Für dieses Konto ist die RTX-KI nicht freigeschaltet. Der Owner richtet das im Command Center ein.",
+      "Für dieses Konto ist die Maschinenraum-KI nicht freigeschaltet. Der Owner richtet das im Command Center ein.",
     );
   }
   return user;

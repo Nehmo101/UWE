@@ -12,8 +12,8 @@ export default async function WorldLabelsPrintPage({ params }: { params: Promise
   const [lists, jobs] = await Promise.all([createPrintListService().listByWorld(worldSlug), createLabelPrintQueueService().listRecent({ worldId: world.id, limit: 20 })]);
   return (
     <>
-      <ShellBreadcrumb items={worldSectionBreadcrumb(world.name, worldSlug, "RTX-Druck", `/worlds/${worldSlug}/labels/print`)} />
-      <PageHeader title="RTX-Druck" summary="Drucklisten an lokale Drucker senden." />
+      <ShellBreadcrumb items={worldSectionBreadcrumb(world.name, worldSlug, "Maschinenraum-Druck", `/worlds/${worldSlug}/labels/print`)} />
+      <PageHeader title="Maschinenraum-Druck" summary="Drucklisten an lokale Drucker senden." />
 
       <div className="flex flex-col gap-4">
         <Card>

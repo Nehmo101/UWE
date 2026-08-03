@@ -35,7 +35,7 @@ export async function getCookbookDashboard(
     contextMode: "current_object_plus_brain",
     taskType: "improve_lore_text",
     localOnlyMode: runtime.localOnlyMode,
-    rtxReady: runtime.ok,
+    engineReady: runtime.ok,
     hardware,
     installedModels,
   });
@@ -57,7 +57,7 @@ export async function getCookbookRoutingContext(input: {
   taskType: CookbookAiTaskType;
   probe: CookbookRuntimeProbeInput;
   localOnlyMode?: boolean;
-  rtxReady?: boolean;
+  engineReady?: boolean;
   explicitModel?: string;
 }) {
   const hardware = await detectHardwareProfile();
@@ -74,7 +74,7 @@ export async function getCookbookRoutingContext(input: {
       contextMode: input.contextMode,
       taskType: input.taskType,
       localOnlyMode: input.localOnlyMode ?? runtime.localOnlyMode,
-      rtxReady: input.rtxReady ?? runtime.ok,
+      engineReady: input.engineReady ?? runtime.ok,
       hardware,
       installedModels,
       explicitModel: input.explicitModel,

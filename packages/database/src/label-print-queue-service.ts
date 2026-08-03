@@ -1,6 +1,6 @@
 /**
  * Host-side label print queue — creates connector jobs and renders documents
- * for the RTX connector to fetch over the LAN (connector token auth only).
+ * for the Maschinenraum connector to fetch over the LAN (connector token auth only).
  */
 
 import {

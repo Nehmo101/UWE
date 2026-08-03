@@ -2,7 +2,7 @@
 export type CookbookEngineId =
   | "ollama"
   | "openai_compatible"
-  | "rtx_agent"
+  | "engine_agent"
   | "docker_ollama"
   | "lm_studio";
 

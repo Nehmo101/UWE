@@ -74,7 +74,7 @@ function entityLines(
 
 /**
  * Prompt für die Einordnungs-Konversation: Wie fügt sich die importierte
- * Kampagne in die bestehende Welt ein? Läuft ausschließlich lokal (RTX);
+ * Kampagne in die bestehende Welt ein? Läuft ausschließlich lokal (Maschinenraum);
  * Welt-/Kampagnenbeschreibung werden bewusst hier — und nur hier — angehängt.
  */
 export function buildCampaignFitChatPrompt(

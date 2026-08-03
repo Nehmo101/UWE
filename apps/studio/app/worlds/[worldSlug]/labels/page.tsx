@@ -106,7 +106,7 @@ export default async function StudioLabelsPage({ params, searchParams }: Props) 
           <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
             <li>Label erstellen oder aus Seite/Handout generieren</li>
             <li>Druckliste anlegen und Labels hinzufügen</li>
-            <li>PDF exportieren oder über RTX-Druck senden</li>
+            <li>PDF exportieren oder über Maschinenraum-Druck senden</li>
           </ol>
         </details>
 
@@ -133,7 +133,7 @@ export default async function StudioLabelsPage({ params, searchParams }: Props) 
             Drucklisten ({printLists.length})
           </Link>
           <Link href={`/worlds/${worldSlug}/labels/print`} className={cn(badgeVariants(), TAB_LINK_CLASS)}>
-            RTX-Druck
+            Maschinenraum-Druck
           </Link>
         </nav>
 

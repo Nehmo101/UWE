@@ -93,7 +93,7 @@ describe("knowledge synthesis (graceful degradation)", () => {
     await db.$disconnect();
   });
 
-  it("returns no_sources without citations and rtx_offline without a local connector", async () => {
+  it("returns no_sources without citations and engine_offline without a local connector", async () => {
     const empty = buildKnowledgeAnswer("x", result([]), NOW);
     const noSources = await synthesizeKnowledgeAnswer(db, empty);
     assert.equal(noSources.status, "no_sources");
@@ -102,7 +102,7 @@ describe("knowledge synthesis (graceful degradation)", () => {
     const jobsBefore = await db.connectorJob.count();
     const offline = await synthesizeKnowledgeAnswer(db, withSources);
     // No llm_local connector registered in the test DB → clean offline state.
-    assert.equal(offline.status, "rtx_offline");
+    assert.equal(offline.status, "engine_offline");
     assert.equal(await db.connectorJob.count(), jobsBefore);
   });
 

@@ -9,11 +9,11 @@
 - [ ] `uwe.service` enabled: `systemctl is-enabled uwe`
 - [ ] Owner bootstrap via `http://127.0.0.1:3000/setup`
 
-## RTX connectivity
+## Maschinenraum connectivity
 
-- [ ] RTX agent reachable from UWE host on LAN
-- [ ] RTX URL not in Cloudflare tunnel config
-- [ ] Deferred `ai_run` jobs tested when RTX stopped
+- [ ] Maschinenraum agent reachable from UWE host on LAN
+- [ ] Maschinenraum URL not in Cloudflare tunnel config
+- [ ] Deferred `ai_run` jobs tested when Maschinenraum stopped
 
 ## Operations
 

@@ -1,14 +1,14 @@
 /**
- * UWE Image Studio — Bildgenerierung und -bearbeitung über den lokalen RTX-Host.
+ * UWE Image Studio — Bildgenerierung und -bearbeitung über den lokalen Maschinenraum-Host.
  *
- * Es gibt genau einen Weg: die outbound Connector-Queue zum RTX-Host. Der
+ * Es gibt genau einen Weg: die outbound Connector-Queue zum Maschinenraum-Host. Der
  * frühere OpenAI-Pfad ist mit Notiz Lasse (N.3) ersatzlos entfallen — „alles
- * was KI-Aktionen sind, geht rein über den RTX Host". Ohne Connector ist Image
+ * was KI-Aktionen sind, geht rein über den Maschinenraum". Ohne Connector ist Image
  * Studio schlicht nicht verfügbar; ein Ausweichweg wäre genau der Cloud-Weg,
  * den es nicht mehr geben soll.
  */
 
-export type ImageProviderMode = "local_rtx" | "disabled";
+export type ImageProviderMode = "local_engine" | "disabled";
 
 export type ImageStudioTask =
   | "generate"
@@ -73,7 +73,7 @@ export function resolveImageProviderConfig(
 ): ImageStudioProviderConfig {
   return {
     enabled: env.IMAGE_STUDIO_ENABLED !== "false",
-    useConnectorImage: env.RTX_USE_CONNECTOR_IMAGE !== "false",
+    useConnectorImage: env.ENGINE_USE_CONNECTOR_IMAGE !== "false",
   };
 }
 
@@ -84,7 +84,7 @@ function hasLocalImageBackend(config: ImageStudioProviderConfig): boolean {
 
 function resolveProvider(config: ImageStudioProviderConfig): ImageProviderMode {
   if (!config.enabled) return "disabled";
-  return hasLocalImageBackend(config) ? "local_rtx" : "disabled";
+  return hasLocalImageBackend(config) ? "local_engine" : "disabled";
 }
 
 async function runLocalImageTask(
@@ -96,7 +96,7 @@ async function runLocalImageTask(
   }
   return {
     success: false,
-    providerUsed: "local_rtx",
+    providerUsed: "local_engine",
     error:
       "Kein lokales Bild-Backend: Maschinenraum mit image_generation erforderlich (outbound Connector-Queue).",
   };

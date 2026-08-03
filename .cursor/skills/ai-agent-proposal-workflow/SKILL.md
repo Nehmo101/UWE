@@ -1,6 +1,6 @@
 ---
 name: ai-agent-proposal-workflow
-description: Work with UWE AI inference, Review/Apply proposals, ai_run jobs, and RTX routing. Use when adding brain actions, generator tasks, or deferred AI prompts.
+description: Work with UWE AI inference, Review/Apply proposals, ai_run jobs, and Maschinenraum routing. Use when adding brain actions, generator tasks, or deferred AI prompts.
 ---
 
 # UWE AI & Agent Proposal Workflow
@@ -14,7 +14,7 @@ dispatches no coding agents.
 ## AI proposal flow (in-app)
 
 ```txt
-User prompt → AI router (privacy guards) → Provider (RTX or cloud)
+User prompt → AI router (privacy guards) → Provider (Maschinenraum or cloud)
     → Proposal saved (idea/draft/dm_only)
     → DM reviews in UI
     → Explicit Apply → canon/page/brain update
@@ -32,14 +32,14 @@ User prompt → AI router (privacy guards) → Provider (RTX or cloud)
 | Review service | `packages/database/src/ai-review-service.ts` |
 | Job queue | `packages/database/src/job-service.ts` |
 
-## RTX offline / deferred
+## Maschinenraum offline / deferred
 
-When local-only context and RTX unavailable:
+When local-only context and Maschinenraum unavailable:
 
 1. Enqueue `ai_run` job with `deferredAiPrompt: true`
 2. HTTP **202** + `jobId`
 3. **No cloud fallback**
-4. Retry on next job run when RTX returns
+4. Retry on next job run when Maschinenraum returns
 
 ## Adding a new AI task
 

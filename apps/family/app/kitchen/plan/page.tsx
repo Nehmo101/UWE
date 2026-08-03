@@ -27,7 +27,7 @@ import {
 /**
  * Wochenplan — pro Tag planen, abhaken, und daraus eine Einkaufsliste ziehen.
  *
- * Der KI-Vorschlag läuft über den RTX-Host und wird nie automatisch übernommen:
+ * Der KI-Vorschlag läuft über den Maschinenraum-Host und wird nie automatisch übernommen:
  * er landet als Entwurf auf der Woche, und jeder Tag wird einzeln bestätigt.
  * Ohne lokalen Connector gibt es schlicht keinen Vorschlag — kein Cloud-Weg.
  */
@@ -39,7 +39,7 @@ interface Props {
 }
 
 const AI_STATUS_MESSAGES: Record<string, string> = {
-  rtx_offline: "Kein lokaler KI-Connector (RTX) online — Wochenvorschlag nicht verfügbar.",
+  engine_offline: "Kein lokaler KI-Connector (Maschinenraum) online — Wochenvorschlag nicht verfügbar.",
   parse_error: "Die KI-Antwort war unlesbar. Bitte erneut versuchen.",
   ok: "KI-Wochenvorschlag erstellt — Einträge unten einzeln übernehmen.",
 };

@@ -3,9 +3,9 @@
  *
  * Deshalb liegt sie hinter dem eigenen Einstiegspunkt `@uwe/doc-import/ai`,
  * genau wie der Schreibpfad hinter `@uwe/doc-import/writer`: Der Hauptindex
- * bleibt rein und damit ohne Datenbank und ohne RTX testbar.
+ * bleibt rein und damit ohne Datenbank und ohne Maschinenraum testbar.
  *
- * **Lokal oder gar nicht.** `providerMode: "local_rtx"` ist keine Vorliebe,
+ * **Lokal oder gar nicht.** `providerMode: "local_engine"` ist keine Vorliebe,
  * sondern die Hausregel: Weltinhalte verlassen die eigene Hardware nicht. Ist
  * der Host stumm, wirft diese Funktion nicht — sie meldet es und gibt leere
  * Hinweise zurück. Der Import läuft dann vollständig auf Regeln, und das
@@ -18,7 +18,7 @@
  * Modell kann diesem Import keine Inhalte hinzufügen.
  */
 
-import { AiRouterError, isRtxReady, routeAiRequest, type AiRouterDeps } from "@uwe/ai-brain";
+import { AiRouterError, isEngineReady, routeAiRequest, type AiRouterDeps } from "@uwe/ai-brain";
 import { buildDocumentTree } from "./doc-tree";
 import { parseDocument } from "./dialect";
 import { DOC_PROFILE_LABELS } from "./profiles";
@@ -57,7 +57,7 @@ export interface CollectRoleHintsResult {
   applied: number;
   /** Leer, wenn alles glattging — sonst der Grund, warum es ohne KI weiterging. */
   warnings: string[];
-  /** Hat der RTX-Host überhaupt geantwortet? */
+  /** Hat der Maschinenraum-Host überhaupt geantwortet? */
   used: boolean;
 }
 
@@ -88,9 +88,9 @@ export async function collectRoleHints(
     used: false,
   };
 
-  if (!(await isRtxReady({ useMock: options.useMock === true }))) {
+  if (!(await isEngineReady({ useMock: options.useMock === true }))) {
     result.warnings.push(
-      "Lokale RTX ist nicht erreichbar — die Zuordnung läuft allein über die Regeln.",
+      "Der lokale Maschinenraum ist nicht erreichbar — die Zuordnung läuft allein über die Regeln.",
     );
     return result;
   }
@@ -127,7 +127,7 @@ export async function collectRoleHints(
     for (const batch of batches) {
       try {
         const routed = await routeAiRequest(deps, {
-          providerMode: "local_rtx",
+          providerMode: "local_engine",
           contextMode: "general_chat",
           taskType: "create_knowledge_text",
           userPrompt: buildOutlinePrompt(batch, {
@@ -147,7 +147,7 @@ export async function collectRoleHints(
       } catch (error) {
         result.warnings.push(
           error instanceof AiRouterError
-            ? `${file.fileName}: Lokale RTX hat nicht geantwortet — die Regeln entscheiden.`
+            ? `${file.fileName}: Der lokale Maschinenraum hat nicht geantwortet — die Regeln entscheiden.`
             : `${file.fileName}: KI-Feinschliff übersprungen (${error instanceof Error ? error.message : "unbekannter Fehler"}).`,
         );
         break;

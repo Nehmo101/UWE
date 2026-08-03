@@ -29,15 +29,15 @@ export function detectHardwareUrlWarnings(
           field: "publicUrl",
           url: device.publicUrl,
           message:
-            "Öffentliche URL auf Hardware-Gerät — RTX/Ollama/UWE-Infrastruktur nicht öffentlich exponieren.",
+            "Öffentliche URL auf Hardware-Gerät — Maschinenraum/Ollama/UWE-Infrastruktur nicht öffentlich exponieren.",
         });
       }
     }
 
     const role = device.role?.toLowerCase() ?? "";
-    const isRtxRole = role.includes("rtx") || role.includes("ollama") || role.includes("local-ai");
+    const isEngineRole = role.includes("engine") || role.includes("ollama") || role.includes("local-ai");
 
-    if (device.publicUrl?.trim() && isRtxRole) {
+    if (device.publicUrl?.trim() && isEngineRole) {
       const kind = classifyEndpointUrl(device.publicUrl);
       if (kind !== "private" && kind !== "loopback") {
         warnings.push({
@@ -45,12 +45,12 @@ export function detectHardwareUrlWarnings(
           deviceName: device.name,
           field: "publicUrl",
           url: device.publicUrl,
-          message: "RTX-Gerät mit nicht-lokaler URL — nur Heimnetz erlaubt.",
+          message: "Maschinenraum-Gerät mit nicht-lokaler URL — nur Heimnetz erlaubt.",
         });
       }
     }
 
-    if (device.localUrl?.trim() && isRtxRole) {
+    if (device.localUrl?.trim() && isEngineRole) {
       const kind = classifyEndpointUrl(device.localUrl);
       if (kind === "public") {
         warnings.push({
@@ -58,7 +58,7 @@ export function detectHardwareUrlWarnings(
           deviceName: device.name,
           field: "localUrl",
           url: device.localUrl,
-          message: "RTX/Ollama localUrl ist öffentlich — niemals exposen.",
+          message: "Maschinenraum/Ollama localUrl ist öffentlich — niemals exposen.",
         });
       }
     }

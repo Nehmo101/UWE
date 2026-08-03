@@ -103,7 +103,7 @@ describe("security boundary", () => {
     delete process.env.STUDIO_API_TOKEN;
   });
 
-  it("keeps RTX connector API public at middleware (handler does token auth)", () => {
+  it("keeps Maschinenraum connector API public at middleware (handler does token auth)", () => {
     // Connectors authenticate with their own token in the handler, not a session.
     assert.equal(isPublicRoute("/api/connectors/heartbeat", "studio"), true);
     assert.equal(isPublicRoute("/api/connectors/claim-job", "studio"), true);

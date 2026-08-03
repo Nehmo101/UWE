@@ -18,7 +18,7 @@ Lore) → preview them → create one campaign-scoped wiki `Page` per selected e
 3. Surface = **extend the existing Import-Zentrale** (`/import`), reusing its job / preview /
    undo machinery.
 
-**Non-negotiable privacy invariant:** the AI call is **local-only** (RTX). Cloud must be
+**Non-negotiable privacy invariant:** the AI call is **local-only** (Maschinenraum). Cloud must be
 impossible and no campaign/brain context is attached to the prompt.
 
 > **Korrektur (2026-08-01):** Der ursprüngliche Satz versprach hier zusätzlich
@@ -34,7 +34,7 @@ impossible and no campaign/brain context is attached to the prompt.
 ## Architecture / data flow
 
 ```
-[PDF base64] → extractPdfText (reuse) → chunkPdfText → per-chunk routeAiRequest(local_rtx)
+[PDF base64] → extractPdfText (reuse) → chunkPdfText → per-chunk routeAiRequest(local_engine)
    → parseCampaignEntities → dedupeEntitiesByTitle → buildCampaignPreview
    → store {items, entities} in ImportJob.previewPayload            ← PREVIEW (AI runs ONCE)
 
@@ -96,7 +96,7 @@ import { createUweRepository, prisma } from "@uwe/database/server";
 const routed = await routeAiRequest(
   { repo: createUweRepository(), prisma },
   {
-    providerMode: "local_rtx",     // hard local — NO cloud fall-through
+    providerMode: "local_engine",     // hard local — NO cloud fall-through
     contextMode: "general_chat",   // attaches NO world/brain/campaign context
     taskType: /* a neutral task type, inert for general_chat */,
     userPrompt: buildCampaignExtractionPrompt(chunk),
@@ -108,7 +108,7 @@ const aiText = routed.result.text;
 ```
 
 **Why this is provably local** (traced in `packages/ai-brain/src/router/aiRouter.ts`):
-`resolveProviderRoute`'s `case "local_rtx"` returns the local route if RTX is ready and
+`resolveProviderRoute`'s `case "local_engine"` returns the local route if Maschinenraum is ready and
 **throws `AiRouterError` otherwise — it never falls through to cloud**. We deliberately
 **bypass `executeAiGatewayRequest`**, because the gateway's `resolveEffectiveProviderMode`
 can flip a request to cloud when `AiGatewayConfig.routingMode === "CLOUD_ONLY"` (and
@@ -116,8 +116,8 @@ can flip a request to cloud when `AiGatewayConfig.routingMode === "CLOUD_ONLY"` 
 note in the PR: bypassing the gateway skips its budget check + usage log — acceptable for MVP
 (local inference has no $ cost; MAX_CHUNKS + 10 MB caps bound it).
 
-**RTX offline:** `routeAiRequest` throws `AiRouterError`; the preview action catches it and
-returns a clean `errors: ["Lokale RTX ist offline — …"]` + `markFailed`. (The `deferred`
+**Maschinenraum offline:** `routeAiRequest` throws `AiRouterError`; the preview action catches it and
+returns a clean `errors: ["Der lokale Maschinenraum ist offline — …"]` + `markFailed`. (The `deferred`
 `ai_run` job path only applies to `personal_brain`/`mail`, so it is out of scope here.)
 
 ## Implementation steps (ordered, file-by-file)
@@ -154,7 +154,7 @@ returns a clean `errors: ["Lokale RTX ist offline — …"]` + `markFailed`. (Th
      cap; `extractPdfText` → `chunkPdfText` → per-chunk `routeAiRequest` → `parseCampaignEntities`
      → `dedupeEntitiesByTitle` → `buildCampaignPreview`; `updateJob({ status:"preview",
      previewPayload:{ kind:"campaign_entities", items, entities, totalDocuments, errors,
-     canExecute, extractionMeta } })`; catch `AiRouterError` → RTX-offline error + `markFailed`.
+     canExecute, extractionMeta } })`; catch `AiRouterError` → Maschinenraum-offline error + `markFailed`.
    - `executeImportCampaignPdfJobAction(jobId, itemIds)` — read `previewPayload.entities` +
      `{worldId, campaignId}` from metadata; `markExecuting`; for each selected `ent-<i>` compute
      a unique slug (`slugifyPageTitle` + `pickUniqueSlug` against existing world+campaign slugs)
@@ -198,18 +198,18 @@ returns a clean `errors: ["Lokale RTX ist offline — …"]` + `markFailed`. (Th
 
 ## Privacy / security (uwe-security-invariants)
 
-- AI route pinned to `local_rtx`; cloud is unreachable (traced). No brain/campaign context
+- AI route pinned to `local_engine`; cloud is unreachable (traced). No brain/campaign context
   attached (`general_chat`). This satisfies "Cloud-AI ohne Kampagnen/Brain-Kontext".
 - Every created `Page` and `ContentBlock` defaults to `visibility: "dm_only"` → never surfaces
   in the Portal.
 - Provenance in block metadata: `{ source: "pdf-campaign-import", importJobId, sourceFile,
-  extractedKind, aiRoute: "local_rtx" }`.
+  extractedKind, aiRoute: "local_engine" }`.
 - All new server actions call `requireStudioActionAuth()`. (Note: the `rateLimit:"ai"` preset
   applies to API routes, not Server Actions; MVP mitigations = local-only, MAX_CHUNKS, 10 MB.)
 
 ## Verification
 
-**Unit tests (pure, no RTX)** in `packages/pdf-campaign-import`:
+**Unit tests (pure, no Maschinenraum)** in `packages/pdf-campaign-import`:
 - `parser.test.ts`: valid array, ```` ```json ```` fences, trailing prose, `[]`, malformed
   element skipped, unknown `kind` → `note`.
 - `chunker.test.ts`: long text → chunks ≤ cap, oversized paragraph hard-split, `MAX_CHUNKS` cap.
@@ -229,11 +229,11 @@ campaign → start job → upload a text-layer PDF → **Vorschau** (entities sh
 Zusammenfassung) → select → **Import ausführen** → confirm pages exist under the campaign with
 `visibility: dm_only` → **Zurückrollen** deletes them.
 
-- **RTX-less testing:** thread a dev-only `useMock` flag from the preview action —
-  `checkRtxReadiness({useMock:true})` returns ready and `createLocalRtxProvider(...,{useMock:true})`
-  returns `MockAiProvider`, so preview works without an RTX host.
-- **RTX-offline check:** with `useMock:false` and no RTX, preview must surface the clean
-  "RTX offline" error (not a crash).
+- **Maschinenraum-less testing:** thread a dev-only `useMock` flag from the preview action —
+  `checkEngineReadiness({useMock:true})` returns ready and `createLocalEngineProvider(...,{useMock:true})`
+  returns `MockAiProvider`, so preview works without a Maschinenraum host.
+- **Maschinenraum-offline check:** with `useMock:false` and no Maschinenraum, preview must surface the clean
+  "Maschinenraum offline" error (not a crash).
 
 **Quality gate:** `pnpm ci:light` (db:generate + lint + typecheck + test:ci + secret:scan +
 docs:check) or `pnpm quality:quiet`. The file-size budget check confirms all new files < 700
@@ -241,7 +241,7 @@ lines and that `import-central-service.ts` is untouched.
 
 ## Risks & explicit MVP exclusions
 
-- **RTX dependency** — unusable when RTX is offline (by privacy design); mitigated by clear
+- **Maschinenraum dependency** — unusable when Maschinenraum is offline (by privacy design); mitigated by clear
   error + `useMock` for tests.
 - **Chunking / non-determinism** — cross-chunk entities may fragment; large PDFs may hit
   `MAX_CHUNKS` (surface `extractionMeta.truncated`); small local models may emit bad JSON.
@@ -256,7 +256,7 @@ job; a `targetCampaignId` FK column (metadata JSON instead); markdown/obsidian �
 
 ## Update: große PDFs, Fortschritt, Einordnungs-Chat
 
-Ausbau nach dem MVP (gleiche Privacy-Invarianten — alles weiterhin `local_rtx`, `dm_only`):
+Ausbau nach dem MVP (gleiche Privacy-Invarianten — alles weiterhin `local_engine`, `dm_only`):
 
 - **300-MB-PDFs.** Der Upload läuft nicht mehr als Base64 durch die Server Action
   (15-MB-Action-Limit), sondern als `multipart/form-data` über
@@ -292,7 +292,7 @@ blind alle 6 000 Zeichen schnitt. Beides ist jetzt ersetzt.
 
 ### Neues Package `packages/pdf-ocr`
 
-Rein (kein Prisma, kein AI-Router), Tests ohne RTX:
+Rein (kein Prisma, kein AI-Router), Tests ohne Maschinenraum:
 
 | Datei | Aufgabe |
 |---|---|
@@ -317,7 +317,7 @@ PDF → readPdfTextLayer  ──usable──→  Text (schneller Weg, unverände
                                                     ↓
                               chunkCampaignText (Überschriften statt 6 000 Zeichen)
                                                     ↓
-                                    routeAiRequest(local_rtx) wie bisher
+                                    routeAiRequest(local_engine) wie bisher
 ```
 
 Orchestrierung: `apps/studio/src/lib/campaign-pdf-ocr.ts` (`acquireCampaignPdfText`).
@@ -470,7 +470,7 @@ Poll-Endpunkt wie der Fortschritt — die Galerie übersteht damit einen Reload.
 
 ### Command Center: Einrichtungsansicht
 
-`apps/rtx-connector-client/src/components/DocumentOcrPanel.tsx`, ganz oben unter
+`apps/engine-connector-client/src/components/DocumentOcrPanel.tsx`, ganz oben unter
 *Modelle*. Drei Schritte mit Status-Badge: Modell laden (Pull-Befehl im Klartext,
 Kopierknopf, Ein-Klick-Pull mit Fortschrittsbalken), für UWE freigeben, im
 Studio als Vision-Slot wählen. Dazu Unlimited-OCR als Katalog-Eintrag in

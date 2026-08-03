@@ -6,7 +6,7 @@
  * einen kurzen Text schreiben.
  *
  * Der Kontext-Bau ist rein und getestet; nur der Modell-Aufruf nicht. Wie in
- * `@uwe/kitchen` läuft er direkt über die Connector-Queue (lokale RTX-
+ * `@uwe/kitchen` läuft er direkt über die Connector-Queue (lokale Maschinenraum-
  * Inferenz). Ist kein Connector online, kommt der Rohkontext zurück — eine
  * Liste ohne Fließtext ist immer noch nützlich, ein Absturz nie.
  */

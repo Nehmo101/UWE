@@ -1,0 +1,21 @@
+# cloudflared-Config fuer den UWE-Staging-Tunnel auf dem Maschinenraum-PC.
+# Ziel: %USERPROFILE%\.cloudflared\config.yml
+#
+# Einmalige Einrichtung:
+#   cloudflared tunnel login
+#   cloudflared tunnel create uwe-test
+#   cloudflared tunnel route dns uwe-test test.studio.uwe.example
+#   cloudflared tunnel route dns uwe-test test.portal.uwe.example
+#
+# Danach beide Hostnames in Cloudflare hinter eine Access-Policy (nur Owner-Mail) legen.
+# Der Tunnel waehlt sich AUSGEHEND ein — kein eingehender Port auf dem Maschinenraum-PC.
+
+tunnel: uwe-test
+credentials-file: C:\Users\<du>\.cloudflared\<uuid>.json
+
+ingress:
+  - hostname: test.studio.uwe.example
+    service: http://localhost:3002
+  - hostname: test.portal.uwe.example
+    service: http://localhost:3003
+  - service: http_status:404

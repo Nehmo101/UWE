@@ -7,18 +7,18 @@ import { brainPrisma } from "@uwe/database/brain-client";
 
 /**
  * Index-Lage des Personal Brain — wie viele Dokumente sind eingebettet, und
- * kann der RTX-Host gerade überhaupt embedden.
+ * kann der Maschinenraum-Host gerade überhaupt embedden.
  *
  * Lag als `LifeBrainIndexPanel` in Studio (Abschnitt H2). Reine Statusanzeige,
  * kein Secret, keine Inhalte — nur Zahlen und der Grund, falls die semantische
  * Suche gerade auf Stichwortsuche zurückfällt.
  */
 
-type RtxState = "ready" | "offline" | "disabled" | "no-model";
+type EngineState = "ready" | "offline" | "disabled" | "no-model";
 
-const RTX_NOTES: Record<RtxState, string> = {
-  ready: "RTX-Embeddings bereit",
-  offline: "RTX-Host offline — Stichwortsuche als Rückfall",
+const ENGINE_NOTES: Record<EngineState, string> = {
+  ready: "Maschinenraum-Embeddings bereit",
+  offline: "Maschinenraum-Host offline — Stichwortsuche als Rückfall",
   disabled: "Embeddings deaktiviert (BRAIN_EMBEDDINGS_ENABLED=false)",
   "no-model": "Kein Embedding-Modell auf dem Connector — Stichwortsuche als Rückfall",
 };
@@ -40,7 +40,7 @@ export async function LifeBrainIndexStatus() {
     process.env.BRAIN_EMBEDDINGS_ENABLED !== "0";
   const hasEmbeddingCapability = connector.availableCapabilities.includes("embedding_local");
 
-  let state: RtxState = "ready";
+  let state: EngineState = "ready";
   if (!embeddingsEnabled) state = "disabled";
   else if (connector.onlineCount === 0) state = "offline";
   else if (!hasEmbeddingCapability) state = "no-model";
@@ -63,7 +63,7 @@ export async function LifeBrainIndexStatus() {
         </div>
       </div>
       <p className={state === "ready" ? "brain-muted" : "brain-callout brain-callout-warn"}>
-        {RTX_NOTES[state]}
+        {ENGINE_NOTES[state]}
       </p>
     </section>
   );

@@ -143,7 +143,7 @@ export const AI_NAV: NavGroup[] = [
         permission: ["owner", "admin"],
         status: "active",
         source: "studio",
-        keywords: ["prompt", "konsole", "ollama", "rtx", "status"],
+        keywords: ["prompt", "konsole", "ollama", "engine", "status"],
       },
     ],
   },

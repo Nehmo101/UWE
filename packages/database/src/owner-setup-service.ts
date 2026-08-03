@@ -14,7 +14,7 @@ export type OwnerSetupSectionId =
   | "cloudflare"
   | "brain"
   | "mail"
-  | "rtx"
+  | "engine"
   | "printer"
   | "diagnose";
 
@@ -42,7 +42,7 @@ export interface SetupSectionStatus {
   message: string;
   nextSteps: string[];
   settings: SetupSettingItem[];
-  testAction?: "mail" | "urls" | "rtx" | "printer";
+  testAction?: "mail" | "urls" | "engine" | "printer";
 }
 
 export interface OwnerSetupSnapshot {
@@ -328,7 +328,7 @@ function buildCloudflareSection(
   if (!proxy.publicAppUrl) {
     nextSteps.push("Für Remote-Zugriff die öffentliche Basis-URL setzen (System → Cloudflare).");
   } else if (!proxy.cloudflareTunnel) {
-    nextSteps.push("Cloudflare Tunnel optional — nur Studio/Portal exponieren, nie RTX.");
+    nextSteps.push("Cloudflare Tunnel optional — nur Studio/Portal exponieren, nie Maschinenraum.");
   }
   nextSteps.push("Routing, Proxy, Turnstile und Sicherheits-Flags bearbeiten: System → Cloudflare.");
 
@@ -467,7 +467,7 @@ function resolveInferenceEnvSummary(env: NodeJS.ProcessEnv): {
   };
 }
 
-async function buildRtxSection(
+async function buildEngineSection(
   db: PrismaClient,
   admin: AdminStatus,
   settings: Awaited<ReturnType<SettingsService["getSettings"]>>,
@@ -493,7 +493,7 @@ async function buildRtxSection(
       displayValue: `${connectors.length} registriert · ${liveConnectors.length} live (${onlineConnectors} online)`,
       source: "db",
       editable: true,
-      href: "/system/rtx-connector",
+      href: "/system/engine-connector",
     },
     {
       id: "inference",
@@ -502,7 +502,7 @@ async function buildRtxSection(
       displayValue: inference.enabled ? inference.endpointLabel : "deaktiviert",
       source: "env",
       editable: false,
-      description: "Erreichbarkeit per RTX-Test prüfen.",
+      description: "Erreichbarkeit per Maschinenraum-Test prüfen.",
     },
     {
       id: "image-studio",
@@ -537,21 +537,21 @@ async function buildRtxSection(
   if (connectors.length === 0) {
     nextSteps.push("Maschinenraum anlegen: Command Center → Maschinenraum.");
   } else if (liveConnectors.length === 0) {
-    nextSteps.push("Connector-Token im RTX-Client eintragen und Dienst starten.");
+    nextSteps.push("Connector-Token im Maschinenraum-Client eintragen und Dienst starten.");
   } else if (!connectorLlmReady) {
-    nextSteps.push("Connector läuft, aber lokale LLM-Fähigkeit fehlt — Ollama auf dem RTX-PC prüfen.");
+    nextSteps.push("Connector läuft, aber lokale LLM-Fähigkeit fehlt — Ollama auf dem Maschinenraum-PC prüfen.");
   }
   if (inference.enabled) {
-    nextSteps.push("Inference-Endpunkt per RTX-Test prüfen.");
+    nextSteps.push("Inference-Endpunkt per Maschinenraum-Test prüfen.");
   }
-  if (!admin.rtxExposure.ok) {
-    nextSteps.push(...admin.rtxExposure.nextSteps.slice(0, 2));
+  if (!admin.engineExposure.ok) {
+    nextSteps.push(...admin.engineExposure.nextSteps.slice(0, 2));
   }
   if (nextSteps.length === 0) {
-    nextSteps.push("RTX bleibt im LAN — nie öffentlich exponieren.");
+    nextSteps.push("Maschinenraum bleibt im LAN — nie öffentlich exponieren.");
   }
 
-  const level: SetupSectionLevel = !admin.rtxExposure.ok
+  const level: SetupSectionLevel = !admin.engineExposure.ok
     ? "error"
     : connectorLlmReady
       ? "ok"
@@ -563,17 +563,17 @@ async function buildRtxSection(
     ? "Maschinenraum meldet lokale KI-Fähigkeit."
     : liveConnectors.length > 0
       ? "Connector verbunden, aber lokale Inference noch nicht bereit."
-      : admin.rtxExposure.message;
+      : admin.engineExposure.message;
 
   return {
-    id: "rtx",
+    id: "engine",
     title: "Maschinenraum & Hardware",
     level,
     statusLabel: level === "ok" ? "Verbunden" : level === "degraded" ? "Teilweise" : "Warnung",
     message: statusMessage,
     nextSteps,
     settings: settingsItems,
-    testAction: "rtx",
+    testAction: "engine",
   };
 }
 
@@ -721,7 +721,7 @@ export async function getOwnerSetupSnapshot(
     Promise.resolve(buildCloudflareSection(system, settings)),
     Promise.resolve(buildBrainSection(settings)),
     Promise.resolve(buildMailSection(system, settings)),
-    buildRtxSection(db, admin, settings, env),
+    buildEngineSection(db, admin, settings, env),
     buildPrinterSection(db),
     Promise.resolve(buildDiagnoseSection(admin, envIssues)),
   ]);
@@ -755,7 +755,7 @@ export function assertOwnerSetupHasNoSecrets(
     "OPENROUTER_API_KEY",
     "RESTORE_OWNER_TOKEN",
     "UWE_CONNECTOR_TOKEN",
-    "RTX_AGENT_TOKEN",
+    "ENGINE_AGENT_TOKEN",
   ] as const;
 
   for (const key of secretKeys) {

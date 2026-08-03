@@ -160,7 +160,7 @@ enum ScanDocumentKind {
 enum ScanDocumentStatus {
   unanalyzed
   analyzing
-  waiting_for_rtx
+  waiting_for_engine
   proposal_ready
   uncertain
   filed
@@ -597,7 +597,7 @@ model FamilyChatMessage {
 
   /// Gesetzt bei Assistenten-Nachrichten: welches Modell geantwortet hat.
   model String?
-  /// Fehlertext statt Antwort (RTX offline, Timeout) — bleibt im Verlauf sichtbar.
+  /// Fehlertext statt Antwort (Maschinenraum offline, Timeout) — bleibt im Verlauf sichtbar.
   errorMessage String? @map("error_message")
   durationMs   Int?    @map("duration_ms")
 

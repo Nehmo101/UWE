@@ -62,7 +62,7 @@ export async function getInferenceStatus(options?: {
   const config = options?.config ?? resolveInferenceConfig();
 
   if (!config.enabled) {
-    return offlineStatus(config, "RTX-Inference ist deaktiviert.");
+    return offlineStatus(config, "Maschinenraum-Inference ist deaktiviert.");
   }
 
   if (!config.urlAllowed) {
@@ -127,7 +127,7 @@ export async function getInferenceStatus(options?: {
       urlAllowed: true,
       urlKind: config.urlKind,
       online: health.ok,
-      message: health.ok ? "RTX-Inference erreichbar" : health.message,
+      message: health.ok ? "Maschinenraum-Inference erreichbar" : health.message,
       health,
       modelCount,
       offlineReason: health.ok ? undefined : health.message,
@@ -142,7 +142,7 @@ export async function getInferenceStatus(options?: {
         ? error.message
         : error instanceof Error
           ? error.message
-          : "RTX-Inference nicht erreichbar";
+          : "Maschinenraum-Inference nicht erreichbar";
 
     return offlineStatus(config, message, message);
   }
@@ -166,7 +166,7 @@ export async function runInferenceTestPrompt(options?: {
       model,
       text: "",
       latencyMs: Date.now() - started,
-      message: "RTX-Inference ist deaktiviert.",
+      message: "Maschinenraum-Inference ist deaktiviert.",
     };
   }
 

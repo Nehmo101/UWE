@@ -1,6 +1,6 @@
 /**
  * Host-side connector smoke — simulates the Worker ↔ Host cycle without a live
- * RTX process. Satisfies audit Kurzfrist #3 (CI-enqueue/claim/complete path).
+ * Maschinenraum process. Satisfies audit Kurzfrist #3 (CI-enqueue/claim/complete path).
  */
 
 import assert from "node:assert/strict";
@@ -22,7 +22,7 @@ describe("connector host smoke (Worker ↔ Host cycle)", () => {
 
   it("registers connector, heartbeats, enqueues llm_generate, claims and completes", async () => {
     const service = createConnectorService(db);
-    const { connector, token } = await service.createConnector("Smoke RTX");
+    const { connector, token } = await service.createConnector("Smoke Maschinenraum");
     assert.ok(token.startsWith("uwec_"));
 
     const heartbeat = await service.heartbeat(connector.id, {

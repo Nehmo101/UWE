@@ -63,7 +63,7 @@ export default async function SessionLivePage({ params }: Props) {
   await db.$disconnect();
 
   const connectorSummary = await createConnectorService(prisma).summarize();
-  const rtxAudioOnline = connectorSummary.availableCapabilities.includes("audio_local");
+  const engineAudioOnline = connectorSummary.availableCapabilities.includes("audio_local");
 
   if (!session) notFound();
 
@@ -153,7 +153,7 @@ export default async function SessionLivePage({ params }: Props) {
         sessionId={sessionId}
         buttons={soundboardButtons}
         campaignSlug={sessionCampaign?.slug ?? null}
-        rtxAudioOnline={rtxAudioOnline}
+        engineAudioOnline={engineAudioOnline}
       />
     </>
   );

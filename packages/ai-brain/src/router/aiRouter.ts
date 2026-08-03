@@ -25,23 +25,23 @@ import { buildRouterContext } from "./context/contextBuilder";
 
 import { createBrainRetrievalAdapter } from "./context/brainRetrieval";
 
-import { checkRtxReadiness } from "./health/rtxReadiness";
+import { checkEngineReadiness } from "./health/engineReadiness";
 
 import {
 
   validateContextModeRequirements,
 
-  validateLocalRtxRequired,
+  validateLocalEngineRequired,
 
 } from "./privacyGuard";
 
 import {
 
-  createLocalRtxProvider,
+  createLocalEngineProvider,
 
-  getLocalRtxProviderId,
+  getLocalEngineProviderId,
 
-} from "./providers/localRtxProvider";
+} from "./providers/localEngineProvider";
 
 import { tryConnectorLlmGenerate } from "./providers/connectorQueueProvider";
 
@@ -170,16 +170,16 @@ export async function resolveProviderRoute(
   contextMode: AiRouterRequest["contextMode"],
   options?: { useMock?: boolean; prisma?: PrismaClient },
 ): Promise<ProviderResolution> {
-  const rtxHealth = await checkRtxReadiness({
+  const engineHealth = await checkEngineReadiness({
     useMock: options?.useMock,
     prisma: options?.prisma,
   });
 
-  validateLocalRtxRequired(contextMode, rtxHealth.ready);
+  validateLocalEngineRequired(contextMode, engineHealth.ready);
 
   return {
-    route: "local_rtx",
-    providerId: getLocalRtxProviderId(),
+    route: "local_engine",
+    providerId: getLocalEngineProviderId(),
   };
 }
 
@@ -188,7 +188,7 @@ function createRoutedProvider(
   apiKeyStore: ApiKeyStore,
   useMock?: boolean,
 ): AiProvider {
-  return createLocalRtxProvider(apiKeyStore, { useMock });
+  return createLocalEngineProvider(apiKeyStore, { useMock });
 }
 
 function resolveModel(
@@ -197,7 +197,7 @@ function resolveModel(
 
   resolution: ProviderResolution,
 
-  rtxDefaultModel: string,
+  engineDefaultModel: string,
 
 ): string {
 
@@ -207,7 +207,7 @@ function resolveModel(
 
   }
 
-  return rtxDefaultModel;
+  return engineDefaultModel;
 }
 
 /**
@@ -243,30 +243,30 @@ export async function routeAiRequest(
     prisma: deps.prisma ?? sharedPrisma,
   });
 
-  const rtxHealth = await checkRtxReadiness({
+  const engineHealth = await checkEngineReadiness({
     useMock: request.useMock,
     prisma: deps.prisma ?? sharedPrisma,
   });
 
-  let model = resolveModel(request, resolution, rtxHealth.defaultModel);
+  let model = resolveModel(request, resolution, engineHealth.defaultModel);
 
-  if (resolution.route === "local_rtx" && !request.model?.trim()) {
+  if (resolution.route === "local_engine" && !request.model?.trim()) {
     const probe = await buildCookbookRuntimeProbe({
       useMock: request.useMock,
     });
     const cookbook = await getCookbookRoutingContext({
-      providerMode: "local_rtx",
+      providerMode: "local_engine",
       contextMode: request.contextMode,
       taskType: request.taskType,
       localOnlyMode: true,
-      rtxReady: rtxHealth.ready,
+      engineReady: engineHealth.ready,
       explicitModel: request.model,
       probe,
     });
     model = resolveCookbookModelForRequest({
       explicitModel: request.model,
       taskType: request.taskType,
-      rtxDefaultModel: rtxHealth.defaultModel,
+      engineDefaultModel: engineHealth.defaultModel,
       hardware: cookbook.hardware,
       installedModels: cookbook.installedModels,
     });
@@ -395,9 +395,9 @@ export async function routeAiRequest(
    * that silently switched backends would be a different experiment.
    */
   async function generateOnce(promptText: string): Promise<AiRouterResult["result"]> {
-    if (resolution.route === "local_rtx" && !request.useMock) {
+    if (resolution.route === "local_engine" && !request.useMock) {
       /* The connector's `llm_generate` payload has no response-format field
-         (`tools/uwe-rtx-connector/src/openai-compatible-llm.ts` reads prompt,
+         (`tools/uwe-engine-connector/src/openai-compatible-llm.ts` reads prompt,
          system, model, maxTokens and ignores the rest), so JSON cannot be
          enforced on this path — only asked for and repaired. */
       const outcome = await tryConnectorLlmGenerate(deps.prisma ?? sharedPrisma, {
@@ -472,7 +472,7 @@ export async function routeAiRequest(
 
     contextMode: request.contextMode,
 
-    providerMode: "local_rtx",
+    providerMode: "local_engine",
 
     jsonMode: {
       requested: jsonWanted,
@@ -488,7 +488,7 @@ export async function routeAiRequest(
 
 export function providerIdToMode(_providerId: AiProviderId): AiProviderMode {
 
-  return "local_rtx";
+  return "local_engine";
 
 }
 

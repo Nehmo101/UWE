@@ -86,7 +86,7 @@ export interface ConnectorClientConfig {
   printCommand: string;
   /**
    * Id of the printer picked as the default target for local test prints in
-   * the RTX Client's printer picker. Purely a local UX convenience — real
+   * the Command Center's printer picker. Purely a local UX convenience — real
    * `label_print` jobs always carry their own explicit printer id from Studio.
    */
   defaultPrinterId: string;

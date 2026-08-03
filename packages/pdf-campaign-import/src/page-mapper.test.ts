@@ -32,7 +32,7 @@ describe("entityToCreatePageInput", () => {
       sourceTitle: "abenteuer.pdf",
       licence: "own",
       extractedKind: "quest",
-      aiRoute: "local_rtx",
+      aiRoute: "local_engine",
     });
   });
 

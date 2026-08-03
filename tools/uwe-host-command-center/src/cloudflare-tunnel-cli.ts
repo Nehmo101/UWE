@@ -1,7 +1,8 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
+
+import { commandCenterDataRoot } from "./desktop-host-paths.ts";
 
 /**
  * Cloudflare tunnel control for the UWE Command Center. Runs the local
@@ -18,14 +19,7 @@ import path from "node:path";
  *   stop                    → { ok }
  */
 
-function dataRoot(): string {
-  const configured = process.env.UWE_COMMAND_CENTER_DATA_DIR?.trim();
-  if (configured) return path.resolve(configured);
-  if (process.platform === "win32" && process.env.LOCALAPPDATA) {
-    return path.join(process.env.LOCALAPPDATA, "UWE", "rtx-connector-client", "host");
-  }
-  return path.join(os.homedir(), ".local", "share", "UWE", "rtx-connector-client", "host");
-}
+const dataRoot = commandCenterDataRoot;
 
 const tokenFile = () => path.join(dataRoot(), "cloudflare-tunnel.token");
 const pidFile = () => path.join(dataRoot(), "runtime", "cloudflared.pid");

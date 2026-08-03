@@ -46,16 +46,16 @@ describe("homelab today alert aggregation", () => {
       hardwareUrlWarnings: [
         {
           deviceId: "1",
-          deviceName: "RTX",
+          deviceName: "Maschinenraum",
           field: "localUrl",
           url: "https://evil.example",
-          message: "public rtx",
+          message: "public engine",
         },
       ],
       openSetupSteps: 0,
       serviceStatuses: [
         {
-          id: "rtx_connector",
+          id: "engine_connector",
           label: "Maschinenraum",
           ok: false,
           severity: "error",
@@ -64,8 +64,8 @@ describe("homelab today alert aggregation", () => {
       ],
       securityChecks: [
         {
-          id: "no_public_rtx",
-          label: "Keine öffentliche RTX-/Connector-URL",
+          id: "no_public_engine",
+          label: "Keine öffentliche Maschinenraum-/Connector-URL",
           ok: false,
           severity: "error",
           message: "blocked",

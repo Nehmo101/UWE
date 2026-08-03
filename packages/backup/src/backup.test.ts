@@ -486,7 +486,7 @@ describe("UWE backup and restore", () => {
       data: { name: "Internet-Vertrag", vendor: "ISP", amountCents: 3999 },
     });
     await brainDb.hardwareDevice.create({
-      data: { name: "RTX-Host", role: "ai", status: "active", hostname: "rtx.local" },
+      data: { name: "Maschinenraum-Host", role: "ai", status: "active", hostname: "engine.local" },
     });
     const brainDocument = await brainDb.personalBrainDocument.create({
       data: { title: "Hausnotizen", content: "Zählerstände und Wartung" },

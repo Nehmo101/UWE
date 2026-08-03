@@ -13,10 +13,10 @@ const HARDWARE: CookbookHardwareProfile = {
   cpuCores: 8,
   ramGb: 32,
   backend: "cuda",
-  gpuName: "RTX 4060",
+  gpuName: "Test-GPU 8 GB",
   gpuVramGb: 8,
   gpuCount: 1,
-  gpus: [{ index: 0, name: "RTX 4060", vramGb: 8 }],
+  gpus: [{ index: 0, name: "Test-GPU 8 GB", vramGb: 8 }],
   gpuGroups: [],
   unifiedMemory: false,
   homogeneousGpus: true,
@@ -39,7 +39,7 @@ describe("routing-hints", () => {
       contextMode: "personal_brain",
       taskType: "improve_lore_text",
       localOnlyMode: false,
-      rtxReady: false,
+      engineReady: false,
       hardware: HARDWARE,
     });
 
@@ -54,7 +54,7 @@ describe("routing-hints", () => {
       contextMode: "brain",
       taskType: "summarize_page",
       localOnlyMode: false,
-      rtxReady: false,
+      engineReady: false,
       hardware: HARDWARE,
     });
 
@@ -68,7 +68,7 @@ describe("routing-hints", () => {
       contextMode: "general_chat",
       taskType: "summarize_page",
       localOnlyMode: true,
-      rtxReady: true,
+      engineReady: true,
       hardware: HARDWARE,
     });
 
@@ -79,7 +79,7 @@ describe("routing-hints", () => {
   it("recommends cookbook model for task when installed", () => {
     const model = resolveCookbookModelForRequest({
       taskType: "create_npc",
-      rtxDefaultModel: "llama3.2",
+      engineDefaultModel: "llama3.2",
       hardware: HARDWARE,
       installedModels: ["qwen2.5:7b"],
     });
@@ -91,7 +91,7 @@ describe("routing-hints", () => {
     const model = resolveCookbookModelForRequest({
       explicitModel: "custom-model",
       taskType: "create_npc",
-      rtxDefaultModel: "llama3.2",
+      engineDefaultModel: "llama3.2",
       hardware: HARDWARE,
     });
 

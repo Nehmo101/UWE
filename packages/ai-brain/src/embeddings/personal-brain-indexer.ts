@@ -94,7 +94,7 @@ export async function indexPersonalBrainDocument(
   if (!settings.enabled) {
     message = "Embeddings deaktiviert — Chunks ohne Vektoren gespeichert";
   } else if (!providerOnline) {
-    message = "RTX offline — Chunks ohne Embeddings gespeichert (Keyword-Fallback aktiv)";
+    message = "Maschinenraum offline — Chunks ohne Embeddings gespeichert (Keyword-Fallback aktiv)";
   } else if (embeddedCount === chunks.length) {
     message = "Dokument vollständig eingebettet";
   } else if (embeddedCount > 0) {

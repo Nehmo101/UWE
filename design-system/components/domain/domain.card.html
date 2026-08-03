@@ -1,4 +1,4 @@
-<!-- @dsCard group="Components" viewport="700x360" name="Domain — visibility, RTX, secrets" subtitle="UWE's player-safety & local-AI signals" -->
+<!-- @dsCard group="Components" viewport="700x360" name="Domain — visibility, Maschinenraum, secrets" subtitle="UWE's player-safety & local-AI signals" -->
 <!DOCTYPE html>
 <html lang="de" data-uwe-theme="uwe-parchment-os">
 <head>
@@ -18,7 +18,7 @@
 <body>
 <div id="root"></div>
 <script type="text/babel">
-  const { VisibilityBadge, RtxStatusBadge, PageTypeBadge, SecretReveal } = window.UWEDesignSystem_f43eab;
+  const { VisibilityBadge, EngineStatusBadge, PageTypeBadge, SecretReveal } = window.UWEDesignSystem_f43eab;
   function Demo() {
     return (
       <div style={{ maxWidth: 640 }}>
@@ -34,12 +34,12 @@
           <PageTypeBadge type="npc" /><PageTypeBadge type="location" />
           <PageTypeBadge type="faction" /><PageTypeBadge type="quest" /><PageTypeBadge type="session" />
         </div>
-        <p className="grp-label">RTX Connector</p>
+        <p className="grp-label">Maschinenraum</p>
         <div className="row">
-          <RtxStatusBadge state="online" />
-          <RtxStatusBadge state="starting" />
-          <RtxStatusBadge state="offline" />
-          <RtxStatusBadge state="disabled" />
+          <EngineStatusBadge state="online" />
+          <EngineStatusBadge state="starting" />
+          <EngineStatusBadge state="offline" />
+          <EngineStatusBadge state="disabled" />
         </div>
         <p className="grp-label">Geheimnis / Spoiler</p>
         <SecretReveal label="GM-Geheimnis">

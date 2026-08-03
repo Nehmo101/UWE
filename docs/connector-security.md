@@ -30,10 +30,10 @@ narrow.
 
 - Communication is **outbound only**: the connector connects to the host. In
   direct/hybrid mode it keeps an outbound Streaming-HTTP/NDJSON channel open.
-  No public port, SSH, or HTTP server is opened on the RTX machine.
-- There is no public RTX API and no Cloudflare Tunnel to the RTX as a required
+  No public port, SSH, or HTTP server is opened on the Maschinenraum machine.
+- There is no public Maschinenraum API and no Cloudflare Tunnel to the Maschinenraum as a required
   path.
-- No DB replication between host and RTX. Queue jobs remain host-owned database
+- No DB replication between host and Maschinenraum. Queue jobs remain host-owned database
   rows; direct requests create no `ConnectorJob` row.
 - The direct session registry is process-local and assumes one Studio process.
   Horizontal Studio deployment requires a shared broker/session registry or

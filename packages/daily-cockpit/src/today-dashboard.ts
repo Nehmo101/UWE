@@ -56,7 +56,7 @@ export interface TodayDashboardData {
   projectDomains: PersonalProjectDashboardStats;
   systemOk: boolean;
   systemLabel: string;
-  rtxReady: boolean;
+  engineReady: boolean;
   brainEnabled: boolean;
   mailOk: boolean;
   portalAuthRequired: boolean;
@@ -130,7 +130,7 @@ export async function getTodayDashboardData(
   }
 
   // Compute the life-admin summary and admin status once, then feed them into
-  // getHomelabCockpitData so the expensive leak scan, AI/RTX probes and the
+  // getHomelabCockpitData so the expensive leak scan, AI/Maschinenraum probes and the
   // ~15-query life-admin summary run only once per /today render (H4).
   const lifeSummaryPromise = lifeAdmin.getTodaySummary();
   const adminStatusPromise = getAdminDashboardStatus(db, {
@@ -205,7 +205,7 @@ export async function getTodayDashboardData(
     homelab,
     systemOk: adminStatus.ok && homelab.alerts.criticalCount === 0,
     systemLabel,
-    rtxReady: adminStatus.rtx.ready,
+    engineReady: adminStatus.engine.ready,
     brainEnabled: adminStatus.brain.enabled,
     mailOk: !adminStatus.mail.enabled || adminStatus.mail.ok,
     portalAuthRequired: adminStatus.auth.portalAuthRequired,

@@ -19,7 +19,7 @@ import {
 import { PrintListEditor } from "@/components/PrintListEditor";
 import { PrintListJobPanel } from "@/components/PrintListJobPanel";
 import { PrintListPreviewPanel } from "@/components/PrintListPreviewPanel";
-import { PrintListRtxForm } from "@/components/PrintListRtxForm";
+import { PrintListEngineForm } from "@/components/PrintListEngineForm";
 import {
   deletePrintListAction,
   setPrintListStatusAction,
@@ -173,7 +173,7 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
       <div className="flex flex-col gap-6">
         {(saved || created || added || status || queued) && (
           <Alert tone="success">
-            {queued ? "RTX-Druckjob in Warteschlange." : created ? "Druckliste erstellt." : added ? "Label hinzugefügt." : status ? `Status: ${LABEL_PRINT_STATUS_LABELS[status as keyof typeof LABEL_PRINT_STATUS_LABELS]}` : "Gespeichert."}
+            {queued ? "Maschinenraum-Druckjob in Warteschlange." : created ? "Druckliste erstellt." : added ? "Label hinzugefügt." : status ? `Status: ${LABEL_PRINT_STATUS_LABELS[status as keyof typeof LABEL_PRINT_STATUS_LABELS]}` : "Gespeichert."}
           </Alert>
         )}
         {error && <Alert tone="warning">{decodeURIComponent(error)}</Alert>}
@@ -184,12 +184,12 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
 
         <Card>
           <CardHeader>
-            <CardTitle>RTX Label-Druck</CardTitle>
+            <CardTitle>Maschinenraum-Label-Druck</CardTitle>
           </CardHeader>
           <CardContent>
             {!hasQueueLabelPrintingConnector(connectorSummary) ? (
               <p className="text-sm text-muted-foreground">
-                RTX Label-Druck benötigt Queue- oder Hybrid-Modus.{" "}
+                Maschinenraum-Label-Druck benötigt Queue- oder Hybrid-Modus.{" "}
                 <span>Kommandozentrale</span>
               </p>
             ) : flatPrinters.length === 0 ? (
@@ -197,7 +197,7 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
                 Keine Drucker. <span>In der Kommandozentrale suchen</span>
               </p>
             ) : (
-              <PrintListRtxForm worldSlug={worldSlug} printListId={printListId} returnTo={returnTo} printers={printerOptions} defaultPrinterKey={defaultKey} totalCopies={summary.totalCopies} labelCount={summary.labelCount} />
+              <PrintListEngineForm worldSlug={worldSlug} printListId={printListId} returnTo={returnTo} printers={printerOptions} defaultPrinterKey={defaultKey} totalCopies={summary.totalCopies} labelCount={summary.labelCount} />
             )}
           </CardContent>
         </Card>
@@ -208,7 +208,7 @@ export default async function PrintListDetailPage({ params, searchParams }: Prop
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
             <p className="text-sm text-muted-foreground">
-              Status der RTX-Jobs für diese Druckliste — aktualisiert sich automatisch bei laufenden Jobs.
+              Status der Maschinenraum-Jobs für diese Druckliste — aktualisiert sich automatisch bei laufenden Jobs.
             </p>
             <PrintListJobPanel worldSlug={worldSlug} printListId={printListId} initialJobs={initialListJobs} printCenterHref={printCenterHref} />
           </CardContent>

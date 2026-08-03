@@ -55,7 +55,7 @@ flowchart LR
 
 - `dm_only` must **never** reach Portal, static export, or anonymous API responses.
 - Filter in `packages/database/src/permissions.ts` — not only in UI.
-- Cloud AI gets **no** campaign/brain context; RTX stays on LAN.
+- Cloud AI gets **no** campaign/brain context; Maschinenraum stays on LAN.
 
 ## Server entry points
 

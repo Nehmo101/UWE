@@ -20,12 +20,12 @@ function readJson(relativePath: string): Record<string, unknown> {
  */
 function makeVersionFixture(): { dir: string; skript: string; git: (...args: string[]) => string } {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "uwe-setversion-"));
-  const tauriDir = path.join(dir, "apps/rtx-connector-client/src-tauri");
+  const tauriDir = path.join(dir, "apps/engine-connector-client/src-tauri");
   fs.mkdirSync(tauriDir, { recursive: true });
   fs.writeFileSync(path.join(dir, "VERSION"), "0.1.0\n");
   fs.writeFileSync(path.join(dir, "package.json"), '{\n  "version": "0.1.0"\n}\n');
   fs.writeFileSync(
-    path.join(dir, "apps/rtx-connector-client/package.json"),
+    path.join(dir, "apps/engine-connector-client/package.json"),
     '{\n  "version": "0.1.0"\n}\n',
   );
   fs.writeFileSync(path.join(tauriDir, "tauri.conf.json"), '{\n  "version": "0.1.0"\n}\n');
@@ -56,7 +56,7 @@ describe("release packaging", () => {
   });
 
   it("never ships an active Command Center updater without a signing pubkey", () => {
-    const tauriConf = readJson("apps/rtx-connector-client/src-tauri/tauri.conf.json");
+    const tauriConf = readJson("apps/engine-connector-client/src-tauri/tauri.conf.json");
     const updater = ((tauriConf.plugins as Record<string, unknown> | undefined)?.updater ??
       {}) as { active?: boolean; pubkey?: string };
     if (updater.active === true) {
@@ -68,7 +68,7 @@ describe("release packaging", () => {
   });
 
   it("keeps a non-null CSP on the Command Center webview", () => {
-    const tauriConf = readJson("apps/rtx-connector-client/src-tauri/tauri.conf.json");
+    const tauriConf = readJson("apps/engine-connector-client/src-tauri/tauri.conf.json");
     const security = ((tauriConf.app as Record<string, unknown> | undefined)?.security ??
       {}) as { csp?: unknown };
     assert.ok(
@@ -143,7 +143,7 @@ describe("release packaging", () => {
 
   it("keeps Command Center update docs aligned with release tags", () => {
     const docs = fs.readFileSync(
-      path.join(root, "docs/engineering/rtx-connector-release.md"),
+      path.join(root, "docs/engineering/engine-connector-release.md"),
       "utf8",
     );
     assert.match(docs, /uwe-vX\.Y\.Z/);
@@ -212,7 +212,7 @@ describe("release packaging", () => {
     );
 
     const rust = fs.readFileSync(
-      path.join(root, "apps/rtx-connector-client/src-tauri/src/command_center.rs"),
+      path.join(root, "apps/engine-connector-client/src-tauri/src/command_center.rs"),
       "utf8",
     );
     assert.match(rust, /CARGO_PKG_VERSION/);
@@ -242,13 +242,13 @@ describe("release packaging", () => {
       assert.equal(fs.readFileSync(path.join(dir, "VERSION"), "utf8").trim(), "2.3.4");
       for (const file of [
         "package.json",
-        "apps/rtx-connector-client/package.json",
-        "apps/rtx-connector-client/src-tauri/tauri.conf.json",
+        "apps/engine-connector-client/package.json",
+        "apps/engine-connector-client/src-tauri/tauri.conf.json",
       ]) {
         assert.equal(JSON.parse(fs.readFileSync(path.join(dir, file), "utf8")).version, "2.3.4");
       }
       const cargo = fs.readFileSync(
-        path.join(dir, "apps/rtx-connector-client/src-tauri/Cargo.toml"),
+        path.join(dir, "apps/engine-connector-client/src-tauri/Cargo.toml"),
         "utf8",
       );
       assert.match(cargo, /^version = "2\.3\.4"$/m);
@@ -435,13 +435,13 @@ describe("release packaging", () => {
     assert.ok(fs.existsSync(path.join(root, "tools/uwe-host-command-center/src/bundle-update.ts")));
 
     const rust = fs.readFileSync(
-      path.join(root, "apps/rtx-connector-client/src-tauri/src/command_center.rs"),
+      path.join(root, "apps/engine-connector-client/src-tauri/src/command_center.rs"),
       "utf8",
     );
     assert.match(rust, /bundled_host_runtime_dir/);
     assert.match(rust, /host-cli\.cjs/);
 
-    const tauriConf = readJson("apps/rtx-connector-client/src-tauri/tauri.conf.json");
+    const tauriConf = readJson("apps/engine-connector-client/src-tauri/tauri.conf.json");
     const bundleConf = tauriConf.bundle as { resources?: string[]; targets?: string[] };
     assert.ok(
       bundleConf.resources?.includes("resources/host-runtime"),

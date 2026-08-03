@@ -218,7 +218,7 @@ describe("AI Brain — generateAiTask with mock provider", () => {
     assert.ok(result.text.length > 0);
   });
 
-  it("no longer rejects a legacy cloud provider id — everything lands on the RTX host", async () => {
+  it("no longer rejects a legacy cloud provider id — everything lands on the Maschinenraum host", async () => {
     // Cloud providers were removed. A stored request that still names one must
     // not blow up; it simply routes locally like every other request.
     const repo = createUweRepository(databaseUrl);

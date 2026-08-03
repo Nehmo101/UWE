@@ -24,7 +24,7 @@ Fields used on `CaptureEntry`:
 
 ## AI proposals (review only)
 
-`buildCaptureAiProposal()` runs **heuristic** classification (no RTX, no auto-apply).
+`buildCaptureAiProposal()` runs **heuristic** classification (no Maschinenraum, no auto-apply).
 
 Proposal stored at `metadata.aiProposal` with `status: "draft" | "accepted" | "rejected"`.
 

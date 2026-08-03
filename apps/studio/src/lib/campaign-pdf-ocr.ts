@@ -25,7 +25,7 @@ import { writeCampaignImportFigure } from "./campaign-pdf-storage";
  *
  * Bleibt bewusst hier statt im Package: der Job braucht Prisma und den
  * Connector, das Package bleibt rein. Läuft ausschließlich lokal auf dem
- * RTX-Host — es gibt keinen Cloud-Pfad, auf den das ausweichen könnte.
+ * Maschinenraum-Host — es gibt keinen Cloud-Pfad, auf den das ausweichen könnte.
  */
 
 /** Zeitbudget pro Vision-Job. Dokument-OCR ist deutlich langsamer als ein Bild-Blick. */
@@ -97,7 +97,7 @@ export async function runCampaignPdfOcr(input: {
 }): Promise<CampaignOcrResult> {
   if (!(await isCampaignOcrAvailable())) {
     throw new CampaignOcrUnavailableError(
-      "Kein Vision-Connector online — gescannte PDFs brauchen die lokale OCR auf dem RTX-Host.",
+      "Kein Vision-Connector online — gescannte PDFs brauchen die lokale OCR auf dem Maschinenraum-Host.",
     );
   }
 

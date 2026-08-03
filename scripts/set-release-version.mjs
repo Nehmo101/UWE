@@ -8,7 +8,7 @@
  *                                            Release-Workflow prüft den Tag
  *                                            dagegen
  *   package.json                             Workspace-Fassung
- *   apps/rtx-connector-client/package.json   Fassung der Desktop-App
+ *   apps/engine-connector-client/package.json   Fassung der Desktop-App
  *   …/src-tauri/tauri.conf.json              Fassung im Installer-Namen
  *   …/src-tauri/Cargo.toml                   CARGO_PKG_VERSION — daraus meldet
  *                                            das Command Center dem
@@ -38,9 +38,9 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 const SEMVER = /^\d+\.\d+\.\d+$/;
 
 const VERSION_FILE = "VERSION";
-const JSON_FILES = ["package.json", "apps/rtx-connector-client/package.json"];
-const TAURI_CONF = "apps/rtx-connector-client/src-tauri/tauri.conf.json";
-const CARGO_TOML = "apps/rtx-connector-client/src-tauri/Cargo.toml";
+const JSON_FILES = ["package.json", "apps/engine-connector-client/package.json"];
+const TAURI_CONF = "apps/engine-connector-client/src-tauri/tauri.conf.json";
+const CARGO_TOML = "apps/engine-connector-client/src-tauri/Cargo.toml";
 const CHANGELOG = "CHANGELOG.md";
 const UNRELEASED = "## [Unreleased]";
 

@@ -70,7 +70,7 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
   await db.$disconnect();
 
   const connectorSummary = await createConnectorService(prisma).summarize();
-  const rtxAudioOnline = connectorSummary.availableCapabilities.includes("audio_local");
+  const engineAudioOnline = connectorSummary.availableCapabilities.includes("audio_local");
 
   const audioAssets = await repo.listAssetsByWorld(worldSlug, { type: "audio" });
   const linkablePages = await repo.listPagesByWorld(worldSlug, {
@@ -218,12 +218,12 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
 
         <Card>
           <CardHeader>
-            <CardTitle>RTX-Audioausgabe</CardTitle>
+            <CardTitle>Maschinenraum-Audioausgabe</CardTitle>
           </CardHeader>
           <CardContent>
-            {rtxAudioOnline ? (
+            {engineAudioOnline ? (
               <Alert tone="success">
-                Maschinenraum online — Sounds können lokal über den RTX-PC ausgegeben werden.
+                Maschinenraum online — Sounds können dort lokal ausgegeben werden.
               </Alert>
             ) : (
               <p className="text-sm text-muted-foreground">

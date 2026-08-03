@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import {
   authorize,
   canAccessStudio,
-  canUseRtxAi,
+  canUseEngineAi,
   type AuthorizeDenied,
 } from "@uwe/auth";
 import { getCurrentAuthUser, studioAuthRequired } from "./auth";
@@ -88,7 +88,7 @@ async function requireStudioActionRole(): Promise<void> {
 }
 
 /**
- * Guard für Server Actions, die den RTX-Host beschäftigen (G-KI).
+ * Guard für Server Actions, die den Maschinenraum-Host beschäftigen (G-KI).
  *
  * Ersetzt `requireStudioActionAuth()` NICHT, es ruft es auf: eine KI-Action
  * braucht dieselbe CSRF-/Origin-Prüfung und dasselbe Studio-Häkchen wie jede
@@ -116,11 +116,11 @@ export async function requireStudioAiActionAuth(): Promise<void> {
   }
 
   const user = await getCurrentAuthUser();
-  if (!user || !canUseRtxAi(user)) {
+  if (!user || !canUseEngineAi(user)) {
     throw new StudioActionAuthError({
       status: 403,
       error:
-        "Für dieses Konto ist die RTX-KI nicht freigeschaltet. Der Owner richtet das im Command Center ein.",
+        "Für dieses Konto ist die Maschinenraum-KI nicht freigeschaltet. Der Owner richtet das im Command Center ein.",
     });
   }
 }

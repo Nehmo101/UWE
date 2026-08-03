@@ -36,8 +36,8 @@ interface Props {
   schema: StructuredGeneratorSchema;
   action: GeneratorActionDefinition;
   npcOptions: QuestPatronOption[];
-  rtxReady: boolean;
-  rtxEnabled: boolean;
+  engineReady: boolean;
+  engineEnabled: boolean;
 }
 
 const CUSTOM_PATRON = "__custom__";
@@ -49,8 +49,8 @@ export function QuestBuilderPanel({
   schema,
   action,
   npcOptions,
-  rtxReady,
-  rtxEnabled,
+  engineReady,
+  engineEnabled,
 }: Props) {
   const [patronChoice, setPatronChoice] = useState(
     npcOptions.length > 0 ? "" : CUSTOM_PATRON,
@@ -104,7 +104,7 @@ export function QuestBuilderPanel({
       if (response.status === 202 || payload.deferred) {
         const id = payload.jobId ?? payload.job?.id ?? null;
         setJobId(id);
-        setStatus(payload.message ?? "RTX offline — Job vorgemerkt. Kein Cloud-Fallback.");
+        setStatus(payload.message ?? "Maschinenraum offline — Job vorgemerkt. Kein Cloud-Fallback.");
         return;
       }
 
@@ -127,19 +127,19 @@ export function QuestBuilderPanel({
         <CardTitle>Quest-Builder</CardTitle>
         <p className="text-sm text-muted-foreground">
           Strukturierte Quest für {pageTitle}: Auftraggeber, Ziel, Twist und Konsequenz —
-          RTX-only, Ergebnis läuft als Review-Vorschlag (nie automatisch übernehmen).
+          Maschinenraum-only, Ergebnis läuft als Review-Vorschlag (nie automatisch übernehmen).
         </p>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        {!rtxEnabled && (
+        {!engineEnabled && (
           <Alert tone="danger" role="alert">
-            RTX-Inference ist deaktiviert.
+            Maschinenraum-Inference ist deaktiviert.
           </Alert>
         )}
 
-        {rtxEnabled && !rtxReady && (
+        {engineEnabled && !engineReady && (
           <p className="text-sm text-muted-foreground">
-            RTX offline — wird als Job vorgemerkt (kein Cloud-Fallback).
+            Maschinenraum offline — wird als Job vorgemerkt (kein Cloud-Fallback).
           </p>
         )}
 
@@ -217,7 +217,7 @@ export function QuestBuilderPanel({
             </div>
           ))}
 
-          <Button type="submit" disabled={!rtxEnabled || busy} className="self-start">
+          <Button type="submit" disabled={!engineEnabled || busy} className="self-start">
             {busy ? "Läuft…" : action.label}
           </Button>
         </form>

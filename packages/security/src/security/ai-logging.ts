@@ -1,5 +1,5 @@
 const SECRET_PATTERNS: RegExp[] = [
-  /(rtx_agent_token\s*=\s*)([^\s\r\n]+)/gi,
+  /(engine_agent_token\s*=\s*)([^\s\r\n]+)/gi,
   /(agent_token\s*=\s*)([^\s\r\n]+)/gi,
   /(studio_api_token\s*=\s*)([^\s\r\n]+)/gi,
   /(authorization:\s*bearer\s+)([^\s\r\n]+)/gi,

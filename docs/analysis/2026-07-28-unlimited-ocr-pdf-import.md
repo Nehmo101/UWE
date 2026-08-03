@@ -24,7 +24,7 @@ Der Importer ist ausgeliefert und vollständig:
 | Konzeptdoku | [`docs/engineering/pdf-campaign-import-plan.md`](../engineering/pdf-campaign-import-plan.md) |
 
 **Ablauf heute:** PDF → `extractPdfText` → `chunkPdfText` (6 000 Zeichen) → pro Chunk
-`routeAiRequest` mit `providerMode: "local_rtx"` → `parseCampaignEntities` → Preview →
+`routeAiRequest` mit `providerMode: "local_engine"` → `parseCampaignEntities` → Preview →
 ausgewählte Entitäten als `Page` mit `visibility: "dm_only"` unter der Kampagne. Rückrollbar
 über `captureImportCentralExecute`.
 
@@ -91,7 +91,7 @@ Das ist der stärkste Teil der Bewertung: Die Infrastruktur ist **bereits vorhan
 - **Job-Typ `vision_extract` existiert** — GPU-Lane, Priorität 40
   (`packages/connector/src/job-types.ts:81`)
 - **Executor existiert** — Ollama `/api/chat` mit `messages[].images`
-  (`tools/uwe-rtx-connector/src/executors.ts`); Default heute `llava`
+  (`tools/uwe-engine-connector/src/executors.ts`); Default heute `llava`
 - **Host-Wrapper existiert** — `runConnectorVisionExtract`
   (`packages/ai-brain/src/router/providers/connectorQueueProvider.ts:188`)
 - **Das Muster ist erprobt** — `packages/scan-inbox` fährt exakt diesen Weg: PDF-Textlayer,
@@ -125,9 +125,9 @@ Die Kette PDF → Bild → `vision_extract` ist damit **ohne neue Abhängigkeit*
 
 ### 4.3 Privacy bleibt unangetastet
 
-Läuft auf dem RTX-Host, MIT-Gewichte, kein Cloud-Provider. `AiProviderMode` kennt ohnehin nur
-noch `"local_rtx"` — Cloud-Provider sind aus dem Router entfernt. Die Regel *"jede KI-Aktion
-über den RTX-Host"* bleibt erfüllt.
+Läuft auf dem Maschinenraum-Host, MIT-Gewichte, kein Cloud-Provider. `AiProviderMode` kennt ohnehin nur
+noch `"local_engine"` — Cloud-Provider sind aus dem Router entfernt. Die Regel *"jede KI-Aktion
+über den Maschinenraum-Host"* bleibt erfüllt.
 
 ---
 
@@ -141,14 +141,14 @@ noch `"local_rtx"` — Cloud-Provider sind aus dem Router entfernt. Die Regel *"
 - **Transport.** Die Connector-Queue trägt Base64-JSON. Eine Seite bei 1 600 px JPEG sind
   ~200–400 KB Base64; ein ganzes Buch geht so nicht als ein Payload durch. Es müsste seiten-
   oder batchweise laufen. (`file_cache` ist als Capability reserviert, hat aber keinen
-  Executor — laut `docs/rtx-connector.md` bewusst deaktiviert.)
-- **RTX-Abhängigkeit verdoppelt sich.** Heute braucht der Import RTX einmal (LLM), mit OCR
+  Executor — laut `docs/engine-connector.md` bewusst deaktiviert.)
+- **Maschinenraum-Abhängigkeit verdoppelt sich.** Heute braucht der Import Maschinenraum einmal (LLM), mit OCR
   zweimal. Der Textlayer-Pfad muss als schneller Weg erhalten bleiben, nicht ersetzt werden.
 - **Ollama-Aktualität.** `frob/unlimited-ocr` braucht ein Ollama auf llama.cpp ≥ Build 168;
   ältere Builds laden es nicht. Braucht einen Preflight-Check statt einer kryptischen
   Ladefehlermeldung.
 - **Capability-Erkennung.** `VISION_MODEL_PATTERNS`
-  (`tools/uwe-rtx-connector/src/local-capabilities.ts:193`) kennt nur llava, minicpm-v,
+  (`tools/uwe-engine-connector/src/local-capabilities.ts:193`) kennt nur llava, minicpm-v,
   qwen2.5-vl, moondream, bakllava, llama3.2-vision — `unlimited-ocr` matcht keines davon.
   Es rettet nur `model.capabilities?.includes("vision")` (Z. 206), falls Ollama die Capability
   meldet. Ein Ein-Zeilen-Risiko — aber es würde **still** fehlschlagen: der Connector meldet
@@ -191,7 +191,7 @@ ollama pull frob/unlimited-ocr:q8_0
 
 ### Vorbedingung vor jeder Umsetzung
 
-**Auf dem RTX-Host `ollama pull` ausführen und eine Testseite durch `vision_extract` schicken.**
+**Auf dem Maschinenraum-Host `ollama pull` ausführen und eine Testseite durch `vision_extract` schicken.**
 Wenn das Modell dort nicht sauber lädt oder der Connector `vision_local` nicht meldet (siehe
 Abschnitt 5), ist die ganze Rechnung hinfällig. Das ist in 15 Minuten geklärt — bevor
 irgendein Code entsteht.

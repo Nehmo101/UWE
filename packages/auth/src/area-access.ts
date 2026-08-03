@@ -43,17 +43,17 @@ export function canAccessFamily(user: Pick<AuthUser, "access">): boolean {
 }
 
 /**
- * Darf diese Adresse die RTX-KI benutzen (G-KI)?
+ * Darf diese Adresse die Maschinenraum-KI benutzen (G-KI)?
  *
  * Die vier Häkchen sagen, WELCHE APP jemand betreten darf. Dieses Flag sagt
  * etwas anderes: ob er darin die lokale Inferenz auslösen darf. Beides ist
- * nötig — das Häkchen bringt ihn in die App, das Flag lässt ihn den RTX-Host
+ * nötig — das Häkchen bringt ihn in die App, das Flag lässt ihn den Maschinenraum-Host
  * beschäftigen.
  *
  * Der Owner geht immer durch. Er richtet das Flag ein; ein Owner, der sich
  * selbst aussperren könnte, wäre eine Falle ohne Nutzen.
  */
-export function canUseRtxAi(user: Pick<AuthUser, "isOwner" | "aiAccess">): boolean {
+export function canUseEngineAi(user: Pick<AuthUser, "isOwner" | "aiAccess">): boolean {
   return isOwner(user) || user.aiAccess === true;
 }
 
@@ -61,7 +61,7 @@ export class AiAccessDeniedError extends Error {
   readonly code = "AI_ACCESS_DENIED";
 
   constructor(
-    message = "Für dieses Konto ist die RTX-KI nicht freigeschaltet. Der Owner richtet das im Command Center ein.",
+    message = "Für dieses Konto ist die Maschinenraum-KI nicht freigeschaltet. Der Owner richtet das im Command Center ein.",
   ) {
     super(message);
     this.name = "AiAccessDeniedError";
@@ -69,11 +69,11 @@ export class AiAccessDeniedError extends Error {
 }
 
 /** Throwing variant for Server Actions and handlers. */
-export function requireRtxAi(user: Pick<AuthUser, "isOwner" | "aiAccess"> | null): void {
+export function requireEngineAi(user: Pick<AuthUser, "isOwner" | "aiAccess"> | null): void {
   if (!user) {
     throw new AuthRequiredError();
   }
-  if (!canUseRtxAi(user)) {
+  if (!canUseEngineAi(user)) {
     throw new AiAccessDeniedError();
   }
 }
@@ -123,7 +123,7 @@ export function requireOwner(user: AuthUser | null): AuthUser {
  * What a request must bring to pass a Studio route gate.
  *
  * `"ai"` ist Studio PLUS das KI-Flag — nicht statt dessen. Eine KI-Route
- * verlangt beides: hereinkommen (Studio-Häkchen) und den RTX-Host beschäftigen
+ * verlangt beides: hereinkommen (Studio-Häkchen) und den Maschinenraum-Host beschäftigen
  * dürfen (`aiAccess`).
  */
 export type StudioRouteAccess = "public" | "studio" | "ai" | "owner";
@@ -157,7 +157,7 @@ function isPublicStudioApiPath(pathname: string): boolean {
 }
 
 /**
- * Studio-Routen, die den RTX-Host beschäftigen (G-KI).
+ * Studio-Routen, die den Maschinenraum-Host beschäftigen (G-KI).
  *
  * Diese Liste ist die EINZIGE Stelle, an der steht, was als KI-Route gilt —
  * es gibt keinen zweiten Ort, an dem eine Route sich selbst als KI-Route
@@ -207,7 +207,7 @@ export function getRequiredAccessForApiPath(pathname: string): StudioRouteAccess
     return null;
   }
   // Owner zuerst: `/api/admin/*` bleibt owner-only, auch wenn dort KI läuft.
-  // Der Owner geht durch `canUseRtxAi` ohnehin durch, die Reihenfolge kostet
+  // Der Owner geht durch `canUseEngineAi` ohnehin durch, die Reihenfolge kostet
   // ihn also nichts — sie hält nur die strengere Stufe oben.
   if (normalized.startsWith("/api/admin")) {
     return "owner";
@@ -244,8 +244,8 @@ export function satisfiesStudioRouteAccess(
   }
   if (required === "ai") {
     // Beides, nicht eines von beiden: hereinkommen UND den Host beschäftigen
-    // dürfen. Der Owner geht über canUseRtxAi durch, hat aber ohnehin Studio.
-    return canAccessStudio(user) && canUseRtxAi(user);
+    // dürfen. Der Owner geht über canUseEngineAi durch, hat aber ohnehin Studio.
+    return canAccessStudio(user) && canUseEngineAi(user);
   }
   return canAccessStudio(user);
 }

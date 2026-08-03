@@ -19,7 +19,7 @@ import {
   AiPolicyViolationError,
 } from "./ai-policy";
 import { formatAiPromptLog, redactAiSecrets, sanitizeAiLogPayload } from "./ai-logging";
-import { rejectClientWorkerUrl } from "./rtx-boundary";
+import { rejectClientWorkerUrl } from "./engine-boundary";
 
 
 describe("ai-policy — access enforcement", () => {
@@ -124,7 +124,7 @@ describe("ai-policy — request limits", () => {
 describe("ai-policy — logging redaction", () => {
   it("redacts secrets from logs", () => {
     const input =
-      'Authorization: Bearer sk-test-secret-12345 RTX_AGENT_TOKEN=super-secret api_key=abc123';
+      'Authorization: Bearer sk-test-secret-12345 ENGINE_AGENT_TOKEN=super-secret api_key=abc123';
     const redacted = redactAiSecrets(input);
     assert.doesNotMatch(redacted, /sk-test-secret-12345/);
     assert.doesNotMatch(redacted, /super-secret/);

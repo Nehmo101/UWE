@@ -3,7 +3,7 @@
  *
  *   host           -> always-on instance (website, studio, portal, db, queue).
  *                    Source of truth. Must boot and serve without any connector.
- *   rtx-connector  -> optional local worker on the RTX PC. Connects OUTBOUND to
+ *   engine-connector  -> optional local worker on the machine with the hardware. Connects OUTBOUND to
  *                    the host and claims jobs for executable local backends.
  *
  * The connector is never required for the host to be online.
@@ -11,15 +11,15 @@
 
 import { normalizeCapabilities, type ConnectorCapability } from "./capabilities";
 
-export const UWE_RUNTIME_ROLES = ["host", "rtx-connector"] as const;
+export const UWE_RUNTIME_ROLES = ["host", "engine-connector"] as const;
 export type UweRuntimeRole = (typeof UWE_RUNTIME_ROLES)[number];
 
 export const DEFAULT_RUNTIME_ROLE: UweRuntimeRole = "host";
 
 export function resolveRuntimeRole(env: NodeJS.ProcessEnv = process.env): UweRuntimeRole {
   const raw = env.UWE_RUNTIME_ROLE?.trim().toLowerCase();
-  if (raw === "rtx-connector" || raw === "connector" || raw === "rtx_connector") {
-    return "rtx-connector";
+  if (raw === "engine-connector" || raw === "connector" || raw === "engine_connector") {
+    return "engine-connector";
   }
   return DEFAULT_RUNTIME_ROLE;
 }
@@ -29,7 +29,7 @@ export function isHostRole(env: NodeJS.ProcessEnv = process.env): boolean {
 }
 
 export function isConnectorRole(env: NodeJS.ProcessEnv = process.env): boolean {
-  return resolveRuntimeRole(env) === "rtx-connector";
+  return resolveRuntimeRole(env) === "engine-connector";
 }
 
 export const DEFAULT_POLL_INTERVAL_MS = 2000;

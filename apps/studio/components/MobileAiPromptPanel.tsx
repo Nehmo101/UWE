@@ -58,7 +58,7 @@ export function MobileAiPromptPanel({
       return;
     }
     if (caps.localAiReady) {
-      setProviderMode("local_rtx");
+      setProviderMode("local_engine");
     }
   }, [caps.localAiReady, isPageVariant, setProviderMode]);
 

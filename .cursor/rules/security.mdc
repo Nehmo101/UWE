@@ -13,7 +13,7 @@ alwaysApply: true
 - Studio APIs: `requireStudioApiAuth` or equivalent guards.
 - Portal: never expose `dm_only` to unauthenticated users.
 - Filter visibility in repository/service layer — not UI-only.
-- Cloud AI: **personal_brain (Life Brain) is permanently local-only** — never cloud, no fallback, not configurable. DnD/world context (brain, current_object, current_object_plus_brain) may go to cloud when admin gateway policy allows (default: CLOUD_ALLOWED, RTX preferred). RTX stays on LAN.
+- Cloud AI: **personal_brain (Life Brain) is permanently local-only** — never cloud, no fallback, not configurable. DnD/world context (brain, current_object, current_object_plus_brain) may go to cloud when admin gateway policy allows (default: CLOUD_ALLOWED, Maschinenraum preferred). Maschinenraum stays on LAN.
 - Do not weaken CORS, CSP, or security headers without explicit review.
 - No sensitive data in logs; validate uploads via `packages/assets`.
 

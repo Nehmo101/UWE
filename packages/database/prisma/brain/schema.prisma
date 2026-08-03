@@ -910,7 +910,7 @@ model BrainChatMessage {
   /// "llm" oder "vision" — welcher Connector-Pfad den Turn beantwortet hat.
   route        String?
   durationMs   Int?    @map("duration_ms")
-  /// Fehlertext statt Antwort (RTX offline, Timeout) — bleibt im Verlauf sichtbar.
+  /// Fehlertext statt Antwort (Maschinenraum offline, Timeout) — bleibt im Verlauf sichtbar.
   errorMessage String? @map("error_message")
 
   createdAt DateTime @default(now()) @map("created_at")

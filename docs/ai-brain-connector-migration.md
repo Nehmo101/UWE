@@ -15,7 +15,7 @@ The connector executor currently runs `llm_generate` and `embedding_generate`
 through Ollama only. LM Studio and llama.cpp discovery remains informational for
 now; they do not advertise executable `llm_local` or `embedding_local`
 capabilities. Cloud providers stay behind the UWE interface/gateway instead of
-the RTX connector.
+the Maschinenraum connector.
 
 `image_generate` can run through an explicitly configured local command via
 `UWE_CONNECTOR_IMAGE_CMD`. There is no bundled first-party image backend yet, so
@@ -54,34 +54,34 @@ Local LLM inference now prefers the outbound Maschinenraum queue:
   (and `ConnectorJobWaitError`) — the host observes the job row; an online
   connector claims and completes it. Injectable `now`/`sleep` keep tests fast.
 - `packages/ai-brain/src/router/aiRouter.ts` prefers the connector queue when
-  the route is `local_rtx` and a connector advertises `llm_local`. The direct
-  `createLocalRtxProvider` stays as the fallback when no connector is online.
+  the route is `local_engine` and a connector advertises `llm_local`. The direct
+  `createLocalEngineProvider` stays as the fallback when no connector is online.
   `request.useMock` bypasses the connector path.
 
 Cloud/privacy rules are unchanged — the connector is just another local backend.
 
 ## Legacy inbound path (renamed / demoted)
 
-- `packages/ai-brain/src/rtx-worker-config.ts` is the canonical resolver for the
-  RTX worker URL/token, timeout and preferred local model (`RtxWorker*` names).
-  `rtx-agent-config.ts` is a deprecated re-export shim that keeps the old
-  `RtxAgent*` aliases and the `./rtx-agent-config` package export for existing
+- `packages/ai-brain/src/engine-worker-config.ts` is the canonical resolver for the
+  Maschinenraum worker URL/token, timeout and preferred local model (`EngineWorker*` names).
+  `engine-agent-config.ts` is a deprecated re-export shim that keeps the old
+  `EngineAgent*` aliases and the `./engine-agent-config` package export for existing
   imports.
 - `apps/studio/app/api/inference/hardware/route.ts` no longer calls the old
   inbound agent hardware endpoint; it returns **410 Gone** and points to the
-  outbound Maschinenraum (`tools/uwe-rtx-connector`, `system_info`).
+  outbound Maschinenraum (`tools/uwe-engine-connector`, `system_info`).
 - `packages/cookbook/src/recommendations.ts` no longer recommends the legacy
-  `rtx_agent` engine — Ollama / OpenAI-compatible / connector only.
+  `engine_agent` engine — Ollama / OpenAI-compatible / connector only.
 
-The RTX worker security boundary (`@uwe/security` rtx-boundary) and the image
+The Maschinenraum worker security boundary (`@uwe/security` engine-boundary) and the image
 path still resolve/LAN-validate the worker URL for existing setups. New docs and
-examples should use `RTX_BASE_URL` / `RTX_SERVICE_TOKEN`.
+examples should use `ENGINE_BASE_URL` / `ENGINE_SERVICE_TOKEN`.
 
 ## Image generation
 
 `image_generate` stays capability-gated. When the direct worker URL is configured,
 Image Studio logs a deprecation warning for the old inbound path. With
-`RTX_USE_CONNECTOR_IMAGE=true` and a host-injected connector bridge, image
+`ENGINE_USE_CONNECTOR_IMAGE=true` and a host-injected connector bridge, image
 generation routes through the connector `image_generate` queue instead of the
 inbound HTTP call. A first-party image worker, model selection and UI status polish
 remain follow-ups.
@@ -104,5 +104,5 @@ pnpm build:release
 
 Phases 0–2 shipped in PRs #490–#492. Phase 3–5 work (governance UI, host smoke tests,
 audio stop executor, env message cleanup) continues on `cursor/phase3-5-connector-roadmap-98ef`.
-See `docs/rtx-connector.md` for the full checklist and remaining
+See `docs/engine-connector.md` for the full checklist and remaining
 deferred items (LM Studio executor, bundled image worker, live Worker CI E2E).

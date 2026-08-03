@@ -47,7 +47,7 @@ export function entityToCreatePageInput(
           sourceTitle: context.sourceTitle?.trim() || context.sourceFile,
           licence: context.licence ?? "own",
           extractedKind: entity.kind,
-          aiRoute: "local_rtx",
+          aiRoute: "local_engine",
         },
       },
     ],

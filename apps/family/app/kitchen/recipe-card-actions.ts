@@ -15,7 +15,7 @@ import { requireFamilyAiActionAuth } from "@/src/lib/family-action-auth";
  * trotzdem.
  *
  * `requireFamilyAiActionAuth` prüft zusätzlich zum Häkchen das KI-Flag des
- * Kontos (`canUseRtxAi`).
+ * Kontos (`canUseEngineAi`).
  */
 
 function stepsOf(value: unknown): string[] {

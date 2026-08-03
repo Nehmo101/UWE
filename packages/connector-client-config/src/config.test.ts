@@ -45,13 +45,13 @@ describe("parseConnectorClientConfig", () => {
     const config = parseConnectorClientConfig({
       hostUrl: "https://uwe.example/",
       token: "  uwec_secret  ",
-      name: "RTX Laptop",
+      name: "Maschinenraum Laptop",
       queueEnabled: false,
     });
 
     assert.equal(config.hostUrl, "https://uwe.example");
     assert.equal(config.token, "uwec_secret");
-    assert.equal(config.name, "RTX Laptop");
+    assert.equal(config.name, "Maschinenraum Laptop");
     assert.equal(config.transportMode, "queue");
     assert.equal(config.queueEnabled, false);
     assert.equal(config.wizardCompleted, false);

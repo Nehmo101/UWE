@@ -87,7 +87,7 @@ achtzehn Karten wären mehr Weg, nicht weniger.
 
 | Ort | Grund |
 |---|---|
-| `apps/rtx-connector-client` | Desktop-Fenster mit eigenem Stylesheet, ohne design-v3. Kein responsives Ziel. |
+| `apps/engine-connector-client` | Desktop-Fenster mit eigenem Stylesheet, ohne design-v3. Kein responsives Ziel. |
 | `packages/database/src/character-sheet-export.ts` | HTML-Export für Druck, keine Bildschirmansicht. |
 | `packages/mail/src/sanitize/mail-html.test.ts` | Testvorlage. |
 

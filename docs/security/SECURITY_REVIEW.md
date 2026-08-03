@@ -122,7 +122,7 @@ Studio + Portal `next.config.ts`:
 | `RUN_DB_SEED=auto` in Docker | **Hoch** in Production | `RUN_DB_SEED=false` setzen |
 | `player_visible` = ohne Login lesbar | **By design** | Bewusst veröffentlichen; `AUTH_REQUIRED=true` für Portal |
 | `PLAYER_PREVIEW_ALLOW_DM_ONLY=true` | **Kritisch** | Nie in Production aktivieren |
-| RTX/Ollama öffentliche URLs | **Kritisch** | Nur LAN/Private IPs; `AI_INFERENCE_ALLOW_PUBLIC_URL=false` |
+| Maschinenraum/Ollama öffentliche URLs | **Kritisch** | Nur LAN/Private IPs; `AI_INFERENCE_ALLOW_PUBLIC_URL=false` |
 | In-Memory Rate-Limits | **Mittel** | Cloudflare Rate-Limiting / nginx bei Multi-Instance |
 | Import/Restore ohne Transaktion | **Mittel** | Preview + `confirmed: true`; Backups vor Restore |
 | SQLite Concurrency | **Niedrig** | Für kleine/mittlere Deployments OK |
@@ -159,7 +159,7 @@ Vor Go-Live auf `uwe.example` (oder ähnlich):
 - [ ] `AUTH_REQUIRED=true` (wenn Portal-Login Pflicht)
 - [ ] `PLAYER_PREVIEW_ALLOW_DM_ONLY=false`
 - [ ] `AI_INFERENCE_ALLOW_PUBLIC_URL=false`
-- [ ] RTX/Inference-URLs nur private IPs (`192.168.x.x`)
+- [ ] Maschinenraum/Inference-URLs nur private IPs (`192.168.x.x`)
 
 ### Nach Deployment verifizieren
 

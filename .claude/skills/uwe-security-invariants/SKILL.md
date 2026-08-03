@@ -26,9 +26,9 @@ Import session symbols from `@uwe/auth` (`SESSION_COOKIE_NAME` from `session`, *
 ## Local-first AI privacy
 
 - **`personal_brain` (Life Brain) is hard local-only — never to cloud, not configurable.** `LOCAL_ONLY_CONTEXT_MODES = ["personal_brain"]`.
-- DnD `brain` / `current_object` modes may use cloud when admin policy allows (W0 default: cloud allowed, RTX preferred).
+- DnD `brain` / `current_object` modes may use cloud when admin policy allows (W0 default: cloud allowed, Maschinenraum preferred).
 - Validation lives in `packages/ai-brain/src/router/` (`validateProviderContextCombination`, `validateResolvedRouteForContext`).
-- RTX/Ollama/LM Studio = LAN only, never behind Cloudflare Tunnel or public DNS.
+- Maschinenraum/Ollama/LM Studio = LAN only, never behind Cloudflare Tunnel or public DNS.
 - AI never writes canon without explicit DM Apply.
 
 ## CSP

@@ -39,7 +39,7 @@ import {
  * Vorschau, nicht das fertige HTML aller Seiten; ein Kampagnenbuch mit 176
  * Seiten muss nicht doppelt in der Datenbank liegen.
  *
- * Die eine Ausnahme ist der **KI-Feinschliff**: Der RTX-Host ist kein
+ * Die eine Ausnahme ist der **KI-Feinschliff**: Der Maschinenraum-Host ist kein
  * deterministischer Teil des Systems. Sein Urteil wird deshalb einmal in der
  * Vorschau eingeholt, im Job abgelegt und beim Ausführen von dort gelesen —
  * angelegt wird genau das, was bestätigt wurde, auch wenn der Host inzwischen
@@ -139,7 +139,7 @@ async function buildPlanForJob(
  * Holt den KI-Feinschliff — oder gibt auf und sagt es.
  *
  * `requireStudioAiActionAuth` steht hier und nicht am Anfang der Action, weil
- * der Import auch ohne KI-Berechtigung vollständig funktioniert. Wer die RTX
+ * der Import auch ohne KI-Berechtigung vollständig funktioniert. Wer den Maschinenraum
  * nicht benutzen darf, bekommt die Regelzuordnung; niemand steht vor einer
  * verschlossenen Tür, nur weil ein Häkchen fehlt.
  */

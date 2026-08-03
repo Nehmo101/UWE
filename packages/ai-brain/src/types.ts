@@ -5,7 +5,7 @@ export const AI_BRAIN_VERSION = "1.0.0";
 /**
  * Die beiden lokalen Inferenz-Backends. Cloud-Anbieter (OpenAI, Anthropic,
  * Gemini, OpenRouter) sind mit N.3 ersatzlos entfallen — jede KI-Aktion läuft
- * über den RTX-Host.
+ * über den Maschinenraum-Host.
  */
 export type AiProviderId = "ollama" | "openai_compatible";
 

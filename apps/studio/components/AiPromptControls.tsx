@@ -1,6 +1,6 @@
 "use client";
 
-import { LoadingSpinner, RtxStatusBadge, type RtxConnectorState } from "@uwe/shared-ui";
+import { LoadingSpinner, EngineStatusBadge, type EngineConnectorState } from "@uwe/shared-ui";
 import {
   computePromptUiState,
   deriveStatusChips,
@@ -93,7 +93,7 @@ export function AiPromptControls({
   const ui = computePromptUiState(providerMode, contextMode, caps, promptPreview);
   const chips = deriveStatusChips(caps);
   const active = formatActiveModes(providerMode, contextMode);
-  const rtxChip = chips.find((chip) => chip.id === "rtx");
+  const engineChip = chips.find((chip) => chip.id === "engine");
 
   if (isPageVariant) {
     return (
@@ -108,13 +108,13 @@ export function AiPromptControls({
                 {" · "}
               </>
             ) : null}
-            {rtxChip ? (
+            {engineChip ? (
               <>
-                RTX {rtxChip.value}
+                Maschinenraum {engineChip.value}
                 {" · "}
               </>
             ) : null}
-            Lokale KI — Weltwissen bleibt auf dem RTX-Rechner.
+            Lokale KI — Weltwissen bleibt auf dem Maschinenraum-Rechner.
           </p>
         )}
 
@@ -139,11 +139,11 @@ export function AiPromptControls({
             {chips.map((chip) => (
               <li key={chip.id} className={`mobile-ai-chip ${chipLevelClass(chip.level)}`}>
                 <span className="mobile-ai-chip-label">{chip.label}</span>
-                {chip.id === "rtx" ? (
-                  <RtxStatusBadge
-                    state={caps.rtxState as RtxConnectorState}
+                {chip.id === "engine" ? (
+                  <EngineStatusBadge
+                    state={caps.engineState as EngineConnectorState}
                     label={chip.value}
-                    className="mobile-ai-chip-rtx-badge"
+                    className="mobile-ai-chip-engine-badge"
                   />
                 ) : (
                   <span className="mobile-ai-chip-value">{chip.value}</span>

@@ -14,7 +14,7 @@
 # OpenAI-compatible `/v1/audio/transcriptions` server, keep the same contract and
 # swap the middle section.
 #
-# Setup on the RTX host (once):
+# Setup on the Maschinenraum host (once):
 #   WHISPER_CLI=/opt/whisper.cpp/build/bin/whisper-cli
 #   WHISPER_MODEL=/opt/whisper.cpp/models/ggml-large-v3-turbo.bin
 # then set the Command Center's STT command to:

@@ -18,7 +18,7 @@ description: Review UWE pull requests for correctness, security, CI readiness, a
 |------|----------------|
 | **Studio API** | New/changed routes use `requireStudioApiAuth` or are in the public allowlist (`health`, `spotify/callback`) |
 | **Portal leaks** | No `dm_only` / draft / secret content on anonymous paths |
-| **AI / RTX** | No campaign context to cloud; rate limits on inference routes |
+| **AI / Maschinenraum** | No campaign context to cloud; rate limits on inference routes |
 | **Migrations** | Prisma migration present if schema changed; backward-compatible for SQLite |
 | **Monorepo scope** | Domain logic in `packages/`, apps stay thin |
 | **Agent PRs** | Draft only; human review required before merge |

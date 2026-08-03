@@ -22,7 +22,7 @@
  * Die Muster sind deutsch und bewusst schlicht: erste passende Regel gewinnt.
  * Sie sind eine Vorbelegung, keine Wahrheit — deshalb steht der Typ jeder Seite
  * in der Vorschau und lässt sich dort korrigieren, bevor geschrieben wird. Wenn
- * der RTX-Host antwortet, korrigiert die KI schon vorher (siehe `ai-hints.ts`).
+ * der Maschinenraum-Host antwortet, korrigiert die KI schon vorher (siehe `ai-hints.ts`).
  */
 
 import type { DocProfile, DocumentNode, SectionRole } from "../types";

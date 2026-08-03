@@ -65,7 +65,7 @@ for script in \
   bash -n "$script"
 done
 
-grep -q 'ConditionPathExists=/opt/uwe/tools/uwe-rtx-connector/.env' \
-  "$SCRIPT_DIR/../systemd/uwe-rtx-connector.service"
+grep -q 'ConditionPathExists=/opt/uwe/tools/uwe-engine-connector/.env' \
+  "$SCRIPT_DIR/../systemd/uwe-engine-connector.service"
 
 echo "[OK] Fedora host smoke passed (${UWE_OS_PRETTY_NAME}, $(host_architecture))."

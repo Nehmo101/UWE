@@ -1,11 +1,11 @@
 # AI Provider Setup
 
-Cloud-Provider und RTX werden **ausschließlich vom Master-Admin (Owner)** konfiguriert.
+Cloud-Provider und Maschinenraum werden **ausschließlich vom Master-Admin (Owner)** konfiguriert.
 
-## Lokale RTX (bevorzugt)
+## Lokaler Maschinenraum (bevorzugt)
 
 Aktiver Weg: direktes Ollama/LM Studio im Heimnetz plus optional der ausgehende
-**Maschinenraum** (`tools/uwe-rtx-connector`, `pnpm connector:start`).
+**Maschinenraum** (`tools/uwe-engine-connector`, `pnpm connector:start`).
 
 ```env
 AI_INFERENCE_ENABLED=true
@@ -14,11 +14,11 @@ AI_INFERENCE_BASE_URL=http://192.168.x.x:11434
 PREFERRED_LOCAL_MODEL=llama3.2
 ```
 
-Nur im Heimnetz, nie öffentlich. Siehe [rtx-connector.md](rtx-connector.md).
+Nur im Heimnetz, nie öffentlich. Siehe [engine-connector.md](engine-connector.md).
 
-> **Legacy (entfernt):** der alte inbound RTX-Agent (Tool + ai-brain-LLM-Client) wurde
+> **Legacy (entfernt):** der alte inbound Maschinenraum-Agent (Tool + ai-brain-LLM-Client) wurde
 > entfernt. Für den verbliebenen Worker/Image-Pfad heißen die aktuellen Variablen
-> `RTX_BASE_URL` / `RTX_SERVICE_TOKEN`; neue Setups sollten keine agent-benannten
+> `ENGINE_BASE_URL` / `ENGINE_SERVICE_TOKEN`; neue Setups sollten keine agent-benannten
 > Env-Aliase mehr dokumentieren oder verwenden.
 
 ## Cloud-Provider (Fallback)
@@ -48,8 +48,8 @@ CLOUD_AI_MODEL=gpt-4o-mini
 
 ## Master-Admin Setup
 
-1. Studio → **KI-Gateway** (`/admin/ai-gateway`) — Maschinenraum unter `/system/rtx-connector`
-2. RTX Health-Check prüfen
+1. Studio → **KI-Gateway** (`/admin/ai-gateway`) — Maschinenraum unter `/system/engine-connector`
+2. Maschinenraum-Health-Check prüfen
 3. Routing-Modus wählen
 4. Cloud-Fallback aktivieren (optional)
 5. Provider + API-Key setzen

@@ -61,7 +61,7 @@ export default async function KnowledgePage({ searchParams }: Props) {
           <Card className="h-full transition-colors hover:border-primary/40">
             <CardHeader>
               <CardTitle>Life Brain</CardTitle>
-              <CardDescription>Persönliche Dokumente &amp; Fakten (RTX-only)</CardDescription>
+              <CardDescription>Persönliche Dokumente &amp; Fakten (Maschinenraum-only)</CardDescription>
             </CardHeader>
           </Card>
         </Link>
@@ -117,7 +117,7 @@ export default async function KnowledgePage({ searchParams }: Props) {
                   <>
                     <p className="whitespace-pre-wrap text-sm">{synthesis.text}</p>
                     <p className="mt-2 text-xs text-muted-foreground">
-                      Lokal formuliert (RTX), erdet auf den Quellen unten — die Quellen bleiben
+                      Lokal formuliert (Maschinenraum), erdet auf den Quellen unten — die Quellen bleiben
                       maßgeblich.
                     </p>
                   </>
@@ -130,7 +130,7 @@ export default async function KnowledgePage({ searchParams }: Props) {
                     <input type="hidden" name="q" value={query} />
                     <input type="hidden" name="synth" value="1" />
                     <Button type="submit" variant="secondary">
-                      KI-Antwort formulieren (RTX-lokal)
+                      KI-Antwort formulieren (Maschinenraum-lokal)
                     </Button>
                   </form>
                 )}

@@ -8,7 +8,7 @@ export {
 
 export {
   validateContextModeRequirements,
-  validateLocalRtxRequired,
+  validateLocalEngineRequired,
   contextModeLabel,
 } from "./privacyGuard";
 
@@ -31,26 +31,26 @@ export {
 } from "./context/brainRetrieval";
 
 export {
-  createLocalRtxProvider,
-  getLocalRtxProviderId,
-  assertLocalRtxReady,
-  type LocalRtxProviderOptions,
-} from "./providers/localRtxProvider";
+  createLocalEngineProvider,
+  getLocalEngineProviderId,
+  assertLocalEngineReady,
+  type LocalEngineProviderOptions,
+} from "./providers/localEngineProvider";
 
 export {
-  checkRtxHealth,
-  isRtxReady,
-  isRtxWorkerConfigured,
-  type RtxHealthStatus,
-} from "./health/rtxHealthcheck";
+  checkEngineHealth,
+  isEngineReady,
+  isEngineWorkerConfigured,
+  type EngineHealthStatus,
+} from "./health/engineHealthcheck";
 
 export {
-  checkRtxReadiness,
-  isRtxReadinessReady,
-  type RtxReadinessStatus,
-  type RtxReadinessOptions,
-  type RtxReadinessSource,
-} from "./health/rtxReadiness";
+  checkEngineReadiness,
+  isEngineReadinessReady,
+  type EngineReadinessStatus,
+  type EngineReadinessOptions,
+  type EngineReadinessSource,
+} from "./health/engineReadiness";
 
 export {
   isConnectorVisionAvailable,

@@ -11,7 +11,7 @@ describe("desktop host update helpers", () => {
   it("parses uwe-v release tags", () => {
     assert.deepEqual(parseReleaseTag("uwe-v1.2.3"), { tag: "uwe-v1.2.3", version: "1.2.3" });
     assert.equal(parseReleaseTag("v1.2.3"), null);
-    assert.equal(parseReleaseTag("rtx-connector-v0.1.0"), null);
+    assert.equal(parseReleaseTag("engine-connector-v0.1.0"), null);
   });
 
   it("compares semver versions", () => {

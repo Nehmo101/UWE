@@ -10,8 +10,8 @@
  *
  * **Rein bleibt rein.** Dieses Modul baut nur die Anfrage und liest die Antwort.
  * Wer die KI tatsächlich ruft, sitzt in `@uwe/doc-import/ai` — dort, wo der
- * AI-Router und damit der RTX-Zwang hingehört. Damit bleibt die Zuordnung ohne
- * Host testbar, und ein stummer RTX kostet den Import nichts als einen Hinweis.
+ * AI-Router und damit der Maschinenraum-Zwang hingehört. Damit bleibt die Zuordnung ohne
+ * Host testbar, und ein stummer Maschinenraum kostet den Import nichts als einen Hinweis.
  *
  * **Der Vertrag ist eng.** Die KI darf eine Rolle *ändern*, nicht die Gliederung
  * erfinden: Sie bekommt Pfade, die es gibt, und ihre Antwort wird gegen genau
