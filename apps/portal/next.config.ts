@@ -37,6 +37,15 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: getUweSecurityHeaderEntries(),
       },
+      {
+        // Der Service Worker darf nicht altern: ein zwischengespeicherter
+        // sw.js liefert wochenlang eine Fassung aus, die niemand mehr hat.
+        source: "/sw.js",
+        headers: [
+          ...getUweSecurityHeaderEntries(),
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+        ],
+      },
     ];
   },
   webpack: (config, { isServer, webpack }) => {

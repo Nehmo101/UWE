@@ -108,6 +108,9 @@ export const PORTAL_SESSION_API_ROUTES = [
   "/api/worlds",
   "/api/worlds/*/graph",
   "/api/worlds/*/characters/print",
+  // Tischmodus: Abzug holen und offline entstandene Notizen nachtragen.
+  "/api/worlds/*/offline-snapshot",
+  "/api/worlds/*/notes/sync",
 ] as const;
 
 /** Studio API routes that require a logged-in session (not Bearer token). */

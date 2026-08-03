@@ -104,6 +104,15 @@ export function portalWorldNav(worldSlug: string): NavGroup[] {
           "charakterbogen",
           "sheet",
         ]),
+        // Führt bewusst aus der Welt heraus: der Tischmodus ist eine Hülle für
+        // alle Welten, nur so lässt sie sich offline vorhalten. Die Welt steht
+        // in der Adresse und wird beim ersten Aufruf mit Netz abgelegt.
+        worldItem("portal-world-table-mode", "Tischmodus", `/auth/tisch?welt=${worldSlug}`, "wifi-off", [
+          "tisch",
+          "tischmodus",
+          "offline",
+          "spieltisch",
+        ]),
         worldItem("portal-world-handouts", "Handout-Postfach", `${base}/handouts`, "inbox", [
           "handouts",
           "postfach",

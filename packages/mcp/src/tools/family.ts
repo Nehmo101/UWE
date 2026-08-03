@@ -95,6 +95,22 @@ function readTools(context: ToolContext): ToolDefinition[] {
     }),
 
     httpTool(context, {
+      name: "family_day_brief",
+      title: "Tagesstand",
+      description:
+        "Was heute (und optional morgen) im Haushalt ansteht, in einem Aufruf: Termine je Person, Geburtstage, Essensplan, offene Einkaufsliste, fällige Wartungsaufgaben und Gesundheits-Fälligkeiten. Für den schnellen Überblick gedacht — Einzelheiten holen die spezialisierten Tools.",
+      inputSchema: objectSchema({
+        days: numberArg("1 = nur heute, 2 = heute und morgen (Default 2)."),
+        at: stringArg("Bezugszeitpunkt als ISO-Zeitstempel (Default: jetzt)."),
+      }),
+      path: () => "/api/v1/day-brief",
+      query: (args) => ({
+        days: typeof args["days"] === "number" ? args["days"] : undefined,
+        at: typeof args["at"] === "string" ? args["at"] : undefined,
+      }),
+    }),
+
+    httpTool(context, {
       name: "family_health_due",
       title: "Gesundheit — Fälligkeiten",
       description:

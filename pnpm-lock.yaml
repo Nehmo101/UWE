@@ -1075,6 +1075,9 @@ importers:
       '@uwe/database':
         specifier: workspace:*
         version: link:../database
+      '@uwe/kitchen':
+        specifier: workspace:*
+        version: link:../kitchen
     devDependencies:
       '@types/node':
         specifier: ^22.15.32

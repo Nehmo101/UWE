@@ -24,6 +24,7 @@ POST /api/v1/calendar/events             family_write
 GET  /api/v1/shopping/items              family_read
 POST /api/v1/shopping/items              family_write
 GET  /api/v1/recipes                     family_read
+GET  /api/v1/day-brief                   family_read
 GET  /api/v1/health                      family_read
 POST /api/v1/health                      family_write
 GET  /api/v1/calendar/subscriptions      family_calendar
@@ -36,6 +37,32 @@ Beispiel:
 curl -H "Authorization: Bearer uwe_…" \
   "http://localhost:3004/api/v1/calendar/events?includeAnniversaries=true"
 ```
+
+## Tagesstand für ein Küchen-Tablet
+
+`GET /api/v1/day-brief` liefert in **einem** Aufruf, was heute ansteht: Termine je Person,
+Geburtstage, Essensplan, offene Einkaufsliste, fällige Wartungsaufgaben und
+Gesundheits-Fälligkeiten. Gedacht für ein Wand- oder Küchendisplay, das nicht fünf
+Endpunkte zusammenstückeln soll.
+
+```bash
+curl -H "Authorization: Bearer uwe_…" \
+  "http://localhost:3004/api/v1/day-brief?days=2"
+```
+
+`days=1` ist nur heute, `days=2` (Default) heute und morgen; mehr gibt der Endpunkt nicht
+her. `at=<ISO>` verschiebt den Bezugszeitpunkt — nützlich zum Prüfen, ohne die Uhr zu
+stellen. Die Antwort trägt `Cache-Control: no-store`: ein Tablet, das den Stand von gestern
+zeigt, ist schlimmer als eines, das kurz leer bleibt.
+
+Überfällige Wartungsaufgaben erscheinen am ersten Tag, damit sie nicht aus dem Blick
+fallen. Zusammengeführt wird in `packages/family-core/src/day-brief-service.ts`; die Route
+selbst enthält keine Logik.
+
+**Es gibt bewusst keinen tokenlosen Weg.** Ein Tagesplan verrät, wer wann nicht zu Hause
+ist — anders als beim ICS-Abo (`/api/family/calendar/feed/[token]`, eigener Token-Typ) gibt
+es hier keine Ausnahme von der Bearer-Regel. Ein Display braucht also einen Token mit
+`family_read` aus Studio → Admin → API-Tokens.
 
 ## Ein Guard, zwei Aufrufer
 
@@ -58,7 +85,7 @@ allein das Häkchen im Command Center.
 
 ## MCP-Server
 
-`uwe-family`, Slash-Befehl `/uwefamily`. Sechs lesende Tools; zwei schreibende
+`uwe-family`, Slash-Befehl `/uwefamily`. Sieben lesende Tools; zwei schreibende
 (`family_calendar_add_event`, `family_shopping_add`) nur mit `UWE_MCP_ALLOW_WRITES=true`.
 
 ```json
