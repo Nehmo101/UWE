@@ -90,6 +90,25 @@ export function normalizePublicAppUrl(value: string | undefined): string | null 
   }
 }
 
+/**
+ * Schneidet abschließende Schrägstriche ab — bewusst als Schleife, nicht als
+ * `replace(/\/+$/, "")`.
+ *
+ * Der Regex mit `+` vor dem Anker läuft auf einer Kette aus lauter
+ * Schrägstrichen quadratisch: die Engine setzt an jeder Position neu an
+ * (polynomialer ReDoS, CodeQL `js/polynomial-redos`). Der Wert kommt zwar aus
+ * der Umgebung und nicht von einem Besucher — aber diese Datei ist die
+ * Eingangstür für jeden Env-Wert, und eine Schleife ist hier weder länger noch
+ * unklarer als der Regex.
+ */
+function stripTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47 /* "/" */) {
+    end -= 1;
+  }
+  return value.slice(0, end);
+}
+
 export function normalizeAppPath(
   value: string | undefined,
   fallback: string,
@@ -103,7 +122,7 @@ export function normalizeAppPath(
     return options?.allowRoot ? "/" : fallback;
   }
   const withLeading = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
-  return withLeading.replace(/\/+$/, "") || fallback;
+  return stripTrailingSlashes(withLeading) || fallback;
 }
 
 export function parsePublicUrlHost(value: string | undefined): string | null {
