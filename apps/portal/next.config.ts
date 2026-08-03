@@ -14,6 +14,24 @@ const nextConfig: NextConfig = {
   output: "standalone",
   basePath,
   ...standalone,
+  /* Gegenstueck zu apps/studio/next.config.ts.
+
+     `sanitizeWikiHtml` laeuft ueber isomorphic-dompurify und damit ueber jsdom,
+     und jsdom liest zur Laufzeit eine eigene Datei: `browser/default-stylesheet.css`,
+     aufgeloest gegen sein `__dirname`. Wird das Paket ins Server-Bundle gezogen,
+     zeigt dieses `__dirname` auf das App-Verzeichnis — die Datei liegt aber
+     weiterhin im Paket. Ergebnis im Standalone-Build:
+
+       ENOENT … apps/portal/browser/default-stylesheet.css
+
+     und zwar bei **jeder** Wiki-Seite, deren Inhalt HTML ist. Das Portal ist
+     genau die lesende Ansicht, also trifft es dort alles. Extern gehalten
+     behaelt jsdom sein eigenes Verzeichnis und findet seine Datei. */
+  serverExternalPackages: [
+    ...standalone.serverExternalPackages,
+    "jsdom",
+    "isomorphic-dompurify",
+  ],
   transpilePackages: ["@uwe/shared-ui", "@uwe/auth", "@uwe/env"],
   async redirects() {
     // Gegenstueck zu apps/studio/next.config.ts — dieselbe Begruendung, dieselbe
@@ -67,6 +85,13 @@ const nextConfig: NextConfig = {
         "@prisma/client",
         "libsql",
         "pg",
+        // `serverExternalPackages` allein reicht hier nicht: `html-sanitize.ts`
+        // holt isomorphic-dompurify per `require()` aus einem Workspace-Paket,
+        // und webpack zieht es trotzdem ins Server-Bundle. Dann verrutscht
+        // jsdoms `__dirname` und seine `browser/default-stylesheet.css` wird
+        // unter `apps/portal/browser/` gesucht, wo sie nie liegt.
+        "isomorphic-dompurify",
+        "jsdom",
       ];
     }
 
