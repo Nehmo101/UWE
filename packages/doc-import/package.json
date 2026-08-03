@@ -16,6 +16,7 @@
     "test": "node ../../scripts/run-node-tests.mjs"
   },
   "dependencies": {
+    "@uwe/auth": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/shared-utils": "workspace:*",
     "marked": "^18.0.7",

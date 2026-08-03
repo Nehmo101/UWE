@@ -24,6 +24,7 @@ import { pickUniqueSlug, slugifyDe } from "@uwe/shared-utils/slug";
 import { parseDocument, frontmatterWarnings } from "./dialect";
 import { buildDocumentTree } from "./doc-tree";
 import { linkEntityNames, type LinkTarget } from "./semantic/crosslink";
+import { balanceDmSections } from "./semantic/dm-balance";
 import { collectEntityNodes, restructureDocument } from "./semantic/restructure";
 import { buildKnownEntityIndex, type KnownEntity } from "./semantic/world-context";
 import { mapDocumentTree } from "./tree-mapper";
@@ -272,7 +273,13 @@ export function buildDocImportPlan(
 
     const rekey = (key: string) => `f${keyOffset}-${key}`;
 
-    for (const page of mapped.pages) {
+    // Ein `:::dm` im Quelltext kennt die Seitengrenzen nicht, die hier gerade
+    // entstanden sind. Ohne diesen Ausgleich bekäme die Seite mit der öffnenden
+    // Marke einen fail-closed abgeschnittenen Rest, und alle Seiten dahinter
+    // stünden ganz ohne Marke offen — siehe `semantic/dm-balance.ts`.
+    const balancedPages = singlePage ? mapped.pages : balanceDmSections(mapped.pages).pages;
+
+    for (const page of balancedPages) {
       takenSlugs.add(page.slug);
       pages.push({
         ...page,
