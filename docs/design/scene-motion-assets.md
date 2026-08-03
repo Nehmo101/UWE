@@ -84,9 +84,22 @@ reichte den Szenen-Index an keiner Stelle in seine Shell, Brain und Portal
 hatten je genau einen Auftritt. Aufgefallen ist es nicht, weil
 `e2e/portal-motion.spec.ts` nur das Portal kannte.
 
-Dagegen steht jetzt `scripts/scene-motion-coverage.test.ts`: Ein Bereich mit
-`available: true` ohne Auftritt ist ein roter Build, und ein eingetragener
-Auftritt, der den Index nicht mehr übergibt, ebenfalls.
+Dagegen stehen jetzt zwei Wächter:
+
+- `scripts/scene-motion-coverage.test.ts` — ein Bereich mit `available: true`
+  ohne Auftritt ist ein roter Build, und ein eingetragener Auftritt, der den
+  Index nicht mehr übergibt, ebenfalls. Kostet keinen Browser und läuft in
+  `pnpm test`.
+- Vier Playwright-Projekte statt zwei. Studio, Portal, **Brain** und **Family**
+  haben je ein `*-motion.spec.ts`, das bis `readyState >= 2` geht — bis wirklich
+  Bilddaten da sind — und den Bereichsnamen in der Quell-URL prüft. Dass die
+  e2e-Abdeckung nur das Portal kannte, ist genau der Grund, warum vier Bereiche
+  leer laufen konnten.
+
+Der Aufbau baut dafür vier Apps statt zwei (`scripts/e2e-servers.mjs`). Läufe,
+die Brain und Family nicht brauchen — der Auth-Smoke bei jedem Push, die
+Perf-, a11y- und Theme-Matrix-Läufe — schneiden sie über `E2E_APPS=studio,portal`
+samt Build weg.
 
 ## Wo die Bühne steht
 

@@ -19,10 +19,10 @@ import { loginStudio } from "./helpers/auth";
  * **Was hier bewusst fehlt:** die Landing. Sie hat seit der Apex-Trennung eine
  * eigene App (`apps/landing`), und `apps/studio/app/page.tsx` leitet bei
  * getrennten Hostnamen zum Login weiter — ein Test gegen `/` prüfte hier also
- * die Anmeldemaske. Der Playwright-Aufbau baut und startet nur Studio und
- * Portal (playwright.config.ts); Landing, Brain und Family deckt stattdessen
- * `scripts/scene-motion-coverage.test.ts` statisch ab. Wer sie im Browser
- * prüfen will, nimmt zuerst die Apps in den Aufbau auf.
+ * die Anmeldemaske. Brain und Family haben seit `brain-motion.spec.ts` /
+ * `family-motion.spec.ts` eigene Projekte; die Landing wäre die fünfte App im
+ * Aufbau und bleibt vorerst bei der statischen Absicherung durch
+ * `scripts/scene-motion-coverage.test.ts`.
  */
 
 test("die Welten-Übersicht trägt das Studio-Band", async ({ page }) => {
