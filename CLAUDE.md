@@ -137,6 +137,25 @@ das jeweilige Häkchen im Command Center setzen.
 
 Minimaler Diff; Package-Grenzen einhalten; keine Drive-by Refactors; Services erweitern statt duplizieren.
 
+## Bereichs-Skills
+
+Zu jedem der vier Bereiche gibt es einen Skill unter `.claude/skills/`, der ihn
+vollständig beschreibt — Zugangsregeln, Aufbau, Fallen, typische Aufgaben, MCP-Tools
+und eine generierte Bereichskarte in `references/karte.md`:
+
+| Skill | Bereich |
+|-------|---------|
+| `/uwestudio` | DM- und Admin-App (`apps/studio`, :3000) |
+| `/uweportal` | Spieler-Wiki inkl. Tischmodus (`apps/portal`, :3001) |
+| `/uwebrain` | Owner-privates Brain (`apps/brain`, :3002) |
+| `/uwefamily` | Haushalt (`apps/family`, :3004) |
+
+**Regel:** Wer einen Bereich erweitert — neue Route, neues MCP-Tool, neues Paket —
+zieht den Skill nach. Die Faktenblöcke erzeugt `pnpm skills:sync`, den Prosa-Teil
+schreibt man selbst. `scripts/area-skills-sync.test.ts` erzwingt es in `pnpm test`
+und `pnpm test:ci`: veralteter Block, toter Pfad oder erfundener Tool-Name = roter
+Build. Details: [docs/engineering/mcp-servers.md](docs/engineering/mcp-servers.md).
+
 ## Wichtige Docs
 
 - [AGENTS.md](AGENTS.md) — Agent-Gate & Cloud-Setup
