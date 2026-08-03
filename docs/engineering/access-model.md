@@ -14,24 +14,24 @@ Dazu zwei Flags, die keine Achse sind:
 
 - **`User.isOwner`** — Betrieb, Restore, Host-Steuerung, `/admin/*`. Das erste
   Konto aus `/setup` bekommt es zusammen mit allen vier Häkchen.
-- **`User.aiAccess`** — darf diese Adresse die **RTX-KI** benutzen (G-KI)?
+- **`User.aiAccess`** — darf diese Adresse die **Maschinenraum-KI** benutzen (G-KI)?
 
 > Das Häkchen sagt, welche App. Die Welt-Zuordnung sagt, welche Welt. Sonst nichts.
 
-## Die RTX-KI ist kein fünftes Häkchen
+## Die Maschinenraum-KI ist kein fünftes Häkchen
 
 Der Satz oben soll gelten bleiben, deshalb sitzt `aiAccess` **neben** den vier
 Häkchen und nicht in ihnen. Der Unterschied ist nicht kosmetisch:
 
 | | Häkchen | `aiAccess` |
 |---|---|---|
-| Beantwortet | Welche App darf ich betreten? | Darf ich darin den RTX-Host beschäftigen? |
+| Beantwortet | Welche App darf ich betreten? | Darf ich darin den Maschinenraum-Host beschäftigen? |
 | Eins je | App | Konto |
 | Ohne es | Ich komme nicht rein | Ich komme rein, die KI-Funktionen fehlen |
 
 Eine KI-Route verlangt **beides**: das Häkchen der App bringt jemanden herein,
 `aiAccess` lässt ihn Inferenz auslösen. Der Owner geht immer durch
-(`canUseRtxAi` prüft `isOwner` zuerst) — er richtet das Flag schliesslich ein.
+(`canUseEngineAi` prüft `isOwner` zuerst) — er richtet das Flag schliesslich ein.
 
 **Wo es durchgesetzt wird**, drei Stellen, alle zentral:
 
@@ -117,7 +117,7 @@ bewusst keine Regel, weil dort nie etwas ankommt.
 | Frage | Code |
 |---|---|
 | Darf die Adresse diese App öffnen? | `packages/auth/src/area-access.ts` |
-| Darf sie die RTX-KI benutzen? | `packages/auth/src/area-access.ts` → `canUseRtxAi` / `requireRtxAi` |
+| Darf sie die Maschinenraum-KI benutzen? | `packages/auth/src/area-access.ts` → `canUseEngineAi` / `requireEngineAi` |
 | Darf die Session diese Studio-Route? | `getRequiredAccessForApiPath` / `getRequiredAccessForPagePath` + `satisfiesStudioRouteAccess` |
 | Darf dieser Kontext den Welt-Inhalt lesen? | `packages/auth/src/permissions.ts` → `canViewWorldContent` |
 | Darf sie den DM-Bereich im Wikitext lesen? | `packages/auth/src/permissions.ts` → `canReadDmSections` |
@@ -129,8 +129,8 @@ Welt A auch Welt B — die Welt-Grenze ist die einzige verbliebene Inhaltsregel.
 
 ## Wo die Häkchen gesetzt werden
 
-Command Center → **Zugänge** (`apps/rtx-connector-client`, Panel `UsersPanel`).
-Dort steht neben den vier App-Häkchen auch **RTX-KI** — beim Owner fest
+Command Center → **Zugänge** (`apps/engine-connector-client`, Panel `UsersPanel`).
+Dort steht neben den vier App-Häkchen auch **Maschinenraum-KI** — beim Owner fest
 angehakt und nicht abwählbar, weil `isOwner` ohnehin vorgeht und ein
 wirkungsloses Häkchen eine Lüge wäre.
 Backend ist `tools/uwe-host-command-center/src/user-admin-cli.ts` mit den

@@ -298,7 +298,7 @@ export function resolveDndApiConfig(env: NodeJS.ProcessEnv = process.env): DndAp
 }
 
 /**
- * Image Studio kennt seit N.3 nur noch einen Weg: den RTX-Host über die
+ * Image Studio kennt seit N.3 nur noch einen Weg: den Maschinenraum-Host über die
  * outbound Connector-Queue. Der Anbieter-Modus und das Cloud-Zubehör
  * (`allowCloud`, API-Key) sind ersatzlos entfallen — was bleibt, ist an/aus und
  * ob der Hintergrund-Entferner benutzt werden darf.
@@ -309,7 +309,7 @@ export interface ImageStudioConfig {
 }
 
 export interface ImageStudioConfigStatus extends ImageStudioConfig {
-  rtxAgentConfigured: boolean;
+  engineAgentConfigured: boolean;
   /** Bildgenerierung läuft über die outbound Maschinenraum-Queue. */
   connectorImageEnabled: boolean;
   localImageBackendReady: boolean;
@@ -350,8 +350,8 @@ export function resolveImageStudioConfigStatus(
   portal?: ImageStudioPortalOverrides | null,
 ): ImageStudioConfigStatus {
   const config = resolveImageStudioConfig(env, portal);
-  const rtxAgentConfigured = Boolean(env.RTX_BASE_URL?.trim());
-  const connectorImageEnabled = env.RTX_USE_CONNECTOR_IMAGE !== "false";
+  const engineAgentConfigured = Boolean(env.ENGINE_BASE_URL?.trim());
+  const connectorImageEnabled = env.ENGINE_USE_CONNECTOR_IMAGE !== "false";
   const fromPortal = portal !== undefined && portal !== null;
 
   let message = fromPortal
@@ -361,7 +361,7 @@ export function resolveImageStudioConfigStatus(
     message = "Image Studio ist deaktiviert.";
   } else if (!connectorImageEnabled) {
     message =
-      "Kein Bild-Backend: die Maschinenraum-Queue ist abgeschaltet (RTX_USE_CONNECTOR_IMAGE=false).";
+      "Kein Bild-Backend: die Maschinenraum-Queue ist abgeschaltet (ENGINE_USE_CONNECTOR_IMAGE=false).";
   } else {
     message =
       "Bildgenerierung über Maschinenraum (image_generate) — der Connector muss image_generation anbieten.";
@@ -369,7 +369,7 @@ export function resolveImageStudioConfigStatus(
 
   return {
     ...config,
-    rtxAgentConfigured,
+    engineAgentConfigured,
     connectorImageEnabled,
     localImageBackendReady: connectorImageEnabled,
     source: fromPortal ? "portal" : "env",

@@ -77,8 +77,8 @@ export default async function OneShotPage({ params, searchParams }: Props) {
       <OneShotQuickAssistant
         worldSlug={worldSlug}
         locations={locations}
-        rtxReady={inference.online}
-        rtxEnabled={inference.enabled}
+        engineReady={inference.online}
+        engineEnabled={inference.enabled}
       />
 
       <Card>

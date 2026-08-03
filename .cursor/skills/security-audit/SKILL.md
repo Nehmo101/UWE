@@ -1,6 +1,6 @@
 ---
 name: security-audit
-description: Run a structured UWE security audit covering Studio/Portal auth, API route protection, player data leaks, uploads, AI/RTX exposure, secrets, and headers. Use before Cloudflare exposure, after security-related PRs, or when asked for a security review.
+description: Run a structured UWE security audit covering Studio/Portal auth, API route protection, player data leaks, uploads, AI/Maschinenraum exposure, secrets, and headers. Use before Cloudflare exposure, after security-related PRs, or when asked for a security review.
 ---
 
 # UWE Security Audit
@@ -31,7 +31,7 @@ node --import tsx --test scripts/studio-route-auth.test.ts
 | **Studio** | Session login (`AUTH_REQUIRED=true`) + optional Cloudflare Access / `STUDIO_API_TOKEN` + CSRF |
 | **Portal** | Session cookies, role matrix (`owner`/`dm`/`player`/`guest`) |
 | **Public paths** | Visibility filters; leak scanner must pass |
-| **RTX / Ollama** | LAN only — never in Cloudflare Tunnel |
+| **Maschinenraum / Ollama** | LAN only — never in Cloudflare Tunnel |
 
 ## Report template
 

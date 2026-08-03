@@ -82,7 +82,7 @@ export interface SecurityDashboardStatus {
       secure: boolean;
       message: string;
     };
-    rtxServiceToken: {
+    engineServiceToken: {
       required: boolean;
       configured: boolean;
       envKey: string;
@@ -191,9 +191,9 @@ function resolveSessionSecret(env: NodeJS.ProcessEnv): { value: string | undefin
   return { value: env.AUTH_SECRET?.trim(), envKey: "AUTH_SECRET" };
 }
 
-function resolveRtxServiceToken(env: NodeJS.ProcessEnv): { value: string | undefined; envKey: string } {
-  const rtxService = env.RTX_SERVICE_TOKEN?.trim();
-  return { value: rtxService, envKey: "RTX_SERVICE_TOKEN" };
+function resolveEngineServiceToken(env: NodeJS.ProcessEnv): { value: string | undefined; envKey: string } {
+  const engineService = env.ENGINE_SERVICE_TOKEN?.trim();
+  return { value: engineService, envKey: "ENGINE_SERVICE_TOKEN" };
 }
 
 function formatBytes(bytes: number): string {
@@ -243,25 +243,25 @@ function assessSetupToken(env: NodeJS.ProcessEnv): SecurityDashboardStatus["env"
   };
 }
 
-function assessRtxServiceToken(
+function assessEngineServiceToken(
   env: NodeJS.ProcessEnv,
   aiEnabled: boolean,
-): SecurityDashboardStatus["env"]["rtxServiceToken"] {
-  const { value, envKey } = resolveRtxServiceToken(env);
+): SecurityDashboardStatus["env"]["engineServiceToken"] {
+  const { value, envKey } = resolveEngineServiceToken(env);
   const configured = Boolean(value);
-  const rtxBaseUrl = env.RTX_BASE_URL?.trim();
+  const engineBaseUrl = env.ENGINE_BASE_URL?.trim();
 
-  const required = aiEnabled && Boolean(rtxBaseUrl);
+  const required = aiEnabled && Boolean(engineBaseUrl);
 
   let message: string;
   if (!required) {
     message = configured
-      ? `${envKey} gesetzt (optional, lokale KI ohne RTX Worker)`
-      : "Nicht erforderlich (kein RTX Worker / KI deaktiviert)";
+      ? `${envKey} gesetzt (optional, lokale KI ohne Maschinenraum-Worker)`
+      : "Nicht erforderlich (kein Maschinenraum-Worker / KI deaktiviert)";
   } else if (configured) {
     message = `${envKey} gesetzt`;
   } else {
-    message = `${envKey} fehlt — RTX_BASE_URL ist konfiguriert`;
+    message = `${envKey} fehlt — ENGINE_BASE_URL ist konfiguriert`;
   }
 
   return {
@@ -399,7 +399,7 @@ export async function getSecurityDashboardStatus(
   const studioSecurity = assessStudioSecurity(system, env);
   const sessionSecret = assessSessionSecret(env);
   const setupToken = assessSetupToken(env);
-  const rtxServiceToken = assessRtxServiceToken(env, aiEnabled);
+  const engineServiceToken = assessEngineServiceToken(env, aiEnabled);
   const accessCounts = await getAreaAccessCounts(db);
 
   const authActive = runtime.authRequired && sessionSecret.configured && sessionSecret.strong;
@@ -474,7 +474,7 @@ export async function getSecurityDashboardStatus(
     networkProtection: {
       checklist: [
         "AUTH_REQUIRED=true — Zugang zu Studio & Portal über den UWE-Login (E-Mail)?",
-        "Tunnel/Ingress zeigt nur auf UWE — nicht auf Ollama/RTX?",
+        "Tunnel/Ingress zeigt nur auf UWE — nicht auf Ollama/Maschinenraum?",
         "TRUST_PROXY=true und CLOUDFLARE_TUNNEL=true gesetzt?",
         "STUDIO_API_TOKEN für sensible APIs gesetzt?",
         "Optional: „Ich bin ein Mensch“-Prüfung (Cloudflare Managed Challenge/Turnstile) vor den Websites aktiv?",
@@ -485,7 +485,7 @@ export async function getSecurityDashboardStatus(
     env: {
       sessionSecret,
       setupToken,
-      rtxServiceToken,
+      engineServiceToken,
     },
     publicRoutes: {
       playerRoutesPublic,
@@ -541,8 +541,8 @@ export function assertSecurityDashboardHasNoSecrets(
     "SESSION_SECRET",
     "AUTH_SECRET",
     "UWE_SETUP_TOKEN",
-    "RTX_SERVICE_TOKEN",
-    "RTX_AGENT_TOKEN",
+    "ENGINE_SERVICE_TOKEN",
+    "ENGINE_AGENT_TOKEN",
     "STUDIO_API_TOKEN",
     "AI_INFERENCE_API_KEY",
     "OPENAI_API_KEY",

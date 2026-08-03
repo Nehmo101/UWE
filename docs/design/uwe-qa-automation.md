@@ -205,7 +205,7 @@ Nach Merge der Phase-1–6-PRs:
 | Portal filtert `dm_only` serverseitig | `pnpm test:security`, `permissions.ts` |
 | Cloud-KI ohne Brain/Welt/Life-Kontext | `privacyGuard.ts` |
 | KI-Output = Proposal/Draft | AI Runs / Generator |
-| RTX nur LAN | `docs/security/DEPLOYMENT_SECURITY.md`, System-Hub |
+| Maschinenraum nur LAN | `docs/security/DEPLOYMENT_SECURITY.md`, System-Hub |
 | Daily Admin nur Studio | Routen + Security-Tests |
 
 ### 3.4 Final QA (qa-engineer) — Abnahme Orchestrator-Welle
@@ -241,7 +241,7 @@ Branch: cursor/qa-checklist-runner-adcf (oder Follow-up von main).
    - kleinere Probleme
    - empfohlene Fixes
 
-Zusätzlich KI/Security-Szenarien (bei KI-PRs): Cloud+Brain blockiert, RTX offline,
+Zusätzlich KI/Security-Szenarien (bei KI-PRs): Cloud+Brain blockiert, Maschinenraum offline,
 keine Brain-Daten an Cloud — siehe SECURITY_NOTES.md.
 ```
 

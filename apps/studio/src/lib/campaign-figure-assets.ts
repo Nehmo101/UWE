@@ -135,7 +135,7 @@ export async function attachCampaignFigures(
         sourceFile: input.sourceFile,
         sourcePage: figure.pageNumber,
         regionType: figure.type,
-        aiRoute: "local_rtx",
+        aiRoute: "local_engine",
       },
     });
     result.createdAssetIds.push(asset.id);

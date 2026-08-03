@@ -41,8 +41,8 @@ interface Props {
   action: GeneratorActionDefinition;
   presets: MagicItemPresetOption[];
   searchEquipmentUrl: string;
-  rtxReady: boolean;
-  rtxEnabled: boolean;
+  engineReady: boolean;
+  engineEnabled: boolean;
 }
 
 function formatSrdBase(result: EquipmentSearchResult): string {
@@ -67,8 +67,8 @@ export function MagicItemBuilderPanel({
   action,
   presets,
   searchEquipmentUrl,
-  rtxReady,
-  rtxEnabled,
+  engineReady,
+  engineEnabled,
 }: Props) {
   const [presetId, setPresetId] = useState("");
   const [values, setValues] = useState<Record<string, string>>({});
@@ -149,7 +149,7 @@ export function MagicItemBuilderPanel({
       if (response.status === 202 || payload.deferred) {
         const id = payload.jobId ?? payload.job?.id ?? null;
         setJobId(id);
-        setStatus(payload.message ?? "RTX offline — Job vorgemerkt. Kein Cloud-Fallback.");
+        setStatus(payload.message ?? "Maschinenraum offline — Job vorgemerkt. Kein Cloud-Fallback.");
         return;
       }
 
@@ -172,20 +172,20 @@ export function MagicItemBuilderPanel({
         <CardTitle>Magic-Item-Builder (strukturiert)</CardTitle>
         <CardDescription>
           Template wählen, SRD/Open5e-Gegenstand als Basis übernehmen und Seltenheit,
-          Einstimmung &amp; Eigenschaften für {pageTitle} generieren — RTX-only, Ergebnis
+          Einstimmung &amp; Eigenschaften für {pageTitle} generieren — Maschinenraum-only, Ergebnis
           läuft als Review-Vorschlag (nie automatisch übernehmen).
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        {!rtxEnabled && (
+        {!engineEnabled && (
           <Alert tone="danger" role="alert">
-            RTX-Inference ist deaktiviert.
+            Maschinenraum-Inference ist deaktiviert.
           </Alert>
         )}
 
-        {rtxEnabled && !rtxReady && (
+        {engineEnabled && !engineReady && (
           <p className="text-sm text-muted-foreground">
-            RTX offline — wird als Job vorgemerkt (kein Cloud-Fallback).
+            Maschinenraum offline — wird als Job vorgemerkt (kein Cloud-Fallback).
           </p>
         )}
 
@@ -264,7 +264,7 @@ export function MagicItemBuilderPanel({
             </div>
           ))}
 
-          <Button type="submit" disabled={!rtxEnabled || busy} className="self-start">
+          <Button type="submit" disabled={!engineEnabled || busy} className="self-start">
             {busy ? "Läuft…" : action.label}
           </Button>
         </form>

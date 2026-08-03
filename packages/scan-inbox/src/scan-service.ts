@@ -135,10 +135,10 @@ export class ScanInboxService {
     return toRecord(row);
   }
 
-  async markWaitingForRtx(id: string, message?: string): Promise<void> {
+  async markWaitingForEngine(id: string, message?: string): Promise<void> {
     await this.familyDb.scanDocument.update({
       where: { id },
-      data: { status: "waiting_for_rtx", errorMessage: message ?? null },
+      data: { status: "waiting_for_engine", errorMessage: message ?? null },
     });
   }
 

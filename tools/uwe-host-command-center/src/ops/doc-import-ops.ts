@@ -164,7 +164,7 @@ export interface DocImportRequest {
   worldSlug: string;
   mode: DocImportMode;
   profile: DocProfile;
-  /** Zuordnung von der lokalen KI verfeinern lassen, wenn der RTX-Host antwortet. */
+  /** Zuordnung von der lokalen KI verfeinern lassen, wenn der Maschinenraum-Host antwortet. */
   useAi: boolean;
 }
 
@@ -196,7 +196,7 @@ interface RoleHintResult {
 /**
  * Der Feinschliff der letzten Vorschau.
  *
- * Der Umbau selbst ist deterministisch, der RTX-Host ist es nicht: Zwischen
+ * Der Umbau selbst ist deterministisch, der Maschinenraum-Host ist es nicht: Zwischen
  * „Vorschau" und „Anlegen" könnte er anders antworten oder gar nicht mehr, und
  * dann entstünde etwas anderes, als in der Vorschau stand. Das Studio legt sein
  * Urteil deshalb im Import-Job ab; hier gibt es keinen Job — aber es gibt genau
@@ -222,7 +222,7 @@ function requestKey(request: DocImportRequest, files: DocImportSourceFile[]): st
 }
 
 /**
- * Holt den KI-Feinschliff, wenn der RTX-Host antwortet.
+ * Holt den KI-Feinschliff, wenn der Maschinenraum-Host antwortet.
  *
  * Wirft nicht: Ein stummer Host ist im Command Center der Normalfall (die
  * Maschine kann laufen, ohne dass das Modell geladen ist), und ein Import, der

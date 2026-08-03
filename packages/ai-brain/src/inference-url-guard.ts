@@ -1,6 +1,6 @@
 /**
  * Blocks public Ollama/LM Studio endpoints unless explicitly allowed.
- * RTX inference must stay on private/home-network addresses.
+ * Maschinenraum inference must stay on private/home-network addresses.
  *
  * The implementation now lives in the low-level `@uwe/security` layer
  * (`@uwe/security/inference`). This module re-exports it so existing

@@ -34,7 +34,7 @@ Erhält explizite Grants in `ai_user_grants`:
 
 Zusätzlich pro User:
 
-- `cloudFallbackAllowed` — darf Cloud nutzen wenn RTX offline (nur für cloud-safe Kontexte)
+- `cloudFallbackAllowed` — darf Cloud nutzen wenn der Maschinenraum offline ist (nur für cloud-safe Kontexte)
 
 ### Normaler User / Spieler
 

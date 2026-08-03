@@ -16,12 +16,12 @@ export default async function AiGatewayAdminPage() {
       <ShellBreadcrumb
         items={[
           { label: "Admin", href: "/admin" },
-          { label: "KI & RTX Fallback" },
+          { label: "KI & Maschinenraum Fallback" },
         ]}
       />
       <PageHeader
-        title="KI & RTX Fallback"
-        summary="Master-Admin-Wizard: RTX bevorzugen, Cloud-Fallback optional, Privacy-Regeln, Budgets und User-Freigaben."
+        title="KI & Maschinenraum Fallback"
+        summary="Master-Admin-Wizard: Maschinenraum bevorzugen, Cloud-Fallback optional, Privacy-Regeln, Budgets und User-Freigaben."
       />
       <AiGatewayWizard initialData={initialData} />
     </>

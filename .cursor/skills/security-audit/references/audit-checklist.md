@@ -50,7 +50,7 @@ Also review: `packages/database/src/visibility-security.test.ts`
 - [ ] Inference URL guard (no SSRF to internal networks)
 - [ ] No secrets in AI API responses
 - [ ] Cloud provider blocked for local/campaign context (`packages/ai-brain/src/privacy.ts`)
-- [ ] RTX/Ollama **not** reachable via public URL
+- [ ] Maschinenraum/Ollama **not** reachable via public URL
 
 ## 6. Secrets & configuration
 

@@ -58,13 +58,13 @@ export abstract class BaseHttpProvider implements AiProvider {
       }
       if (error instanceof Error && error.name === "AbortError") {
         throw new AiProviderError(
-          `${this.id} Anfrage abgebrochen nach ${Math.round(timeoutMs / 1000)}s (AI_INFERENCE_TIMEOUT_SECONDS). RTX antwortet nicht rechtzeitig.`,
+          `${this.id} Anfrage abgebrochen nach ${Math.round(timeoutMs / 1000)}s (AI_INFERENCE_TIMEOUT_SECONDS). Maschinenraum antwortet nicht rechtzeitig.`,
           this.id,
         );
       }
       const endpoint = this.baseUrl.replace(/\/$/, "");
       throw new AiProviderError(
-        `${this.id} auf ${endpoint} nicht erreichbar. RTX/Ollama/LM Studio offline oder Netzwerk blockiert.`,
+        `${this.id} auf ${endpoint} nicht erreichbar. Maschinenraum/Ollama/LM Studio offline oder Netzwerk blockiert.`,
         this.id,
       );
     } finally {

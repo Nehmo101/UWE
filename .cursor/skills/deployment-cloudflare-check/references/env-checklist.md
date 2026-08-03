@@ -73,7 +73,7 @@ Manual checklist (not server-verifiable):
 - [ ] Access application for Studio hostname
 - [ ] Allow only admin email/group
 - [ ] No bypass rules in production
-- [ ] RTX/Ollama URLs **not** in tunnel config
+- [ ] Maschinenraum/Ollama URLs **not** in tunnel config
 
 See `docs/cloudflare-access.md` for path-level policies.
 
@@ -103,9 +103,9 @@ curl -sf http://127.0.0.1:3001/api/health/public
 - Missing `AUTH_SECRET` / demo seed enabled
 - Public URL without `STUDIO_API_TOKEN`
 - Cloudflare tunnel without proxy flags
-- RTX inference URL pointing to public host
+- Maschinenraum inference URL pointing to public host
 
-## RTX / AI (LAN only)
+## Maschinenraum / AI (LAN only)
 
 ```bash
 # Correct — LAN IP

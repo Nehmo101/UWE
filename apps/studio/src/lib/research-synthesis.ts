@@ -64,7 +64,7 @@ export async function synthesizeResearchReportViaGateway(
     },
     {
       user: input.user,
-      providerMode: "local_rtx",
+      providerMode: "local_engine",
       contextMode,
       taskType: "synthesize_research",
       worldSlug,

@@ -6,7 +6,7 @@ import {
   AiPolicyViolationError,
   enforceAiAccessPolicy,
   enforceAiRequestLimits,
-  RtxBoundaryError,
+  EngineBoundaryError,
   SsrfBlockedError,
 } from "@uwe/security";
 
@@ -57,7 +57,7 @@ export function aiPolicyErrorResponse(error: unknown): NextResponse {
     return jsonError(error.message, 429);
   }
 
-  if (error instanceof RtxBoundaryError || error instanceof SsrfBlockedError) {
+  if (error instanceof EngineBoundaryError || error instanceof SsrfBlockedError) {
     return jsonError(error.message, 403);
   }
 

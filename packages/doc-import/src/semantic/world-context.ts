@@ -10,7 +10,7 @@
  * Zwei Verwendungen, und die erste ist die wichtigere:
  *
  * 1. **Deterministisch.** Trägt eine Überschrift den Namen einer vorhandenen
- *    Seite, übernimmt der Import deren Typ. Kein Raten, kein RTX-Host nötig.
+ *    Seite, übernimmt der Import deren Typ. Kein Raten, kein Maschinenraum-Host nötig.
  * 2. **Als Kontext für die KI.** Die im Dokument tatsächlich vorkommenden
  *    Namen gehen mit in die Anfrage, damit das Modell einordnen kann statt zu
  *    erfinden.

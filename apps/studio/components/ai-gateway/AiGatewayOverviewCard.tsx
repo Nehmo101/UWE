@@ -3,8 +3,8 @@ import { ROUTING_LABELS } from "./constants";
 import type { GatewayDashboard } from "./types";
 
 export function AiGatewayOverviewCard({ data }: { data: GatewayDashboard }) {
-  const { config, rtxHealth } = data;
-  const rtxLabel = rtxHealth.ready ? "Erreichbar" : "Nicht erreichbar";
+  const { config, engineHealth } = data;
+  const engineLabel = engineHealth.ready ? "Erreichbar" : "Nicht erreichbar";
 
   return (
     <Card aria-label="KI-Gateway Übersicht">
@@ -17,12 +17,12 @@ export function AiGatewayOverviewCard({ data }: { data: GatewayDashboard }) {
             Status: <strong>{ROUTING_LABELS[config.routingMode]}</strong>
           </p>
           <p className="text-base font-semibold">
-            RTX: <strong>{rtxLabel}</strong>
+            Maschinenraum: <strong>{engineLabel}</strong>
             {" · "}
             <span>Connector: Kommandozentrale</span>
           </p>
         </div>
-        {rtxHealth.message && <p className="text-sm text-muted-foreground">{rtxHealth.message}</p>}
+        {engineHealth.message && <p className="text-sm text-muted-foreground">{engineHealth.message}</p>}
       </CardContent>
     </Card>
   );

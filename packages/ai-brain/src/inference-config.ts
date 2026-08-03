@@ -152,7 +152,7 @@ export function resolveInferenceConfig(
 
 export function assertInferenceConfigUsable(config: InferenceConfig): void {
   if (!config.enabled) {
-    throw new Error("RTX-Inference ist deaktiviert (AI_INFERENCE_ENABLED=false).");
+    throw new Error("Maschinenraum-Inference ist deaktiviert (AI_INFERENCE_ENABLED=false).");
   }
 
   assertInferenceUrlAllowed(config.baseUrl, config.allowPublicUrl);

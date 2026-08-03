@@ -30,6 +30,7 @@ var beschriftungen = holeBeschriftungsschicht();
 var letzterBeschriftungsAbgleich = -1e9;
 import { tickWind } from './world/wind.js';
 import { tickWeltschildkroeten } from './generators/weltschildkroete.js';
+import { tickWeltschloesser } from './generators/weltschloss.js';
 import { ARCHITEKTUR_STILE, architekturAssetId } from './assets/architektur-katalog.js';
 import { erstelleLuftschauPlan } from './generators/luftschau.js';
 import {
@@ -357,6 +358,7 @@ function animate() {
   tickWind(now * 0.001);
   updateBirds(dt, now * 0.001);
   tickWeltschildkroeten(now * 0.001);
+  tickWeltschloesser(now * 0.001);
   tickFlugrouten(now * 0.001);
   updateRauch(now * 0.001);
   vfxFokus.x = cam.focus.x; vfxFokus.y = cam.focusY; vfxFokus.z = cam.focus.z;

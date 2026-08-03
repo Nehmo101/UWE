@@ -1,10 +1,10 @@
 /**
- * Connector queue provider — local AI inference via the outbound RTX Host
- * Connector queue instead of a direct HTTP call to a local inference server.
+ * Connector queue provider — local AI inference via the outbound Maschinenraum
+ * queue instead of a direct HTTP call to a local inference server.
  *
  * The UWE host enqueues an `llm_generate` / `embedding_generate` job and waits
  * for an online connector to claim, run and complete it. This keeps inference
- * fully outbound (no inbound RTX Agent) while reusing the existing connector
+ * fully outbound (no inbound Maschinenraum-Agent) while reusing the existing connector
  * registry, capability gating and job queue.
  *
  * Only used when an online connector advertises the required effective
@@ -412,14 +412,14 @@ export async function runConnectorImageGenerate(
     if (!imageBase64) {
       return {
         success: false,
-        providerUsed: "local_rtx",
+        providerUsed: "local_engine",
         error: "Connector lieferte kein Bild (image_generate ohne image/imageBase64).",
         metadata,
       };
     }
     return {
       success: true,
-      providerUsed: "local_rtx",
+      providerUsed: "local_engine",
       imageBase64,
       mimeType,
       metadata,
@@ -443,7 +443,7 @@ export async function runConnectorImageGenerate(
           : undefined;
     return {
       success: false,
-      providerUsed: "local_rtx",
+      providerUsed: "local_engine",
       error:
         error instanceof Error
           ? error.message
@@ -523,7 +523,7 @@ export interface ConnectorLlmRouteInput {
 }
 
 /**
- * Prefer the connector queue for `local_rtx` generate requests. Returns null
+ * Prefer the connector queue for `local_engine` generate requests. Returns null
  * when no connector advertises `llm_local` so the caller can fall back to the
  * direct local provider. When a connector is available, resolves the model
  * (explicit request model → workflow slot default → resolved fallback), runs

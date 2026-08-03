@@ -447,7 +447,7 @@ model User {
   studioAccess        Boolean    @default(false) @map("studio_access")
   brainAccess         Boolean    @default(false) @map("brain_access")
   familyAccess        Boolean    @default(false) @map("family_access")
-  /// Darf die RTX-KI benutzen (G-KI). KEIN fuenftes App-Haekchen: die vier
+  /// Darf die Maschinenraum-KI benutzen (G-KI). KEIN fuenftes App-Haekchen: die vier
   /// oben sagen, welche App diese Adresse betreten darf, dieses Feld sagt, ob
   /// sie darin die lokale Inferenz ausloesen darf. Der Owner braucht es nicht
   /// — `isOwner` geht immer vor.
@@ -1663,7 +1663,7 @@ model JobLog {
 }
 
 enum ConnectorType {
-  rtx_connector
+  engine_connector
 }
 
 enum ConnectorStatus {
@@ -1722,7 +1722,7 @@ enum ConnectorWorkflowSlot {
 model Connector {
   id                   String          @id @default(cuid())
   name                 String
-  type                 ConnectorType   @default(rtx_connector)
+  type                 ConnectorType   @default(engine_connector)
   // Only the SHA-256 hash of the connector token is ever stored — never plaintext.
   tokenHash            String          @unique @map("token_hash")
   status               ConnectorStatus @default(offline)
@@ -2595,7 +2595,7 @@ model PlayerQuestion {
 enum ScanDocumentStatus {
   unanalyzed
   analyzing
-  waiting_for_rtx
+  waiting_for_engine
   proposal_ready
   uncertain
   filed

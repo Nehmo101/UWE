@@ -29,7 +29,7 @@ export const CAMPAIGN_JOB_PRESETS: CampaignJobPreset[] = [
   {
     id: "brain-canon-check",
     label: "KI Kanon-Konfliktprüfung",
-    description: "Widersprüche per RTX/Brain als Review-Vorschlag.",
+    description: "Widersprüche per Maschinenraum/Brain als Review-Vorschlag.",
     kind: "brain_action",
     brainActionId: "canon_check",
   },

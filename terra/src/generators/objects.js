@@ -8,6 +8,7 @@ import { ARCHITEKTUR_STIL_TABELLEN } from '../assets/architektur-katalog.js';
 import { heightAt, slopeAt, inCorridor } from '../world/terrain.js';
 import { FENSTER_ANKER, LICHT_ANKER, islandGeo, leafSurface, leafHalfWidth } from './geometry.js';
 import { genWeltschildkroete } from './weltschildkroete.js';
+import { genWeltschloss } from './weltschloss.js';
 import { genLuftarchipelObjekt, genRiesenbambusObjekt } from './luftobjekte.js';
 import { baueAssetSchauLayout, setzeAssetSchauInstanzen } from './asset-schau.js';
 import { baueAssetSchauMeshes } from './asset-schau-meshes.js';
@@ -449,6 +450,7 @@ for (var architekturZeichen in ARCHITEKTUR_STIL_TABELLEN) {
   OBJEKT_ZEICHEN[architekturZeichen] = { sache: 'ort' };
 }
 OBJEKT_ZEICHEN.weltschildkroete = { sache: 'wehrbau', art: 'sig_burg' };
+OBJEKT_ZEICHEN.weltschloss = { sache: 'wehrbau', art: 'sig_burg' };
 /* Unbekannte Varianten alter Karten streuen Baeume und erhalten das Waldzeichen. */
 var OBJEKT_ZEICHEN_VORGABE = OBJEKT_ZEICHEN.baeume;
 
@@ -658,10 +660,13 @@ function genObjekt(el) {
     return;
   }
   // Animierte Hero-Landmarke: ein eigenes Mesh-Ensemble statt Poolstreuung.
-  if (el.variant === "weltschildkroete") {
+  if (el.variant === "weltschildkroete" || el.variant === "weltschloss") {
     el.kennzahl = Math.max(1, el.points.length);
     if (alsZeichen(S.einheitMeter)) objektZeichen(el);
-    if (alsKoerper(S.einheitMeter)) genWeltschildkroete(el);
+    if (alsKoerper(S.einheitMeter)) {
+      if (el.variant === "weltschloss") genWeltschloss(el);
+      else genWeltschildkroete(el);
+    }
     return;
   }
   // Schwebeinseln VOR der normalen Poolstreuung: eigener Zweig ohne

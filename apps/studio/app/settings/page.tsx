@@ -100,7 +100,7 @@ export default async function SettingsPage({ searchParams }: Props) {
 
           <SettingsCollapsiblePanel
             title="Neues Design mit KI erstellen"
-            summary="Farbpalette per Fragebogen-Chat mit dem lokalen RTX-Assistenten"
+            summary="Farbpalette per Fragebogen-Chat mit dem lokalen Maschinenraum-Assistenten"
             defaultOpen={false}
           >
             <DesignAssistantWizard />

@@ -26,8 +26,8 @@ interface Props {
   pageTitle: string;
   schema: StructuredGeneratorSchema;
   action: GeneratorActionDefinition;
-  rtxReady: boolean;
-  rtxEnabled: boolean;
+  engineReady: boolean;
+  engineEnabled: boolean;
 }
 
 export function StructuredGeneratorPanel({
@@ -36,8 +36,8 @@ export function StructuredGeneratorPanel({
   pageTitle,
   schema,
   action,
-  rtxReady,
-  rtxEnabled,
+  engineReady,
+  engineEnabled,
 }: Props) {
   const initialValues = useMemo(
     () => Object.fromEntries(schema.fields.map((field) => [field.id, ""])),
@@ -88,7 +88,7 @@ export function StructuredGeneratorPanel({
         setJobId(id);
         setStatus(
           payload.message ??
-            "RTX offline — Job vorgemerkt. Kein Cloud-Fallback.",
+            "Maschinenraum offline — Job vorgemerkt. Kein Cloud-Fallback.",
         );
         return;
       }
@@ -113,17 +113,17 @@ export function StructuredGeneratorPanel({
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <p className="text-sm text-muted-foreground">
-          {schema.description} Für {pageTitle} — RTX-only, Review vor Übernahme.
+          {schema.description} Für {pageTitle} — Maschinenraum-only, Review vor Übernahme.
         </p>
 
-        {!rtxEnabled && (
+        {!engineEnabled && (
           <Alert tone="danger" role="alert">
-            RTX-Inference ist deaktiviert.
+            Maschinenraum-Inference ist deaktiviert.
           </Alert>
         )}
 
-        {rtxEnabled && !rtxReady && (
-          <p className="text-sm text-muted-foreground">RTX offline — wird als Job vorgemerkt.</p>
+        {engineEnabled && !engineReady && (
+          <p className="text-sm text-muted-foreground">Maschinenraum offline — wird als Job vorgemerkt.</p>
         )}
 
         <form
@@ -161,7 +161,7 @@ export function StructuredGeneratorPanel({
             </div>
           ))}
 
-          <Button type="submit" disabled={!rtxEnabled || busy} className="self-start">
+          <Button type="submit" disabled={!engineEnabled || busy} className="self-start">
             {busy ? "Läuft…" : action.label}
           </Button>
         </form>

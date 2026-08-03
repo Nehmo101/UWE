@@ -29,7 +29,7 @@ Hauptdomain trotzdem in Studio — die Ingress-Seite davon steht in
 | `/var/log/uwe` | Anwendungslogs |
 | `/var/backups/uwe` | Backups |
 | `uwe.service` | Offizieller Studio-/Portal-/Startseiten-Dienst |
-| `uwe-rtx-connector.service` | Optionaler outbound Maschinenraum; nur mit gültiger Connector-`.env` aktiviert |
+| `uwe-engine-connector.service` | Optionaler outbound Maschinenraum; nur mit gültiger Connector-`.env` aktiviert |
 
 Es gibt **keinen** parallelen Legacy-Flow mehr (`uwe-host.service`, `.uwe-host`, repo-lokale `.env` für Production).
 
@@ -252,8 +252,8 @@ Implementierung: `deploy/scripts/lib/uwe-host-ai-diagnostics.sh`
 ## Autostart nach Neustart
 
 `setup-uwe-host.sh` aktiviert `uwe.service` automatisch (`systemctl enable`). Die
-optionale `uwe-rtx-connector.service` wird installiert, aber erst bei einer gültig
-konfigurierten `tools/uwe-rtx-connector/.env` aktiviert und gestartet.
+optionale `uwe-engine-connector.service` wird installiert, aber erst bei einer gültig
+konfigurierten `tools/uwe-engine-connector/.env` aktiviert und gestartet.
 
 Nach Reboot prüfen:
 
@@ -491,7 +491,7 @@ Datei-Logs (falls konfiguriert): `/var/log/uwe/`
 | `deploy/scripts/lib/uwe-host-ai-diagnostics.sh` | Optionale AI-Fehleranalyse |
 | `deploy/scripts/start-uwe.sh` | Startet Studio + Portal + Startseite (von systemd aufgerufen) |
 | `deploy/systemd/uwe.service` | Referenz-Unit (wird vom Setup-Script nach `/etc/systemd/system/` geschrieben) |
-| `deploy/systemd/uwe-rtx-connector.service` | Optionale outbound Connector-Unit |
+| `deploy/systemd/uwe-engine-connector.service` | Optionale outbound Connector-Unit |
 | `scripts/uwe-host-*.sh` | Convenience-Wrapper um `uwe.service` |
 
 Weitere Production-Hinweise: [PRODUCTION.md](./PRODUCTION.md). Der aktive Pfad ist Linux Host + `systemd` (kein Docker, kein Windows-Installer) — siehe [removed-legacy-runtime.md](./removed-legacy-runtime.md).

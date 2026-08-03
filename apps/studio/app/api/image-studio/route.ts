@@ -65,7 +65,7 @@ export async function POST(request: Request) {
 
   const body = parsed.data;
   // Kein Kontext-Datenschutz-Check mehr: seit N.3 rendert nur der lokale
-  // RTX-Host, der Prompt verlässt den Host nicht.
+  // Maschinenraum-Host, der Prompt verlässt den Host nicht.
   const contextMode = (body.contextMode ?? "prompt_only") as ImageStudioPromptContextMode;
 
   const repo = getAppRepository();

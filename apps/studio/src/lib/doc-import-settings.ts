@@ -13,7 +13,7 @@
  * Umbau in `@uwe/doc-import` — Ebenen, Räume, NSC, Begegnungen, Handouts.
  *
  * **Die KI-Hinweise gehören ebenfalls in den Job.** Der Umbau selbst ist
- * deterministisch, der RTX-Host ist es nicht: Zwischen Vorschau und Ausführung
+ * deterministisch, der Maschinenraum-Host ist es nicht: Zwischen Vorschau und Ausführung
  * könnte er anders antworten oder gar nicht mehr. Deshalb wird das Ergebnis des
  * Feinschliffs mitgespeichert und beim Ausführen wiederverwendet.
  */
@@ -30,7 +30,7 @@ export interface DocImportSettings {
   mode: DocImportMode;
   profile: DocProfile;
   /**
-   * Zuordnung von der lokalen KI verfeinern lassen, wenn der RTX-Host
+   * Zuordnung von der lokalen KI verfeinern lassen, wenn der Maschinenraum-Host
    * erreichbar ist. Ohne Host läuft der Import unverändert über die Regeln.
    */
   useAi: boolean;

@@ -3,9 +3,9 @@ import type { BrainPrismaClient } from "./brain-client";
 import { Prisma } from "./generated/prisma/client";
 import { getSystemStatus, type SystemStatus } from "./system-status";
 import {
-  assessRtxExposure,
+  assessEngineExposure,
   assessStudioSecurity,
-  type RtxExposureAssessment,
+  type EngineExposureAssessment,
   type StudioSecurityAssessment,
 } from "./studio-security";
 import type { MailConfigStatus } from "@uwe/mail-core";
@@ -154,7 +154,7 @@ export interface AdminStatus {
   timestamp: string;
   system: SystemStatus;
   studioSecurity: StudioSecurityAssessment;
-  rtxExposure: RtxExposureAssessment;
+  engineExposure: EngineExposureAssessment;
   mail: MailHealthStatus;
   brain: BrainStoreHealthStatus;
   embeddings: EmbeddingHealthStatus;
@@ -366,7 +366,7 @@ export async function getEmbeddingHealthStatus(
       message: "Embeddings sind deaktiviert (BRAIN_EMBEDDINGS_ENABLED=false).",
       nextSteps: [
         "Semantische Suche benötigt Embeddings — aktiviere BRAIN_EMBEDDINGS_ENABLED=true.",
-        "RTX-Rechner muss für Embedding-Berechnung erreichbar sein.",
+        "Maschinenraum-Rechner muss für Embedding-Berechnung erreichbar sein.",
       ],
     };
   }
@@ -405,7 +405,7 @@ export async function getEmbeddingHealthStatus(
     const kind = classifyEndpointUrl(config.baseUrl);
     const offlineReason =
       `Embedding-Endpoint ist öffentlich (${kind}) und blockiert. Nutze eine private Heimnetz-IP.`;
-    nextSteps.push("Setze BRAIN_EMBEDDING_BASE_URL auf den RTX-Rechner (z. B. http://192.168.x.x:11434).");
+    nextSteps.push("Setze BRAIN_EMBEDDING_BASE_URL auf den Maschinenraum-Rechner (z. B. http://192.168.x.x:11434).");
     nextSteps.push("Alternativ: AI_INFERENCE_ALLOW_PUBLIC_URL=true nur für Tests.");
 
     return {
@@ -425,7 +425,7 @@ export async function getEmbeddingHealthStatus(
   }
 
   let endpointReachable = false;
-  let reachMessage = "RTX-Embedding-Endpoint nicht geprüft.";
+  let reachMessage = "Maschinenraum-Embedding-Endpoint nicht geprüft.";
 
   try {
     if (!urlAllowed) {
@@ -443,21 +443,21 @@ export async function getEmbeddingHealthStatus(
     clearTimeout(timeout);
     endpointReachable = response.ok;
     reachMessage = endpointReachable
-      ? "RTX-Embedding-Endpoint erreichbar."
-      : `RTX antwortet mit HTTP ${response.status}.`;
+      ? "Maschinenraum-Embedding-Endpoint erreichbar."
+      : `Maschinenraum antwortet mit HTTP ${response.status}.`;
   } catch (error) {
     reachMessage =
       error instanceof Error && error.name === "AbortError"
-        ? "RTX-Embedding-Endpoint antwortet nicht (Timeout)."
+        ? "Maschinenraum-Embedding-Endpoint antwortet nicht (Timeout)."
         : error instanceof Error
           ? error.message
-          : "RTX-Embedding-Endpoint nicht erreichbar.";
+          : "Maschinenraum-Embedding-Endpoint nicht erreichbar.";
   }
 
   if (!endpointReachable) {
-    nextSteps.push("Prüfe, ob Ollama/LM Studio auf dem RTX-Rechner läuft.");
+    nextSteps.push("Prüfe, ob Ollama/LM Studio auf dem Maschinenraum-Rechner läuft.");
     nextSteps.push("Prüfe Firewall — Zugriff nur aus dem Heimnetz erlauben.");
-    nextSteps.push("Bereits indexierte Vektoren in UWE bleiben lesbar; neue Embeddings warten auf RTX.");
+    nextSteps.push("Bereits indexierte Vektoren in UWE bleiben lesbar; neue Embeddings warten auf Maschinenraum.");
   } else if (totalChunks > 0 && indexedChunks < totalChunks) {
     nextSteps.push(`${totalChunks - indexedChunks} Chunks ohne Embedding — Reindex-Job starten (P10).`);
   } else if (totalChunks === 0) {
@@ -540,7 +540,7 @@ export async function getAiRunSummaryStatus(db: PrismaClient): Promise<AiRunSumm
       nextSteps.push(`${openProposalsCount} abgeschlossene Runs warten auf Review/Apply.`);
     }
     if (runningCount > 0) {
-      nextSteps.push(`${runningCount} AI Run(s) laufen gerade — RTX muss erreichbar sein.`);
+      nextSteps.push(`${runningCount} AI Run(s) laufen gerade — Maschinenraum muss erreichbar sein.`);
     }
 
     const ok = failedCount === 0 && runningCount === 0;
@@ -691,12 +691,12 @@ export async function getAdminStatus(
 
   const auth = getAuthHealthStatus(system);
   const studioSecurity = assessStudioSecurity(system, env);
-  const rtxExposure = assessRtxExposure(env);
+  const engineExposure = assessEngineExposure(env);
 
   const ok =
     system.ok &&
     studioSecurity.severity !== "critical" &&
-    rtxExposure.severity !== "critical" &&
+    engineExposure.severity !== "critical" &&
     (!mail.enabled || mail.ok) &&
     brain.ok &&
     (!embeddings.enabled || embeddings.ok);
@@ -706,7 +706,7 @@ export async function getAdminStatus(
     timestamp: new Date().toISOString(),
     system,
     studioSecurity,
-    rtxExposure,
+    engineExposure,
     mail,
     brain,
     embeddings,
@@ -733,8 +733,8 @@ export function assertAdminStatusHasNoSecrets(
     "ANTHROPIC_API_KEY",
     "GEMINI_API_KEY",
     "OPENROUTER_API_KEY",
-    "RTX_SERVICE_TOKEN",
-    "RTX_AGENT_TOKEN",
+    "ENGINE_SERVICE_TOKEN",
+    "ENGINE_AGENT_TOKEN",
     "CLOUD_AI_API_KEY",
     "SPOTIFY_CLIENT_SECRET",
   ] as const;

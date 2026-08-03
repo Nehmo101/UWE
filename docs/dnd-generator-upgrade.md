@@ -2,7 +2,7 @@
 
 KI-gestützte DnD-Inhaltsgenerierung in UWE — kontextuelle Aktionen, Review/Apply-Workflow und strikte Player-Safety.
 
-> Der „DnD-Generator“ ist kein separates Modul, sondern ein Set von **KI-Aufgaben** (`AiTaskType`) und **Brain-Aktionen** (`BrainActionId`), die über den AI Router mit lokaler RTX-Inferenz laufen.
+> Der „DnD-Generator“ ist kein separates Modul, sondern ein Set von **KI-Aufgaben** (`AiTaskType`) und **Brain-Aktionen** (`BrainActionId`), die über den AI Router mit lokaler Maschinenraum-Inferenz laufen.
 
 ---
 
@@ -42,7 +42,7 @@ UWE übernimmt **nichts automatisch**. Der Ablauf:
 
 ```txt
 1. DM wählt Kontext (Seite, Session, Dungeon-Raum)
-2. DM startet KI-Aktion (lokale RTX erforderlich)
+2. DM startet KI-Aktion (lokaler Maschinenraum erforderlich)
 3. KI erzeugt Vorschlag (AI Run + Proposal)
 4. DM prüft Vorschlag in Review-UI
 5. DM wendet explizit an (Apply) oder verwirft (Discard)
@@ -89,15 +89,15 @@ Gespeichert mit Metadaten `isCanon: false` und Quellen-Referenzen.
 
 ---
 
-## RTX offline und Jobs
+## Maschinenraum offline und Jobs
 
-Wenn RTX nicht bereit ist:
+Wenn Maschinenraum nicht bereit ist:
 
 | Kontext | Verhalten |
 |---------|-----------|
 | Allgemeiner Chat (Auto) | Cloud-Fallback, wenn konfiguriert |
 | Brain / Objekt / DnD-Kontext | **Blockieren** oder Job `pending` anlegen |
-| DnD-Generator-Aktionen | Job vormerken, Ausführung bei RTX ready |
+| DnD-Generator-Aktionen | Job vormerken, Ausführung bei Maschinenraum ready |
 
 Kein Cloud-Fallback für Generator-Aktionen mit Kampagnenkontext.
 
@@ -107,7 +107,7 @@ Job-Verwaltung: `/jobs` — Status `pending`, `running`, `completed`, `failed`, 
 
 ## Privacy: Kein Brain-/Objektkontext an Cloud
 
-Der DnD-Generator sendet bei lokalen Kontextmodi **ausschließlich** an RTX:
+Der DnD-Generator sendet bei lokalen Kontextmodi **ausschließlich** an den Maschinenraum:
 
 - Brain-Retrieval-Ergebnisse
 - Aktuelle Seite/Entität
@@ -131,7 +131,7 @@ pnpm test
 # - Player recap validation (ai-brain.test.ts)
 ```
 
-### Manuell (mit laufender RTX oder `AI_USE_MOCK=true`)
+### Manuell (mit laufendem Maschinenraum oder `AI_USE_MOCK=true`)
 
 | Aktion | Erwartung |
 |--------|-----------|
@@ -144,7 +144,7 @@ pnpm test
 | Prepare-for-next-session | Agenda + Szenen als Proposal |
 | Apply | Explizit — nichts wird automatisch kanonisiert |
 | Discard | Proposal wird verworfen, kein Seiten-Update |
-| RTX offline | Klare Fehlermeldung oder pending Job |
+| Maschinenraum offline | Klare Fehlermeldung oder pending Job |
 
 ---
 
@@ -164,7 +164,7 @@ pnpm test
 | KI-Prompt (mobil/desktop) | `/admin/ai-prompt` |
 | AI Runs (pro Welt) | `/worlds/[slug]/ai-runs` |
 | Brain-Aktionen | Seiten-Sidebar, Session-Ansicht, Dungeon-Raum |
-| Admin Status (RTX) | `/admin/status` |
+| Admin Status (Maschinenraum) | `/admin/status` |
 
 ---
 

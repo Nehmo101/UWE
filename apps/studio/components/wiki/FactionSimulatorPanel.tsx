@@ -13,8 +13,8 @@ interface Props {
   action: GeneratorActionDefinition;
   currentDateLabel: string;
   factionStateSummary: string[];
-  rtxReady: boolean;
-  rtxEnabled: boolean;
+  engineReady: boolean;
+  engineEnabled: boolean;
 }
 
 export function FactionSimulatorPanel({
@@ -24,8 +24,8 @@ export function FactionSimulatorPanel({
   action,
   currentDateLabel,
   factionStateSummary,
-  rtxReady,
-  rtxEnabled,
+  engineReady,
+  engineEnabled,
 }: Props) {
   const [timeSkipDays, setTimeSkipDays] = useState("30");
   const [scenarioNote, setScenarioNote] = useState("");
@@ -72,7 +72,7 @@ export function FactionSimulatorPanel({
         setJobId(id);
         setStatus(
           payload.message ??
-            "RTX offline — Simulation vorgemerkt. Kein Cloud-Fallback.",
+            "Maschinenraum offline — Simulation vorgemerkt. Kein Cloud-Fallback.",
         );
         return;
       }
@@ -97,19 +97,19 @@ export function FactionSimulatorPanel({
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <p className="text-sm text-muted-foreground">
-          RTX-only KI-Simulation für {pageTitle} — erzeugt datierte Chronik-Events als Review-Vorschlag
+          Maschinenraum-only KI-Simulation für {pageTitle} — erzeugt datierte Chronik-Events als Review-Vorschlag
           (nie automatisch übernehmen).
         </p>
 
-        {!rtxEnabled && (
+        {!engineEnabled && (
           <p className="text-sm text-destructive" role="alert">
-            RTX-Inference ist deaktiviert. Fraktions-Simulation ist nicht verfügbar.
+            Maschinenraum-Inference ist deaktiviert. Fraktions-Simulation ist nicht verfügbar.
           </p>
         )}
 
-        {rtxEnabled && !rtxReady && (
+        {engineEnabled && !engineReady && (
           <p className="text-sm text-muted-foreground">
-            RTX ist offline — Simulation wird als Job vorgemerkt (kein Cloud-Fallback).
+            Der Maschinenraum ist offline — Simulation wird als Job vorgemerkt (kein Cloud-Fallback).
           </p>
         )}
 
@@ -160,7 +160,7 @@ export function FactionSimulatorPanel({
             />
           </div>
 
-          <Button type="submit" disabled={!rtxEnabled || busy} className="self-start">
+          <Button type="submit" disabled={!engineEnabled || busy} className="self-start">
             {busy ? "Simuliert…" : action.label}
           </Button>
         </form>

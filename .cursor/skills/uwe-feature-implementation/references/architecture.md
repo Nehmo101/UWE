@@ -19,7 +19,7 @@ packages/
   soundboard/
   static-export/
 tools/
-  uwe-rtx-agent/       # Local inference worker
+  uwe-engine-agent/       # Local inference worker
   windows-installer/   # Windows one-click setup
 ```
 
@@ -103,7 +103,7 @@ For large features, ship in small PRs — one package at a time.
 - Put domain logic directly in React components
 - Send campaign/brain context to cloud AI
 - Hardcode Terra/demo world in product logic (seed only)
-- Expose RTX/Ollama via Cloudflare Tunnel
+- Expose Maschinenraum/Ollama via Cloudflare Tunnel
 
 ## Related docs
 

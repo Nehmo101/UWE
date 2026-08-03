@@ -1,6 +1,6 @@
 /**
  * Blocks public Ollama/LM Studio endpoints unless explicitly allowed.
- * RTX inference must stay on private/home-network addresses.
+ * Maschinenraum inference must stay on private/home-network addresses.
  *
  * Low-level SSRF/URL-classification primitive. Lives in `@uwe/security` so
  * guards and boundaries can use it without pulling in the AI feature package.
@@ -103,7 +103,7 @@ export function assertInferenceUrlAllowed(url: string, allowPublicUrl: boolean):
   const kind = classifyInferenceUrl(url);
   throw new InferenceUrlBlockedError(
     `Inference-Endpoint ist öffentlich erreichbar (${kind}). ` +
-      "RTX/Ollama/LM Studio dürfen nur im Heimnetz genutzt werden. " +
+      "Maschinenraum/Ollama/LM Studio dürfen nur im Heimnetz genutzt werden. " +
       "Setze eine private IP (z. B. 192.168.x.x) oder AI_INFERENCE_ALLOW_PUBLIC_URL=true nur bewusst für Tests.",
     url,
     kind,

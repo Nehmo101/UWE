@@ -43,8 +43,8 @@ describe("AiPromptControls — mobile UI structure", () => {
 });
 
 describe("MobileAiPromptPanel — security and layout", () => {
-  it("does not reference RTX agent tokens in component source", () => {
-    assert.doesNotMatch(mobilePanelSource, /RTX_AGENT_TOKEN|AGENT_TOKEN|process\.env\.RTX/i);
+  it("does not reference Maschinenraum agent tokens in component source", () => {
+    assert.doesNotMatch(mobilePanelSource, /ENGINE_AGENT_TOKEN|AGENT_TOKEN|process\.env\.Maschinenraum/i);
   });
 
   it("uses sticky send bar and large textarea for mobile prompting", () => {

@@ -90,7 +90,7 @@ export function DesignAssistantWizard() {
           }
         } catch {
           setError(
-            "Der Design-Assistent ist nicht erreichbar. Läuft der RTX-Host / ist ein lokales LLM eingerichtet?",
+            "Der Design-Assistent ist nicht erreichbar. Läuft der Maschinenraum-Host / ist ein lokales LLM eingerichtet?",
           );
           setMessages((prev) => [
             ...prev,
@@ -151,7 +151,7 @@ export function DesignAssistantWizard() {
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-muted-foreground">
-        Beschreibe dein Wunschdesign — der lokale RTX-Assistent stellt Rückfragen,
+        Beschreibe dein Wunschdesign — der lokale Maschinenraum-Assistent stellt Rückfragen,
         schlägt Farbvarianten vor und speichert das gewählte Design als auswählbares
         Theme. Läuft lokal; es werden keine Kampagnen-Inhalte gesendet.
       </p>

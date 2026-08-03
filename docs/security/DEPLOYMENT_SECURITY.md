@@ -16,10 +16,10 @@ Cloudflare (DNS + Tunnel + Access)
                               ^ Cloudflare Access required
 
 Home LAN (NOT in Tunnel)
-   `---> Ollama / LM Studio / optional RTX Worker   http://192.168.x.x:11434
+   `---> Ollama / LM Studio / optional Maschinenraum-Worker   http://192.168.x.x:11434
 ```
 
-**Critical rule:** The Cloudflare Tunnel must point **only** to UWE (Studio + Portal). Never expose Ollama, LM Studio, the Maschinenraum, or any direct RTX worker endpoint to the internet.
+**Critical rule:** The Cloudflare Tunnel must point **only** to UWE (Studio + Portal). Never expose Ollama, LM Studio, the Maschinenraum, or any direct Maschinenraum worker endpoint to the internet.
 
 ## Recommended Cloudflare Setup
 
@@ -92,12 +92,12 @@ PLAYER_PREVIEW_PUBLIC=false
 DATABASE_URL=file:/var/lib/uwe/uwe.db
 UWE_DATA_DIR=/var/lib/uwe
 
-# RTX — private LAN only, NOT public URLs
+# Maschinenraum — private LAN only, NOT public URLs
 AI_INFERENCE_ALLOW_PUBLIC_URL=false
 # AI_INFERENCE_BASE_URL=http://192.168.1.50:11434
 # Optional direct worker endpoint for image/security-boundary path:
-# RTX_BASE_URL=http://192.168.1.50:8765
-# RTX_SERVICE_TOKEN=<rtx-worker-token>
+# ENGINE_BASE_URL=http://192.168.1.50:8765
+# ENGINE_SERVICE_TOKEN=<engine-worker-token>
 
 # Upload limit (optional)
 # UWE_MAX_UPLOAD_BYTES=52428800
@@ -123,7 +123,7 @@ The active host product path is Linux + `pnpm` + `systemd`; Docker and the old W
 
 4. **Admin Status Dashboard**
    - Studio → `/admin/status`
-   - Check: Studio Security = "geschützt", RTX Exposure = private, Env Validation = no errors
+   - Check: Studio Security = "geschützt", Maschinenraum Exposure = private, Env Validation = no errors
    - Run Public Leak Scanner — 0 critical findings
 
 5. **API protection test**
@@ -181,7 +181,7 @@ location / {
 - Single-instance deployment (in-memory rate limits sufficient)
 - SQLite database on trusted host filesystem
 - DM operates Studio from trusted browser after Cloudflare Access **and** UWE session login
-- RTX/AI inference runs on separate machine in home LAN
+- Maschinenraum/AI inference runs on separate machine in home LAN
 - Portal `player_visible` content is intentionally world-readable
 
 ## Open Risks After Hardening

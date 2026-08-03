@@ -134,7 +134,7 @@ export function FamilyChatView({
             </div>
           </form>
           <p className="family-muted">
-            Die Antwort der KI kommt vom RTX-Host. Solange der Runner nicht angebunden ist, bleibt
+            Die Antwort der KI kommt vom Maschinenraum-Host. Solange der Runner nicht angebunden ist, bleibt
             der Verlauf ein reines Notizbuch — geschrieben wird trotzdem alles.
           </p>
         </section>

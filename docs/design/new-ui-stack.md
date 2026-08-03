@@ -15,7 +15,7 @@ The Hard UI/UX Reset introduces a single, modern component system. This document
 ### Data & interaction
 
 - **TanStack Table** — all larger tables (pages, users, sessions, dungeons, jobs, logs, navigation overview, print queue). Sorting, filtering, pagination, column visibility.
-- **React Hook Form + Zod** (`@hookform/resolvers`) — all important forms (users, create world/page/session/dungeon, system/RTX/Cloudflare/printer settings).
+- **React Hook Form + Zod** (`@hookform/resolvers`) — all important forms (users, create world/page/session/dungeon, system/Maschinenraum/Cloudflare/printer settings).
 - **cmdk** — global command palette, fed from the central navigation contract.
 - **dnd-kit** — drag-and-drop (navigation editing, dashboard/widget layout, page block sorting, print queue). Already present in `packages/shared-ui`.
 - **Sonner** — unified toasts (success/error/save/load/retry).
@@ -24,12 +24,12 @@ The Hard UI/UX Reset introduces a single, modern component system. This document
 
 - **React Flow / @xyflow/react** — knowledge graph, page connections, broken-link visualization.
 - **Tiptap** — kept (already integrated); embedded cleanly into the new page editor with wiki-link UX.
-- **TanStack Query** — client-side fetch/mutate where it is currently ad-hoc: RTX status, Cloudflare status, printer queue, jobs, health checks, layout save.
+- **TanStack Query** — client-side fetch/mutate where it is currently ad-hoc: Maschinenraum status, Cloudflare status, printer queue, jobs, health checks, layout save.
 
 ### UWE Command Center
 
 The **UWE Command Center** (Tauri/Vite desktop app) uses `ConnectorShell`
-(`apps/rtx-connector-client/src/components/shell/ConnectorShell.tsx`) — a
+(`apps/engine-connector-client/src/components/shell/ConnectorShell.tsx`) — a
 Tauri-friendly shell driven by `connector-nav.ts`. Uses the same
 `@uwe/shared-utils/navigation` contract. Navigation is state-based (no router),
 using `onNavigate` callbacks instead of Next.js `<Link>`. Icons resolved via

@@ -12,7 +12,7 @@ Persönliches Life-Brain (`PersonalBrainDocument`, `PersonalBrainFact`) ist **st
 | `GET /api/life-brain/search` | Studio-auth API für Suche |
 | `GET\|POST /api/life-brain/context` | Query-fokussierter Kontext für **lokale** Agenten |
 
-Retrieval: Stichwort + Filter in `packages/database/src/personal-brain-search.ts`; semantische Chunks über RTX in `@uwe/ai-brain` (`indexPersonalBrainDocument`, `semanticSearchPersonalBrainChunks`). Life-Brain-Embeddings sind strikt getrennt vom DnD-Brain (`BrainChunk`).
+Retrieval: Stichwort + Filter in `packages/database/src/personal-brain-search.ts`; semantische Chunks über Maschinenraum in `@uwe/ai-brain` (`indexPersonalBrainDocument`, `semanticSearchPersonalBrainChunks`). Life-Brain-Embeddings sind strikt getrennt vom DnD-Brain (`BrainChunk`).
 
 ## Capture → Life Brain
 
@@ -27,7 +27,7 @@ architektonisch fixiert durch
 administrativen Gateway-Policy konfigurierbar; ausschließlich persönlicher
 Brain-Kontext bleibt unabhängig von Konfiguration hart local-only.
 
-| Kontextmodus | Cloud erlaubt | RTX erforderlich |
+| Kontextmodus | Cloud erlaubt | Maschinenraum erforderlich |
 |--------------|---------------|------------------|
 | `general_chat` | Ja | Nein (Auto fällt auf Cloud zurück) |
 | `brain` (DnD) | **Konfigurierbar**, Default `CLOUD_ALLOWED` | Nein (lokal bevorzugt; Cloud-Fallback nach Policy) |
@@ -36,25 +36,25 @@ Brain-Kontext bleibt unabhängig von Konfiguration hart local-only.
 | `personal_brain` | **Nein** | **Ja** |
 | Mail-KI (Triage/Entwürfe) | Nein (nur Allgemeiner Chat-Fallback optional) | Ja |
 
-Mail Center nutzt lokale RTX für Triage und Entwürfe; Cloud-Fallback gilt nur für allgemeinen Chat ohne persönliche Inhalte — siehe `/mail` Einstellungen.
+Mail Center nutzt den lokalen Maschinenraum für Triage und Entwürfe; Cloud-Fallback gilt nur für allgemeinen Chat ohne persönliche Inhalte — siehe `/mail` Einstellungen.
 
 ## Implementierung
 
 - Router: `packages/ai-brain/src/router/types.ts` — `personal_brain` in `LOCAL_ONLY_CONTEXT_MODES`
 - Privacy Guard: `validateProviderContextCombination`, `validateResolvedRouteForContext`
 - Kontext-Lader: `loadPersonalBrainAgentContext` / `loadPersonalBrainPromptContext` in `@uwe/database/server` — mit Retrieval wenn Prompt/Query gesetzt
-- Chunks: `PersonalBrainChunk` + `createPersonalBrainService` — Embeddings via RTX (`indexPersonalBrainDocument`)
+- Chunks: `PersonalBrainChunk` + `createPersonalBrainService` — Embeddings via Maschinenraum (`indexPersonalBrainDocument`)
 - Context-API-Gate: `assertPersonalBrainLocalOnly` — Cloud-Provider werden abgewiesen
 - Studio UI: KI-Prompt Modus „Persönliches Life-Brain“ — nur lokal, deaktiviert bei Cloud-Provider
 
-## RTX offline
+## Maschinenraum offline
 
-Wenn RTX offline und `personal_brain` gewählt ist:
+Wenn Maschinenraum offline und `personal_brain` gewählt ist:
 
 1. Anfrage wird als `ai_run`-Job mit `deferredAiPrompt: true` vorgemerkt
 2. Antwort HTTP 202 mit `jobId`
 3. **Kein** Cloud-Fallback
-4. Ausführung beim nächsten Job-Lauf, sobald RTX erreichbar ist
+4. Ausführung beim nächsten Job-Lauf, sobald der Maschinenraum erreichbar ist
 
 Für D&D-Kontext im Auto-Modus ist dagegen ein Cloud-Fallback zulässig, wenn die
 Gateway-Policy `CLOUD_ALLOWED` gilt. `dm_only` wird davor immer entfernt; der

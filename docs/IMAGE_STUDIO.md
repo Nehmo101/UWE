@@ -5,7 +5,7 @@ Odysseus-inspiriertes Bild-Studio für UWE — Generierung, Bearbeitung, Inpaint
 ## Features (Phase 1 — nutzbar)
 
 - **Bildgenerierung** per Prompt (Job-Queue) — Operationen `generate`, `variant`, `inpaint`, `edit`, `remove_background`
-- Ein Weg: die outbound RTX-Host-Connector-Queue. Cloud-Anbieter gibt es seit N.3 nicht mehr
+- Ein Weg: die outbound Maschinenraum-Queue. Cloud-Anbieter gibt es seit N.3 nicht mehr
 - Projekt-/Versions-Tracking mit **reviewbare Drafts** (`metadata.reviewStatus`)
 - Ergebnis als Asset in Medienbibliothek — **automatische Verknüpfung** zu verlinkten Seiten/Entitäten
 - **Prompt-Kontext:** `contextMode` steuert, ob Welt-/Brain-Kontext im Prompt landet — er verlässt den Host ohnehin nicht
@@ -20,13 +20,13 @@ Odysseus-inspiriertes Bild-Studio für UWE — Generierung, Bearbeitung, Inpaint
 |----------|---------|--------------|
 | `IMAGE_STUDIO_ENABLED` | `true` | Feature aktiv |
 | `IMAGE_STUDIO_BG_REMOVAL` | `true` | Background-Removal Task erlaubt |
-| `RTX_USE_CONNECTOR_IMAGE` | `true` | Connector-Queue benutzen; `false` schaltet Image Studio praktisch ab |
-| `RTX_BASE_URL` | — | Direkter RTX Worker Endpoint `/v1/images` |
-| `RTX_SERVICE_TOKEN` | — | Bearer Token |
+| `ENGINE_USE_CONNECTOR_IMAGE` | `true` | Connector-Queue benutzen; `false` schaltet Image Studio praktisch ab |
+| `ENGINE_BASE_URL` | — | Direkter Maschinenraum-Worker Endpoint `/v1/images` |
+| `ENGINE_SERVICE_TOKEN` | — | Bearer Token |
 
 ## Routing
 
-Es gibt nur einen Weg: die outbound RTX-Host-Connector-Queue. Ist sie nicht da,
+Es gibt nur einen Weg: die outbound Maschinenraum-Queue. Ist sie nicht da,
 meldet Image Studio das und tut nichts — ein Ausweichweg wäre genau der
 Cloud-Weg, den es nach N.3 nicht mehr geben soll.
 
@@ -38,14 +38,14 @@ eigenen Host.
 
 Implementierung: `packages/image-studio/src/prompt-privacy.ts` — `assembleImageStudioPrompt()`.
 
-## RTX Bild-Endpoint (Legacy)
+## Maschinenraum Bild-Endpoint (Legacy)
 
 > Image Studio ist **Beta** — Masken-Canvas für Inpainting vorhanden, das
 > Fehlerhandling ist stellenweise dünn — siehe [FEATURE_MATURITY_MATRIX.md](FEATURE_MATURITY_MATRIX.md).
 
 Der lokale Bild-Worker sollte Endpoint `POST /v1/images` implementieren. Der aktive
-Weg ist der outbound Maschinenraum ([rtx-connector.md](rtx-connector.md));
-für direkte Worker-Endpunkte sind `RTX_BASE_URL` / `RTX_SERVICE_TOKEN` die aktuellen
+Weg ist der outbound Maschinenraum ([engine-connector.md](engine-connector.md));
+für direkte Worker-Endpunkte sind `ENGINE_BASE_URL` / `ENGINE_SERVICE_TOKEN` die aktuellen
 Namen:
 
 ```json

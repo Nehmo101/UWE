@@ -9,7 +9,7 @@
  * Usage:
  *   node scripts/coverage.mjs                    # default: packages/database
  *   node scripts/coverage.mjs packages/calendar packages/shared-utils
- *   node scripts/coverage.mjs apps/rtx-connector-client
+ *   node scripts/coverage.mjs apps/engine-connector-client
  *
  * Not wired into CI on purpose — this is a local analysis tool.
  * Caveat: coverage is measured on the tsx-transformed modules and mapped back

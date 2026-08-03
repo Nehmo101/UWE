@@ -12,7 +12,7 @@ import type {
  * Wissensassistent mit Quellenpflicht: beantwortet eine Frage aus dem Life-Brain
  * und weist IMMER Quellen + Unsicherheit aus („das weiß ich nicht sicher",
  * „stammt aus alter Notiz"). Reines Retrieval über das lokale Brain — keine
- * Cloud, kein Dispatch. Eine spätere RTX-lokale LLM-Synthese kann darauf
+ * Cloud, kein Dispatch. Eine spätere Maschinenraum-lokale LLM-Synthese kann darauf
  * aufsetzen (personal_brain-Modus), ersetzt die Quellen aber nie.
  */
 

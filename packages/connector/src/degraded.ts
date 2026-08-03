@@ -1,5 +1,5 @@
 /**
- * Degraded-mode messaging. When no Maschinenraum is online, RTX-dependent
+ * Degraded-mode messaging. When no Maschinenraum is online, Maschinenraum-dependent
  * features stay visible but show a calm, explicit notice — never a crash or a
  * "system broken" error. This is the expected steady state, not a failure.
  */

@@ -231,10 +231,11 @@ function setzeKopfVertrag(geometrie) {
   daten.terraHalsSForm = 'ausgepraegt';
   daten.terraHalsTopologie = 'catmull-rom-tube';
   daten.terraHalsSplinePunkte = 8;
-  daten.terraHalsSegmente = 24;
-  daten.terraHalsRinge = 25;
-  daten.terraHalsRadialSegmente = 12;
+  daten.terraHalsSegmente = 32;
+  daten.terraHalsRinge = 33;
+  daten.terraHalsRadialSegmente = 16;
   daten.terraHalsKontinuierlich = true;
+  daten.terraGesichtsStandard = '2026-organisch-weich';
   daten.terraStatischeGeometrie = true;
 }
 
@@ -266,7 +267,7 @@ export function baueWeltschildkroetenKopf() {
   var halsBreiten = [2.65, 2.52, 2.35, 2.15, 1.94, 1.8, 1.67, 1.58];
   var halsTiefen = [2.25, 2.12, 1.96, 1.82, 1.63, 1.49, 1.36, 1.28];
   p.push(part(taperedTube(
-    halsPunkte, halsBreiten, halsTiefen, 24, 12
+    halsPunkte, halsBreiten, halsTiefen, 32, 16
   ), M(), HAUT));
 
   // Der gesamte Schaedel kippt um zehn Grad nach vorn. Dadurch sitzt er am
@@ -336,7 +337,7 @@ export function baueWeltschildkroetenKopf() {
     ] }
   ]);
   p.push(kopfTeil(unterkiefer, M(0, 9.83, 8.45), WANGEN_PLATTE));
-  p.push(kopfTeil(new SP(1, 12, 8),
+  p.push(kopfTeil(new SP(1, 20, 14),
     M(0, 9.5, 7.75, 0, 0, 0, 0.74, 0.46, 0.95), WANGEN_PLATTE));
 
   // Laechelnde Maulnaht: vorn ein kurzer Spalt unter der Hornkappe, seitlich
@@ -370,14 +371,14 @@ export function baueWeltschildkroetenKopf() {
     var nz = Math.cos(augRy) * Math.cos(augRx);
 
     // Lidring: ein flacher Torus fasst das Auge wie ein wulstiges Lid.
-    p.push(kopfTeil(new TO(0.4, 0.095, 7, 14),
+    p.push(kopfTeil(new TO(0.4, 0.095, 10, 20),
       M(ax, ay, az, augRx, augRy, 0, 1, 0.92, 1), LID));
     // Augapfel als dunkle Kuppel im Lidring.
-    p.push(kopfTeil(new SP(1, 12, 8),
+    p.push(kopfTeil(new SP(1, 18, 12),
       M(ax - nx * 0.05, ay - 0.02, az - nz * 0.05,
         augRx, augRy, 0, 0.36, 0.32, 0.26), AUGE));
     // Warme Iris und tiefe Pupille als flache Kuppeln auf dem Augapfel.
-    p.push(kopfTeil(new SP(1, 10, 7),
+    p.push(kopfTeil(new SP(1, 16, 10),
       M(ax + nx * 0.17, ay + ny * 0.17 - 0.01, az + nz * 0.17,
         augRx, augRy, 0, 0.21, 0.19, 0.07), IRIS));
     p.push(kopfTeil(new SP(1, 9, 6),

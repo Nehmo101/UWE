@@ -51,7 +51,7 @@ suchen. Nie direkt auf `uwe-brain.db` zugreifen.
 Owner geht mit durch. Es gibt hier keine Welt-Zuordnung und keine
 Sichtbarkeitsstufen: was in Brain liegt, gehört dem Owner.
 
-Daneben steht `User.aiAccess` (`canUseRtxAi`): darf dieses Konto die RTX-KI
+Daneben steht `User.aiAccess` (`canUseEngineAi`): darf dieses Konto die Maschinenraum-KI
 benutzen. Einstellbar im Command Center.
 
 ## Aufbau
@@ -79,7 +79,7 @@ Getragen von `@uwe/daily-cockpit`, `@uwe/brain-assistant`, `@uwe/host-cockpit`,
 - **Brain-Daten gehören nicht nach Studio oder Family.** Die Modellgrenzen sind in
   `PRISMA_MODEL_BOUNDARIES` festgeschrieben und werden getestet — ein Modell in die
   falsche Datenbank zu legen, bricht `prisma-model-boundaries.sync.test.ts`.
-- RTX / Ollama / LM Studio sind LAN-only. Nie hinter Cloudflare Tunnel oder
+- Maschinenraum / Ollama / LM Studio sind LAN-only. Nie hinter Cloudflare Tunnel oder
   öffentliches DNS hängen.
 - Drei Datenbanken, drei Migrationsläufe. Für Brain:
   `pnpm --filter @uwe/database db:deploy:brain`.

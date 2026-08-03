@@ -13,7 +13,7 @@ If the user invokes this skill without any other guidance, ask them what they wa
 ## Quick orientation
 - **Signature theme:** Parchment OS — warm paper (`#f1e8d4`), ink text (`#211d17`), terracotta accent (`#c2622b`), teal links, dark-ink sidebar. Default UI font **Space Mono**; headings **Newsreader** (serif). Set `<html data-uwe-theme="uwe-parchment-os">`.
 - **Tokens:** link `styles.css`; everything is a `--uwe-*` custom property. Swap `data-uwe-theme` for any of 9 themes.
-- **Components:** compiled to `_ds_bundle.js` → `window.UWEDesignSystem_f43eab` (Button, Card, StatCard, Badge, Tag, EmptyState, Input/Textarea/Select, VisibilityBadge, PageTypeBadge, RtxStatusBadge, SecretReveal, PageHeader, Breadcrumb, SidebarNav, Brand). See each component's `.prompt.md`.
+- **Components:** compiled to `_ds_bundle.js` → `window.UWEDesignSystem_f43eab` (Button, Card, StatCard, Badge, Tag, EmptyState, Input/Textarea/Select, VisibilityBadge, PageTypeBadge, EngineStatusBadge, SecretReveal, PageHeader, Breadcrumb, SidebarNav, Brand). See each component's `.prompt.md`.
 - **Icons:** Lucide (CDN). No emoji.
 - **Voice:** German UI, informal *du*, honest/technical tone, "GM" not "DM". Visibility is the core concept: Privat / Nur GM / Portal sichtbar / Share-Link.
 - **Products:** UWE Studio (DM cockpit) and UWE Portal (player wiki) — see `ui_kits/`.

@@ -12,7 +12,7 @@ export type {
   CookbookAiContextMode,
   CookbookAiTaskType,
   CookbookInferenceProbe,
-  CookbookRtxProbe,
+  CookbookEngineHostProbe,
   CookbookRuntimeProbeInput,
 } from "./ai-types";
 export { COOKBOOK_LOCAL_ONLY_CONTEXT_MODES } from "./ai-types";

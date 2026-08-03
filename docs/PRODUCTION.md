@@ -21,15 +21,15 @@ dem aktiven Zielpfad: **Linux Host + `pnpm` + `systemd`**, optional hinter einem
 
 - **Node.js** ≥ 22 und **pnpm** ≥ 10
 - **Linux** mit `systemd` (Production-Host); macOS/Linux für Entwicklung
-- Optional: `cloudflared` (Tunnel), ein RTX-Rechner für den Host Connector
+- Optional: `cloudflared` (Tunnel), ein Maschinenraum-Rechner für den Host Connector
 
 ---
 
 ## Production Host (Linux)
 
 UWE läuft dauerhaft auf einem **always-on Linux-Laptop** als zentraler Host
-(Datenbank, Uploads, Backups, Exporte, Brain/Mail). Der RTX-Rechner ist ein
-separater **outbound** Inference-Worker — siehe [rtx-connector.md](./rtx-connector.md).
+(Datenbank, Uploads, Backups, Exporte, Brain/Mail). Der Maschinenraum-Rechner ist ein
+separater **outbound** Inference-Worker — siehe [engine-connector.md](./engine-connector.md).
 
 ### Kanonischer Setup-Pfad
 
@@ -220,17 +220,17 @@ Kopieren Sie `.env.example` nach `.env` (Dev) bzw. pflegen Sie `/etc/uwe/uwe.env
 | `PLAYER_PREVIEW_ALLOW_DM_ONLY` | DM-only in Preview erlauben | **Immer `false` in Production** |
 
 Vollständige Liste inkl. Brain/Inferenz/Connector: `.env.example` und
-`tools/uwe-rtx-connector/.env.example`.
+`tools/uwe-engine-connector/.env.example`.
 
 ### Cloudflare Tunnel
 
 Cloudflare darf **nur auf UWE** zeigen — niemals auf Ollama, LM Studio oder einen
-RTX-Inference-Endpoint. Der Maschinenraum verbindet sich ohnehin **outbound**
+Maschinenraum-Inference-Endpoint. Der Maschinenraum verbindet sich ohnehin **outbound**
 und braucht keinen eingehenden Port.
 
 **Daily Admin OS / Life-Brain:** Persönliches Life-Brain und DnD-Brain dürfen nur
-über lokale RTX-Inference verarbeitet werden — Cloud-KI erhält keinen lokalen
-Kontext. RTX offline → Jobs werden vorgemerkt, kein Cloud-Fallback. Details:
+über lokale Maschinenraum-Inference verarbeitet werden — Cloud-KI erhält keinen lokalen
+Kontext. Maschinenraum offline → Jobs werden vorgemerkt, kein Cloud-Fallback. Details:
 [life-brain-privacy.md](./life-brain-privacy.md), Admin-Status unter `/admin/status`.
 
 ```txt

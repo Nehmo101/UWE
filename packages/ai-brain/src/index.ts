@@ -24,9 +24,9 @@ import type {
 } from "./types";
 
 export {
-  buildRtxCaptureProposalPrompt,
-  parseRtxCaptureProposalResponse,
-} from "./capture-triage/rtx-proposal";
+  buildEngineCaptureProposalPrompt,
+  parseEngineCaptureProposalResponse,
+} from "./capture-triage/engine-proposal";
 export * from "./types";
 export { buildAiContext, buildAiContextBySlug, listSessionsForBrain } from "./context/context-builder";
 export {
@@ -105,16 +105,16 @@ export {
   providerIdToMode,
   legacyContextMode,
   validateContextModeRequirements,
-  validateLocalRtxRequired,
+  validateLocalEngineRequired,
   buildRouterContext,
   createBrainRetrievalAdapter,
-  createLocalRtxProvider,
-  checkRtxHealth,
-  checkRtxReadiness,
-  isRtxReady,
-  isRtxReadinessReady,
-  isRtxWorkerConfigured,
-  type RtxReadinessStatus,
+  createLocalEngineProvider,
+  checkEngineHealth,
+  checkEngineReadiness,
+  isEngineReady,
+  isEngineReadinessReady,
+  isEngineWorkerConfigured,
+  type EngineReadinessStatus,
   AiRouterError,
   type AiProviderMode,
   type AiContextMode,

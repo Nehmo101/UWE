@@ -49,7 +49,7 @@ export function buildCookbookRoutingHints(input: {
   contextMode: CookbookAiContextMode;
   taskType: CookbookAiTaskType;
   localOnlyMode: boolean;
-  rtxReady: boolean;
+  engineReady: boolean;
   hardware: CookbookHardwareProfile;
   installedModels?: string[];
   explicitModel?: string;
@@ -73,8 +73,8 @@ export function buildCookbookRoutingHints(input: {
     warnings.push("Gewählter Cloud-Modus wird für diesen Kontext blockiert.");
   }
 
-  if (input.providerMode === "local_rtx" && !input.rtxReady) {
-    warnings.push("Lokale RTX-Inference ist nicht bereit — Aufgabe wird nicht an Cloud weitergeleitet.");
+  if (input.providerMode === "local_engine" && !input.engineReady) {
+    warnings.push("Lokale Maschinenraum-Inference ist nicht bereit — Aufgabe wird nicht an Cloud weitergeleitet.");
   }
 
   const preferLocal = privateContext || input.localOnlyMode || input.providerMode !== "cloud";
@@ -108,7 +108,7 @@ export function buildCookbookRoutingHints(input: {
 export function resolveCookbookModelForRequest(input: {
   explicitModel?: string;
   taskType: CookbookAiTaskType;
-  rtxDefaultModel: string;
+  engineDefaultModel: string;
   hardware: CookbookHardwareProfile;
   installedModels?: string[];
 }): string {
@@ -131,5 +131,5 @@ export function resolveCookbookModelForRequest(input: {
     return rec.modelId;
   }
 
-  return input.rtxDefaultModel;
+  return input.engineDefaultModel;
 }

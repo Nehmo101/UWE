@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     brainAccess: body.brainAccess === true,
     familyAccess: body.familyAccess === true,
     // Fehlend heisst hier `false` wie bei den Häkchen — das Anlegen ist eine
-    // vollständige Angabe, kein Teil-Update. Wer die RTX-KI braucht, bekommt
+    // vollständige Angabe, kein Teil-Update. Wer den Maschinenraum-KI braucht, bekommt
     // sie ausdrücklich.
     aiAccess: body.aiAccess === true,
   };

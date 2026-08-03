@@ -1,11 +1,12 @@
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 
 import {
   defaultConnectorClientConfig,
   parseConnectorClientConfig,
 } from "@uwe/connector-client-config";
+
+import { commandCenterDataRoot } from "./desktop-host-paths.ts";
 
 const DEFAULT_LOCAL_HOST_URL = "http://127.0.0.1:3000";
 const LOCAL_CONNECTOR_NAME = "UWE Command Center (lokal)";
@@ -42,14 +43,7 @@ function argumentValue(argv: string[], name: string): string | undefined {
   return index >= 0 ? argv[index + 1] : undefined;
 }
 
-function defaultDataRoot(): string {
-  const configured = process.env.UWE_COMMAND_CENTER_DATA_DIR?.trim();
-  if (configured) return path.resolve(configured);
-  if (process.platform === "win32" && process.env.LOCALAPPDATA) {
-    return path.join(process.env.LOCALAPPDATA, "UWE", "rtx-connector-client", "host");
-  }
-  return path.join(os.homedir(), ".local", "share", "UWE", "rtx-connector-client", "host");
-}
+const defaultDataRoot = commandCenterDataRoot;
 
 function readCurrentConfig(configPath: string): ReturnType<typeof defaultConnectorClientConfig> {
   if (!fs.existsSync(configPath)) return defaultConnectorClientConfig();

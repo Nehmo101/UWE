@@ -91,7 +91,7 @@ export interface ResolveNodeTypeContext {
  *
  * Der `typeHint` steht so weit vorn, weil er aus mehr Wissen kommt als ein
  * Titelmuster: Er kennt die Stellung des Abschnitts im Dokument (Eintrag einer
- * Werteblockliste, Raum unter einer Ebene) und, wenn der RTX-Host antwortet,
+ * Werteblockliste, Raum unter einer Ebene) und, wenn der Maschinenraum-Host antwortet,
  * das Urteil der lokalen KI.
  */
 export function resolveNodePageType(

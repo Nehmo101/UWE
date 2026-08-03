@@ -25,7 +25,7 @@ description: Work with UWE DnD Brain and Life Brain — storage, retrieval, embe
 ## Life Brain
 
 - Models: `PersonalBrainDocument`, `PersonalBrainFact`
-- Context mode: `personal_brain` — **local RTX only**
+- Context mode: `personal_brain` — **local Maschinenraum only**
 - No Portal exposure, no cloud provider
 - Docs: `docs/life-brain-privacy.md`
 

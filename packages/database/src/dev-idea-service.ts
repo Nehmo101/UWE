@@ -39,7 +39,7 @@ export interface DevIdeaChatMessage {
   role: DevIdeaChatRole;
   content: string;
   createdAt: string;
-  /** Resolved backend route for assistant turns (e.g. "local_rtx" or "cloud"). */
+  /** Resolved backend route for assistant turns (e.g. "local_engine" or "cloud"). */
   via?: string;
 }
 

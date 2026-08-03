@@ -20,7 +20,7 @@ interface AdminStatusPayload {
     message?: string;
     offlineReason?: string;
   };
-  rtx?: {
+  engine?: {
     ready: boolean;
     online: boolean;
     message: string;
@@ -38,9 +38,9 @@ interface AdminStatusPayload {
 }
 
 const DEFAULT_CAPS: AiPromptCapabilities = {
-  rtxEnabled: false,
-  rtxOnline: false,
-  rtxState: "disabled",
+  engineEnabled: false,
+  engineOnline: false,
+  engineState: "disabled",
   localAiReady: false,
   cloudAvailable: false,
   brainLocal: false,
@@ -59,7 +59,7 @@ export interface UseAiPromptCapabilitiesOptions {
  * not available, and only show the hard red error for genuine failures.
  *
  * - "none": status loaded, AI is usable.
- * - "unavailable": AI is intentionally off/offline/mock (RTX disabled, no cloud,
+ * - "unavailable": AI is intentionally off/offline/mock (Maschinenraum disabled, no cloud,
  *   mock mode). Render a muted hint, never a danger block.
  * - "error": unexpected failure (network/5xx while AI is expected). Render red.
  */
@@ -87,7 +87,7 @@ const MOCK_AI =
 const HINT_AI_OFFLINE_MOCK =
   "KI läuft im Offline-/Mock-Modus. Antworten sind simuliert.";
 const HINT_AI_NOT_AVAILABLE =
-  "KI ist aktuell nicht verfügbar (lokale RTX aus, keine Cloud konfiguriert).";
+  "KI ist aktuell nicht verfügbar (lokaler Maschinenraum aus, keine Cloud konfiguriert).";
 
 /** True when the resolved capabilities offer no usable AI backend. */
 function capsHaveNoBackend(caps: AiPromptCapabilities): boolean {
@@ -102,19 +102,19 @@ async function parseStatusJson<T>(response: Response, label: string): Promise<T>
 }
 
 function buildInferenceInputFromAdmin(admin: AdminStatusPayload) {
-  if (admin.rtx) {
+  if (admin.engine) {
     return {
       enabled: admin.inference?.enabled ?? true,
-      online: admin.rtx.ready,
+      online: admin.engine.ready,
       urlAllowed: true,
-      message: admin.rtx.message,
+      message: admin.engine.message,
       offlineReason:
-        admin.rtx.connectorDegraded && admin.rtx.connectorLastError
-          ? admin.rtx.connectorLastError
-          : admin.rtx.agentStatus === "error" || admin.rtx.agentStatus === "unreachable"
-            ? admin.rtx.message
+        admin.engine.connectorDegraded && admin.engine.connectorLastError
+          ? admin.engine.connectorLastError
+          : admin.engine.agentStatus === "error" || admin.engine.agentStatus === "unreachable"
+            ? admin.engine.message
             : undefined,
-      degraded: admin.rtx.connectorDegraded,
+      degraded: admin.engine.connectorDegraded,
     };
   }
 
@@ -140,7 +140,7 @@ export function useAiPromptCapabilities(
   const [statusKind, setStatusKind] = useState<AiStatusKind>("none");
   const [unavailableHint, setUnavailableHint] = useState<string | null>(null);
   const [providerMode, setProviderModeState] = useState<AiProviderMode>(
-    pageSlug ? "local_rtx" : "auto",
+    pageSlug ? "local_engine" : "auto",
   );
   const [contextMode, setContextModeState] = useState<AiContextMode>(
     pageSlug ? "current_object" : "general_chat",

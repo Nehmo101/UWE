@@ -6,30 +6,30 @@ import { DEFAULT_PRIVACY_RULES } from "@uwe/database/server";
 // Test helper — mirrors private function behavior via re-export pattern
 function resolveMode(
   config: AiGatewayConfigRecord,
-  requested: "auto" | "local_rtx" | "cloud",
+  requested: "auto" | "local_engine" | "cloud",
   cloudFallbackAllowed: boolean,
   privacyLevel: "CLOUD_ALLOWED" | "CLOUD_FORBIDDEN" | "LOCAL_REQUIRED",
-): "auto" | "local_rtx" | "cloud" {
+): "auto" | "local_engine" | "cloud" {
   if (config.routingMode === "DISABLED") {
     throw new Error("disabled");
   }
   if (config.routingMode === "LOCAL_ONLY" || privacyLevel === "LOCAL_REQUIRED") {
-    return "local_rtx";
+    return "local_engine";
   }
   if (privacyLevel === "CLOUD_FORBIDDEN") {
     if (requested === "cloud") {
-      return "local_rtx";
+      return "local_engine";
     }
-    return requested === "local_rtx" ? "local_rtx" : "auto";
+    return requested === "local_engine" ? "local_engine" : "auto";
   }
   if (config.routingMode === "CLOUD_ONLY") {
     return "cloud";
   }
   if (requested === "cloud") {
-    return cloudFallbackAllowed ? "cloud" : "local_rtx";
+    return cloudFallbackAllowed ? "cloud" : "local_engine";
   }
-  if (requested === "local_rtx") {
-    return "local_rtx";
+  if (requested === "local_engine") {
+    return "local_engine";
   }
   return "auto";
 }
@@ -44,16 +44,16 @@ describe("ai gateway routing", () => {
     updatedAt: new Date(),
   };
 
-  it("LOCAL_ONLY forces local_rtx", () => {
+  it("LOCAL_ONLY forces local_engine", () => {
     assert.equal(
       resolveMode({ ...baseConfig, routingMode: "LOCAL_ONLY" }, "auto", true, "CLOUD_ALLOWED"),
-      "local_rtx",
+      "local_engine",
     );
   });
 
   it("CLOUD_ONLY forces cloud", () => {
     assert.equal(
-      resolveMode({ ...baseConfig, routingMode: "CLOUD_ONLY" }, "local_rtx", false, "CLOUD_ALLOWED"),
+      resolveMode({ ...baseConfig, routingMode: "CLOUD_ONLY" }, "local_engine", false, "CLOUD_ALLOWED"),
       "cloud",
     );
   });
@@ -61,21 +61,21 @@ describe("ai gateway routing", () => {
   it("LOCAL_REQUIRED privacy blocks cloud request", () => {
     assert.equal(
       resolveMode(baseConfig, "cloud", true, "LOCAL_REQUIRED"),
-      "local_rtx",
+      "local_engine",
     );
   });
 
   it("cloud request denied when fallback not allowed", () => {
     assert.equal(
       resolveMode(baseConfig, "cloud", false, "CLOUD_ALLOWED"),
-      "local_rtx",
+      "local_engine",
     );
   });
 
   it("CLOUD_FORBIDDEN blocks explicit cloud request", () => {
     assert.equal(
       resolveMode(baseConfig, "cloud", true, "CLOUD_FORBIDDEN"),
-      "local_rtx",
+      "local_engine",
     );
   });
 

@@ -3,7 +3,7 @@
  * assistant panel: persisted conversations, a hinterlegte (assigned) Connector
  * model, image analysis, document intake and local dictation.
  *
- * Everything routes through the local Connector/RTX path. There is no cloud
+ * Everything routes through the local Connector/Maschinenraum path. There is no cloud
  * fallback anywhere in this package.
  */
 

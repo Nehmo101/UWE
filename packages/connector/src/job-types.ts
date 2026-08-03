@@ -1,6 +1,6 @@
 /**
- * Connector job catalogue — the work the UWE Host can hand to an RTX Host
- * Connector via the queue. Each job type maps to an execution lane, a default
+ * Connector job catalogue — the work the UWE Host can hand to the Maschinenraum
+ * via the queue. Each job type maps to an execution lane, a default
  * priority and the capability a connector must advertise to claim it.
  *
  * Priorities (higher runs first):

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  assessRtxExposure,
+  assessEngineExposure,
   assessStudioSecurity,
   classifyEndpointUrl,
 } from "./studio-security";
@@ -145,22 +145,22 @@ describe("studio security assessment", () => {
   });
 });
 
-describe("RTX exposure assessment", () => {
-  it("flags public RTX_BASE_URL", () => {
-    const assessment = assessRtxExposure({
-      RTX_BASE_URL: "https://rtx.example.com",
+describe("Maschinenraum exposure assessment", () => {
+  it("flags public ENGINE_BASE_URL", () => {
+    const assessment = assessEngineExposure({
+      ENGINE_BASE_URL: "https://engine.example.com",
       AI_INFERENCE_ALLOW_PUBLIC_URL: "false",
     });
 
     assert.equal(assessment.ok, false);
     assert.equal(assessment.severity, "critical");
-    assert.ok(assessment.endpoints.some((endpoint) => endpoint.envKey === "RTX_BASE_URL"));
-    assert.ok(assessment.nextSteps.some((step) => step.includes("RTX_BASE_URL")));
+    assert.ok(assessment.endpoints.some((endpoint) => endpoint.envKey === "ENGINE_BASE_URL"));
+    assert.ok(assessment.nextSteps.some((step) => step.includes("ENGINE_BASE_URL")));
   });
 
   it("allows private home network URLs", () => {
-    const assessment = assessRtxExposure({
-      RTX_BASE_URL: "http://192.168.1.100:8787",
+    const assessment = assessEngineExposure({
+      ENGINE_BASE_URL: "http://192.168.1.100:8787",
       AI_INFERENCE_BASE_URL: "http://192.168.1.100:11434",
     });
 
@@ -169,7 +169,7 @@ describe("RTX exposure assessment", () => {
   });
 
   it("warns when AI_INFERENCE_ALLOW_PUBLIC_URL overrides protection", () => {
-    const assessment = assessRtxExposure({
+    const assessment = assessEngineExposure({
       AI_INFERENCE_BASE_URL: "https://ollama.example.com",
       AI_INFERENCE_ALLOW_PUBLIC_URL: "true",
     });
@@ -179,12 +179,12 @@ describe("RTX exposure assessment", () => {
     assert.ok(assessment.nextSteps.some((step) => step.includes("AI_INFERENCE_ALLOW_PUBLIC_URL")));
   });
 
-  it("does not leak RTX tokens in serialized output", () => {
-    const assessment = assessRtxExposure({
-      RTX_BASE_URL: "http://192.168.1.100:8787",
-      RTX_SERVICE_TOKEN: "secret-rtx-token-do-not-leak",
+  it("does not leak Maschinenraum tokens in serialized output", () => {
+    const assessment = assessEngineExposure({
+      ENGINE_BASE_URL: "http://192.168.1.100:8787",
+      ENGINE_SERVICE_TOKEN: "secret-engine-token-do-not-leak",
     });
 
-    assert.ok(!JSON.stringify(assessment).includes("secret-rtx-token-do-not-leak"));
+    assert.ok(!JSON.stringify(assessment).includes("secret-engine-token-do-not-leak"));
   });
 });

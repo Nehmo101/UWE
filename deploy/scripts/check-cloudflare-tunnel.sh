@@ -75,11 +75,11 @@ if [[ -f "$TUNNEL_CONFIG" ]]; then
   report ok "Tunnel-Konfiguration gefunden: $TUNNEL_CONFIG"
   if grep -Eq '127\.0\.0\.1:(11434|8787|8080|3000|3001)' "$TUNNEL_CONFIG"; then
     if grep -Eq '127\.0\.0\.1:(11434|8787)' "$TUNNEL_CONFIG"; then
-      report fail "Tunnel-Konfiguration zeigt auf RTX/Ollama-Port — niemals öffentlich exponieren"
+      report fail "Tunnel-Konfiguration zeigt auf Maschinenraum/Ollama-Port — niemals öffentlich exponieren"
     fi
   fi
-  if grep -qiE 'ollama|rtx|11434|8787' "$TUNNEL_CONFIG"; then
-    report fail "Tunnel-Konfiguration enthält RTX/Ollama-Referenzen"
+  if grep -qiE 'ollama|engine|11434|8787' "$TUNNEL_CONFIG"; then
+    report fail "Tunnel-Konfiguration enthält Maschinenraum/Ollama-Referenzen"
   fi
   # Brain is owner-only and loopback by default (ADR 004/007) — it must not appear
   # in the public tunnel ingress UNLESS the owner has deliberately opted in via

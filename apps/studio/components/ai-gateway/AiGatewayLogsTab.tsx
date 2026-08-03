@@ -73,7 +73,7 @@ export function AiGatewayLogsTab({
               id="ai-gateway-logs-route"
               value={usageFilters.route}
               onChange={(e) => setUsageFilters((f) => ({ ...f, route: e.target.value }))}
-              placeholder="z. B. local_rtx"
+              placeholder="z. B. local_engine"
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -97,7 +97,7 @@ export function AiGatewayLogsTab({
         </div>
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="secondary" onClick={() => void runFallbackTest()}>
-            RTX-Erreichbarkeit prüfen
+            Maschinenraum-Erreichbarkeit prüfen
           </Button>
           <Button
             type="button"

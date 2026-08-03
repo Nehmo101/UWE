@@ -44,8 +44,8 @@ sudo systemctl restart uwe.service
 ## Maschinenraum deployment
 
 Optional and independent of the host lifecycle. Create a token in Studio, fill
-`tools/uwe-rtx-connector/.env`, run `pnpm connector:start`. The connector can come
-and go freely; the host stays online. See [rtx-connector.md](rtx-connector.md).
+`tools/uwe-engine-connector/.env`, run `pnpm connector:start`. The connector can come
+and go freely; the host stays online. See [engine-connector.md](engine-connector.md).
 
 ## Backups
 

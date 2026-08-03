@@ -1,19 +1,19 @@
 "use client";
 
 import * as React from "react";
-import { NavIcon, RtxStatusBadge, type RtxConnectorState } from "@uwe/shared-ui";
+import { NavIcon, EngineStatusBadge, type EngineConnectorState } from "@uwe/shared-ui";
 import { MailButton, IconButton } from "./mail-ui";
 import type { MailMessageDetailVM } from "./mail-types";
 import type { MailChatMessage } from "@uwe/mail/ai";
 
 interface MailChatPanelProps {
   message: MailMessageDetailVM;
-  rtxState: RtxConnectorState;
+  engineState: EngineConnectorState;
   onClose: () => void;
   onActionComplete: () => void;
 }
 
-export function MailChatPanel({ message, rtxState, onClose, onActionComplete }: MailChatPanelProps) {
+export function MailChatPanel({ message, engineState, onClose, onActionComplete }: MailChatPanelProps) {
   const [messages, setMessages] = React.useState<MailChatMessage[]>([]);
   const [input, setInput] = React.useState("");
   const [busy, setBusy] = React.useState(false);
@@ -47,7 +47,7 @@ export function MailChatPanel({ message, rtxState, onClose, onActionComplete }: 
         error?: string;
       };
       if (!response.ok) {
-        setStatus(payload.error ?? payload.unavailable ?? "RTX-Anfrage fehlgeschlagen.");
+        setStatus(payload.error ?? payload.unavailable ?? "Maschinenraum-Anfrage fehlgeschlagen.");
         return;
       }
       if (payload.unavailable) {
@@ -144,15 +144,15 @@ export function MailChatPanel({ message, rtxState, onClose, onActionComplete }: 
         }}
       >
         <NavIcon name="message-circle" width={16} height={16} style={{ color: "var(--uwe-accent)" }} />
-        <span style={{ flex: 1, fontSize: 13, fontWeight: 700 }}>RTX Mail-Assistent</span>
-        <RtxStatusBadge state={rtxState} />
+        <span style={{ flex: 1, fontSize: 13, fontWeight: 700 }}>Maschinenraum Mail-Assistent</span>
+        <EngineStatusBadge state={engineState} />
         <IconButton icon="x" size={16} title="Schließen" onClick={onClose} />
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: 12, display: "flex", flexDirection: "column", gap: 10 }}>
         {messages.length === 0 ? (
           <p style={{ margin: 0, fontSize: 12.5, color: "var(--uwe-fg-muted)", lineHeight: 1.55 }}>
-            Frag RTX z. B.: „Lösche alle Mails von diesem Absender“ oder „Melde mich vom Newsletter ab“.
+            Frag Maschinenraum z. B.: „Lösche alle Mails von diesem Absender“ oder „Melde mich vom Newsletter ab“.
           </p>
         ) : null}
         {messages.map((entry, index) => (
@@ -205,7 +205,7 @@ export function MailChatPanel({ message, rtxState, onClose, onActionComplete }: 
               void submit();
             }
           }}
-          placeholder="Aufgabe an RTX…"
+          placeholder="Aufgabe an den Maschinenraum…"
           disabled={busy}
           style={{
             flex: 1,

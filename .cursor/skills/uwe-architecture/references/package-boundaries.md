@@ -30,4 +30,4 @@ Life Admin models and services live in `@uwe/database` (`life-admin-service.ts`)
 - Importing `node:crypto`, Prisma, or filesystem APIs in client components
 - Duplicating visibility checks only in React — always mirror in service layer
 - Sending world/brain context to cloud AI providers
-- Exposing RTX/Ollama via Cloudflare Tunnel
+- Exposing Maschinenraum/Ollama via Cloudflare Tunnel

@@ -94,7 +94,7 @@ export async function markCampaignPreviewFailed(
     canExecute: false,
   };
   await importJobs().updateJob(importJobId, {
-    previewPayload: buildPreviewPayload(preview, { aiRoute: "local_rtx" }),
+    previewPayload: buildPreviewPayload(preview, { aiRoute: "local_engine" }),
   });
   await importJobs().markFailed(importJobId, message);
   return preview;
@@ -233,7 +233,7 @@ export async function runCampaignPdfAnalysis(
       const routed = await routeAiRequest(
         { repo, prisma },
         {
-          providerMode: "local_rtx",
+          providerMode: "local_engine",
           contextMode: "general_chat",
           taskType: "create_knowledge_text",
           userPrompt: buildCampaignExtractionPrompt(promptChunk, input.campaignContext),
@@ -274,7 +274,7 @@ export async function runCampaignPdfAnalysis(
 
     const processedCharacters = chunks.reduce((total, chunk) => total + chunk.length, 0);
     const extractionMeta = {
-      aiRoute: "local_rtx",
+      aiRoute: "local_engine",
       textSource: acquired.source,
       ocrModel: acquired.model,
       pageCount: acquired.pageCount,
@@ -306,7 +306,7 @@ export async function runCampaignPdfAnalysis(
     // fällt hier unter `instanceof Error`.
     const message =
       error instanceof AiRouterError
-        ? "Lokale RTX ist offline — der Kampagnen-Import kann nicht in die Cloud ausweichen."
+        ? "Der lokale Maschinenraum ist offline — der Kampagnen-Import kann nicht in die Cloud ausweichen."
         : error instanceof Error
           ? error.message
           : "PDF-Kampagnenvorschau fehlgeschlagen.";

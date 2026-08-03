@@ -36,7 +36,7 @@ pnpm --filter @uwe/database test -- visibility-security
 
 - Outputs saved as `idea` / `draft` / `dm_only` — **never** auto-canon
 - Player-safe tasks (`create_player_handout`, `generate_player_recap`): no GM secrets
-- RTX required for campaign context — no cloud fallback
+- Maschinenraum required for campaign context — no cloud fallback
 
 ## Output template
 

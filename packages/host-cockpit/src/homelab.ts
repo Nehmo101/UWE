@@ -70,7 +70,7 @@ export async function getHomelabCockpitData(
     env?: NodeJS.ProcessEnv;
     /**
      * Pre-computed admin dashboard status. When provided it is reused instead of
-     * re-running the (expensive) leak scan and AI/RTX probes. Falls back to an
+     * re-running the (expensive) leak scan and AI/Maschinenraum probes. Falls back to an
      * internal computation for standalone callers.
      */
     adminStatus?: Awaited<ReturnType<typeof getAdminDashboardStatus>>;
@@ -99,15 +99,15 @@ export async function getHomelabCockpitData(
   const serviceStatuses = buildHomelabServiceStatuses({
     system: adminStatus.system,
     studioSecurity: adminStatus.studioSecurity,
-    rtxExposure: adminStatus.rtxExposure,
-    rtx: {
-      ready: adminStatus.rtx.ready,
-      online: adminStatus.rtx.online,
-      message: adminStatus.rtx.message,
-      urlAllowed: adminStatus.rtx.urlAllowed,
-      source: adminStatus.rtx.source,
-      connectorDegraded: adminStatus.rtx.connectorDegraded,
-      connectorOnlineCount: adminStatus.rtx.connectorOnlineCount,
+    engineExposure: adminStatus.engineExposure,
+    engine: {
+      ready: adminStatus.engine.ready,
+      online: adminStatus.engine.online,
+      message: adminStatus.engine.message,
+      urlAllowed: adminStatus.engine.urlAllowed,
+      source: adminStatus.engine.source,
+      connectorDegraded: adminStatus.engine.connectorDegraded,
+      connectorOnlineCount: adminStatus.engine.connectorOnlineCount,
     },
     inference: {
       enabled: adminStatus.inference.enabled,
@@ -128,7 +128,7 @@ export async function getHomelabCockpitData(
   const securityChecks = buildHomelabSecurityChecklist({
     system: adminStatus.system,
     studioSecurity: adminStatus.studioSecurity,
-    rtxExposure: adminStatus.rtxExposure,
+    engineExposure: adminStatus.engineExposure,
     accessCounts,
     totalUsers,
     hardwareUrlWarnings: urlWarnings,

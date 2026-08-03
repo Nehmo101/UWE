@@ -66,7 +66,7 @@ Brain eine andere App importiert oder von einem Paket importiert wird.
 ## KI-Chat (`/ki-chat`)
 
 Der Brain-Assistent (`@uwe/brain-assistant`) ist **lokal-only**: der Chat-Runner
-pinnt `providerMode: "local_rtx"` und nutzt ausschließlich die Kontextmodi
+pinnt `providerMode: "local_engine"` und nutzt ausschließlich die Kontextmodi
 `general_chat` und `personal_brain`. Es gibt keinen Cloud-Fallback und keinen
 Schalter dafür — `packages/brain-assistant/src/chat-runner.test.ts` hält das
 fest.
@@ -87,7 +87,7 @@ gespeichert, damit Folge-Turns keinen zweiten GPU-Job auslösen.
 - **Lokal (Standard).** `MediaRecorder` → `POST /api/ai/assistant/transcribe` →
   Connector-Job `audio_transcribe` (Capability `stt_local`) → lokales
   Sprach-Kommando. Die Aufnahme wird nie auf Platte geschrieben und verlässt den
-  RTX-PC nicht. Das Kommando wird **im Command Center** gesetzt
+  Maschinenraum-PC nicht. Das Kommando wird **im Command Center** gesetzt
   (`sttCommand` → `UWE_CONNECTOR_STT_CMD`), nicht von Hand auf dem Host;
   Referenz-Wrapper: `deploy/scripts/uwe-stt-whisper.sh`.
 - **Browser-Fallback (opt-in, aus).** Die Web-Speech-API sendet das Audio in

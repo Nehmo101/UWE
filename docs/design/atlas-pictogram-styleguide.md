@@ -1,7 +1,7 @@
 # Asset-Styleguide (Piktogramme & Gouache)
 
 > **Diese Datei ist ein Laufzeitpfad, kein blosses Dokument.** Ihr Pfad steht
-> als Konstante im Prompt-Kontext der RTX-Asset-Action (`packages/ai-brain`)
+> als Konstante im Prompt-Kontext der Maschinenraum-Asset-Action (`packages/ai-brain`)
 > und wird von einem Test geprüft. Nicht umbenennen, nicht verschieben.
 >
 > Der Karteneditor, für den sie ursprünglich geschrieben wurde, ist am
@@ -17,13 +17,13 @@ um konkrete Regeln und einen Katalog für die Punkt-Symbole und gemalten Assets.
 > bleiben stabil, neue Gouache-Assets folgen einer gemeinsamen Form-, Farb- und
 > Review-Sprache.
 >
-> Für RTX-gestützte Asset-Erzeugung in UWE ist dieses Dokument die verbindliche
-> Prompt- und Review-Quelle. RTX-Ausgaben sind Vorschläge, nie Auto-Apply.
+> Für Maschinenraum-gestützte Asset-Erzeugung in UWE ist dieses Dokument die verbindliche
+> Prompt- und Review-Quelle. Maschinenraum-Ausgaben sind Vorschläge, nie Auto-Apply.
 >
 > **Gouache ist der kanonische Look (Owner-Entscheid).** Die Ink-Spur ist
 > **deprecated für Neues**: keine neuen Ink-Glyphen, die Editor-Palette zeigt
-> nur noch Gouache/RTX, und alle Generatoren (KI-Bild-Stempel via
-> `ATLAS_STAMP_STYLE_PROMPT`, RTX-Rezepte, Scatter, Säumen, Legenden) erzeugen
+> nur noch Gouache/Maschinenraum, und alle Generatoren (KI-Bild-Stempel via
+> `ATLAS_STAMP_STYLE_PROMPT`, Maschinenraum-Rezepte, Scatter, Säumen, Legenden) erzeugen
 > bzw. rendern Gouache. Bestehende Ink-Keys bleiben als stabile FK-Träger
 > (`AtlasObject.paletteItemId`, Restrict) und werden über `GLYPH_TO_GOUACHE`
 > (`packages/atlas/src/assets-batch5.ts`) automatisch gemalt gerendert.
@@ -68,7 +68,7 @@ Gouache-Hilfsfunktionen aus `@uwe/atlas/assets`:
 `getGouacheAsset`, `listGouacheAssetsByCategory`, `drawGouacheAsset`,
 `isGouacheAsset`.
 
-**RTX-Regel:** Das RTX-Asset-Studio darf diese Registries und den
+**Maschinenraum-Regel:** Das Maschinenraum-Asset-Studio darf diese Registries und den
 Asset-Katalog lesen, aber es schreibt nicht direkt TypeScript. Es erzeugt
 validierte Asset-Vorschläge, die UWE als Preview/Review zeigt.
 
@@ -139,12 +139,12 @@ deckend, aber weiterhin deterministisch, schnell und kartografisch lesbar.
    `hashStringToSeed`, damit dieselbe Welt reproduzierbar bleibt.
 5. **Keine fremden CoK-Assets kopieren.** Canvas of Kings ist Stilreferenz, keine
    Asset-Quelle. Rezepte sind eigene Formen.
-6. **Kein Runtime-Code aus RTX.** RTX darf JSON/Parameter/Skizzen vorschlagen,
+6. **Kein Runtime-Code aus Maschinenraum.** Maschinenraum darf JSON/Parameter/Skizzen vorschlagen,
    aber UWE führt keine generierte TypeScript- oder JavaScript-Quelle direkt aus.
 7. **Stabile `g_`-Keys.** Builtin-Gouache-Assets verwenden `g_<name>` und werden
    nach Veröffentlichung nicht umbenannt. Custom-Assets bekommen eigene stabile
    IDs/PaletteItems.
-8. **Review vor Kanon.** Jedes RTX-Asset landet zuerst als Preview/Proposal; erst
+8. **Review vor Kanon.** Jedes Maschinenraum-Asset landet zuerst als Preview/Proposal; erst
    nach Übernahme wird es in einer Welt oder Palette sichtbar.
 
 Gouache-Kategorien in `assets.ts`: `flora`, `structure`, `landmark`, `vehicle`,
@@ -251,29 +251,29 @@ Tabelle listet bewusst nur die stabilen Identifikatoren.
 
 ---
 
-## RTX-Asset-Erzeugung in UWE
+## Maschinenraum-Asset-Erzeugung in UWE
 
-Der RTX-Workflow erstellt Assets direkt in UWE, aber bleibt ein Review-Flow:
+Der Maschinenraum-Workflow erstellt Assets direkt in UWE, aber bleibt ein Review-Flow:
 
-1. UWE gibt RTX diesen Styleguide, den Asset-Katalog und die bestehende
+1. UWE gibt Maschinenraum diesen Styleguide, den Asset-Katalog und die bestehende
    `GOUACHE_ASSETS`-Registry als Kontext.
 2. Der DM beschreibt das gewünschte Asset, z. B. „verwunschener Leuchtturm auf
    Klippe, Gouache, Landmarke".
-3. RTX liefert einen **Asset-Vorschlag**: Name, Kategorie, Tags, Palette,
+3. Maschinenraum liefert einen **Asset-Vorschlag**: Name, Kategorie, Tags, Palette,
    Formbeschreibung/JSON-Rezept oder PNG-Fallback, kurze Begründung gegen diesen
    Styleguide.
 4. UWE rendert eine Preview und zeigt Validierungsfehler statt Auto-Apply.
 5. Übernahme erzeugt ein Custom-Asset/PaletteItem. Builtin-Promotion bleibt ein
    normaler PR-Schritt mit Code-Review und Tests.
 
-RTX darf:
+Maschinenraum darf:
 
 - bestehende Kategorien, Farben, Schatten-/Highlight-Regeln und Backlog-Tags
   benutzen;
 - Varianten für Marktstände, Baustile, Jahreszeiten und Zustände vorschlagen;
 - Vorschläge für `Plot`-, `Landmark`-, `Gen`- oder `Terrain`-Einsatz liefern.
 
-RTX darf nicht:
+Maschinenraum darf nicht:
 
 - fremde Canvas-of-Kings-Grafiken kopieren oder nachbauen;
 - TypeScript/JavaScript erzeugen, das UWE ungeprüft zur Laufzeit ausführt;

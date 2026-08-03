@@ -69,7 +69,7 @@ describe("ai usage rollup service", () => {
           feature: "general_chat",
           provider: "local",
           model: "llama",
-          route: "local_rtx",
+          route: "local_engine",
           inputTokens: 300,
           outputTokens: 120,
           estimatedCostUsd: 0,

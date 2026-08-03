@@ -145,7 +145,7 @@ export class LifeAdminContractService {
           status: amountCents > 0 ? "active" : "archived",
           categoryLabel: "KI / Cloud",
           notes:
-            "Automatisch aus ai_usage_logs übernommen (Schätzung, nur Cloud-Kosten). RTX-Läufe sind 0 USD.",
+            "Automatisch aus ai_usage_logs übernommen (Schätzung, nur Cloud-Kosten). Maschinenraum-Läufe sind 0 USD.",
           metadata: toPrismaJsonValue(metadata),
         },
       });
@@ -163,7 +163,7 @@ export class LifeAdminContractService {
         amountCents,
         startDate: bounds.since,
         notes:
-          "Automatisch aus ai_usage_logs übernommen (Schätzung, nur Cloud-Kosten). RTX-Läufe sind 0 USD.",
+          "Automatisch aus ai_usage_logs übernommen (Schätzung, nur Cloud-Kosten). Maschinenraum-Läufe sind 0 USD.",
         metadata: toPrismaJsonValue(metadata),
       },
     });

@@ -1,6 +1,6 @@
 ---
 name: local-first-privacy
-description: Enforce UWE local-first and privacy rules — RTX-only brain context, no cloud leakage, deferred jobs, and separation of personal vs campaign data. Use when changing AI providers, context modes, brain retrieval, or deployment exposure.
+description: Enforce UWE local-first and privacy rules — Maschinenraum-only brain context, no cloud leakage, deferred jobs, and separation of personal vs campaign data. Use when changing AI providers, context modes, brain retrieval, or deployment exposure.
 ---
 
 # UWE Local-First Privacy
@@ -8,14 +8,14 @@ description: Enforce UWE local-first and privacy rules — RTX-only brain contex
 ## Principles
 
 1. **Campaign and brain data stay on the UWE host** — SQLite, uploads, backups local/self-hosted.
-2. **RTX/Ollama/LM Studio = LAN only** — never in Cloudflare Tunnel or public DNS.
+2. **Maschinenraum/Ollama/LM Studio = LAN only** — never in Cloudflare Tunnel or public DNS.
 3. **Personal Life Brain = strictly local** — personal_brain never goes to cloud, hard-coded, not configurable.
-4. **DnD/world context = configurable** — brain/current_object modes may go to cloud when admin policy allows (W0 default: CLOUD_ALLOWED, RTX preferred).
+4. **DnD/world context = configurable** — brain/current_object modes may go to cloud when admin policy allows (W0 default: CLOUD_ALLOWED, Maschinenraum preferred).
 5. **Explicit Apply** — AI never writes canon without DM review.
 
 ## Context modes (W0 Atlas Policy)
 
-| Mode | Cloud allowed | RTX required | Notes |
+| Mode | Cloud allowed | Maschinenraum required | Notes |
 |------|---------------|--------------|-------|
 | `general_chat` | Yes | No (falls back to cloud) | No context in prompt |
 | `brain` (DnD) | **Configurable** | No (cloud fallback OK) | Default: CLOUD_ALLOWED |
@@ -39,10 +39,10 @@ Validation: `validateProviderContextCombination`, `validateResolvedRouteForConte
 
 See `docs/life-brain-privacy.md`.
 
-## RTX inference (outbound connector)
+## Maschinenraum inference (outbound connector)
 
-- `tools/uwe-rtx-connector/` — outbound inference worker only (legacy inbound `tools/uwe-rtx-agent` removed)
-- No persistent UWE data storage on RTX host
+- `tools/uwe-engine-connector/` — outbound inference worker only (legacy inbound `tools/uwe-engine-agent` removed)
+- No persistent UWE data storage on Maschinenraum host
 - Connector connects outbound to the host over the private network; no inbound port
 
 ## Deployment checks
@@ -55,7 +55,7 @@ Before public exposure:
 
 ## Deferred execution
 
-When RTX offline + local-only mode:
+When Maschinenraum offline + local-only mode:
 
 - Queue `ai_run` job — HTTP 202
 - **No cloud fallback**
@@ -66,7 +66,7 @@ When RTX offline + local-only mode:
 - [ ] New context mode classified local-only or cloud-safe
 - [ ] Context builder excludes cross-brain data
 - [ ] Logs contain no prompt text with PII in production
-- [ ] ENV documents RTX URL as internal only
+- [ ] ENV documents Maschinenraum URL as internal only
 - [ ] Backup/export opts for player notes documented (`docs/BACKUP.md`)
 
 ## Related

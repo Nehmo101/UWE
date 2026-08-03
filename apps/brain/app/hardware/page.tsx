@@ -78,7 +78,7 @@ export default async function BrainHardwarePage() {
     >
       {cockpit.urlWarnings.length > 0 ? (
         <div className="brain-callout brain-callout-warn" role="alert">
-          <strong>Sicherheitswarnungen — der RTX-Host gehört nie ins öffentliche Netz:</strong>
+          <strong>Sicherheitswarnungen — der Maschinenraum-Host gehört nie ins öffentliche Netz:</strong>
           <ul>
             {cockpit.urlWarnings.map((warning) => (
               <li key={`${warning.deviceId}-${warning.field}`}>
@@ -118,7 +118,7 @@ export default async function BrainHardwarePage() {
             </label>
             <label>
               Rolle
-              <input name="role" placeholder="z. B. UWE Host, RTX-Rechner, NAS" />
+              <input name="role" placeholder="z. B. UWE Host, Maschinenraum-Rechner, NAS" />
             </label>
             <StatusSelect defaultValue="planned" />
           </div>
@@ -142,7 +142,7 @@ export default async function BrainHardwarePage() {
               <input name="localUrl" placeholder="http://192.168.x.x:3000" />
             </label>
             <label>
-              Öffentliche URL (nur UWE-Host — nie RTX/Ollama)
+              Öffentliche URL (nur UWE-Host — nie Maschinenraum/Ollama)
               <input name="publicUrl" />
             </label>
           </div>
@@ -281,7 +281,7 @@ export default async function BrainHardwarePage() {
                       </label>
                       <label>
                         Betroffene Dienste (kommagetrennt)
-                        <input name="affectedServices" placeholder="rtx_agent, backup" />
+                        <input name="affectedServices" placeholder="engine_agent, backup" />
                       </label>
                       <div>
                         <button type="submit" className="brain-btn brain-btn-sm">

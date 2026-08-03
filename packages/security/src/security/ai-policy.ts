@@ -2,7 +2,7 @@ import { AiAccessDeniedError, AiPolicyViolationError } from "./errors";
 import {
 } from "./inference/privacy";
 import type {} from "./inference/ai-context-types";
-import { rejectClientWorkerUrl } from "./rtx-boundary";
+import { rejectClientWorkerUrl } from "./engine-boundary";
 
 const DEFAULT_MAX_PROMPT_LENGTH = 32_000;
 const DEFAULT_MAX_CONTEXT_CHARS = 24_000;
@@ -196,7 +196,7 @@ export function sanitizeAiResponseForClient<T extends Record<string, unknown>>(p
   delete sanitized.systemPrompt;
   delete sanitized.apiKey;
   delete sanitized.token;
-  delete sanitized.RTX_AGENT_TOKEN;
+  delete sanitized.ENGINE_AGENT_TOKEN;
   delete sanitized.workerUrl;
   delete sanitized.baseUrl;
 

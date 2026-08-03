@@ -1,6 +1,6 @@
 /**
- * @uwe/connector-model-profile — curated model metadata for the RTX Host
- * Connector. Defines the persisted store shape (`ConnectorModelProfile`,
+ * @uwe/connector-model-profile — curated model metadata for the Maschinenraum.
+ * Defines the persisted store shape (`ConnectorModelProfile`,
  * `ModelScanPath`), validation/parse helpers, and the stable profile key used
  * to match persisted profiles against freshly discovered models.
  *

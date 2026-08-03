@@ -150,13 +150,13 @@ export default async function BrainSystemPage({ searchParams }: Props) {
                 ]}
               />
               <StatusRow
-                label="RTX-Host"
-                ok={status.rtx.ready}
-                state={status.rtx.ready ? "Bereit" : "Offline"}
-                message={status.rtx.message}
+                label="Maschinenraum-Host"
+                ok={status.engine.ready}
+                state={status.engine.ready ? "Bereit" : "Offline"}
+                message={status.engine.message}
                 details={[
-                  { label: "Quelle", value: status.rtx.source },
-                  { label: "Connectoren online", value: status.rtx.connectorOnlineCount },
+                  { label: "Quelle", value: status.engine.source },
+                  { label: "Connectoren online", value: status.engine.connectorOnlineCount },
                 ]}
               />
               <StatusRow
@@ -232,7 +232,7 @@ export default async function BrainSystemPage({ searchParams }: Props) {
         <>
           {cockpit.urlWarnings.length > 0 ? (
             <div className="brain-callout brain-callout-warn" role="alert">
-              <strong>Sicherheitswarnungen — der RTX-Host gehört nie ins öffentliche Netz:</strong>
+              <strong>Sicherheitswarnungen — der Maschinenraum-Host gehört nie ins öffentliche Netz:</strong>
               <ul>
                 {cockpit.urlWarnings.map((warning) => (
                   <li key={`${warning.deviceId}-${warning.field}`}>
@@ -354,7 +354,7 @@ export default async function BrainSystemPage({ searchParams }: Props) {
               />
               <StatusRow
                 label="Inferenz"
-                ok={!status.inference.enabled || status.inference.online || status.rtx.ready}
+                ok={!status.inference.enabled || status.inference.online || status.engine.ready}
                 state={status.inference.enabled ? status.inference.provider : "Aus"}
                 message={status.inference.message}
               />

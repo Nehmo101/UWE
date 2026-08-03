@@ -4,7 +4,7 @@ import {
   AiProviderError,
   AiRouterError,
   InferenceUrlBlockedError,
-  isRtxReadinessReady,
+  isEngineReadinessReady,
   resolveAiBrainSettings,
   executeAiGatewayRequest,
   AiGatewayAccessDeniedError,
@@ -25,7 +25,7 @@ import {
   AiAccessDeniedError,
   AiPolicyViolationError,
   enforceAiRequestLimits,
-  RtxBoundaryError,
+  EngineBoundaryError,
 } from "@uwe/security";
 import type { AiContextMode, AiProviderMode } from "./ai-prompt-ui";
 import { aiPolicyErrorResponse } from "./ai-security";
@@ -119,15 +119,15 @@ export async function executeAiPrompt(
     throw new Error("KI ist deaktiviert.");
   }
 
-  // Every request needs the RTX host now — there is no other backend to fall
+  // Every request needs the Maschinenraum host now — there is no other backend to fall
   // back to, so an offline host always means "queue it and retry later".
   {
-    const rtxReady = await isRtxReadinessReady({ useMock: body.useMock, prisma });
-    if (!rtxReady) {
+    const engineReady = await isEngineReadinessReady({ useMock: body.useMock, prisma });
+    if (!engineReady) {
       const jobs = createJobService(prisma);
       const job = await jobs.enqueue({
         type: "ai_run",
-        title: `KI-Prompt (${body.contextMode}) — wartet auf RTX`,
+        title: `KI-Prompt (${body.contextMode}) — wartet auf Maschinenraum`,
         worldSlug: body.worldSlug?.trim() || null,
         userId: user?.userId ?? null,
         payload: {
@@ -145,7 +145,7 @@ export async function executeAiPrompt(
         kind: "deferred",
         jobId: job.id,
         message:
-          "RTX ist offline — Anfrage wurde als Job vorgemerkt. Kein Cloud-Fallback für lokalen Kontext.",
+          "Der Maschinenraum ist offline — Anfrage wurde als Job vorgemerkt. Kein Cloud-Fallback für lokalen Kontext.",
       };
     }
   }
@@ -170,7 +170,7 @@ export async function executeAiPrompt(
     },
     {
       user: gatewayUser,
-      providerMode: "local_rtx",
+      providerMode: "local_engine",
       contextMode: body.contextMode,
       taskType: resolvePromptTaskType(body.contextMode),
       worldSlug: body.worldSlug?.trim() || undefined,
@@ -203,7 +203,7 @@ export function aiPromptErrorResponse(error: unknown): NextResponse {
   if (
     error instanceof AiAccessDeniedError ||
     error instanceof AiPolicyViolationError ||
-    error instanceof RtxBoundaryError ||
+    error instanceof EngineBoundaryError ||
     error instanceof AiGatewayAccessDeniedError ||
     error instanceof AiGatewayBudgetExceededError ||
     error instanceof AiGatewayDisabledError

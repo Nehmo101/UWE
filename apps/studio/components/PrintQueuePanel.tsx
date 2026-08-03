@@ -91,7 +91,7 @@ export function PrintQueuePanel({ worldSlug, initialJobs, labelsHref }: Props) {
       empty={
         <p className="text-sm text-muted-foreground">
           Keine Druckjobs in der Warteschlange.{" "}
-          <Link href={labelsHref}>RTX-Druck öffnen →</Link>
+          <Link href={labelsHref}>Maschinenraum-Druck öffnen →</Link>
         </p>
       }
     />

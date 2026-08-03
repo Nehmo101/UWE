@@ -26,7 +26,7 @@ export async function tryAiShortenLabelText(
       { gatewayService, repo: createUweRepository() },
       {
         user: { userId: options.userId },
-        providerMode: "local_rtx",
+        providerMode: "local_engine",
         contextMode: "general_chat",
         taskType: "summarize_page",
         userPrompt: `${SHORTEN_PROMPT}${trimmed}`,

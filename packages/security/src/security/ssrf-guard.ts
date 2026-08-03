@@ -14,7 +14,7 @@ export class SsrfBlockedError extends Error {
  * Standard-Allowlist für ausgehende KI-Anfragen: leer.
  *
  * Bis N.3 standen hier die Cloud-Anbieter. UWE spricht nur noch den eigenen
- * RTX-Host an, und der ist per Definition kein öffentlicher Host — eine
+ * Maschinenraum-Host an, und der ist per Definition kein öffentlicher Host — eine
  * Vorgabe-Erlaubnis für fremde Domains wäre also genau die Tür, die zu bleiben
  * hat. Wer bewusst eine öffentliche Adresse braucht, setzt `AI_FETCH_ALLOWLIST`.
  */

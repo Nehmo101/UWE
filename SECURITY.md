@@ -9,7 +9,7 @@ Detailed security documents live in [docs/security/](docs/security/):
 - [docs/security/DEPLOYMENT_SECURITY.md](docs/security/DEPLOYMENT_SECURITY.md) — Cloudflare Tunnel/Access deployment guide
 - [docs/security/SECURITY_REVIEW.md](docs/security/SECURITY_REVIEW.md) — historical security review (2026-06-16)
 - [docs/security/dependency-notes.md](docs/security/dependency-notes.md) — dependency overrides and build-script allowlist
-- [SECURITY_NOTES.md](SECURITY_NOTES.md) — AI privacy, RTX agent, cloud rules (stays in root; required by `scripts/integration-smoke.test.ts`)
+- [SECURITY_NOTES.md](SECURITY_NOTES.md) — AI privacy, Maschinenraum agent, cloud rules (stays in root; required by `scripts/integration-smoke.test.ts`)
 
 ## Supported Versions
 
@@ -263,10 +263,10 @@ Enforced server-side by the AI router / privacy guard (`packages/ai-brain`):
 | Context | Cloud allowed? | Notes |
 |---------|----------------|-------|
 | General chat (prompt only) | Yes | Always |
-| Brain / world knowledge | **Configurable** | Default: CLOUD_ALLOWED (RTX preferred, cloud fallback OK) |
+| Brain / world knowledge | **Configurable** | Default: CLOUD_ALLOWED (Maschinenraum preferred, cloud fallback OK) |
 | Current object (page, NPC, …) | **Configurable** | Same as brain; admin can set CLOUD_FORBIDDEN |
 | Object + brain | **Configurable** | Same as brain |
-| Auto mode + DnD context + RTX offline | **Allowed** → cloud fallback | When gateway policy is CLOUD_ALLOWED |
+| Auto mode + DnD context + Maschinenraum offline | **Allowed** → cloud fallback | When gateway policy is CLOUD_ALLOWED |
 | Personal Life Brain (`personal_brain`) | **Never** — hard rule | Permanently local-only, cannot be configured |
 
 **Hard rules (non-negotiable, code-enforced):**
@@ -274,7 +274,7 @@ Enforced server-side by the AI router / privacy guard (`packages/ai-brain`):
 - DM-only content is always stripped before cloud routing.
 - datenschutzMode=true blocks all campaign data from cloud.
 
-Admin gateway policy (`DEFAULT_PRIVACY_RULES.dnd_world = CLOUD_ALLOWED`) allows DnD world context to reach cloud providers when RTX is offline. This is intentional and owner-approved behaviour (W0 Atlas policy).
+Admin gateway policy (`DEFAULT_PRIVACY_RULES.dnd_world = CLOUD_ALLOWED`) allows DnD world context to reach cloud providers when Maschinenraum is offline. This is intentional and owner-approved behaviour (W0 Atlas policy).
 
 Details: [SECURITY_NOTES.md](SECURITY_NOTES.md), [docs/ai-privacy-and-cloud-fallback.md](docs/ai-privacy-and-cloud-fallback.md).
 Architekturentscheidungen: [ADR 005 — Session-Audiences](docs/adr/005-session-audiences.md),
@@ -285,13 +285,13 @@ Foundation-Welle unverändert.
 
 ---
 
-## RTX / AI Worker Exposure
+## Maschinenraum / AI Worker Exposure
 
-**Never expose the Maschinenraum helper endpoints, RTX worker, Ollama, or LM Studio to the public internet.**
+**Never expose the Maschinenraum helper endpoints, Maschinenraum worker, Ollama, or LM Studio to the public internet.**
 
-- No Cloudflare Tunnel or port-forward to the RTX machine or local inference endpoints
-- `RTX_BASE_URL` must point to a private LAN IP or `localhost` when a direct RTX worker is used
-- `AI_INFERENCE_ALLOW_PUBLIC_URL=false` (default) blocks public RTX URLs
+- No Cloudflare Tunnel or port-forward to the Maschinenraum machine or local inference endpoints
+- `ENGINE_BASE_URL` must point to a private LAN IP or `localhost` when a direct Maschinenraum worker is used
+- `AI_INFERENCE_ALLOW_PUBLIC_URL=false` (default) blocks public Maschinenraum URLs
 - The Maschinenraum connects outbound to UWE and stores no UWE source-of-truth data
 
 ---

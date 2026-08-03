@@ -1,6 +1,6 @@
 # Soundboard ↔ worker flow
 
-The browser never talks to the RTX machine directly. A soundboard action becomes a
+The browser never talks to the Maschinenraum machine directly. A soundboard action becomes a
 queued connector job that the Maschinenraum claims and plays locally.
 
 ## Flow
@@ -15,7 +15,7 @@ User klickt Soundbutton
   → UI zeigt Status
 ```
 
-API: `POST /api/worlds/{worldSlug}/soundboard/rtx` with
+API: `POST /api/worlds/{worldSlug}/soundboard/engine` with
 `{ action: "play" | "stop" | "stop_all" | "volume", buttonId?, sourceUrl?, title?, volume? }`.
 
 ## Priorities
@@ -25,7 +25,7 @@ API: `POST /api/worlds/{worldSlug}/soundboard/rtx` with
 - Audio jobs run in the `audio` lane and **overtake** long GPU jobs — sound never
   waits behind an LLM or image job.
 
-## Degraded mode (RTX offline)
+## Degraded mode (Maschinenraum offline)
 
 When no connector advertising `audio_local` is online, the endpoint returns a calm
 degraded response (HTTP 200), **not** an error:
@@ -51,4 +51,4 @@ follow-up; today the direct Spotify path remains.
 The connector plays a sound by spawning an optional player command
 (`UWE_CONNECTOR_AUDIO_CMD`, e.g. `mpv --no-video`). Without it, the job is
 acknowledged so the host UI reflects receipt — the platform-specific audio backend
-is configured per RTX machine.
+is configured per Maschinenraum machine.

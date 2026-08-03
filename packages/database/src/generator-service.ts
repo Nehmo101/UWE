@@ -50,7 +50,7 @@ export interface GeneratorActionDefinition {
   id: GeneratorActionId;
   label: string;
   description: string;
-  requiresLocalRtx: boolean;
+  requiresLocalEngine: boolean;
   reviewRequired: true;
 }
 
@@ -84,28 +84,28 @@ const BASE_ACTIONS: GeneratorActionDefinition[] = [
     id: "fill_missing_fields",
     label: "Fehlende Felder ergänzen",
     description: "Erkennt Lücken und schlägt gezielte Ergänzungen vor.",
-    requiresLocalRtx: true,
+    requiresLocalEngine: true,
     reviewRequired: true,
   },
   {
     id: "generate_dm_notes",
     label: "DM-Notizen erzeugen",
     description: "Erzeugt DM-only Notizen — Review vor Übernahme.",
-    requiresLocalRtx: true,
+    requiresLocalEngine: true,
     reviewRequired: true,
   },
   {
     id: "generate_player_text",
     label: "Spielertext erzeugen",
     description: "Player-safe Text ohne DM-only Leaks.",
-    requiresLocalRtx: true,
+    requiresLocalEngine: true,
     reviewRequired: true,
   },
   {
     id: "check_canon",
     label: "Kanon prüfen",
     description: "Prüft Konflikte mit Weltwissen und Terra-Regeln.",
-    requiresLocalRtx: true,
+    requiresLocalEngine: true,
     reviewRequired: true,
   },
 ];
@@ -131,7 +131,7 @@ const ACTION_DEFINITIONS: Record<GeneratorActionId, GeneratorActionDefinition> =
     id: "generate_handout",
     label: "Handout erzeugen",
     description: "Erzeugt ein prüfbares Handout-Vorschlag.",
-    requiresLocalRtx: true,
+    requiresLocalEngine: true,
     reviewRequired: true,
   },
   prepare_next_session: {
@@ -139,60 +139,60 @@ const ACTION_DEFINITIONS: Record<GeneratorActionId, GeneratorActionDefinition> =
     label: "Nächste Session vorbereiten",
     description:
       "Regelbasierte Outline aus Session-Metadaten (ohne KI-Modell) — als Review-Vorschlag, nie automatisch übernehmen.",
-    requiresLocalRtx: true,
+    requiresLocalEngine: true,
     reviewRequired: true,
   },
   generate_encounter: {
     id: "generate_encounter",
     label: "Encounter vorschlagen",
     description: "Encounter mit Taktik, Scaling und Alternativen.",
-    requiresLocalRtx: true,
+    requiresLocalEngine: true,
     reviewRequired: true,
   },
   generate_read_aloud: {
     id: "generate_read_aloud",
     label: "Vorlesetext erzeugen",
     description: "Read-aloud Text für Dungeon-Räume.",
-    requiresLocalRtx: true,
+    requiresLocalEngine: true,
     reviewRequired: true,
   },
   remove_spoilers: {
     id: "remove_spoilers",
     label: "Spoiler entfernen",
     description: "Portal-sichere Version ohne DM-only Inhalte.",
-    requiresLocalRtx: true,
+    requiresLocalEngine: true,
     reviewRequired: true,
   },
   simulate_faction: {
     id: "simulate_faction",
     label: "Fraktion simulieren",
     description:
-      "RTX-only: Schlägt datierte WorldEvents als Review-Vorschlag vor — nie automatisch übernehmen.",
-    requiresLocalRtx: true,
+      "Maschinenraum-only: Schlägt datierte WorldEvents als Review-Vorschlag vor — nie automatisch übernehmen.",
+    requiresLocalEngine: true,
     reviewRequired: true,
   },
   generate_npc: {
     id: "generate_npc",
     label: "NPC strukturiert generieren",
     description:
-      "RTX-only: Stimme, Motivation, Beziehung und Plot-Nutzen als JSON-Vorschlag — Review vor Übernahme.",
-    requiresLocalRtx: true,
+      "Maschinenraum-only: Stimme, Motivation, Beziehung und Plot-Nutzen als JSON-Vorschlag — Review vor Übernahme.",
+    requiresLocalEngine: true,
     reviewRequired: true,
   },
   generate_quest: {
     id: "generate_quest",
     label: "Quest strukturiert generieren",
     description:
-      "RTX-only: Auftraggeber, Ziel, Twist und Belohnung als JSON-Vorschlag — Review vor Übernahme.",
-    requiresLocalRtx: true,
+      "Maschinenraum-only: Auftraggeber, Ziel, Twist und Belohnung als JSON-Vorschlag — Review vor Übernahme.",
+    requiresLocalEngine: true,
     reviewRequired: true,
   },
   generate_item: {
     id: "generate_item",
     label: "Item strukturiert generieren",
     description:
-      "RTX-only: Eigenschaften, Seltenheit und Lore als JSON-Vorschlag — Review vor Übernahme.",
-    requiresLocalRtx: true,
+      "Maschinenraum-only: Eigenschaften, Seltenheit und Lore als JSON-Vorschlag — Review vor Übernahme.",
+    requiresLocalEngine: true,
     reviewRequired: true,
   },
 };

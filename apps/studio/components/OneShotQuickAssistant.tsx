@@ -24,8 +24,8 @@ interface LocationOption {
 interface Props {
   worldSlug: string;
   locations: LocationOption[];
-  rtxReady: boolean;
-  rtxEnabled: boolean;
+  engineReady: boolean;
+  engineEnabled: boolean;
 }
 
 const QUICK_PRESETS: Array<{ label: string; tone: OneShotTone }> = [
@@ -43,8 +43,8 @@ const NATIVE_SELECT_CLASS =
 export function OneShotQuickAssistant({
   worldSlug,
   locations,
-  rtxReady,
-  rtxEnabled,
+  engineReady,
+  engineEnabled,
 }: Props) {
   const router = useRouter();
   const [location, setLocation] = useState(locations[0]?.title ?? "");
@@ -99,7 +99,7 @@ export function OneShotQuickAssistant({
       if (response.status === 202) {
         setStatus(
           payload.job?.status === "deferred"
-            ? "RTX offline — Vorschlag wird vorgemerkt. Ergebnis unter AI Runs."
+            ? "Maschinenraum offline — Vorschlag wird vorgemerkt. Ergebnis unter AI Runs."
             : "KI-Assistent läuft — Ergebnis unter AI Runs prüfen.",
         );
         return;
@@ -120,7 +120,7 @@ export function OneShotQuickAssistant({
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <p className="text-sm text-muted-foreground">
-          Ort und Ton wählen, sofort das Regel-Gerüst erzeugen — optional mit RTX-KI
+          Ort und Ton wählen, sofort das Regel-Gerüst erzeugen — optional mit Maschinenraum-KI
           ausbauen.
         </p>
 
@@ -177,14 +177,14 @@ export function OneShotQuickAssistant({
         </div>
 
         <details>
-          <summary className="cursor-pointer text-sm font-medium">KI-Ausbau (RTX, optional)</summary>
+          <summary className="cursor-pointer text-sm font-medium">KI-Ausbau (Maschinenraum, optional)</summary>
           <div className="mt-3 flex flex-col gap-2">
-            {!rtxEnabled ? (
+            {!engineEnabled ? (
               <Alert tone="danger" role="alert">
-                RTX-Inference ist deaktiviert.
+                Maschinenraum-Inference ist deaktiviert.
               </Alert>
-            ) : rtxEnabled && !rtxReady ? (
-              <p className="text-sm text-muted-foreground">RTX offline — wird als Job vorgemerkt.</p>
+            ) : engineEnabled && !engineReady ? (
+              <p className="text-sm text-muted-foreground">Maschinenraum offline — wird als Job vorgemerkt.</p>
             ) : null}
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="one-shot-ai-prompt">Zusätzliche Anweisungen</Label>
@@ -200,7 +200,7 @@ export function OneShotQuickAssistant({
               <Button
                 type="button"
                 variant="secondary"
-                disabled={!rtxEnabled || busy || !location}
+                disabled={!engineEnabled || busy || !location}
                 onClick={() => void runAiAssist()}
               >
                 {busy ? "Läuft…" : "Mit KI ausbauen"}

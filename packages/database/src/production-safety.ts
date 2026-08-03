@@ -172,7 +172,7 @@ export async function getProductionSafetyWarnings(
       severity: "warning",
       title: "Cloudflare/Proxy nur auf UWE zeigen",
       description:
-        "Der Tunnel oder Reverse Proxy darf nur auf UWE (Studio/Portal) zeigen — niemals auf Ollama, LM Studio oder den RTX-Inference-Endpoint.",
+        "Der Tunnel oder Reverse Proxy darf nur auf UWE (Studio/Portal) zeigen — niemals auf Ollama, LM Studio oder den Maschinenraum-Inference-Endpoint.",
     });
   }
 

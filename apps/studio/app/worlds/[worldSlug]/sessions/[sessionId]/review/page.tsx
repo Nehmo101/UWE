@@ -263,8 +263,8 @@ export default async function SessionReviewPage({ params, searchParams }: Props)
       <SessionRecapAiButton
         worldSlug={worldSlug}
         sessionId={sessionId}
-        rtxReady={inference.online}
-        rtxEnabled={inference.enabled}
+        engineReady={inference.online}
+        engineEnabled={inference.enabled}
       />
     </>
   );

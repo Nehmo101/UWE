@@ -22,7 +22,7 @@ import {
 /**
  * Einordnungs-Konversation zum PDF-Kampagnenimport: Der Spielleiter bespricht
  * mit der lokalen KI, wie sich die importierte Kampagne in die bestehende Welt
- * einfügt. Läuft ausschließlich über die RTX (kein Cloud-Fallback); Welt- und
+ * einfügt. Läuft ausschließlich über den Maschinenraum (kein Cloud-Fallback); Welt- und
  * Kampagnenbeschreibung werden bewusst nur an die lokale Inferenz angehängt.
  */
 export async function campaignFitChatAction(
@@ -72,7 +72,7 @@ export async function campaignFitChatAction(
     const routed = await routeAiRequest(
       { repo, prisma },
       {
-        providerMode: "local_rtx",
+        providerMode: "local_engine",
         contextMode: "general_chat",
         taskType: "create_knowledge_text",
         userPrompt: prompt,
@@ -84,7 +84,7 @@ export async function campaignFitChatAction(
   } catch (error) {
     if (error instanceof AiRouterError) {
       throw new Error(
-        "Lokale RTX ist offline — die Einordnungs-Konversation kann nicht in die Cloud ausweichen.",
+        "Der lokale Maschinenraum ist offline — die Einordnungs-Konversation kann nicht in die Cloud ausweichen.",
       );
     }
     throw error;

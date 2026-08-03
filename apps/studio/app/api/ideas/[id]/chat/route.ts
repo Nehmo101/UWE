@@ -18,7 +18,7 @@ const ideaIdParamSchema = z.object({ id: idSchema });
 
 const ideaChatBodySchema = z.object({
   message: nonEmptyString.max(8_000),
-  providerMode: z.enum(["auto", "local_rtx", "cloud"]).default("auto"),
+  providerMode: z.enum(["auto", "local_engine", "cloud"]).default("auto"),
 });
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
