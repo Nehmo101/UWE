@@ -100,6 +100,11 @@ production file (apps/, packages/, tools/) outgrows its budget:
 - **Search/index exclusions:** `.cursorignore` / `.cursorindexingignore` exclude generated Prisma (~560k lines), lockfile, and build artifacts.
 - **Service index:** `docs/engineering/database-service-map.md` — find `@uwe/database` services without opening the 2100+-line barrel.
 - **Skills:** `.cursor/skills/manifest.json` — load one skill by trigger, not the whole catalog.
+- **Bereichs-Skills:** `/uwestudio` `/uweportal` `/uwebrain` `/uwefamily`
+  (`.claude/skills/uwe*/`) — Einstieg in genau einen Bereich statt Repo-weiter Suche.
+  Wer einen Bereich erweitert, zieht den Skill nach: `pnpm skills:sync` für die
+  generierten Blöcke, Prosa von Hand. `scripts/area-skills-sync.test.ts` macht
+  veraltete Blöcke, tote Pfade und erfundene Tool-Namen zu einem roten Build.
 
 ## Further reading
 

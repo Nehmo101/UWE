@@ -4,8 +4,8 @@ UWE stellt seine vier Produkte als **MCP-Server** (Model Context Protocol) berei
 Agent wie Claude Code direkt mit der laufenden Instanz arbeiten kann — statt sich durch den
 Quellcode zu raten.
 
-| Server | Produkt | Slash-Command | Zweck |
-|--------|---------|---------------|-------|
+| Server | Produkt | Bereichs-Skill | Zweck |
+|--------|---------|----------------|-------|
 | `uwe-studio` | DM-App (Port 3000) | `/uwestudio` | Welten, Brain, Jobs, Health, Admin |
 | `uwe-portal` | Spieler-Wiki (Port 3001) | `/uweportal` | Spielersicht einer zugeordneten Welt prüfen |
 | `uwe-brain` | Owner-Bereich (Port 3002) | `/uwebrain` | Personal Brain, Daily Admin OS — privacy-gated |
@@ -37,13 +37,31 @@ Cloudflare Tunnel.
 Der Preis: Ein Tool kann nur, was eine Route hergibt. Es gibt z. B. kein `list_worlds`, weil
 Studios `/api/worlds` nur `POST` kennt — `studio_search` ist der Weg dorthin.
 
-## Slash-Commands vs. MCP
+## Bereichs-Skills vs. MCP
 
 Ein MCP-Server liefert **Tools**; seine Prompts erscheinen in Claude Code als
 `/mcp__uwe-brain__<prompt>`. Ein kurzes `/uwebrain` entsteht dadurch **nicht** von selbst.
-Deshalb liegen in `.claude/commands/` vier dünne Slash-Commands (`uwebrain.md`, `uwestudio.md`,
-`uweportal.md`, `uwefamily.md`), die den passenden Server ansteuern und die Reihenfolge der
-Tool-Aufrufe vorgeben. Der MCP-Server ist die Fähigkeit, der Slash-Command der Einstieg.
+Deshalb liegt zu jedem Server ein Bereichs-Skill unter `.claude/skills/uwe<bereich>/`.
+Der MCP-Server ist die Fähigkeit, der Skill der Einstieg — und zugleich das Bereichswissen:
+Zugangsregeln, Aufbau, Fallen und eine generierte Karte des Bereichs in `references/karte.md`.
+
+Bis Anfang August 2026 waren das vier dünne Slash-Commands in `.claude/commands/`. Sie sind
+durch die Skills ersetzt, weil sie unbemerkt veralteten: `/uweportal` verlangte noch
+`portal_leak_check`, lange nachdem das Tool entfernt war. Die Faktenteile der Skills sind
+deshalb generiert und werden geprüft — siehe unten.
+
+### Aktualität
+
+`scripts/generate-area-skills.ts` schreibt die MCP-Tabelle und die Bereichskarte jedes Skills
+zwischen `<!-- uwe:generated:… -->`-Marker; die Tool-Liste kommt aus `createServer()` selbst,
+nicht aus einer Textsuche. `scripts/area-skills-sync.test.ts` läuft in `pnpm test` und
+`pnpm test:ci` und schlägt fehl, wenn ein Block veraltet ist, ein genannter Repo-Pfad nicht
+existiert oder ein genannter `studio_*`/`portal_*`/`brain_*`/`family_*`-Bezeichner kein
+echtes Tool (mehr) ist.
+
+```bash
+pnpm skills:sync   # Blöcke neu erzeugen, danach die Prosa nachziehen
+```
 
 ## Konfiguration
 
@@ -120,6 +138,7 @@ Portal fährt.
 pnpm mcp:studio     # stdio-Server, spricht JSON-RPC — nicht interaktiv gedacht
 pnpm mcp:portal
 pnpm mcp:brain
+pnpm mcp:family
 ```
 
 In Claude Code werden die Server über `.mcp.json` automatisch gefunden; `/mcp` zeigt den Status.
@@ -154,6 +173,9 @@ offline laufen können muss) und hält die Fläche testbar: `handleMessage` ist 
 3. Schreibende Tools gehören in `writeTools(...)` — sie erscheinen nur mit
    `UWE_MCP_ALLOW_WRITES=true`.
 4. Test in `packages/mcp/src/tools/tools.test.ts` ergänzen: Gating und Ausgabeform.
+5. `pnpm skills:sync` laufen lassen — sonst kennt der Bereichs-Skill das Tool nicht und
+   `scripts/area-skills-sync.test.ts` macht den Build rot. Danach prüfen, ob der Prosa-Teil
+   des Skills etwas zum neuen Tool sagen sollte.
 
 Verwandt: [AGENTS.md](../../AGENTS.md), [self-service-config.md](self-service-config.md),
 [../ARCHITECTURE.md](../ARCHITECTURE.md).
