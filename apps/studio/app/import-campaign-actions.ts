@@ -95,7 +95,7 @@ export async function previewImportCampaignPdfJobAction(
   campaignContext = "",
 ): Promise<{ preview: CampaignImportPreviewSummary | null; started: boolean }> {
   // KI-Guard, obwohl die Analyse inzwischen als Hintergrund-Job läuft: der
-  // Klick hier ist es, der den RTX-Host beschäftigt — dass die Arbeit
+  // Klick hier ist es, der den Maschinenraum-Host beschäftigt — dass die Arbeit
   // asynchron passiert, ändert nichts daran, wer sie ausgelöst hat.
   await requireStudioAiActionAuth();
 

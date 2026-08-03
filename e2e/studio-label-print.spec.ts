@@ -3,8 +3,8 @@ import { loginStudioForShellTests } from "./helpers/auth";
 
 /**
  * QF10 label printing — Studio UI is covered in CI; physical print requires a
- * homelab RTX connector with CUPS or UWE_CONNECTOR_PRINT_CMD (not GitHub CI).
- * Manual QA checklist: docs/rtx-connector.md#manual-qa-label-printing
+ * homelab Maschinenraum connector with CUPS or UWE_CONNECTOR_PRINT_CMD (not GitHub CI).
+ * Manual QA checklist: docs/engine-connector.md#manual-qa-label-printing
  */
 test.describe("Studio label print (QF10)", () => {
   test.beforeEach(async ({ page }) => {
@@ -19,10 +19,10 @@ test.describe("Studio label print (QF10)", () => {
     await expect(page.getByRole("button", { name: "Suchen" })).toBeVisible();
   });
 
-  test("physical label print via RTX host", async ({ page }) => {
+  test("physical label print via Maschinenraum host", async ({ page }) => {
     test.skip(
       !process.env.UWE_E2E_LABEL_PRINT,
-      "Homelab only: set UWE_E2E_LABEL_PRINT=1 with RTX connector + stub/CUPS print. See docs/rtx-connector.md#manual-qa-label-printing.",
+      "Homelab only: set UWE_E2E_LABEL_PRINT=1 with Maschinenraum connector + stub/CUPS print. See docs/engine-connector.md#manual-qa-label-printing.",
     );
 
     await page.goto("/system/printers");

@@ -46,7 +46,7 @@ export interface BuildDocImportPlanOptions {
   /**
    * Rollen, die die lokale KI vorgegeben hat, je Datei und Dokumentpfad.
    * Fehlen sie, entscheiden allein die Regeln — der Import läuft vollständig
-   * ohne RTX-Host.
+   * ohne Maschinenraum-Host.
    */
   roleHints?: Map<string, Map<string, SectionRole>>;
   /**

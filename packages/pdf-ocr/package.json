@@ -2,7 +2,7 @@
   "name": "@uwe/pdf-ocr",
   "version": "0.1.0",
   "private": true,
-  "description": "Layout-aware PDF parsing for UWE via local Unlimited-OCR on the RTX host",
+  "description": "Layout-aware PDF parsing for UWE via local Unlimited-OCR on the Maschinenraum host",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {

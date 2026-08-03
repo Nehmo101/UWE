@@ -25,7 +25,7 @@ interface SpotifyDevice {
 interface SpotifyStatusResponse {
   configured: boolean;
   connected: boolean;
-  /** "rtx-connector" when Spotify is served by the UWE Command Center. */
+  /** "engine-connector" when Spotify is served by the UWE Command Center. */
   via?: string | null;
   spotifyDisplayName?: string | null;
   preferredDeviceId?: string | null;
@@ -168,7 +168,7 @@ export function SpotifyConnectionPanel({ worldSlug }: Props) {
     return labels[type] ?? type;
   };
 
-  const connectorActive = status?.via === "rtx-connector";
+  const connectorActive = status?.via === "engine-connector";
 
   return (
     <Card>
@@ -177,7 +177,7 @@ export function SpotifyConnectionPanel({ worldSlug }: Props) {
           <CardTitle>Spotify</CardTitle>
           <CardDescription>
             Spotify wird im UWE Command Center eingerichtet — das Soundboard sendet die
-            Wiedergabe als Connector-Job an den RTX-PC.
+            Wiedergabe als Connector-Job an den Maschinenraum-PC.
           </CardDescription>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -256,7 +256,7 @@ export function SpotifyConnectionPanel({ worldSlug }: Props) {
           <Card>
             <CardContent className="flex flex-col gap-3 pt-6">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <strong>Ausgabegerät wählen (RTX-Host oder anderes Spotify-Connect-Gerät)</strong>
+                <strong>Ausgabegerät wählen (Maschinenraum-Host oder anderes Spotify-Connect-Gerät)</strong>
                 <Button
                   type="button"
                   variant="secondary"
@@ -277,7 +277,7 @@ export function SpotifyConnectionPanel({ worldSlug }: Props) {
 
               {!loadingDevices && devices.length === 0 && !deviceError && (
                 <p className="text-sm text-muted-foreground">
-                  Keine aktiven Spotify-Connect-Geräte gefunden. Spotify-App auf dem RTX-Host oder einem anderen Gerät starten.
+                  Keine aktiven Spotify-Connect-Geräte gefunden. Spotify-App auf dem Maschinenraum-Host oder einem anderen Gerät starten.
                 </p>
               )}
 

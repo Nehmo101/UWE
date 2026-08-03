@@ -1,6 +1,6 @@
 ---
 name: life-brain
-description: Work with UWE Life Brain — personal local knowledge store (documents, facts, captures), search/filter, capture promotion, and local-only agent context. Use when implementing or reviewing Life Brain features, privacy gating, or RTX context loading.
+description: Work with UWE Life Brain — personal local knowledge store (documents, facts, captures), search/filter, capture promotion, and local-only agent context. Use when implementing or reviewing Life Brain features, privacy gating, or Maschinenraum context loading.
 ---
 
 # Life Brain
@@ -60,14 +60,14 @@ KI-Prompt-Handler nutzt query-fokussierten Kontext für `personal_brain`-Modus.
 
 ## Privacy (hart)
 
-| Kontext | Cloud | RTX |
+| Kontext | Cloud | Maschinenraum |
 |---------|-------|-----|
 | `general_chat` | Ja | optional |
 | `personal_brain` | **Nein** | **Ja** |
 
 - `LOCAL_ONLY_CONTEXT_MODES` in `packages/ai-brain/src/router/types.ts`
 - `assertPersonalBrainLocalOnly()` für Context-API
-- RTX offline → Job-Queue, **kein** Cloud-Fallback
+- Maschinenraum offline → Job-Queue, **kein** Cloud-Fallback
 
 Details: [docs/life-brain-privacy.md](../../../docs/life-brain-privacy.md)
 

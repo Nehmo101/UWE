@@ -129,7 +129,7 @@ export class ContinueWorkService {
         id: scan.id,
         kind: "scan",
         title: scan.title || "Dokument",
-        hint: scan.status === "waiting_for_rtx" ? "Wartet auf RTX" : "Vorschlag prüfen",
+        hint: scan.status === "waiting_for_engine" ? "Wartet auf Maschinenraum" : "Vorschlag prüfen",
         href: `/scan-inbox/${scan.id}`,
         sortDate: scan.updatedAt,
       });

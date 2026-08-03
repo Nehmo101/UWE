@@ -11,7 +11,7 @@
     "./inference-config": "./src/inference-config.ts",
     "./inference-url-guard": "./src/inference-url-guard.ts",
     "./privacy": "./src/privacy.ts",
-    "./rtx-worker-config": "./src/rtx-worker-config.ts",
+    "./engine-worker-config": "./src/engine-worker-config.ts",
     "./types": "./src/types.ts",
     "./router": "./src/router/index.ts",
     "./cookbook-bridge": "./src/cookbook-bridge.ts",

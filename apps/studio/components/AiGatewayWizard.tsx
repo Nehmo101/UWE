@@ -15,7 +15,7 @@ import type { GatewayDashboard } from "./ai-gateway/types";
  *
  * This screen used to manage cloud providers, per-user grants, spend budgets,
  * privacy rules and a routing simulator. All of that went away with the cloud
- * providers themselves — the RTX host is the only backend, so there is no route
+ * providers themselves — the Maschinenraum host is the only backend, so there is no route
  * to police, no key to store and no spend to cap. What is left is choosing the
  * local model per feature and reading the usage log.
  */

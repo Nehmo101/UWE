@@ -16,7 +16,7 @@ agents can generate on-brand UWE interfaces and assets.
 | DM app | **UWE Studio** | World/campaign editor + Daily Admin OS + AI workflows (DM-only). Topbar + dark-ink sidebar + main. |
 | Player app | **UWE Portal** | Player-facing wiki & handouts. Shows only published, player-visible content. |
 | Backend | **UWE Core** | Shared data layer, auth, wiki engine (not visual). |
-| Local AI | **Maschinenraum** | Optional outbound GPU worker; surfaced in the UI as an RTX status badge. |
+| Local AI | **Maschinenraum** | Optional outbound GPU worker; surfaced in the UI as a Maschinenraum status badge. |
 
 **Domain vocabulary** (used verbatim across the UI): Welten (worlds), NPCs, Orte
 (locations), Fraktionen (factions), Quests, Sessions, Handouts, Dungeons, Kanon
@@ -174,7 +174,7 @@ help glyph). Stroke style, ~2px weight, 16px default in UI, currentColor stroke.
 **`components/`** (React; `window.UWEDesignSystem_f43eab`)
 - `core/` — Button, Card, StatCard, Badge, Tag, EmptyState
 - `forms/` — Input, Textarea, Select
-- `domain/` — VisibilityBadge, PageTypeBadge, RtxStatusBadge, SecretReveal
+- `domain/` — VisibilityBadge, PageTypeBadge, EngineStatusBadge, SecretReveal
 - `navigation/` — PageHeader, Breadcrumb, SidebarNav, Brand
 
 **`ui_kits/`**

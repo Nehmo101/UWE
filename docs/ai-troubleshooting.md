@@ -1,14 +1,14 @@
 # AI Troubleshooting
 
-## RTX nicht erreichbar
+## Maschinenraum nicht erreichbar
 
-**Symptom:** „Lokale RTX-Inference ist nicht erreichbar“
+**Symptom:** „Lokale Maschinenraum-Inference ist nicht erreichbar“
 
-1. RTX-Laptop eingeschaltet?
+1. Maschinenraum-Laptop eingeschaltet?
 2. Direkter Runner-Endpunkt korrekt (`AI_INFERENCE_BASE_URL`, LAN-IP, nicht localhost vom Server)?
-3. Falls ein separater RTX-Worker genutzt wird: `RTX_BASE_URL` und `RTX_SERVICE_TOKEN` gemeinsam gesetzt?
-4. Firewall: Port von Ollama/LM Studio oder des expliziten RTX-Workers im Heimnetz erreichbar?
-5. `/admin/status` oder Cookbook → RTX Health prüfen
+3. Falls ein separater Maschinenraum-Worker genutzt wird: `ENGINE_BASE_URL` und `ENGINE_SERVICE_TOKEN` gemeinsam gesetzt?
+4. Firewall: Port von Ollama/LM Studio oder des expliziten Maschinenraum-Workers im Heimnetz erreichbar?
+5. `/admin/status` oder Cookbook → Maschinenraum-Health prüfen
 
 ## Cloud-Fallback funktioniert nicht
 

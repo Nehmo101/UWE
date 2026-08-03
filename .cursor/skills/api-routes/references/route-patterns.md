@@ -26,7 +26,7 @@ Do not block HTTP for minutes. Enqueue via `job-service.ts`:
 2. Return `202` with `jobId`
 3. Worker/cron completes and updates status
 
-AI deferred prompts follow the same pattern when RTX is offline.
+AI deferred prompts follow the same pattern when Maschinenraum is offline.
 
 ## Health endpoints
 

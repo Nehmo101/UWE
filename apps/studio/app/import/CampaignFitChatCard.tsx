@@ -23,7 +23,7 @@ interface Props {
 }
 
 /**
- * Einordnungs-Konversation: Der Spielleiter bespricht mit der lokalen RTX-KI,
+ * Einordnungs-Konversation: Der Spielleiter bespricht mit der lokalen Maschinenraum-KI,
  * wie sich die importierte Kampagne in die bestehende Welt einfügt. Der
  * Verlauf wird serverseitig am Import-Job gespeichert.
  */
@@ -72,7 +72,7 @@ export function CampaignFitChatCard({ jobId, initialMessages }: Props) {
       <CardHeader>
         <CardTitle>Einordnung in die Welt (lokale KI)</CardTitle>
         <CardDescription>
-          Bespreche mit der lokalen RTX-KI, wie sich die importierte Kampagne in deine Welt
+          Bespreche mit der lokalen Maschinenraum-KI, wie sich die importierte Kampagne in deine Welt
           einfügt — Anknüpfungspunkte, Konflikte mit bestehender Lore, Einbau-Vorschläge. Nach der
           PDF-Analyse kennt die KI zusätzlich die extrahierten Entitäten.
         </CardDescription>

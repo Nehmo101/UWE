@@ -182,10 +182,10 @@ export async function toggleMealCookedAction(formData: FormData) {
   redirect(planRedirect(formData));
 }
 
-// ── KI-Wochenvorschlag (K3, RTX-lokal) ────────────────────────────
+// ── KI-Wochenvorschlag (K3, Maschinenraum-lokal) ────────────────────────────
 
 /**
- * Fordert über die Connector-Queue (lokale RTX-Inferenz) einen KI-Wochen-
+ * Fordert über die Connector-Queue (lokale Maschinenraum-Inferenz) einen KI-Wochen-
  * vorschlag an und legt ihn als Entwurf auf der Woche ab. Nie Auto-Apply —
  * der Owner übernimmt Einträge einzeln. Ist kein Maschinenraum online oder die
  * Antwort unlesbar, wird der Grund als Query-Flag zurückgereicht.

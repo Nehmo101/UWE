@@ -13,7 +13,7 @@ describe("self-hosting setup", () => {
     assert.ok(fs.existsSync(path.join(root, "docs/deployment-hardening.md")));
     assert.ok(fs.existsSync(path.join(root, "docs/UWE_HOST_LINUX_STARTUP.md")));
     assert.ok(fs.existsSync(path.join(root, "deploy/systemd/uwe.service")));
-    assert.ok(fs.existsSync(path.join(root, "deploy/systemd/uwe-rtx-connector.service")));
+    assert.ok(fs.existsSync(path.join(root, "deploy/systemd/uwe-engine-connector.service")));
     assert.ok(fs.existsSync(path.join(root, "deploy/scripts/setup-uwe-host.sh")));
     assert.ok(fs.existsSync(path.join(root, "deploy/scripts/lib/uwe-host-constants.sh")));
     assert.ok(fs.existsSync(path.join(root, "deploy/scripts/lib/uwe-host-platform.sh")));
@@ -60,7 +60,7 @@ describe("self-hosting setup", () => {
     assert.match(deps, /install_node_from_nodesource/);
     assert.match(deps, /install_node_from_fedora/);
     assert.match(deps, /nodejs22-bin nodejs22-npm-bin/);
-    assert.match(setup, /install_rtx_connector_unit/);
+    assert.match(setup, /install_engine_connector_unit/);
     assert.match(connectorInstall, /systemctl disable --now/);
     assert.match(deps, /diagnose_node_install_failure/);
     assert.match(deps, /pnpm --filter '\$DATABASE_WORKSPACE_FILTER' db:generate/);
@@ -153,12 +153,12 @@ describe("self-hosting setup", () => {
     assert.ok(envFileIndex >= 0 && pathIndex > envFileIndex, "PATH must come after EnvironmentFile");
   });
 
-  it("RTX connector systemd unit is optional, outbound and host-hardened", () => {
+  it("Maschinenraum connector systemd unit is optional, outbound and host-hardened", () => {
     const unit = fs.readFileSync(
-      path.join(root, "deploy/systemd/uwe-rtx-connector.service"),
+      path.join(root, "deploy/systemd/uwe-engine-connector.service"),
       "utf8",
     );
-    assert.match(unit, /ConditionPathExists=\/opt\/uwe\/tools\/uwe-rtx-connector\/\.env/);
+    assert.match(unit, /ConditionPathExists=\/opt\/uwe\/tools\/uwe-engine-connector\/\.env/);
     assert.match(unit, /ExecStart=\/usr\/bin\/node --import tsx/);
     assert.match(unit, /RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6/);
     assert.doesNotMatch(unit, /ListenStream|IPAddressAllow/);

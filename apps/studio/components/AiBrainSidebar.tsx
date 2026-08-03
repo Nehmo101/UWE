@@ -94,11 +94,11 @@ export function AiBrainSidebar({
   const showLegacyProviderControls = !isStoreVariant;
   const showConnectorPicker = connectorModels.length > 0;
   const showLocalModelPicker = !showConnectorPicker || !isStoreVariant;
-  const rtxReady = caps.localAiReady || process.env.NEXT_PUBLIC_AI_USE_MOCK === "true";
+  const engineReady = caps.localAiReady || process.env.NEXT_PUBLIC_AI_USE_MOCK === "true";
   const canRunAction =
     !loading &&
     Boolean(model) &&
-    (!isStoreVariant || rtxReady || process.env.NEXT_PUBLIC_AI_USE_MOCK === "true");
+    (!isStoreVariant || engineReady || process.env.NEXT_PUBLIC_AI_USE_MOCK === "true");
 
   const selectedAction = useMemo(
     () => actions.find((action) => action.id === actionId),
@@ -292,14 +292,14 @@ export function AiBrainSidebar({
       if (response.status === 202 && data.job?.id) {
         if (data.job.status === "deferred") {
           setStatus(
-            "RTX offline — KI-Job vorgemerkt (deferred). Ausführung startet automatisch, wenn RTX bereit ist. Kein Cloud-Fallback.",
+            "Maschinenraum offline — KI-Job vorgemerkt (deferred). Ausführung startet automatisch, wenn der Maschinenraum bereit ist. Kein Cloud-Fallback.",
           );
           return;
         }
         const job = await waitForJob(data.job.id);
         if (job.status === "deferred") {
           setStatus(
-            "RTX offline — KI-Job wartet auf lokale RTX (deferred). Planung möglich, Ausführung folgt bei RTX-Bereitschaft.",
+            "Maschinenraum offline — KI-Job wartet auf den lokalen Maschinenraum (deferred). Planung möglich, Ausführung folgt bei Maschinenraum-Bereitschaft.",
           );
           return;
         }
@@ -387,15 +387,15 @@ export function AiBrainSidebar({
         </p>
       )}
 
-      {isStoreVariant && !statusLoading && !rtxReady && statusKind !== "unavailable" && (
+      {isStoreVariant && !statusLoading && !engineReady && statusKind !== "unavailable" && (
         <p className="text-sm text-destructive" role="note">
           {HINT_LOCAL_NOT_READY}
         </p>
       )}
 
-      {isStoreVariant && rtxReady && (
+      {isStoreVariant && engineReady && (
         <p className="ai-brain-meta">
-          Lokale RTX bereit — Weltwissen wird nicht an Cloud-KI gesendet.
+          Lokaler Maschinenraum bereit — Weltwissen wird nicht an Cloud-KI gesendet.
         </p>
       )}
 

@@ -20,7 +20,7 @@ Es gilt folgende verbindliche Policy:
 | Kontext | Cloud-Regel |
 |---|---|
 | `general_chat` | Cloud ist zulässig; es wird kein UWE-Kontext beigefügt. |
-| `brain` | Konfigurierbar nach administrativer D&D-Gateway-Policy; Default `CLOUD_ALLOWED`, lokale RTX bevorzugt. |
+| `brain` | Konfigurierbar nach administrativer D&D-Gateway-Policy; Default `CLOUD_ALLOWED`, lokaler Maschinenraum bevorzugt. |
 | `current_object` | Wie `brain`. |
 | `current_object_plus_brain` | Wie `brain`. |
 | `personal_brain` | Niemals Cloud; hart local-only, owner-only und nicht konfigurierbar. |

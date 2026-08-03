@@ -397,7 +397,7 @@ export function MailComposeModal({ context, accounts, onClose, onSent }: MailCom
             );
           })}
           <span style={{ flex: 1 }} />
-          <span style={{ fontSize: 11, color: "var(--uwe-fg-subtle)" }}>Lokal · RTX</span>
+          <span style={{ fontSize: 11, color: "var(--uwe-fg-subtle)" }}>Lokal · Maschinenraum</span>
         </div>
 
         <textarea

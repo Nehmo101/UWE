@@ -26,7 +26,7 @@
 ## Manuelle Tests
 
 ### Image Studio
-1. `IMAGE_STUDIO_ENABLED=true`, RTX mock oder `AI_USE_MOCK`
+1. `IMAGE_STUDIO_ENABLED=true`, Maschinenraum mock oder `AI_USE_MOCK`
 2. `/image-studio` → Prompt senden
 3. `/jobs` → Job `image_studio` completed
 4. Asset in Welt-Medienbibliothek
@@ -63,7 +63,7 @@ pnpm build
 
 - [ ] Migration `20260614120000_media_calendar_dnd_agents` deployed
 - [ ] `.env.example` auf Host aktualisiert
-- [ ] RTX `/v1/images` Endpoint (optional)
+- [ ] Maschinenraum `/v1/images` Endpoint (optional)
 - [ ] FamilyWall iCal URL getestet
 
 ## Auth UI (Landing, Login, Passwort-Reset)
@@ -116,4 +116,4 @@ Manuelle Frontend-QA für Studio (Port 3000) und Portal (Port 3001):
 - Kein E2E Playwright für Auth-Flows (Login, Setup, Forgot/Reset, Logout) — manuelle QA in [SECURITY_QA_MATRIX.md](./SECURITY_QA_MATRIX.md)
 - Kein E2E Playwright für neue Pages (Phase 2)
 - CalDAV Integrationstest mit Mock-Server (TODO)
-- Image Studio ohne RTX/Cloud nur Fehlerpfad testbar
+- Image Studio ohne Maschinenraum/Cloud nur Fehlerpfad testbar

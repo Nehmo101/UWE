@@ -122,7 +122,7 @@ export async function reindexBrainWorld(
     providerOnline = health.ok;
     if (!providerOnline && !options?.force) {
       throw new BrainEmbeddingOfflineError(
-        "Reindex abgebrochen — RTX-Embedding-Provider offline",
+        "Reindex abgebrochen — Maschinenraum-Embedding-Provider offline",
       );
     }
   }

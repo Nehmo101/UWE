@@ -11,7 +11,7 @@ Die Ergänzung von 2026-07-25 ist die in dieser ADR geforderte explizite
 Entscheidung: Brain darf unter eigenem Origin über den owner-gated Tunnel
 veröffentlicht werden (`BRAIN_EXPOSURE=public` + `BRAIN_PUBLIC_TUNNEL=1`). Alle
 übrigen Regeln — deny-by-default in Generatoren, Owner-Auth auf jeder Route,
-RTX/Ollama außerhalb öffentlicher Tunnel — bleiben unverändert.
+Maschinenraum/Ollama außerhalb öffentlicher Tunnel — bleiben unverändert.
 
 ## Kontext
 
@@ -36,7 +36,7 @@ Health-Aggregation und Proxy-Beispielen weiterhin deny-by-default behandelt:
 Erreichbarkeit entsteht nur durch die ausdrückliche Opt-in-Konfiguration, nie
 als Nebeneffekt einer Generierung oder eines grünen Builds.
 
-Lokale Inferenzendpunkte, Ollama/LM-Studio-Dienste und der RTX Host Connector
+Lokale Inferenzendpunkte, Ollama/LM-Studio-Dienste und der Maschinenraum
 bleiben ebenfalls außerhalb öffentlicher Tunnel. Der Connector arbeitet
 outbound und ist keine öffentliche Produkt-Surface.
 

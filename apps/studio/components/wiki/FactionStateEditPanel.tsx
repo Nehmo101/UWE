@@ -30,7 +30,7 @@ export async function FactionStateEditPanel({ worldSlug, pageId, pageSlug, categ
     <CollapsibleSection title="Fraktions-State" defaultOpen={Boolean(state)}>
       <p className="text-sm text-muted-foreground">
         Strukturierter Zustand für Simulation und Kampagnen-Tracking — ergänzt die Wiki-Blöcke.
-        Nutze den Fraktions-Simulator darunter (RTX-only, Review vor Übernahme in die Chronik).
+        Nutze den Fraktions-Simulator darunter (Maschinenraum-only, Review vor Übernahme in die Chronik).
       </p>
 
       <form action={upsertFactionStateAction} className="flex flex-col gap-4">

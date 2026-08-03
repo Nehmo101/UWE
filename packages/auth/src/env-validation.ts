@@ -135,7 +135,7 @@ export function validateUweEnvironment(env: NodeJS.ProcessEnv = process.env): En
       id: "env:inference-public-url",
       severity: "warning",
       envKey: "AI_INFERENCE_ALLOW_PUBLIC_URL",
-      message: "AI_INFERENCE_ALLOW_PUBLIC_URL=true in Production — RTX nur im Heimnetz betreiben.",
+      message: "AI_INFERENCE_ALLOW_PUBLIC_URL=true in Production — Maschinenraum nur im Heimnetz betreiben.",
     });
   }
 

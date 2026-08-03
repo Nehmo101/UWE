@@ -50,7 +50,7 @@ export function PrintListJobPanel({ worldSlug, printListId, initialJobs, printCe
   if (jobs.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
-        Noch keine RTX-Jobs für diese Liste.{" "}
+        Noch keine Maschinenraum-Jobs für diese Liste.{" "}
         <Link href={printCenterHref}>Print Center →</Link>
       </p>
     );

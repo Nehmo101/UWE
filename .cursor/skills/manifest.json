@@ -5,7 +5,7 @@
     {
       "id": "ai-agent-proposal-workflow",
       "path": ".cursor/skills/ai-agent-proposal-workflow/SKILL.md",
-      "trigger": "AI inference, Review/Apply proposals, ai_run jobs, RTX routing"
+      "trigger": "AI inference, Review/Apply proposals, ai_run jobs, Maschinenraum routing"
     },
     {
       "id": "api-routes",
@@ -45,12 +45,12 @@
     {
       "id": "hardware-homelab",
       "path": ".cursor/skills/hardware-homelab/SKILL.md",
-      "trigger": "Linux host scripts, RTX, backups, autostart, homelab CI"
+      "trigger": "Linux host scripts, Maschinenraum, backups, autostart, homelab CI"
     },
     {
       "id": "image-studio-workflows",
       "path": ".cursor/skills/image-studio-workflows/SKILL.md",
-      "trigger": "Image Studio jobs, RTX/cloud routing, Capture pipeline"
+      "trigger": "Image Studio jobs, Maschinenraum/cloud routing, Capture pipeline"
     },
     {
       "id": "life-brain",
@@ -65,7 +65,7 @@
     {
       "id": "local-first-privacy",
       "path": ".cursor/skills/local-first-privacy/SKILL.md",
-      "trigger": "RTX-only context, no cloud brain leak, AI provider routing"
+      "trigger": "Maschinenraum-only context, no cloud brain leak, AI provider routing"
     },
     {
       "id": "portal-player-view",

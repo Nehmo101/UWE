@@ -10,7 +10,7 @@ import { resolveImageProviderConfig, type ImageStudioProviderConfig } from "@uwe
  *
  * Früher wählte sie zwischen lokalem Backend und einem Cloud-Anbieter — mit
  * Routing-Modus, Cloud-Fallback und API-Key-Store. Seit N.3 gibt es nur noch
- * den RTX-Host über die Connector-Queue, also bleibt genau eine Entscheidung:
+ * den Maschinenraum-Host über die Connector-Queue, also bleibt genau eine Entscheidung:
  * ist der Connector da oder nicht.
  */
 export async function resolveConnectorAwareImageProviderConfig(options?: {

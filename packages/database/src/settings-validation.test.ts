@@ -218,7 +218,7 @@ describe("validateSettingsUpdate", () => {
 /**
  * Abdeckungs-Inventar: Systemeinstellungen werden seit Abschnitt D33 nicht mehr
  * in Studio gepflegt, sondern in der Kommandozentrale (`SETTINGS_GROUPS` in
- * `apps/rtx-connector-client/src/components/ops/settings-fields.ts`). Beide
+ * `apps/engine-connector-client/src/components/ops/settings-fields.ts`). Beide
  * Seiten können nicht gemeinsam getestet werden — die Kommandozentrale ist ein
  * Frontend und darf `@uwe/database` nicht importieren.
  *

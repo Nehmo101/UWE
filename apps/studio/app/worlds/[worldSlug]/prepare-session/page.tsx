@@ -198,7 +198,7 @@ export default async function PrepareSessionPage({ params }: Props) {
 
       <SettingsCollapsiblePanel
         title="KI Session-Paket generieren"
-        summary="RTX-only — Review vor Übernahme"
+        summary="Maschinenraum-only — Review vor Übernahme"
         defaultOpen
       >
         <PrepareSessionPanel
@@ -209,8 +209,8 @@ export default async function PrepareSessionPage({ params }: Props) {
             sessionNumber: session.sessionNumber,
           }))}
           defaultSessionId={defaultSessionId}
-          rtxReady={inference.online}
-          rtxEnabled={inference.enabled}
+          engineReady={inference.online}
+          engineEnabled={inference.enabled}
         />
       </SettingsCollapsiblePanel>
     </>

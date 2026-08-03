@@ -22,9 +22,9 @@ Tabelle: `ai_usage_logs`
 |------|--------|
 | `userId` | Ausführender User |
 | `feature` | Feature/Kategorie |
-| `provider`, `model`, `route` | `local_rtx` oder `cloud` |
+| `provider`, `model`, `route` | `local_engine` oder `cloud` |
 | `inputTokens`, `outputTokens` | Optional |
-| `estimatedCostUsd` | Schätzung für Cloud (RTX = 0) |
+| `estimatedCostUsd` | Schätzung für Cloud (Maschinenraum = 0) |
 | `success`, `errorMessage` | Ergebnis |
 | `durationMs` | Laufzeit |
 

@@ -64,8 +64,8 @@ src/security/middleware.ts(5,3): error TS2305: Module '"../runtime-config"' has 
 **Example error:**
 
 ```
-apps/rtx-connector-client/src/App.tsx: 707 lines (budget 700)
-tools/uwe-rtx-connector/src/client-cli.ts: 732 lines (budget 700)
+apps/engine-connector-client/src/App.tsx: 707 lines (budget 700)
+tools/uwe-engine-connector/src/client-cli.ts: 732 lines (budget 700)
 ```
 
 **Fix:** Extract helpers into colocated modules or a feature package. **Never** raise values in `scripts/file-size-baseline.json`.

@@ -4,11 +4,11 @@
 
 Owner-approved policy change (effective with W0 implementation):
 - **Personal Life Brain (`personal_brain`) stays HARD local-only** — never cloud, no fallback, NOT configurable in UI or API.
-- **DnD/world context** (`brain`, `current_object`, `current_object_plus_brain`) may go to cloud when admin gateway policy allows (default: `CLOUD_ALLOWED`, RTX preferred).
+- **DnD/world context** (`brain`, `current_object`, `current_object_plus_brain`) may go to cloud when admin gateway policy allows (default: `CLOUD_ALLOWED`, Maschinenraum preferred).
 
 ## Grundregeln
 
-1. **Lokale RTX ist Standard** — Cloud nur als explizit freigegebener Fallback
+1. **Der lokale Maschinenraum ist Standard** — Cloud nur als explizit freigegebener Fallback
 2. **Cloud-Fallback** erfordert Master-Admin-Freigabe (`cloudFallbackEnabled`)
 3. **`personal_brain`** geht **niemals** an Cloud-Provider — hart codiert, nicht konfigurierbar
 
@@ -55,16 +55,16 @@ Selbst wenn global aktiviert, benötigen normale User `cloudFallbackAllowed: tru
 
 DM/Owner/Admin: Cloud-Fallback für erlaubte Kategorien ohne extra Grant.
 
-## RTX offline
+## Maschinenraum offline
 
 | Kontext | Verhalten |
 |---------|-----------|
 | `personal_brain` | Blockiert — kein Cloud-Fallback |
 | DnD-Brain (auto-Modus, Policy CLOUD_ALLOWED) | Cloud-Provider als Fallback |
-| Explizit `local_rtx` | Fehler — RTX muss online sein |
+| Explizit `local_engine` | Fehler — Maschinenraum muss online sein |
 | General Chat + Fallback erlaubt | Cloud-Provider |
 | General Chat + Fallback verboten | Fehlermeldung |
 
 ## Deployment
 
-RTX-Agent **nie** hinter Cloudflare Tunnel — siehe `docs/security/DEPLOYMENT_SECURITY.md`.
+Maschinenraum-Agent **nie** hinter Cloudflare Tunnel — siehe `docs/security/DEPLOYMENT_SECURITY.md`.

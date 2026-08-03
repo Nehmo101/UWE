@@ -91,8 +91,8 @@
         "message": "<PageTypeBadge> doesn't accept that prop. Declared props: type."
       },
       {
-        "selector": "JSXOpeningElement[name.name='RtxStatusBadge'] > JSXAttribute > JSXIdentifier[name!=/^(?:state|label|key|ref|className|style|children)$/]",
-        "message": "<RtxStatusBadge> doesn't accept that prop. Declared props: state, label."
+        "selector": "JSXOpeningElement[name.name='EngineStatusBadge'] > JSXAttribute > JSXIdentifier[name!=/^(?:state|label|key|ref|className|style|children)$/]",
+        "message": "<EngineStatusBadge> doesn't accept that prop. Declared props: state, label."
       },
       {
         "selector": "JSXOpeningElement[name.name='SecretReveal'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|revealHint|defaultRevealed|key|ref|className|style|children)$/]",
@@ -159,7 +159,7 @@
       "PageTypeBadge": {
         "replaces": []
       },
-      "RtxStatusBadge": {
+      "EngineStatusBadge": {
         "replaces": []
       },
       "SecretReveal": {

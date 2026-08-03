@@ -25,15 +25,15 @@ Rules are loaded automatically by Cursor. `alwaysApply: true` rules apply to eve
 | `ci-quality-gate` | Before push / PR — full `pnpm quality` |
 | `uwe-orchestrator` | Multi-domain planning, subagent sequencing |
 | `daily-admin-os` | Today, Capture, Projects, Workshop, Contracts, Hardware |
-| `life-brain-retrieval` | Personal brain embeddings, RTX-only retrieval |
+| `life-brain-retrieval` | Personal brain embeddings, Maschinenraum-only retrieval |
 | `image-studio-workflows` | Image Studio jobs, assets, Capture pipeline |
 | `uwe-architecture` | Monorepo layout, package boundaries |
 | `uwe-feature-implementation` | End-to-end feature delivery |
 | `api-routes` | Studio/Portal REST routes, guards |
 | `react-next-ui` | App Router, shared-ui, forms |
 | `auth-access` | Sessions, Zugangs-Häkchen, Welt-Zuordnung |
-| `ai-agent-proposal-workflow` | AI router, Review/Apply, RTX routing |
-| `local-first-privacy` | RTX-only, no cloud brain context |
+| `ai-agent-proposal-workflow` | AI router, Review/Apply, Maschinenraum routing |
+| `local-first-privacy` | Maschinenraum-only, no cloud brain context |
 | `uwe-brain` | DnD Brain + Life Brain |
 | `dnd-content-consistency-check` | Canon, leaks, generator QA |
 | `portal-player-view` | Player wiki, share links |
@@ -41,7 +41,7 @@ Rules are loaded automatically by Cursor. `alwaysApply: true` rules apply to eve
 | `security-audit` | Structured security review |
 | `pr-review` | PR review checklist |
 | `deployment-cloudflare-check` | Tunnel + Access + ENV |
-| `hardware-homelab` | Host scripts, RTX, backups |
+| `hardware-homelab` | Host scripts, Maschinenraum, backups |
 
 Technical refactor order: [TECHNICAL_ROADMAP.md](./TECHNICAL_ROADMAP.md). Product rollout order: `product-orchestrator-plan.md` (historisch; Datei entfernt).
 

@@ -45,7 +45,7 @@ export type CaptureProposalStatus = "draft" | "accepted" | "rejected";
 export interface CaptureAiProposal {
   status: CaptureProposalStatus;
   generatedAt: string;
-  source: "heuristic" | "rtx";
+  source: "heuristic" | "engine";
   suggestedCategory: string;
   suggestedTags: string[];
   suggestedTarget: CaptureProposalTarget;

@@ -1,6 +1,6 @@
 ---
 name: life-brain-retrieval
-description: Implement Life Brain embeddings and semantic retrieval for personal knowledge in UWE. Strict RTX-only — no cloud fallback. Use when extending PersonalBrainDocument, PersonalBrainFact, or AI context modes for personal_brain.
+description: Implement Life Brain embeddings and semantic retrieval for personal knowledge in UWE. Strict Maschinenraum-only — no cloud fallback. Use when extending PersonalBrainDocument, PersonalBrainFact, or AI context modes for personal_brain.
 ---
 
 # Life Brain Retrieval
@@ -12,7 +12,7 @@ Read `docs/life-brain-privacy.md` before any code change.
 | Rule | Detail |
 |------|--------|
 | Context mode | `personal_brain` is `LOCAL_ONLY_CONTEXT_MODES` |
-| Provider | RTX/local only — block if offline |
+| Provider | Maschinenraum/local only — block if offline |
 | Cloud fallback | **Never** — same as DnD/world brain |
 | Storage | Personal brain separate from `BrainDocument` (DnD) |
 | Portal | Life Brain never in Portal |
@@ -34,7 +34,7 @@ Enforcement: `packages/ai-brain/src/router/privacyGuard.ts`, `personal-brain-pri
 1. Service layer — packages/database/src/personal-brain-service.ts
    - CRUD (may exist via life-admin-service)
    - chunkDocument(), embedChunks(), searchSimilar()
-2. Reuse embedding client from ai-brain (RTX endpoint only)
+2. Reuse embedding client from ai-brain (Maschinenraum endpoint only)
 3. Retrieval API for Studio chat / life-brain page
 4. Index on document save/update (deferred job or sync)
 5. Tests — privacy guard blocks cloud; retrieval smoke with mock embeddings
@@ -43,8 +43,8 @@ Enforcement: `packages/ai-brain/src/router/privacyGuard.ts`, `personal-brain-pri
 ## AI integration
 
 - Context mode `personal_brain` in AI router
-- Retrieval results injected only when provider is `local_rtx` or `auto` resolves to local
-- User-facing error when RTX offline: clear message, no silent cloud fallback
+- Retrieval results injected only when provider is `local_engine` or `auto` resolves to local
+- User-facing error when Maschinenraum offline: clear message, no silent cloud fallback
 
 ## Files (typical)
 

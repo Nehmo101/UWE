@@ -33,7 +33,7 @@ export function useAiGateway(initialData?: GatewayDashboard | null) {
   const [filteredUsage, setFilteredUsage] = useState<UsageLogEntry[] | null>(null);
   const [usageLoading, setUsageLoading] = useState(false);
   const [simulationForm, setSimulationForm] = useState({
-    simulateRtxOffline: true,
+    simulateEngineOffline: true,
     privacyFeature: "general_chat",
     userId: "",
   });
@@ -200,7 +200,7 @@ export function useAiGateway(initialData?: GatewayDashboard | null) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          simulateRtxOffline: simulationForm.simulateRtxOffline,
+          simulateEngineOffline: simulationForm.simulateEngineOffline,
           privacyFeature: simulationForm.privacyFeature,
           userId: simulationForm.userId || undefined,
         }),

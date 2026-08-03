@@ -3,7 +3,7 @@
  *
  * Dieser Einstiegspunkt ist rein: kein Prisma, kein AI-Router, kein Dateisystem.
  * Alles hier ist eine Funktion von Text auf Daten und damit ohne Datenbank und
- * ohne RTX testbar. Der Schreibpfad liegt bewusst daneben unter
+ * ohne Maschinenraum testbar. Der Schreibpfad liegt bewusst daneben unter
  * `@uwe/doc-import/writer`; die Sanitisierung des erzeugten HTML passiert beim
  * Rendern (`sanitizeWikiHtml`).
  */

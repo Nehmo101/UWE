@@ -59,13 +59,13 @@ Schnell-Gate ohne Security/Audit: `pnpm ci:check`
 
 Details: [SECURITY.md](SECURITY.md) und `.cursor/rules/security.mdc`.
 
-Kernregeln: keine Secrets in Source; Zugang = vier Häkchen pro E-Mail (`packages/auth/src/area-access.ts`); Inhalt = Welt-Zuordnung (`packages/auth/src/permissions.ts`); jede KI-Aktion über den RTX-Host, kein Cloud-Provider; CSP nicht ohne Review schwächen.
+Kernregeln: keine Secrets in Source; Zugang = vier Häkchen pro E-Mail (`packages/auth/src/area-access.ts`); Inhalt = Welt-Zuordnung (`packages/auth/src/permissions.ts`); jede KI-Aktion über den Maschinenraum-Host, kein Cloud-Provider; CSP nicht ohne Review schwächen.
 
 **Zugangsmodell in einem Satz:** Das Häkchen sagt, welche App (Portal / Studio / Brain / Family). Die Welt-Zuordnung sagt, welche Welt. Sonst nichts. `owner` ist die einzige verbliebene Rolle — für Betrieb, Restore und das Command Center.
 
 **Eine Ausnahme davon:** der DM-Bereich im Wikitext (`:::dm … :::`). Diese Zeilen liest nur, wer das Studio-Häkchen trägt (Owner geht mit durch) — Welt-Zuordnung reicht nicht, Vorschau-als-Spieler fällt heraus. Der Bereich wird serverseitig aus dem Text geschnitten, nicht ausgeblendet: `canReadDmSections` / `filterBlocksForViewer` (`packages/auth`), Parser in `packages/auth/src/dm-section.ts`.
 
-**Ein Flag daneben:** `User.aiAccess` — darf diese Adresse die RTX-KI benutzen. Kein fünftes App-Häkchen, sondern eine Fähigkeit des Kontos; einstellbar im Command Center, Owner geht immer durch (`canUseRtxAi`). Durchgesetzt zentral: Pfadregel für KI-API-Routen, `require*AiActionAuth` für KI-Server-Actions. Details: [docs/engineering/access-model.md](docs/engineering/access-model.md).
+**Ein Flag daneben:** `User.aiAccess` — darf diese Adresse die Maschinenraum-KI benutzen. Kein fünftes App-Häkchen, sondern eine Fähigkeit des Kontos; einstellbar im Command Center, Owner geht immer durch (`canUseEngineAi`). Durchgesetzt zentral: Pfadregel für KI-API-Routen, `require*AiActionAuth` für KI-Server-Actions. Details: [docs/engineering/access-model.md](docs/engineering/access-model.md).
 
 ## TypeScript / React Konventionen
 
@@ -109,17 +109,20 @@ das jeweilige Häkchen im Command Center setzen.
   Die Aufteilung kommt aus `PRISMA_MODEL_BOUNDARIES`; `scripts/generate-brain-schema-split.mjs`
   schreibt daraus die drei Prisma-Schemata.
 - **UWE Host**: Linux + Node.js 22 + `pnpm` + `systemd` (`deploy/systemd/uwe.service`).
-- **Maschinenraum**: optionaler **outbound** Worker (`tools/uwe-rtx-connector`).
-  Früher „RTX Host Connector“ — umbenannt wurde nur der Produktname; Ordner,
-  Paketnamen, `UWE_CONNECTOR_*`, Token-Präfix `uwec_` und die systemd-Unit
-  bleiben eingefroren ([docs/rtx-connector.md](docs/rtx-connector.md)).
-- **UWE Command Center**: Desktop-App (`apps/rtx-connector-client`) mit
+- **Maschinenraum**: optionaler **outbound** Worker (`tools/uwe-engine-connector`).
+  Früher „RTX Host Connector“. Seit 2026-08 ist der NVIDIA-Markenname auch aus
+  Ordnern, Paketnamen, Env-Vars (`ENGINE_*`), der systemd-Unit und den DB-Enums
+  verschwunden — UWE läuft auf jeder GPU, und OCR, Audio und Etikettendruck
+  brauchen gar keine. `UWE_CONNECTOR_*`, `UWE_HOST_URL` und das Token-Präfix
+  `uwec_` trugen den alten Namen nie und bleiben unverändert
+  ([docs/engine-connector.md](docs/engine-connector.md)).
+- **UWE Command Center**: Desktop-App (`apps/engine-connector-client`) mit
   Ersteinrichtungs-Assistent. Welche Apps eine Installation betreibt, steht in
   `install-selection.json` neben den Host-Daten und steuert Migrationen, Builds,
   Statuskarten und Start ([docs/command-center.md](docs/command-center.md)).
 - **Cloudflare Tunnel / Access**: optional davor.
 - **CI/Agenten**: nur GitHub Cloud.
-- **Kein** Docker, **kein** Windows-One-Click-Installer, **kein** inbound RTX-Agent als aktiver Pfad.
+- **Kein** Docker, **kein** Windows-One-Click-Installer, **kein** inbound Maschinenraum-Agent als aktiver Pfad.
 
 ## Self-Service-Betrieb (kein manuelles Host-Setup)
 
@@ -164,6 +167,7 @@ Build. Details: [docs/engineering/mcp-servers.md](docs/engineering/mcp-servers.m
 - [docs/engineering/self-service-config.md](docs/engineering/self-service-config.md) — Self-Service-Konfig & Host-Sync-Muster
 - [docs/engineering/studio-shell.md](docs/engineering/studio-shell.md) — Ein Shell für alle Studio-Routen: Welt als Context + Cookie, Slot-Melder, welche Route ohne Rahmen läuft
 - [docs/engineering/mcp-servers.md](docs/engineering/mcp-servers.md) — MCP-Server & `/uwestudio` `/uweportal` `/uwebrain` `/uwefamily`
+- [docs/engineering/engine-rename-migration.md](docs/engineering/engine-rename-migration.md) — Umzug von den RTX-Namen: Env-Vars, Pfade, systemd-Unit, DB-Enums, was automatisch läuft
 - [docs/family/README.md](docs/family/README.md) — Family: Mitglieder, Kalender, API, Kochbuch, Konto
 - [docs/engineering/doc-import-und-session-runner.md](docs/engineering/doc-import-und-session-runner.md) — Frontmatter-Dialekt, Seitenbaum-Import, Splitscreen am Spieltisch, API-Allowlist-Falle
 - [docs/design/responsive-tables.md](docs/design/responsive-tables.md) — Tabellen auf dem Telefon: `ResponsiveTable`, `DataTable`, Attribut-Vertrag

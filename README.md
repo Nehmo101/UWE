@@ -28,7 +28,7 @@ Paketen.
 | **Family** (`apps/family`) | 3004 | Häkchen `Family` | Gemeinsamer Haushalt — Kalender, Küche, Dokumente, Chat. |
 | **Landing** (`apps/landing`) | 3103 | öffentlich | Startseite auf dem Apex-Origin. Genau drei Routen, keine Inhalte. |
 
-Dazu kommt das **Command Center** (`apps/rtx-connector-client`, Tauri) als
+Dazu kommt das **Command Center** (`apps/engine-connector-client`, Tauri) als
 optionale Desktop-Oberfläche für Host- und Connector-Verwaltung.
 
 Die Trennung ist keine Kosmetik: Sie wird durch `packages/product-contracts`

@@ -82,7 +82,7 @@ Shells-Nav-Vertrag: `@uwe/shared-utils/navigation` — alle drei Apps (Studio, P
 
 | Phase 1 | Phase 2 |
 |---------|---------|
-| `/image-studio`, Job-Queue, RTX/Cloud-Routing, Inpaint-API | ✅ Masken-Canvas für Inpainting (`ImageStudioMaskCanvas`) |
+| `/image-studio`, Job-Queue, Maschinenraum/Cloud-Routing, Inpaint-API | ✅ Masken-Canvas für Inpainting (`ImageStudioMaskCanvas`) |
 
 ### Kalender (`docs/CALENDAR_INTEGRATION.md`)
 

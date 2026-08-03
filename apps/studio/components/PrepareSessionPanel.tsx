@@ -26,8 +26,8 @@ interface Props {
   worldSlug: string;
   sessions: PrepareSessionOption[];
   defaultSessionId?: string;
-  rtxReady: boolean;
-  rtxEnabled: boolean;
+  engineReady: boolean;
+  engineEnabled: boolean;
 }
 
 /** TODO(design-kit): natives select bleibt — controlled Session-Auswahl ohne Kit-Select,
@@ -39,8 +39,8 @@ export function PrepareSessionPanel({
   worldSlug,
   sessions,
   defaultSessionId,
-  rtxReady,
-  rtxEnabled,
+  engineReady,
+  engineEnabled,
 }: Props) {
   const [sessionId, setSessionId] = useState(defaultSessionId ?? sessions[0]?.id ?? "");
   const [userPrompt, setUserPrompt] = useState("");
@@ -89,7 +89,7 @@ export function PrepareSessionPanel({
         setJobId(id);
         if (payload.job?.status === "deferred") {
           setStatus(
-            "RTX offline — Job vorgemerkt. Kein Cloud-Fallback. Ausführung sobald RTX bereit ist.",
+            "Maschinenraum offline — Job vorgemerkt. Kein Cloud-Fallback. Ausführung sobald der Maschinenraum bereit ist.",
           );
         } else {
           setStatus("Session-Vorbereitung gestartet — Ergebnis unter AI Runs prüfen.");
@@ -117,18 +117,18 @@ export function PrepareSessionPanel({
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <p className="text-sm text-muted-foreground">
-          KI-gestütztes Session-Paket (Recap, Plots, NPCs, Encounters) — RTX-only, Review vor
+          KI-gestütztes Session-Paket (Recap, Plots, NPCs, Encounters) — Maschinenraum-only, Review vor
           Übernahme.
         </p>
 
-        {!rtxEnabled && (
+        {!engineEnabled && (
           <Alert tone="danger" role="alert">
-            RTX-Inference ist deaktiviert.
+            Maschinenraum-Inference ist deaktiviert.
           </Alert>
         )}
 
-        {rtxEnabled && !rtxReady && (
-          <p className="text-sm text-muted-foreground">RTX offline — wird als Job vorgemerkt.</p>
+        {engineEnabled && !engineReady && (
+          <p className="text-sm text-muted-foreground">Maschinenraum offline — wird als Job vorgemerkt.</p>
         )}
 
         {sessions.length === 0 ? (
@@ -179,7 +179,7 @@ export function PrepareSessionPanel({
               />
             </div>
 
-            <Button type="submit" disabled={!rtxEnabled || busy || !sessionId} className="self-start">
+            <Button type="submit" disabled={!engineEnabled || busy || !sessionId} className="self-start">
               {busy ? "Läuft…" : "Nächste Session vorbereiten"}
             </Button>
           </form>

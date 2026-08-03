@@ -11,7 +11,7 @@ import {
 import {
   getAiGatewayStatusForClient,
   runAiGatewayFallbackTest,
-  checkRtxReadiness,
+  checkEngineReadiness,
 } from "@uwe/ai-brain";
 import type { AuthUser } from "@uwe/auth";
 import { jsonError } from "./api-response";
@@ -92,7 +92,7 @@ export async function patchAiGatewayConfig(
     );
   }
 
-  if (body.featureModels?.personal_brain?.providerId && body.featureModels.personal_brain.providerId !== "local_rtx") {
+  if (body.featureModels?.personal_brain?.providerId && body.featureModels.personal_brain.providerId !== "local_engine") {
     return jsonError("personal_brain darf keinen Cloud-Provider nutzen — Life-Brain ist permanent lokal-only.", 400);
   }
   const service = gatewayService();
@@ -158,11 +158,11 @@ export async function postAiGatewayFallbackTest(user: AuthUser | null) {
     { userId: user.id },
   );
 
-  const rtxHealth = await checkRtxReadiness({ prisma });
+  const engineHealth = await checkEngineReadiness({ prisma });
 
   return NextResponse.json({
     ...result,
-    rtxHealth,
+    engineHealth,
   });
 }
 

@@ -19,8 +19,8 @@ interface Props {
   pageId: string;
   pageType: string;
   worldId: string;
-  rtxReady: boolean;
-  rtxEnabled: boolean;
+  engineReady: boolean;
+  engineEnabled: boolean;
 }
 
 export async function FactionSimulatorSection({
@@ -30,8 +30,8 @@ export async function FactionSimulatorSection({
   pageId,
   pageType,
   worldId,
-  rtxReady,
-  rtxEnabled,
+  engineReady,
+  engineEnabled,
 }: Props) {
   if (pageType !== "faction") {
     return null;
@@ -72,8 +72,8 @@ export async function FactionSimulatorSection({
       action={action}
       currentDateLabel={currentDateLabel}
       factionStateSummary={factionStateSummary}
-      rtxReady={rtxReady}
-      rtxEnabled={rtxEnabled}
+      engineReady={engineReady}
+      engineEnabled={engineEnabled}
     />
   );
 }

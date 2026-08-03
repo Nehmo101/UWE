@@ -24,7 +24,7 @@ export interface AuthUser {
   isOwner: boolean;
   access: AreaAccess;
   /**
-   * May this address trigger the RTX AI (G-KI)?
+   * May this address trigger the Maschinenraum AI (G-KI)?
    *
    * Deliberately NOT a fifth key inside `access`. The four in there answer
    * „welche App darf diese Adresse betreten" — one entry per app, and that
@@ -33,7 +33,7 @@ export interface AuthUser {
    * next to `isOwner` because it is the same kind of thing — a capability of
    * the account, not a door.
    *
-   * The owner never needs it; `isOwner` wins (see `canUseRtxAi`).
+   * The owner never needs it; `isOwner` wins (see `canUseEngineAi`).
    */
   aiAccess: boolean;
 }

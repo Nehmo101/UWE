@@ -37,7 +37,7 @@ export interface GatewayDashboard {
     perUserDailyBudgetUsd: number | null;
     updatedAt: string;
   };
-  rtxHealth: {
+  engineHealth: {
     ready: boolean;
     message?: string;
     source?: "agent" | "inference" | "connector";

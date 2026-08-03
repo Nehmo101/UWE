@@ -70,7 +70,11 @@ Portal und Studio haben **eigene Navigationen** und je einen eigenen Shell unter
 ### Portal-Regeln (umgesetzt)
 
 - Keine Admin-Navigation im Portal-Sidebar
-- Admin-Nutzer sehen **„Studio öffnen“** in der Topbar (nicht „Admin/Einstellungen“)
+- Die Topbar trägt **„UWE Start“** — den Weg zurück auf die öffentliche Startseite
+  (Apex, `apps/landing`), von der aus jeder Bereich erreichbar ist. Sie ersetzt den
+  früheren „Studio öffnen“-Knopf und hängt an keinem Häkchen: die Startseite ist
+  öffentlich, den Zugang prüft die jeweilige App
+
 - Preview-as-Player bleibt auf Welt-Dashboard (DM-Tool, nicht in Hauptnav)
 - Welt-Erstellung nur für Owner/Admin auf `/auth/worlds` (bestehendes Feature)
 
@@ -86,7 +90,10 @@ Portal und Studio haben **eigene Navigationen** und je einen eigenen Shell unter
 
 ### Abgrenzung zum Studio
 
-Portal verlinkt optional auf Studio (nur für Admin-Rollen). Studio verlinkt nicht verwirrend zurück ins Portal-Admin.
+Portal und Studio verlinken einander nicht mehr direkt in der Topbar: beide zeigen
+**„UWE Start“** auf die Startseite, und dort wählt man den Bereich. Brain und Family
+tragen denselben Knopf. Die produktübergreifende Bottom-Nav (mobil) bleibt daneben
+bestehen.
 
 ---
 

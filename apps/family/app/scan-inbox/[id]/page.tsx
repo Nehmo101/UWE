@@ -171,8 +171,8 @@ export default async function FamilyScanDetailPage({ params }: Props) {
           ) : null}
         </div>
         <p className="family-muted">
-          Auto-OCR nutzt den PDF-Textlayer oder den lokalen RTX-Vision-Connector. Ohne Connector
-          bleibt der Scan auf &bdquo;Wartet auf RTX&ldquo;.
+          Auto-OCR nutzt den PDF-Textlayer oder den lokalen Maschinenraum-Vision-Connector. Ohne Connector
+          bleibt der Scan auf &bdquo;Wartet auf Maschinenraum&ldquo;.
         </p>
       </section>
 

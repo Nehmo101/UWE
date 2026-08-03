@@ -19,14 +19,14 @@ Lasses privates Admin-Cockpit in UWE Studio — neben DnD-Welten für Projekte, 
 | `/life-brain` | Persönliches Brain — Suche, Filter, Capture-Import |
 | `/life-brain/documents/[id]` | Life-Brain-Dokument-Detail |
 | `/life-brain/facts/[id]` | Life-Brain-Fakt-Detail |
-| `/admin/status` | Studio Security + RTX Exposure |
+| `/admin/status` | Studio Security + Maschinenraum Exposure |
 
 ### Life-Brain APIs (Studio-Auth, lokal)
 
 | Route | Zweck |
 |-------|--------|
 | `/api/life-brain/search` | Stichwort-/Filter-Suche |
-| `/api/life-brain/context` | Query-fokussierter Kontext für lokale Agenten (RTX only) |
+| `/api/life-brain/context` | Query-fokussierter Kontext für lokale Agenten (Maschinenraum only) |
 
 ## Mobile Navigation
 
@@ -50,7 +50,7 @@ Terra wird **nicht** hardcodiert erzwungen — Multi-World bleibt unter `/worlds
 - **Kontext-Generator** auf Wiki-Seitenbearbeitung (`/worlds/.../edit`)
 - Aktionen abhängig vom Seitentyp (NPC, Raum, Session, …)
 - Alle Outputs → Review (AI Runs / Proposals), nie Auto-Apply
-- RTX offline → Jobs in Warteschlange, **kein Cloud-Fallback** für lokalen Kontext
+- Maschinenraum offline → Jobs in Warteschlange, **kein Cloud-Fallback** für lokalen Kontext
 
 ## Datenschutz
 
@@ -72,8 +72,8 @@ Siehe [life-brain-privacy.md](./life-brain-privacy.md).
 ## Homelab Cockpit (`/hardware`)
 
 - **Service-Status:** UWE Studio, Portal, DB, Cloudflare Tunnel, Maschinenraum, Ollama, Backup
-- **Runbooks:** Nach Neustart, UWE starten, Logs/SSH/Cloudflare/DB/RTX prüfen
-- **Security Checklist:** SSH, User, Cloudflare Access, RTX nicht öffentlich, Secrets, Firewall
+- **Runbooks:** Nach Neustart, UWE starten, Logs/SSH/Cloudflare/DB/Maschinenraum prüfen
+- **Security Checklist:** SSH, User, Cloudflare Access, Maschinenraum nicht öffentlich, Secrets, Firewall
 - **Fehlerhistorie:** pro Gerät in `metadata.errorHistory` — aggregiert auf der Hardware-Seite
 - **Today:** System-Ampel mit live DB/Backup/Cloudflare; kritische Homelab-Warnungen verlinken auf `/hardware`
 

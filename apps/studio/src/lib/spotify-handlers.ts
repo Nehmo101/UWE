@@ -50,7 +50,7 @@ export async function getSpotifyStatus(worldSlug: string) {
     return NextResponse.json({
       configured: true,
       connected: true,
-      via: "rtx-connector",
+      via: "engine-connector",
       spotifyDisplayName: "Maschinenraum",
       message: "Maschinenraum",
     });
@@ -85,7 +85,7 @@ export async function startSpotifyConnect(_worldSlug: string) {
   return NextResponse.json(
     {
       ok: false,
-      setup: "rtx-connector-client",
+      setup: "engine-connector-client",
       message:
         "Spotify wird jetzt im UWE Command Center eingerichtet: dort Client-ID/Secret hinterlegen, anmelden und das Ausgabegerät wählen.",
     },

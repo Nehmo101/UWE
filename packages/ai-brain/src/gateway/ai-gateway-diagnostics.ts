@@ -1,6 +1,6 @@
 import type { AiGatewayConfigRecord, AiGatewayService } from "@uwe/database/server";
 import { createAiGatewayService, prisma as sharedPrisma } from "@uwe/database/server";
-import { checkRtxReadiness } from "../router/health/rtxReadiness";
+import { checkEngineReadiness } from "../router/health/engineReadiness";
 import type { AiGatewayDeps, AiGatewayUserContext } from "./aiGateway";
 
 /** Sanitized gateway status for client (no secrets). */
@@ -8,12 +8,12 @@ export async function getAiGatewayStatusForClient(
   gatewayService?: AiGatewayService,
 ): Promise<{
   config: Omit<AiGatewayConfigRecord, "updatedAt"> & { updatedAt: string };
-  rtxHealth: Awaited<ReturnType<typeof checkRtxReadiness>>;
+  engineHealth: Awaited<ReturnType<typeof checkEngineReadiness>>;
 }> {
   const gateway = gatewayService ?? createAiGatewayService();
-  const [config, rtxHealth] = await Promise.all([
+  const [config, engineHealth] = await Promise.all([
     gateway.getConfig(),
-    checkRtxReadiness({ prisma: sharedPrisma }),
+    checkEngineReadiness({ prisma: sharedPrisma }),
   ]);
 
   return {
@@ -21,25 +21,25 @@ export async function getAiGatewayStatusForClient(
       ...config,
       updatedAt: config.updatedAt.toISOString(),
     },
-    rtxHealth,
+    engineHealth,
   };
 }
 
 /**
  * Reachability check for the one backend UWE has left. There is no fallback to
- * test against any more — cloud providers were removed, so "is the RTX host up?"
+ * test against any more — cloud providers were removed, so "is the Maschinenraum host up?"
  * is the whole question.
  */
 export async function runAiGatewayFallbackTest(
   deps: AiGatewayDeps,
   _user: AiGatewayUserContext,
 ): Promise<{ localOk: boolean; message: string }> {
-  const rtxHealth = await checkRtxReadiness({ prisma: deps.prisma ?? sharedPrisma });
+  const engineHealth = await checkEngineReadiness({ prisma: deps.prisma ?? sharedPrisma });
 
   return {
-    localOk: rtxHealth.ready,
-    message: rtxHealth.ready
-      ? "RTX-Host erreichbar."
-      : rtxHealth.message || "RTX-Host nicht erreichbar.",
+    localOk: engineHealth.ready,
+    message: engineHealth.ready
+      ? "Maschinenraum-Host erreichbar."
+      : engineHealth.message || "Maschinenraum-Host nicht erreichbar.",
   };
 }

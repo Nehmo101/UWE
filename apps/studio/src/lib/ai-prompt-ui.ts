@@ -3,7 +3,7 @@
  * Privacy rules mirror the orchestrator spec — server-side guard remains authoritative.
  */
 
-export type AiProviderMode = "auto" | "local_rtx" | "cloud";
+export type AiProviderMode = "auto" | "local_engine" | "cloud";
 
 export type AiContextMode =
   | "general_chat"
@@ -14,7 +14,7 @@ export type AiContextMode =
 
 export const PROVIDER_LABELS: Record<AiProviderMode, string> = {
   auto: "Auto",
-  local_rtx: "Lokale KI / RTX",
+  local_engine: "Lokale KI / Maschinenraum",
   cloud: "Cloud-KI",
 };
 
@@ -28,34 +28,34 @@ export const CONTEXT_LABELS: Record<AiContextMode, string> = {
 
 export const HINT_CLOUD_NO_BRAIN =
   "Cloud-KI darf persönliches Life-Brain nicht nutzen.";
-export const HINT_RTX_NOT_READY = "Der Maschinenraum ist aktuell nicht bereit.";
+export const HINT_ENGINE_NOT_READY = "Der Maschinenraum ist aktuell nicht bereit.";
 export const HINT_LOCAL_READY = "Lokale KI bereit.";
-export const HINT_RTX_DISABLED = "Maschinenraum deaktiviert.";
-export const HINT_RTX_UNREACHABLE = "Maschinenraum nicht erreichbar.";
+export const HINT_ENGINE_DISABLED = "Maschinenraum deaktiviert.";
+export const HINT_ENGINE_UNREACHABLE = "Maschinenraum nicht erreichbar.";
 export const HINT_LOCAL_NOT_READY =
   "Lokale KI ist aktuell nicht bereit. Bitte Maschinenraum aktivieren oder allgemeinen Cloud-Chat nutzen.";
 export const HINT_PERSONAL_BRAIN_LOCAL_ONLY =
-  "Persönliches Life-Brain ist nur mit lokaler RTX verfügbar — kein Cloud-Fallback.";
+  "Persönliches Life-Brain ist nur mit lokaler Maschinenraum verfügbar — kein Cloud-Fallback.";
 export const HINT_OBJECT_NEEDS_PAGE =
   "Aktuelles Objekt erfordert eine geöffnete Wiki-Seite.";
 
 export type StatusChipLevel = "ok" | "warn" | "error" | "neutral";
 
-/** RTX display state shown in status chips (maps inference / future RTX-agent health). */
-export type RtxDisplayState = "online" | "offline" | "disabled" | "starting" | "error";
+/** Maschinenraum display state shown in status chips (maps inference / future Maschinenraum-agent health). */
+export type EngineDisplayState = "online" | "offline" | "disabled" | "starting" | "error";
 
 export interface AiStatusChip {
-  id: "rtx" | "local_ai" | "cloud" | "brain";
+  id: "engine" | "local_ai" | "cloud" | "brain";
   label: string;
   value: string;
   level: StatusChipLevel;
 }
 
 export interface AiPromptCapabilities {
-  rtxEnabled: boolean;
-  rtxOnline: boolean;
-  /** Fine-grained RTX state for UI labels (online/offline/deaktiviert/starting/error). */
-  rtxState: RtxDisplayState;
+  engineEnabled: boolean;
+  engineOnline: boolean;
+  /** Fine-grained Maschinenraum state for UI labels (online/offline/deaktiviert/starting/error). */
+  engineState: EngineDisplayState;
   localAiReady: boolean;
   cloudAvailable: boolean;
   brainLocal: boolean;
@@ -67,7 +67,7 @@ export interface ActiveModeSummary {
   contextLabel: string;
 }
 
-const RTX_STATE_LABELS: Record<RtxDisplayState, string> = {
+const ENGINE_STATE_LABELS: Record<EngineDisplayState, string> = {
   online: "online",
   offline: "offline",
   disabled: "deaktiviert",
@@ -75,7 +75,7 @@ const RTX_STATE_LABELS: Record<RtxDisplayState, string> = {
   error: "error",
 };
 
-const RTX_STATE_LEVELS: Record<RtxDisplayState, StatusChipLevel> = {
+const ENGINE_STATE_LEVELS: Record<EngineDisplayState, StatusChipLevel> = {
   online: "ok",
   offline: "error",
   disabled: "neutral",
@@ -93,8 +93,8 @@ export interface InferenceStatusInput {
   degraded?: boolean;
 }
 
-/** Map backend inference (or future RTX-agent) payload to UI capabilities. */
-export function mapInferenceToRtxState(input: InferenceStatusInput): RtxDisplayState {
+/** Map backend inference (or future Maschinenraum-agent) payload to UI capabilities. */
+export function mapInferenceToEngineState(input: InferenceStatusInput): EngineDisplayState {
   if (!input.enabled) {
     return "disabled";
   }
@@ -123,13 +123,13 @@ export function buildAiPromptCapabilities(input: {
   brainLocal: boolean;
   hasCurrentObject: boolean;
 }): AiPromptCapabilities {
-  const rtxState = mapInferenceToRtxState(input.inference);
-  const rtxOnline = rtxState === "online";
-  const localAiReady = rtxState === "online" || rtxState === "starting";
+  const engineState = mapInferenceToEngineState(input.inference);
+  const engineOnline = engineState === "online";
+  const localAiReady = engineState === "online" || engineState === "starting";
   return {
-    rtxEnabled: input.inference.enabled,
-    rtxOnline,
-    rtxState,
+    engineEnabled: input.inference.enabled,
+    engineOnline,
+    engineState,
     localAiReady,
     cloudAvailable: input.cloudAvailable,
     brainLocal: input.brainLocal,
@@ -176,8 +176,8 @@ function isPersonalBrainMode(mode: AiContextMode): boolean {
 }
 
 export function deriveStatusChips(caps: AiPromptCapabilities): AiStatusChip[] {
-  const rtxValue = RTX_STATE_LABELS[caps.rtxState];
-  const rtxLevel = RTX_STATE_LEVELS[caps.rtxState];
+  const engineValue = ENGINE_STATE_LABELS[caps.engineState];
+  const engineLevel = ENGINE_STATE_LEVELS[caps.engineState];
 
   const localValue = caps.localAiReady ? "bereit" : "nicht bereit";
   const localLevel: StatusChipLevel = caps.localAiReady ? "ok" : "warn";
@@ -189,7 +189,7 @@ export function deriveStatusChips(caps: AiPromptCapabilities): AiStatusChip[] {
   const brainLevel: StatusChipLevel = caps.brainLocal ? "ok" : "warn";
 
   return [
-    { id: "rtx", label: "RTX", value: rtxValue, level: rtxLevel },
+    { id: "engine", label: "Maschinenraum", value: engineValue, level: engineLevel },
     { id: "local_ai", label: "Lokale KI", value: localValue, level: localLevel },
     { id: "cloud", label: "Cloud", value: cloudValue, level: cloudLevel },
     { id: "brain", label: "Brain", value: brainValue, level: brainLevel },
@@ -216,7 +216,7 @@ function isContextDisabled(
     return { disabled: true, reason: HINT_PERSONAL_BRAIN_LOCAL_ONLY };
   }
 
-  if (provider === "local_rtx" && !caps.localAiReady && mode !== "general_chat") {
+  if (provider === "local_engine" && !caps.localAiReady && mode !== "general_chat") {
     return { disabled: true, reason: HINT_LOCAL_NOT_READY };
   }
 
@@ -234,8 +234,8 @@ function isProviderDisabled(
   if (mode === "cloud" && !caps.cloudAvailable) {
     return { disabled: true, reason: "Cloud-KI ist nicht konfiguriert." };
   }
-  if (mode === "local_rtx" && !caps.rtxEnabled) {
-    return { disabled: true, reason: HINT_RTX_DISABLED };
+  if (mode === "local_engine" && !caps.engineEnabled) {
+    return { disabled: true, reason: HINT_ENGINE_DISABLED };
   }
   return { disabled: false };
 }
@@ -263,25 +263,25 @@ export function computePromptUiState(
     context !== "general_chat" &&
     caps.cloudAvailable
   ) {
-    hints.push("RTX offline — Cloud-Fallback für DnD-/World-Kontext ist verfügbar.");
+    hints.push("Maschinenraum offline — Cloud-Fallback für DnD-/World-Kontext ist verfügbar.");
   }
 
-  if (provider === "local_rtx" && !caps.localAiReady) {
+  if (provider === "local_engine" && !caps.localAiReady) {
     hints.push(HINT_LOCAL_NOT_READY);
   }
 
-  if (provider === "local_rtx" && caps.localAiReady) {
+  if (provider === "local_engine" && caps.localAiReady) {
     hints.push(HINT_LOCAL_READY);
   }
 
-  if (caps.rtxState === "disabled") {
-    hints.push(HINT_RTX_DISABLED);
-  } else if (caps.rtxState === "starting" && provider !== "cloud") {
+  if (caps.engineState === "disabled") {
+    hints.push(HINT_ENGINE_DISABLED);
+  } else if (caps.engineState === "starting" && provider !== "cloud") {
     hints.push("Maschinenraum wird gestartet — bitte kurz warten.");
-  } else if (caps.rtxState === "error" && provider !== "cloud") {
+  } else if (caps.engineState === "error" && provider !== "cloud") {
     hints.push("Maschinenraum meldet einen Fehler — Systemstatus prüfen.");
-  } else if (caps.rtxState === "offline" && provider !== "cloud") {
-    hints.push(HINT_RTX_UNREACHABLE);
+  } else if (caps.engineState === "offline" && provider !== "cloud") {
+    hints.push(HINT_ENGINE_UNREACHABLE);
   }
 
   const providerOptions = (Object.keys(PROVIDER_LABELS) as AiProviderMode[]).map((id) => {
@@ -306,7 +306,7 @@ export function computePromptUiState(
   } else if (contextBlocked) {
     canSend = false;
     sendBlockedReason = activeContext?.disabledReason;
-  } else if (provider === "local_rtx" && !caps.localAiReady) {
+  } else if (provider === "local_engine" && !caps.localAiReady) {
     canSend = false;
     sendBlockedReason = HINT_LOCAL_NOT_READY;
   } else if (provider === "cloud" && !caps.cloudAvailable) {
@@ -366,10 +366,10 @@ export function resolveProviderSelection(
 /** Map low-level provider errors to user-facing German hints. */
 export function sanitizeAiErrorMessage(message: string): string {
   if (/Ollama chat HTTP 404/i.test(message)) {
-    return "Lokales Modell nicht erreichbar — Ollama/LM Studio auf dem RTX-Rechner starten und das Modell laden.";
+    return "Lokales Modell nicht erreichbar — Ollama/LM Studio auf dem Maschinenraum-Rechner starten und das Modell laden.";
   }
   if (/Ollama .+ HTTP/i.test(message)) {
-    return "Lokale KI (RTX) antwortet nicht — Maschinenraum und Ollama auf dem RTX-Rechner prüfen.";
+    return "Lokale KI antwortet nicht — Maschinenraum und Ollama auf dem Rechner mit der Hardware prüfen.";
   }
   if (/Kein lokaler LLM-Provider/i.test(message)) {
     return "Maschinenraum meldet keinen lokalen LLM-Provider — Ollama-URL in der Connector-Konfiguration prüfen.";

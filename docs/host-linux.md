@@ -5,7 +5,7 @@ Studio, Portal, database, auth, uploads, queue, settings and public reachability
 It runs on a small Linux box (an old laptop is fine) with Node.js 22, `pnpm` and
 `systemd`.
 
-The host must boot and serve **without** any RTX connector.
+The host must boot and serve **without** any Maschinenraum connector.
 
 ## Requirements
 
@@ -68,7 +68,7 @@ sudo bash deploy/scripts/setup-uwe-host.sh
 
 The main reference unit is `deploy/systemd/uwe.service` (restart limits, pinned Node
 path, `EnvironmentFile=-/etc/uwe/uwe.env`). The optional outbound connector unit is
-`deploy/systemd/uwe-rtx-connector.service`; setup only enables it when its `.env`
+`deploy/systemd/uwe-engine-connector.service`; setup only enables it when its `.env`
 contains a real host URL and token. Fedora also installs the DNF5 plugins used for
 reboot hints and automatic-update status; automatic updates remain operator-controlled.
 Main-service autostart:
@@ -93,10 +93,10 @@ proxy and `PUBLIC_BASE_URL` to the public URL.
 
 SQLite (libsql) is the default. PostgreSQL is optional via
 `schema.postgresql.prisma` + `pnpm --filter @uwe/database db:deploy:postgres`.
-The host is always the data truth — there is **no** DB replication to the RTX
+The host is always the data truth — there is **no** DB replication to the Maschinenraum
 machine.
 
-## Behaviour without an RTX connector
+## Behaviour without a Maschinenraum connector
 
 Studio, Portal, login and worlds stay fully online. Connector-backed features use
 honest degraded behavior when no online connector advertises the required
@@ -110,4 +110,4 @@ effective capability:
   image command.
 
 No crashes — this is the expected degraded state. See
-[rtx-connector.md](rtx-connector.md).
+[engine-connector.md](engine-connector.md).

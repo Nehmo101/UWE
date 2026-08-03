@@ -97,7 +97,7 @@ describe("config normalisation", () => {
     assert.equal(normalizeManagedChallengeConfig({ action: "block" }).action, "managed_challenge");
   });
 
-  // Regression: the RTX connector polls /api/connectors/* over the public
+  // Regression: the Maschinenraum connector polls /api/connectors/* over the public
   // origin. Challenging it would stall every AI job without any error the owner
   // could see, so the exemption is part of the defaults, not opt-in.
   it("exempts every machine client the host depends on", () => {

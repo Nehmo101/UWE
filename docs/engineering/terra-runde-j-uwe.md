@@ -409,7 +409,7 @@ nicht nur unserer.
 Das Modellverzeichnis zeigt auf ein Laufwerk `E:`, das es nicht gibt. Damit ist
 **kein einziges lokales Modell verfügbar**. Da in der `.env` zugleich
 `UWE_AI_CLOUD_FALLBACK=false` steht und keine Cloud-Schlüssel hinterlegt sind,
-würde jede Brain-Action derzeit mit „Lokale RTX-Inference ist nicht bereit"
+würde jede Brain-Action derzeit mit „Lokale Maschinenraum-Inference ist nicht bereit"
 abbrechen. **Das muss vor jedem Experiment repariert werden.**
 
 ### Baustelle 3: Zwei Fehler im vorhandenen Atlas-Aufruf
@@ -445,7 +445,7 @@ Arbeitsteilung.
 1. **Der Prompt-Cache täuscht Reproduzierbarkeit vor.** Identische Anfragen
    liefern identische Antworten — bis der Prozess neu startet oder 128 Einträge
    überschritten sind. Darauf darf man nichts stützen.
-2. **Automatische Routenwahl kann das Modell wechseln** (je nach RTX-Bereitschaft).
+2. **Automatische Routenwahl kann das Modell wechseln** (je nach Maschinenraum-Bereitschaft).
 
 Beides ist unkritisch, **solange die KI-Antwort ein einmalig erzeugtes,
 gespeichertes Artefakt ist**: Parametersatz und Namen werden in der Karte
@@ -569,7 +569,7 @@ und die Seite ruft `notFound()` — dieselbe Antwort wie für eine Karte aus ein
 fremden Welt.
 
 Die KI-Bedienfelder (`TerraEntwurfPanel`, `TerraTextPanel` aus J4) bleiben im
-Studio. Sie laufen über den RTX-Host und die Brain-Aktionen des Spielleiters;
+Studio. Sie laufen über den Maschinenraum-Host und die Brain-Aktionen des Spielleiters;
 das Werkzeug im Frame ist davon unberührt — der Spieler baut von Hand, und
 zwar ohne Einschränkung.
 

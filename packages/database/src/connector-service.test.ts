@@ -20,7 +20,7 @@ describe("ConnectorService", () => {
 
   it("creates a connector and stores only the token hash", async () => {
     const service = createConnectorService(db);
-    const { connector, token } = await service.createConnector("RTX Laptop");
+    const { connector, token } = await service.createConnector("Maschinenraum Laptop");
 
     assert.ok(token.startsWith("uwec_"));
     const row = await db.connector.findUnique({ where: { id: connector.id } });

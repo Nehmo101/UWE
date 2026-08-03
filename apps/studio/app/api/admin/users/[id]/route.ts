@@ -45,7 +45,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     brainAccess?: boolean;
     familyAccess?: boolean;
     /**
-     * RTX-KI (G-KI). Weglassen heisst „unverändert" — `updateUser` schreibt
+     * Maschinenraum-KI (G-KI). Weglassen heisst „unverändert" — `updateUser` schreibt
      * nur, was gesetzt ist. Ein Teil-Update darf das Recht nicht nebenbei
      * abräumen.
      */

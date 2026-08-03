@@ -166,7 +166,7 @@ export function useMailActions(deps: MailActionsDeps): MailActions {
       const ok = await postJson("/api/mail/ai/summarize", { messageId: id });
       setBusy(false);
       if (ok) {
-        flash("Von RTX zusammengefasst.");
+        flash("Von Maschinenraum zusammengefasst.");
         if (selectedId === id) void loadDetail(id);
       }
     },

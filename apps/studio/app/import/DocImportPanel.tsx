@@ -297,7 +297,7 @@ export function DocImportPanel({ jobId, isObsidianSource, fileAccept, onComplete
                 <p className="text-sm text-muted-foreground">
                   Regeln erkennen {"„EBENE 3“"} und {"„Begegnung: Die Genesenen“"} von selbst. Namen
                   ohne Amtsbezeichnung — {"„Tibbik Moosfunke“"}, {"„Windhafen“"} — erkennt nur die KI. Läuft
-                  ausschließlich auf dem RTX-Host; ist er offline, entscheiden die Regeln.
+                  ausschließlich auf dem Maschinenraum-Host; ist er offline, entscheiden die Regeln.
                 </p>
               </div>
             </>

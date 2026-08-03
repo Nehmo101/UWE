@@ -193,9 +193,9 @@ export function ImageStudioJobForm({
         Prompt-Kontext
         <select name="contextMode" defaultValue="prompt_only" className={NATIVE_SELECT_CLASS}>
           <option value="prompt_only">Nur Prompt (Cloud-sicher)</option>
-          <option value="page_context">Seiten-Kontext (nur RTX)</option>
-          <option value="brain_context">Brain/Welt-Kontext (nur RTX)</option>
-          <option value="object_context">Aktuelles Objekt (nur RTX)</option>
+          <option value="page_context">Seiten-Kontext (nur Maschinenraum)</option>
+          <option value="brain_context">Brain/Welt-Kontext (nur Maschinenraum)</option>
+          <option value="object_context">Aktuelles Objekt (nur Maschinenraum)</option>
         </select>
       </label>
       <p className="text-sm text-muted-foreground">

@@ -8,7 +8,7 @@
 export type ScanDocumentStatus =
   | "unanalyzed"
   | "analyzing"
-  | "waiting_for_rtx"
+  | "waiting_for_engine"
   | "proposal_ready"
   | "uncertain"
   | "filed"
@@ -45,7 +45,7 @@ export type ScanFilingTarget =
 export const SCAN_STATUS_LABELS: Record<ScanDocumentStatus, string> = {
   unanalyzed: "Unanalysiert",
   analyzing: "Wird analysiert",
-  waiting_for_rtx: "Wartet auf RTX",
+  waiting_for_engine: "Wartet auf Maschinenraum",
   proposal_ready: "Vorschlag bereit",
   uncertain: "Unsicher",
   filed: "Abgelegt",
@@ -138,7 +138,7 @@ export interface ScanDocumentRecord {
 export const ACTIVE_SCAN_STATUSES: ScanDocumentStatus[] = [
   "unanalyzed",
   "analyzing",
-  "waiting_for_rtx",
+  "waiting_for_engine",
   "proposal_ready",
   "uncertain",
 ];

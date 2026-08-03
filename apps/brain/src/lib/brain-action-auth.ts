@@ -1,4 +1,4 @@
-import { canUseRtxAi } from "@uwe/auth";
+import { canUseEngineAi } from "@uwe/auth";
 import { getBrainOwner } from "./page-owner";
 
 /** Thrown when a non-owner reaches a mutating Brain Server Action. */
@@ -24,17 +24,17 @@ export async function requireBrainActionAuth() {
 }
 
 /**
- * Zusätzliche Prüfung für Brain-Actions, die den RTX-Host beschäftigen (G-KI).
+ * Zusätzliche Prüfung für Brain-Actions, die den Maschinenraum-Host beschäftigen (G-KI).
  *
  * Das Brain-Häkchen bringt jemanden in den Bereich; ob er darin die lokale
- * Inferenz auslösen darf, sagt das KI-Flag. Der Owner geht über `canUseRtxAi`
+ * Inferenz auslösen darf, sagt das KI-Flag. Der Owner geht über `canUseEngineAi`
  * durch — für ihn ändert sich nichts.
  */
 export async function requireBrainAiActionAuth() {
   const owner = await requireBrainActionAuth();
-  if (!canUseRtxAi(owner)) {
+  if (!canUseEngineAi(owner)) {
     throw new BrainActionAuthError(
-      "Für dieses Konto ist die RTX-KI nicht freigeschaltet. Der Owner richtet das im Command Center ein.",
+      "Für dieses Konto ist die Maschinenraum-KI nicht freigeschaltet. Der Owner richtet das im Command Center ein.",
     );
   }
   return owner;

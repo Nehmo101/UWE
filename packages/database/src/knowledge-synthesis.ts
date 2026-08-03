@@ -1,10 +1,10 @@
 /**
- * Optionale RTX-lokale LLM-Synthese für den Wissensassistenten. Setzt auf die
+ * Optionale Maschinenraum-lokale LLM-Synthese für den Wissensassistenten. Setzt auf die
  * bereits abgerufenen Quellen (`KnowledgeAnswer.citations`) auf und formuliert
  * eine zusammenhängende Antwort — **erdet strikt auf den Quellen**, erfindet
  * nichts und ersetzt die Quellenanzeige nie. Läuft ausschließlich über die
  * Connector-Queue (lokale Inferenz, `llm_generate`); ist kein `llm_local`-
- * Connector online, degradiert die Funktion sauber („RTX offline"), die reine
+ * Connector online, degradiert die Funktion sauber („Maschinenraum offline"), die reine
  * Retrieval-Antwort bleibt unverändert nutzbar. Muster: `ai-suggest.ts`.
  */
 import {
@@ -30,7 +30,7 @@ const SYNTHESIS_SYSTEM_PROMPT = [
 export type KnowledgeSynthesisResult =
   | { status: "ok"; text: string }
   | { status: "no_sources"; error: string }
-  | { status: "rtx_offline"; error: string }
+  | { status: "engine_offline"; error: string }
   | { status: "error"; error: string };
 
 /**
@@ -109,8 +109,8 @@ export async function synthesizeKnowledgeAnswer(
   );
   if (!queueAvailable) {
     return {
-      status: "rtx_offline",
-      error: "Kein lokaler KI-Connector (RTX) online — Synthese nicht verfügbar.",
+      status: "engine_offline",
+      error: "Kein lokaler KI-Connector (Maschinenraum) online — Synthese nicht verfügbar.",
     };
   }
 

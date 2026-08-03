@@ -152,7 +152,7 @@ function inferProposalTarget(capture: CaptureEntry): CaptureProposalTarget {
   if (hasKeyword(text, ["vertrag", "rechnung", "abo", "subscription", "kündig"])) {
     return "contract_expense";
   }
-  if (hasKeyword(text, ["server", "nas", "router", "homelab", "gpu", "rtx"])) {
+  if (hasKeyword(text, ["server", "nas", "router", "homelab", "gpu", "engine"])) {
     return "hardware_device";
   }
   if (hasKeyword(text, ["npc", "session", "kampagne", "quest", "dnd", "welt"])) {

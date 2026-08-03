@@ -57,7 +57,7 @@ export interface EndpointExposureCheck {
   allowPublicUrlOverride: boolean;
 }
 
-export interface RtxExposureAssessment {
+export interface EngineExposureAssessment {
   ok: boolean;
   severity: StudioSecuritySeverity;
   message: string;
@@ -302,12 +302,12 @@ function buildEndpointCheck(
   };
 }
 
-export function assessRtxExposure(env: NodeJS.ProcessEnv = process.env): RtxExposureAssessment {
+export function assessEngineExposure(env: NodeJS.ProcessEnv = process.env): EngineExposureAssessment {
   const allowPublicUrl = parseBooleanEnv(env.AI_INFERENCE_ALLOW_PUBLIC_URL, false);
   const nextSteps: string[] = [];
 
   const endpoints: EndpointExposureCheck[] = [
-    buildEndpointCheck("RTX_BASE_URL", env.RTX_BASE_URL?.trim() ?? null, allowPublicUrl),
+    buildEndpointCheck("ENGINE_BASE_URL", env.ENGINE_BASE_URL?.trim() ?? null, allowPublicUrl),
     buildEndpointCheck("AI_INFERENCE_BASE_URL", resolveInferenceBaseUrl(env), allowPublicUrl),
     buildEndpointCheck("BRAIN_EMBEDDING_BASE_URL", resolveEmbeddingBaseUrl(env), allowPublicUrl),
   ];
@@ -323,8 +323,8 @@ export function assessRtxExposure(env: NodeJS.ProcessEnv = process.env): RtxExpo
       severity: "ok",
       message:
         configured.length === 0
-          ? "Keine RTX-/Inference-URLs konfiguriert — lokale KI nutzt Defaults (localhost)."
-          : "RTX- und Inference-Endpoints zeigen auf private/loopback-Adressen.",
+          ? "Keine Maschinenraum-/Inference-URLs konfiguriert — lokale KI nutzt Defaults (localhost)."
+          : "Maschinenraum- und Inference-Endpoints zeigen auf private/loopback-Adressen.",
       endpoints,
       nextSteps:
         allowPublicUrl && configured.some((endpoint) => endpoint.urlKind === "public")
@@ -350,19 +350,19 @@ export function assessRtxExposure(env: NodeJS.ProcessEnv = process.env): RtxExpo
 
   for (const endpoint of publicLookingEndpoints) {
     nextSteps.push(
-      `${endpoint.envKey} (${endpoint.endpointLabel}) wirkt öffentlich erreichbar — RTX/Ollama nur im Heimnetz betreiben.`,
+      `${endpoint.envKey} (${endpoint.endpointLabel}) wirkt öffentlich erreichbar — Maschinenraum/Ollama nur im Heimnetz betreiben.`,
     );
   }
 
   nextSteps.push(
-    "Setze private Heimnetz-IP (z. B. http://192.168.x.x:11434) oder nutze den UWE RTX-Agent im LAN.",
+    "Setze private Heimnetz-IP (z. B. http://192.168.x.x:11434) oder nutze den UWE Maschinenraum-Agent im LAN.",
   );
-  nextSteps.push("RTX-Agent und Ollama/LM Studio niemals über Cloudflare oder öffentliche URLs exponieren.");
+  nextSteps.push("Maschinenraum-Agent und Ollama/LM Studio niemals über Cloudflare oder öffentliche URLs exponieren.");
 
   return {
     ok: false,
     severity: "critical",
-    message: `${publicLookingEndpoints.length} Endpoint(s) wirken öffentlich — RTX-Inference darf nicht ins Internet.`,
+    message: `${publicLookingEndpoints.length} Endpoint(s) wirken öffentlich — Maschinenraum-Inference darf nicht ins Internet.`,
     endpoints,
     nextSteps: [...new Set(nextSteps)],
   };

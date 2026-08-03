@@ -116,7 +116,7 @@ function estimateCostUsd(input: {
 
 /**
  * Central AI Gateway — all AI calls should pass through here.
- * Permission → Privacy → Budget → RTX Health → Provider → Usage Log
+ * Permission → Privacy → Budget → Maschinenraum-Health → Provider → Usage Log
  */
 export async function executeAiGatewayRequest(
   deps: AiGatewayDeps,
@@ -150,7 +150,7 @@ export async function executeAiGatewayRequest(
 
   const routerRequest: AiRouterRequest = {
     ...request,
-    providerMode: "local_rtx",
+    providerMode: "local_engine",
     model: resolveFeatureModelOverride(config, privacyCategory)?.model ?? request.model,
     apiKeyStore,
     options: {
@@ -204,7 +204,7 @@ export async function executeAiGatewayRequest(
         userId: resolveGatewayUsageUserId(request.user),
         feature: request.feature ?? privacyCategory,
         taskType: request.taskType,
-        provider: "local_rtx",
+        provider: "local_engine",
         model: request.model ?? "unknown",
         route: "unknown",
         contextMode: request.contextMode,
@@ -334,7 +334,7 @@ export async function executeAiGatewayImageRequest(
   let errorMessage: string | undefined;
 
   try {
-    result = await runImageStudioTask({ ...request, providerMode: "local_rtx" }, imageConfig);
+    result = await runImageStudioTask({ ...request, providerMode: "local_engine" }, imageConfig);
     if (!result.success) {
       success = false;
       errorMessage = result.error ?? "Bildgenerierung fehlgeschlagen.";
@@ -346,7 +346,7 @@ export async function executeAiGatewayImageRequest(
     throw error;
   } finally {
     const durationMs = Date.now() - started;
-    const route = result?.providerUsed === "local_rtx" ? "local_rtx" : "unknown";
+    const route = result?.providerUsed === "local_engine" ? "local_engine" : "unknown";
     const logInput: CreateUsageLogInput = {
       userId: request.user.userId,
       feature,
@@ -357,7 +357,7 @@ export async function executeAiGatewayImageRequest(
       contextMode: request.contextMode ?? "prompt_only",
       inputTokens: null,
       outputTokens: null,
-      // Der RTX-Host kostet nichts — das Feld bleibt für die Historie.
+      // Der Maschinenraum-Host kostet nichts — das Feld bleibt für die Historie.
       estimatedCostUsd: 0,
       success,
       errorMessage: success ? undefined : errorMessage,
@@ -437,7 +437,7 @@ export async function executeAiGatewayResearchJob<T>(
 
 /**
  * The gateway used to choose between local and cloud providers under budget and
- * privacy policy. Cloud providers are gone — the RTX host is the only backend —
+ * privacy policy. Cloud providers are gone — the Maschinenraum host is the only backend —
  * so the only decision left is whether AI is switched on at all.
  */
 function assertGatewayEnabled(config: AiGatewayConfigRecord): void {

@@ -11,12 +11,12 @@
  * ensuring real middleware / CSP behaviour is exercised.
  *
  * Label-print E2E (deferred — QF10 hardware stub):
- *   Physical label printing needs a local RTX connector with CUPS or
+ *   Physical label printing needs a local Maschinenraum connector with CUPS or
  *   UWE_CONNECTOR_PRINTERS — not available in GitHub Cloud CI. Host-side queue
  *   and document routes are covered by unit tests (label-print-queue-service.test.ts,
  *   capabilities.test.ts). A future e2e/studio-label-print.spec.ts could run on a
  *   self-hosted runner with STUDIO_API_TOKEN and a mocked connector, or stub CUPS via
- *   UWE_CONNECTOR_PRINT_CMD in tools/uwe-rtx-connector/.env.example.
+ *   UWE_CONNECTOR_PRINT_CMD in tools/uwe-engine-connector/.env.example.
  *
  * Studio `/portal` shim (e2e/portal-auth.spec.ts):
  *   With separate Studio/Portal ports but unified-path deployment, the shim may

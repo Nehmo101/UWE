@@ -5,8 +5,8 @@ const STATIC_SECRET_KEYS = [
   "AUTH_SECRET",
   "UWE_SETUP_TOKEN",
   "STUDIO_API_TOKEN",
-  "RTX_SERVICE_TOKEN",
-  "RTX_AGENT_TOKEN",
+  "ENGINE_SERVICE_TOKEN",
+  "ENGINE_AGENT_TOKEN",
   "AI_INFERENCE_API_KEY",
   "CLOUD_AI_API_KEY",
   "OPENAI_API_KEY",
@@ -56,7 +56,7 @@ function collectKnownSecretValues(env: NodeJS.ProcessEnv = process.env): string[
   const derived = [
     raw.SESSION_SECRET,
     raw.UWE_SETUP_TOKEN,
-    raw.RTX_SERVICE_TOKEN,
+    raw.ENGINE_SERVICE_TOKEN,
   ];
 
   for (const value of derived) {

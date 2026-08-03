@@ -9,10 +9,10 @@ import type {
 
 /**
  * High-level provider routing mode. Only one value remains: every AI action in
- * UWE runs on the RTX host. Cloud providers were removed entirely, so there is
+ * UWE runs on the Maschinenraum host. Cloud providers were removed entirely, so there is
  * no route to choose between and no privacy label to enforce.
  */
-export type AiProviderMode = "local_rtx";
+export type AiProviderMode = "local_engine";
 
 /** Which local context may be included in the prompt. */
 export type AiContextMode =
@@ -23,8 +23,8 @@ export type AiContextMode =
   | "personal_brain"
   | "mail";
 
-/** Resolved backend route. Local RTX is the only backend. */
-export type AiResolvedRoute = "local_rtx";
+/** Resolved backend route. Local Maschinenraum is the only backend. */
+export type AiResolvedRoute = "local_engine";
 
 export interface AiRouterRequest {
   providerMode: AiProviderMode;
@@ -80,4 +80,4 @@ export class AiRouterError extends Error {
 }
 
 /** The only provider mode; kept as a constant so callers need not spell it out. */
-export const AI_PROVIDER_MODE: AiProviderMode = "local_rtx";
+export const AI_PROVIDER_MODE: AiProviderMode = "local_engine";

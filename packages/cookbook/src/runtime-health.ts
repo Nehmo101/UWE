@@ -91,22 +91,22 @@ async function probeOllamaTags(baseUrl: string, fallbackModels: string[]): Promi
 }
 
 function buildEngineStatuses(probe: CookbookRuntimeProbeInput): RuntimeEngineStatus[] {
-  const { inference, rtx } = probe;
+  const { inference, engineHost } = probe;
   const statuses: RuntimeEngineStatus[] = [];
 
   for (const engine of listCookbookEngines()) {
-    if (engine.id === "rtx_agent") {
+    if (engine.id === "engine_agent") {
       statuses.push({
         engineId: engine.id,
         label: engine.label,
-        online: rtx.ready,
-        endpoint: rtx.agentConfigured ? rtx.endpoint : null,
-        modelCount: rtx.modelCount ?? null,
-        defaultModel: rtx.defaultModel,
-        message: rtx.agentConfigured
-          ? rtx.message
-          : "RTX Worker nicht konfiguriert (RTX_BASE_URL / RTX_SERVICE_TOKEN).",
-        urlAllowed: rtx.urlAllowed,
+        online: engineHost.ready,
+        endpoint: engineHost.agentConfigured ? engineHost.endpoint : null,
+        modelCount: engineHost.modelCount ?? null,
+        defaultModel: engineHost.defaultModel,
+        message: engineHost.agentConfigured
+          ? engineHost.message
+          : "Maschinenraum-Worker nicht konfiguriert (ENGINE_BASE_URL / ENGINE_SERVICE_TOKEN).",
+        urlAllowed: engineHost.urlAllowed,
       });
       continue;
     }
@@ -177,14 +177,14 @@ export async function buildCookbookRuntimeHealth(
   const warnings: string[] = [];
   const nextSteps: string[] = [];
 
-  if (!probe.inference.urlAllowed || !probe.rtx.urlAllowed) {
-    warnings.push("Inference- oder RTX-URL ist öffentlich — nur private Adressen für Kampagnendaten.");
-    nextSteps.push("AI_INFERENCE_BASE_URL / RTX_BASE_URL auf private IP oder localhost setzen.");
+  if (!probe.inference.urlAllowed || !probe.engineHost.urlAllowed) {
+    warnings.push("Inference- oder Maschinenraum-URL ist öffentlich — nur private Adressen für Kampagnendaten.");
+    nextSteps.push("AI_INFERENCE_BASE_URL / ENGINE_BASE_URL auf private IP oder localhost setzen.");
   }
 
-  if (localOnlyMode && !probe.rtx.ready && !probe.inference.online) {
+  if (localOnlyMode && !probe.engineHost.ready && !probe.inference.online) {
     warnings.push("Local-only aktiv, aber keine lokale Inference bereit — KI-Aufgaben werden zurückgestellt.");
-    nextSteps.push("Ollama starten oder RTX-Agent konfigurieren.");
+    nextSteps.push("Ollama starten oder Maschinenraum-Agent konfigurieren.");
   }
 
   if (ollama.reachable && ollama.modelCount === 0) {
@@ -197,15 +197,15 @@ export async function buildCookbookRuntimeHealth(
 
   const diagnoses = diagnoseRuntimeMessages([
     probe.inference.message,
-    probe.rtx.message,
+    probe.engineHost.message,
     ollama.message,
     docker.message,
   ]);
 
-  const localReady = probe.rtx.ready || probe.inference.online;
+  const localReady = probe.engineHost.ready || probe.inference.online;
 
   return {
-    ok: localReady && probe.inference.urlAllowed && probe.rtx.urlAllowed,
+    ok: localReady && probe.inference.urlAllowed && probe.engineHost.urlAllowed,
     localOnlyMode,
     engines,
     ollama,

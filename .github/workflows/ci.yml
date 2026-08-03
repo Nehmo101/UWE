@@ -184,7 +184,7 @@ jobs:
         with:
           filters: |
             rust:
-              - 'apps/rtx-connector-client/src-tauri/**'
+              - 'apps/engine-connector-client/src-tauri/**'
               - '.github/workflows/ci.yml'
 
       # Auf Commit-SHA gepinnt. Die Action leitet die Toolchain sonst aus dem
@@ -199,7 +199,7 @@ jobs:
       - uses: swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         if: steps.filter.outputs.rust == 'true'
         with:
-          workspaces: "apps/rtx-connector-client/src-tauri -> target"
+          workspaces: "apps/engine-connector-client/src-tauri -> target"
 
       - name: GTK/WebKit für den Tauri-Build
         if: steps.filter.outputs.rust == 'true'
@@ -210,12 +210,12 @@ jobs:
 
       - name: cargo fmt --check
         if: steps.filter.outputs.rust == 'true'
-        working-directory: apps/rtx-connector-client/src-tauri
+        working-directory: apps/engine-connector-client/src-tauri
         run: cargo fmt --check
 
       - name: cargo clippy
         if: steps.filter.outputs.rust == 'true'
-        working-directory: apps/rtx-connector-client/src-tauri
+        working-directory: apps/engine-connector-client/src-tauri
         run: cargo clippy --all-targets -- -D warnings
 
   e2e:

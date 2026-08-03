@@ -86,6 +86,11 @@ export function FamilyShell({
           </Link>
           <FamilyNavSearch />
           <span className="uwe-topbar-end">
+            {/* Wie in Studio, Portal und Brain: ein Knopf zurück auf die
+                öffentliche Startseite — von dort geht es in jeden Bereich. */}
+            <a className="family-btn family-btn-ghost family-btn-sm" href={urls.start}>
+              UWE Start
+            </a>
             <span className="family-owner-badge">Family</span>
             <ThemeModeToggle />
           </span>

@@ -80,12 +80,12 @@ describe("redactSecrets", () => {
   it("redacts error messages without leaking env values", () => {
     withEnv(
       {
-        RTX_SERVICE_TOKEN: "rtx-service-token-9876543210",
+        ENGINE_SERVICE_TOKEN: "engine-service-token-9876543210",
       },
       () => {
-        const error = new Error("Request failed: rtx-service-token-9876543210");
+        const error = new Error("Request failed: engine-service-token-9876543210");
         const redacted = redactError(error, process.env);
-        assert.doesNotMatch(redacted.message, /rtx-service-token-9876543210/);
+        assert.doesNotMatch(redacted.message, /engine-service-token-9876543210/);
       },
     );
   });

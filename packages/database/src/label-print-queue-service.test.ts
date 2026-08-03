@@ -19,7 +19,7 @@ describe("LabelPrintQueueService", () => {
     const printLists = createPrintListService(dbUrl);
     const world = await isolatedDb.world.create({ data: { slug: `print-q-${Date.now()}`, name: "Test" } });
     const list = await printLists.create({ worldId: world.id, name: "Pack" });
-    const { connector } = await connectorService.createConnector("RTX");
+    const { connector } = await connectorService.createConnector("Maschinenraum");
     const job = await queue.enqueuePrintList({ worldSlug: world.slug, printListId: list.id, printerId: "p1", targetConnectorId: connector.id });
     assert.equal(job.type, "label_print");
     const row = await isolatedDb.connectorJob.findUnique({ where: { id: job.id } });
@@ -30,7 +30,7 @@ describe("LabelPrintQueueService", () => {
     const dbUrl = createTestDatabaseUrl();
     const connectorService = createConnectorService(createPrismaClient(dbUrl));
     const queue = createLabelPrintQueueService(dbUrl);
-    const { connector } = await connectorService.createConnector("RTX2");
+    const { connector } = await connectorService.createConnector("Maschinenraum2");
     const job = await queue.enqueuePrinterDiscover({ targetConnectorId: connector.id });
     assert.equal(job.type, "printer_discover");
   });
@@ -43,8 +43,8 @@ describe("LabelPrintQueueService", () => {
     const printLists = createPrintListService(dbUrl);
     const world = await isolatedDb.world.create({ data: { slug: `print-auth-${Date.now()}`, name: "Test" } });
     const list = await printLists.create({ worldId: world.id, name: "Secure Pack" });
-    const { connector: owner } = await connectorService.createConnector("Owner RTX");
-    const { connector: intruder } = await connectorService.createConnector("Intruder RTX");
+    const { connector: owner } = await connectorService.createConnector("Owner Maschinenraum");
+    const { connector: intruder } = await connectorService.createConnector("Intruder Maschinenraum");
     const job = await queue.enqueuePrintList({
       worldSlug: world.slug,
       printListId: list.id,
@@ -85,7 +85,7 @@ describe("LabelPrintQueueService", () => {
     const world = await isolatedDb.world.create({ data: { slug: `print-list-jobs-${Date.now()}`, name: "Test" } });
     const listA = await printLists.create({ worldId: world.id, name: "Pack A" });
     const listB = await printLists.create({ worldId: world.id, name: "Pack B" });
-    const { connector } = await connectorService.createConnector("RTX List");
+    const { connector } = await connectorService.createConnector("Maschinenraum List");
     await queue.enqueuePrintList({
       worldSlug: world.slug,
       printListId: listA.id,

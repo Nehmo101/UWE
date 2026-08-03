@@ -1,6 +1,6 @@
 # UWE Cookbook
 
-Native local model management for UWE Studio — **not** an Odysseus sidecar. The Cookbook helps admins choose, fit, and operate local LLM backends while respecting UWE privacy rules (RTX/local-only, no cloud for private context).
+Native local model management for UWE Studio — **not** an Odysseus sidecar. The Cookbook helps admins choose, fit, and operate local LLM backends while respecting UWE privacy rules (Maschinenraum/local-only, no cloud for private context).
 
 ## Overview
 
@@ -47,7 +47,7 @@ Cookbook feeds `@uwe/ai-brain` routing via `buildCookbookRuntimeProbe()` (`packa
 |----------|---------|
 | `AI_INFERENCE_PROVIDER` | `ollama` or `openai_compatible` |
 | `AI_INFERENCE_BASE_URL` | Local inference endpoint |
-| `RTX_BASE_URL` / `RTX_SERVICE_TOKEN` | RTX Worker endpoint and service token for local GPU/image workflows |
+| `ENGINE_BASE_URL` / `ENGINE_SERVICE_TOKEN` | Maschinenraum-Worker endpoint and service token for local GPU/image workflows |
 | `AI_LOCAL_ONLY` / `AI_DATENSCHUTZ_MODE` | Force local-only |
 | `COOKBOOK_GPU_VRAM_GB` | Override detected VRAM (CI / headless hosts) |
 | `COOKBOOK_GPU_NAME` | GPU label for override profile |
@@ -80,16 +80,16 @@ docker exec -it ollama ollama pull llama3.1:8b
 ### Maschinenraum (UWE host ← GPU PC, outbound)
 
 On the GPU machine, run the **outbound Maschinenraum** (`pnpm connector:start`,
-`tools/uwe-rtx-connector`). It connects outbound to the host and opens no inbound port.
-See [rtx-connector.md](rtx-connector.md).
+`tools/uwe-engine-connector`). It connects outbound to the host and opens no inbound port.
+See [engine-connector.md](engine-connector.md).
 
-> **Legacy (removed):** the old inbound RTX Agent (tool + ai-brain LLM client) was
+> **Legacy (removed):** the old inbound Maschinenraum-Agent (tool + ai-brain LLM client) was
 > removed. Existing installs may still have legacy agent-named aliases in code for
-> compatibility, but new docs and setup should use `RTX_BASE_URL` and
-> `RTX_SERVICE_TOKEN` for the RTX worker/image path
+> compatibility, but new docs and setup should use `ENGINE_BASE_URL` and
+> `ENGINE_SERVICE_TOKEN` for the Maschinenraum worker/image path
 > (see [removed-legacy-runtime.md](removed-legacy-runtime.md)).
 
-Use **private LAN IPs only** — public RTX URLs are blocked by `@uwe/security` and Cookbook warnings.
+Use **private LAN IPs only** — public Maschinenraum URLs are blocked by `@uwe/security` and Cookbook warnings.
 
 ## Admin UI
 
@@ -122,11 +122,11 @@ Add entries to `COOKBOOK_MODEL_REGISTRY` in `packages/cookbook/src/model-registr
 
 Re-run `pnpm --filter @uwe/cookbook test` after changes.
 
-## Admin Setup: KI & RTX Fallback
+## Admin Setup: KI & Maschinenraum Fallback
 
-Master-Admin-Wizard unter **`/admin/ai-gateway`** (Cookbook → KI & RTX Fallback):
+Master-Admin-Wizard unter **`/admin/ai-gateway`** (Cookbook → KI & Maschinenraum Fallback):
 
-1. **RTX verbinden** — `RTX_BASE_URL` + Service-Token prüfen, Health-Check
+1. **Maschinenraum verbinden** — `ENGINE_BASE_URL` + Service-Token prüfen, Health-Check
 2. **Routing-Modus** — `LOCAL_ONLY`, `LOCAL_THEN_CLOUD` (Standard), `CLOUD_ONLY`, `DISABLED`
 3. **Cloud-Fallback** — global aktivieren/deaktivieren (Owner only)
 4. **Provider einrichten** — OpenAI, Anthropic, Gemini, OpenRouter; API-Key sicher setzen

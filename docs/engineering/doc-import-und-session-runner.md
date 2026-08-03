@@ -184,7 +184,7 @@ der Datenbank, in die dieser Import ohnehin schreibt. `world-context.ts` nutzt d
 zweifach:
 
 1. **Deterministisch.** Trägt eine Überschrift den Namen einer vorhandenen Seite,
-   übernimmt der Import deren Typ. Kein Raten, kein RTX-Host nötig — genau die Fragen,
+   übernimmt der Import deren Typ. Kein Raten, kein Maschinenraum-Host nötig — genau die Fragen,
    an denen die Titelmuster scheitern, denn einem Namen sieht man nicht an, was er ist.
 2. **Als Kontext für die KI.** Die im Dokument tatsächlich vorkommenden Namen gehen mit
    in die Anfrage. Geschnitten wird am Text selbst: Eine Welt mit tausend Seiten passt
@@ -216,7 +216,7 @@ Drei Vorsichtsmaßnahmen, jede aus einem Fehltreffer entstanden:
 Was die Regeln nicht können, ist ein Name ohne Amtsbezeichnung: „Tibbik Moosfunke" ist
 eine Person, „Windhafen, die Boomstadt" ein Ort, und beides steht dem Titel nicht an.
 Dafür gibt es `@uwe/doc-import/ai` → `collectRoleHints`: Die Gliederung samt Anreißern
-geht **an den RTX-Host** (`providerMode: "local_rtx"`), zurück kommen Rollen zu
+geht **an den Maschinenraum-Host** (`providerMode: "local_engine"`), zurück kommen Rollen zu
 **vorhandenen** Pfaden. Alles, was nicht auf einen bekannten Abschnitt zeigt, fällt weg —
 das Modell kann diesem Import keine Inhalte hinzufügen.
 

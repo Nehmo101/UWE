@@ -222,7 +222,7 @@ describe("life admin service", () => {
     });
 
     const device = await service.createHardwareDevice({
-      name: "RTX Agent PC",
+      name: "Maschinenraum-Agent PC",
       role: "local-ai",
       status: "active",
       ipAddress: "192.168.1.50",

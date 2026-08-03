@@ -175,7 +175,7 @@ Coverage is **not** part of any CI gate — it is a local analysis tool with zer
 ```bash
 node scripts/coverage.mjs                          # default: packages/database
 node scripts/coverage.mjs packages/calendar        # one package
-node scripts/coverage.mjs packages/shared-utils apps/rtx-connector-client   # several
+node scripts/coverage.mjs packages/shared-utils apps/engine-connector-client   # several
 ```
 
 The script collects `*.test.ts(x)` files per package (under `src/`, or the package root for packages without `src/` such as `packages/config`), runs them with coverage, prints Node's per-file table, and exits non-zero if any package's tests fail.

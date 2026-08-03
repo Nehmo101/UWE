@@ -367,7 +367,7 @@ export function CampaignPdfImportPanel({ jobId, onComplete }: Props) {
         <CardHeader>
           <CardTitle>PDF zu Kampagne</CardTitle>
           <CardDescription>
-            Die lokale RTX-KI extrahiert Kampagnen-Entitäten. Vorschau und Seiten bleiben
+            Die lokale Maschinenraum-KI extrahiert Kampagnen-Entitäten. Vorschau und Seiten bleiben
             ausschließlich im DM-Bereich; gescannte PDFs benötigen vorab OCR. PDFs bis{" "}
             {MAX_PDF_MEGABYTES} MB werden direkt auf den UWE-Host hochgeladen.
           </CardDescription>

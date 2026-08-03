@@ -68,7 +68,7 @@ export const MASTER_ADMIN_PERMISSIONS: readonly AiFeaturePermission[] = [
 
 export const DEFAULT_PRIVACY_RULES: Record<AiFeatureCategory, AiPrivacyLevel> = {
   general_chat: "CLOUD_ALLOWED",
-  // DnD/world context may go to cloud when admin policy allows (RTX preferred, cloud fallback OK).
+  // DnD/world context may go to cloud when admin policy allows (Maschinenraum preferred, cloud fallback OK).
   // personal_brain remains hard local-only and cannot be changed via UI or API.
   dnd_world: "CLOUD_ALLOWED",
   personal_brain: "CLOUD_FORBIDDEN",
@@ -453,7 +453,7 @@ export class AiGatewayService {
    */
   /**
    * Feature gate for AI requests. Per-user grants existed to ration cloud spend
-   * and to hand out cloud access selectively; with the RTX host as the only
+   * and to hand out cloud access selectively; with the Maschinenraum host as the only
    * backend there is nothing to ration. Whoever can reach the app can use its
    * AI — the app itself is already behind the access gate.
    */
@@ -471,14 +471,14 @@ export class AiGatewayService {
 
 
   /**
-   * The RTX host is the only backend, so the config can only switch AI on or
+   * The Maschinenraum host is the only backend, so the config can only switch AI on or
    * off — there is no provider left to choose.
    */
-  resolveProviderModeFromConfig(config: AiGatewayConfigRecord): "local_rtx" {
+  resolveProviderModeFromConfig(config: AiGatewayConfigRecord): "local_engine" {
     if (config.routingMode === "DISABLED") {
       throw new AiGatewayDisabledError("KI ist systemweit deaktiviert.");
     }
-    return "local_rtx";
+    return "local_engine";
   }
 }
 

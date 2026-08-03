@@ -1,7 +1,7 @@
 /**
  * Connector token handling.
  *
- * A connector token authenticates an Maschinenraum to the UWE Host. The
+ * A connector token authenticates a Maschinenraum to the UWE Host. The
  * raw token is shown to the operator exactly once (or set manually in the
  * connector's .env) — the host only ever stores a SHA-256 hash, never the
  * plaintext. Verification is timing-safe.

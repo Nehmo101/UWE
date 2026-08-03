@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { canUseRtxAi } from "@uwe/auth";
+import { canUseEngineAi } from "@uwe/auth";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
 import { getSessionToken } from "@/src/lib/auth";
 import { canEnterBrain } from "@/src/lib/owner";
@@ -10,9 +10,9 @@ import { canEnterBrain } from "@/src/lib/owner";
  * receives 401/403.
  *
  * `options.requireAi` verlangt zusätzlich das KI-Flag (G-KI) — für die Routen,
- * die den RTX-Host beschäftigen. Das Brain-Häkchen bringt jemanden in den
+ * die den Maschinenraum-Host beschäftigen. Das Brain-Häkchen bringt jemanden in den
  * Bereich; ob er darin Inferenz auslösen darf, ist die zweite Frage. Der Owner
- * geht über `canUseRtxAi` durch.
+ * geht über `canUseEngineAi` durch.
  */
 export async function requireBrainOwnerAuth(
   options: { requireAi?: boolean } = {},
@@ -32,11 +32,11 @@ export async function requireBrainOwnerAuth(
         { status: 403 },
       );
     }
-    if (options.requireAi && !canUseRtxAi(auth.toAuthUser(session.user))) {
+    if (options.requireAi && !canUseEngineAi(auth.toAuthUser(session.user))) {
       return NextResponse.json(
         {
           error:
-            "Für dieses Konto ist die RTX-KI nicht freigeschaltet. Der Owner richtet das im Command Center ein.",
+            "Für dieses Konto ist die Maschinenraum-KI nicht freigeschaltet. Der Owner richtet das im Command Center ein.",
         },
         { status: 403 },
       );

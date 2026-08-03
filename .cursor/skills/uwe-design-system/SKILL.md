@@ -17,7 +17,7 @@ root — read [`design-system/README.md`](../../design-system/README.md) first.
   property. Swap `data-uwe-theme` for any of 9 themes (`design-system/tokens/colors.css`).
 - **Components:** compiled to `design-system/_ds_bundle.js` →
   `window.UWEDesignSystem_f43eab` (Button, Card, StatCard, Badge, Tag, EmptyState,
-  Input/Textarea/Select, VisibilityBadge, PageTypeBadge, RtxStatusBadge,
+  Input/Textarea/Select, VisibilityBadge, PageTypeBadge, EngineStatusBadge,
   SecretReveal, PageHeader, Breadcrumb, SidebarNav, Brand). See each component's
   `.prompt.md` under `design-system/components/*`.
 - **Icons:** Lucide (`lucide-react` in-product, CDN in the kit). No emoji.

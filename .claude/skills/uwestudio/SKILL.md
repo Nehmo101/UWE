@@ -58,7 +58,7 @@ Zwei Sonderfälle, die man in Studio ständig trifft:
   `packages/auth/src/dm-section.ts`. Nur wer das Studio-Häkchen trägt, liest sie —
   Welt-Zuordnung reicht nicht, und die Vorschau-als-Spieler fällt heraus.
 - **`User.aiAccess`** — kein fünftes App-Häkchen, sondern eine Kontofähigkeit:
-  darf diese Adresse die RTX-KI benutzen. Durchgesetzt über `canUseRtxAi`, die
+  darf diese Adresse die Maschinenraum-KI benutzen. Durchgesetzt über `canUseEngineAi`, die
   Pfadregel für KI-API-Routen und `require*AiActionAuth` für KI-Server-Actions.
 
 Studio zeigt bewusst auch `dm_only`-Inhalte. Die dürfen **niemals** in

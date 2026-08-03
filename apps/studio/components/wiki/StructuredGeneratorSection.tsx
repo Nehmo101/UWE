@@ -14,8 +14,8 @@ interface Props {
   pageType: string;
   pageId: string;
   worldId: string;
-  rtxReady: boolean;
-  rtxEnabled: boolean;
+  engineReady: boolean;
+  engineEnabled: boolean;
 }
 
 export async function StructuredGeneratorSection({
@@ -25,8 +25,8 @@ export async function StructuredGeneratorSection({
   pageType,
   pageId,
   worldId,
-  rtxReady,
-  rtxEnabled,
+  engineReady,
+  engineEnabled,
 }: Props) {
   if (!isStructuredGeneratorTarget(pageType)) {
     return null;
@@ -61,8 +61,8 @@ export async function StructuredGeneratorSection({
         pageTitle={pageTitle}
         schema={schema}
         action={action}
-        rtxReady={rtxReady}
-        rtxEnabled={rtxEnabled}
+        engineReady={engineReady}
+        engineEnabled={engineEnabled}
       />
     </div>
   );

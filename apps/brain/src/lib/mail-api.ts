@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { canUseRtxAi } from "@uwe/auth";
+import { canUseEngineAi } from "@uwe/auth";
 import { requireSameOriginMutation } from "@uwe/security";
 import { canEnterBrain } from "@/src/lib/owner";
 import { getCurrentUser } from "@/src/lib/auth";
@@ -44,21 +44,21 @@ export async function requireBrainMailApi(): Promise<MailApiAuth> {
 }
 
 /**
- * Mail-Route, die den RTX-Host beschäftigt (Zusammenfassung, Antwortentwurf,
+ * Mail-Route, die den Maschinenraum-Host beschäftigt (Zusammenfassung, Antwortentwurf,
  * Postfach-Chat): zusätzlich zum Häkchen `Brain` braucht sie das KI-Flag.
- * Der Owner geht über `canUseRtxAi` durch.
+ * Der Owner geht über `canUseEngineAi` durch.
  */
 export async function requireBrainMailAi(request: Request): Promise<MailApiAuth> {
   const auth = await requireBrainMailMutation(request, "ai");
   if (auth.error) return auth;
 
   const user = await getCurrentUser();
-  if (!user || !canUseRtxAi(user)) {
+  if (!user || !canUseEngineAi(user)) {
     return {
       error: NextResponse.json(
         {
           error:
-            "Für dieses Konto ist die RTX-KI nicht freigeschaltet. Der Owner richtet das im Command Center ein.",
+            "Für dieses Konto ist die Maschinenraum-KI nicht freigeschaltet. Der Owner richtet das im Command Center ein.",
         },
         { status: 403 },
       ),

@@ -14,13 +14,13 @@ import {
  * through unnoticed.
  */
 describe("personal-brain-privacy", () => {
-  it("names local_rtx as the only provider mode", () => {
-    assert.deepEqual([...PERSONAL_BRAIN_ALLOWED_PROVIDER_MODES], ["local_rtx"]);
+  it("names local_engine as the only provider mode", () => {
+    assert.deepEqual([...PERSONAL_BRAIN_ALLOWED_PROVIDER_MODES], ["local_engine"]);
   });
 
   it("allows the local provider", () => {
-    assert.equal(isPersonalBrainContextAllowedForProvider("local_rtx"), true);
-    assert.doesNotThrow(() => assertPersonalBrainLocalOnly("local_rtx"));
+    assert.equal(isPersonalBrainContextAllowedForProvider("local_engine"), true);
+    assert.doesNotThrow(() => assertPersonalBrainLocalOnly("local_engine"));
   });
 
   it("rejects every other provider string, including the retired cloud modes", () => {
@@ -30,7 +30,7 @@ describe("personal-brain-privacy", () => {
         false,
         `${provider || "(empty)"} must not be accepted`,
       );
-      assert.throws(() => assertPersonalBrainLocalOnly(provider), /RTX-Host/);
+      assert.throws(() => assertPersonalBrainLocalOnly(provider), /Maschinenraum-Host/);
     }
   });
 });

@@ -1,6 +1,6 @@
 ---
 name: deployment-cloudflare-check
-description: Verify UWE self-hosting and Cloudflare Tunnel deployment — ENV, tunnel scope, Access policies, Studio protection, RTX isolation, health checks, and production safety warnings. Use before going live, after deployment changes, or when troubleshooting Cloudflare/Proxy setup.
+description: Verify UWE self-hosting and Cloudflare Tunnel deployment — ENV, tunnel scope, Access policies, Studio protection, Maschinenraum isolation, health checks, and production safety warnings. Use before going live, after deployment changes, or when troubleshooting Cloudflare/Proxy setup.
 ---
 
 # UWE Deployment / Cloudflare Check
@@ -8,7 +8,7 @@ description: Verify UWE self-hosting and Cloudflare Tunnel deployment — ENV, t
 ## Architecture rule
 
 **Only UWE Studio (:3000) and Portal (:3001) behind Cloudflare Tunnel.**  
-**Never** expose RTX Agent, Ollama, or LM Studio to the internet.
+**Never** expose Maschinenraum-Agent, Ollama, or LM Studio to the internet.
 
 ## Check workflow
 
@@ -29,7 +29,7 @@ pnpm test:security   # optional pre-flight
 
 UWE surfaces deployment issues via:
 
-- `/hardware` — Homelab Cockpit (Service-Status, Runbooks, Security Checklist, RTX-URL-Warnungen)
+- `/hardware` — Homelab Cockpit (Service-Status, Runbooks, Security Checklist, Maschinenraum-URL-Warnungen)
 - `/today` — System-Ampel mit DB/Backup/Cloudflare und kritischen Homelab-Warnungen
 - `packages/database/src/production-safety.ts` — startup warnings
 - `packages/database/src/studio-security.ts` — Studio exposure assessment

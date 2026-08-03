@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { NavIcon, RtxStatusBadge, type RtxConnectorState } from "@uwe/shared-ui";
+import { NavIcon, EngineStatusBadge, type EngineConnectorState } from "@uwe/shared-ui";
 import { MailAccountManager } from "./MailAccountManager";
 import { MailRulesPanel } from "./MailRulesPanel";
 import type { MailAccountVM, MailConfigVM, MailLogVM } from "./mail-types";
@@ -10,7 +10,7 @@ interface MailSettingsProps {
   accounts: MailAccountVM[];
   config: MailConfigVM;
   logs: MailLogVM[];
-  rtxState: RtxConnectorState;
+  engineState: EngineConnectorState;
 }
 
 /**
@@ -44,7 +44,7 @@ function SettingCard({
   );
 }
 
-export function MailSettings({ accounts, config, logs, rtxState }: MailSettingsProps) {
+export function MailSettings({ accounts, config, logs, engineState }: MailSettingsProps) {
   return (
     <div className="flex min-w-0 flex-1 flex-col bg-background">
       <div className="flex items-center gap-3 border-b border-border/60 px-6 pb-4 pt-5">
@@ -68,10 +68,10 @@ export function MailSettings({ accounts, config, logs, rtxState }: MailSettingsP
           nichts schaltet, ist schlimmer als kein Schalter — also stehen hier
           jetzt die Tatsachen.
         */}
-        <SettingCard icon="cpu" title="KI &amp; RTX" action={<RtxStatusBadge state={rtxState} />}>
+        <SettingCard icon="cpu" title="KI &amp; Maschinenraum" action={<EngineStatusBadge state={engineState} />}>
           <p className="m-0 text-xs text-muted-foreground">
-            Zusammenfassung, Antwortentwurf, Priorisierung und Mail-Chat laufen über den RTX Host
-            Connector — auf deiner eigenen GPU. Es gibt keinen Cloud-Anbieter und keinen Schalter
+            Zusammenfassung, Antwortentwurf, Priorisierung und Mail-Chat laufen über den Maschinenraum
+            — auf deiner eigenen GPU. Es gibt keinen Cloud-Anbieter und keinen Schalter
             dafür: läuft der Connector nicht, bleibt die Funktion aus, statt auszuweichen.
           </p>
           <p className="mb-0 mt-2 text-xs text-muted-foreground">

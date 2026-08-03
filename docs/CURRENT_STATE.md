@@ -11,19 +11,19 @@ Stand: 2026-07-28 (Doku-Sync nach Abspeckung N.3 / Häkchen-Modell / Family / At
 - **UWE Host** — zwei gleichwertige Pfade:
   Linux + Node.js 22 + `pnpm` + `systemd` (`deploy/systemd/uwe.service`,
   `deploy/scripts/setup-uwe-host.sh`) **oder** Windows über den Command Center
-  (`apps/rtx-connector-client`, Tauri — startet Studio/Portal/Brain/Landing als
-  Kind-Prozesse, Daten unter `%LOCALAPPDATA%\UWE\rtx-connector-client\host`).
-- **Maschinenraum** — optionaler **outbound** Worker (`tools/uwe-rtx-connector`,
-  `pnpm connector:start`). Öffnet keinen Port am RTX-PC, verbindet sich ausschließlich
-  ausgehend zum Host. Siehe [rtx-connector.md](rtx-connector.md).
+  (`apps/engine-connector-client`, Tauri — startet Studio/Portal/Brain/Landing als
+  Kind-Prozesse, Daten unter `%LOCALAPPDATA%\UWE\engine-connector-client\host`).
+- **Maschinenraum** — optionaler **outbound** Worker (`tools/uwe-engine-connector`,
+  `pnpm connector:start`). Öffnet keinen Port am Maschinenraum-PC, verbindet sich ausschließlich
+  ausgehend zum Host. Siehe [engine-connector.md](engine-connector.md).
 - **Cloudflare Tunnel / Access** — optional davor; Studio/Portal/Landing, Brain nur
-  mit `BRAIN_PUBLIC_TUNNEL=1`, niemals RTX/Ollama.
+  mit `BRAIN_PUBLIC_TUNNEL=1`, niemals Maschinenraum/Ollama.
 - **Datenbanken** — drei SQLite-Dateien: `uwe.db` (Kern), `uwe-brain.db`
   (owner-privat), `uwe-family.db` (geteilt); optional PostgreSQL für den Kern
   (`schema.postgresql.prisma`). Grenze: `packages/product-contracts/src/prisma-model-boundaries.ts`.
 
 **Nicht aktiv (entfernt/deprecated):** Docker, Windows-One-Click-Installer und der
-inbound RTX-Agent. Details: [removed-legacy-runtime.md](removed-legacy-runtime.md).
+inbound Maschinenraum-Agent. Details: [removed-legacy-runtime.md](removed-legacy-runtime.md).
 
 ## Aktive CI-Wahrheit
 
@@ -46,7 +46,7 @@ Pflicht- oder Self-hosted-Gate. Details: [engineering/ci.md](engineering/ci.md).
 - `apps/family` — Familienbereich (Port 3004, loopback-bind): Verträge, Dokumente,
   Küche, Kalender (`uwe-family.db`).
 - `apps/landing` — Apex-Startseite (Port 3103): genau drei Routen, keine Inhalte.
-- `apps/rtx-connector-client` — Command Center (Tauri-Desktop-App): Host- und
+- `apps/engine-connector-client` — Command Center (Tauri-Desktop-App): Host- und
   Connector-Verwaltung, startet die vier Web-Apps auf Windows.
 
 Zugriff läuft über das **Häkchen-Modell** (vier Boolean-Flächen
@@ -63,7 +63,7 @@ wurde am 2026-07-26 entfernt (`packages/auth/src/area-access.ts`,
 `@uwe/calendar`, `@uwe/mail`, `@uwe/mail-core`, `@uwe/dnd-api`,
 `@uwe/image-studio`, `@uwe/github-issues`, `@uwe/kitchen`, `@uwe/scan-inbox`,
 `@uwe/passkeys`, `@uwe/security-tests`). Der Karteneditor **Terra** lebt außerhalb
-des Workspace unter `terra/`. Aktive Tools: `tools/uwe-rtx-connector`,
+des Workspace unter `terra/`. Aktive Tools: `tools/uwe-engine-connector`,
 `tools/uwe-host-command-center`.
 
 ## Feature-Reifegrade (Kurzfassung)
@@ -76,7 +76,7 @@ Vollständig: [FEATURE_MATURITY_MATRIX.md](FEATURE_MATURITY_MATRIX.md).
   Secrets/Reveal (Page + Block), Kanonprüfung, Prepare-for-next-session,
   Image Studio (Masken-Canvas), Import Undo,
   Auto-Backup-Scheduler, Life-Brain Retrieval — implementiert
-  (RTX-Embeddings + Keyword-Fallback), Qualität RTX-abhängig;
+  (Maschinenraum-Embeddings + Keyword-Fallback), Qualität Maschinenraum-abhängig;
   aus den Backlog-Wellen: Charaktersheet (Voll-5e-Kern),
   Party-Treasury/Inventar, strukturierte Generatoren (NPC/Quest/Item, Review-pflichtig),
   Statblock Studio + Exporte, Encounter-XP-Budget, „Was ist offen?“-View,
@@ -86,7 +86,7 @@ Vollständig: [FEATURE_MATURITY_MATRIX.md](FEATURE_MATURITY_MATRIX.md).
   Admin-Checklist, Migration Inspector, Import-Zentrale (Multi-Quelle),
   Miniaturen-Sammlung, `db:deploy:safe` (Auto-Backup vor Migration).
 - **Lab / nicht production-ready:** Performance-Budget / große Testwelt.
-- **Deprecated/Removed:** Docker, Windows-One-Click-Installer, inbound RTX-Agent.
+- **Deprecated/Removed:** Docker, Windows-One-Click-Installer, inbound Maschinenraum-Agent.
 
 ## Produkt-Backlog (bestätigt offen)
 
@@ -110,9 +110,9 @@ voller Secret-Vault, semantische Suche (Embeddings).
 
 ## Weitere bekannte Lücken (ohne festen Backlog-Slot)
 
-- **Life-Brain Retrieval** — implementiert (Beta): RTX-Embeddings + Keyword-Fallback
+- **Life-Brain Retrieval** — implementiert (Beta): Maschinenraum-Embeddings + Keyword-Fallback
   (`/api/life-brain/search`, Such-/Index-Panels + Reindex auf `/life-brain`); kein
-  Cloud-Fallback, Qualität RTX-abhängig.
+  Cloud-Fallback, Qualität Maschinenraum-abhängig.
 - **Performance** — keine Browser-LCP-Gates, nur CI-Smoke + Bundle-Budget.
 - **Capture Bild-Upload** — implementiert (`/api/capture/upload`, Quick Capture); UI auf `/capture`.
 - **Drei-Produkte-Split (Portal/Studio/Brain)** — abgeschlossen und überholt:

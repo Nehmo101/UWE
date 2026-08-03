@@ -8,7 +8,7 @@
  * that promise is the reason this validator hands out numbers and enum
  * members only.
  *
- * Difference to its siblings (`plot-fill-proposal.ts`, `rtx-asset-proposal.ts`):
+ * Difference to its siblings (`plot-fill-proposal.ts`, `engine-asset-proposal.ts`):
  * those REJECT a malformed proposal. This one CLAMPS. A world draft that
  * fails validation would leave the user with nothing; a clamped one leaves
  * them with a boring map they can edit. Only four things are fatal — a

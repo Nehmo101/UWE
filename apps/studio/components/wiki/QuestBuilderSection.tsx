@@ -14,8 +14,8 @@ interface Props {
   pageType: string;
   pageId: string;
   worldId: string;
-  rtxReady: boolean;
-  rtxEnabled: boolean;
+  engineReady: boolean;
+  engineEnabled: boolean;
 }
 
 export async function QuestBuilderSection({
@@ -25,8 +25,8 @@ export async function QuestBuilderSection({
   pageType,
   pageId,
   worldId,
-  rtxReady,
-  rtxEnabled,
+  engineReady,
+  engineEnabled,
 }: Props) {
   if (pageType !== "quest") {
     return null;
@@ -56,8 +56,8 @@ export async function QuestBuilderSection({
       schema={schema}
       action={action}
       npcOptions={npcs.map((npc) => ({ title: npc.title, slug: npc.slug }))}
-      rtxReady={rtxReady}
-      rtxEnabled={rtxEnabled}
+      engineReady={engineReady}
+      engineEnabled={engineEnabled}
     />
   );
 }
