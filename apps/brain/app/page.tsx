@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { dayIndex } from "@uwe/shared-ui";
 import { getCurrentUser } from "@/src/lib/auth";
 import { canEnterBrain } from "@/src/lib/owner";
 import { BrainShell, BrainDenied } from "@/src/components/BrainShell";
@@ -36,6 +37,9 @@ export default async function BrainHome() {
       active="/"
       title="UWE Brain"
       lede="Dein privater Alltags- und Wissensbereich — Daily Admin OS und Personal Brain, lokal auf deiner Hardware. Owner-gesichert; online nur nach Owner-Login."
+      // Gleiche Regel wie in Family: der Einstieg bekommt die Bühne, die
+      // Arbeitsseiten nicht. `/today` hatte sie schon, die Startseite nicht.
+      sceneIndex={dayIndex()}
     >
       <div
         style={{

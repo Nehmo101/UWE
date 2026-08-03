@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { EmptyState } from "@uwe/shared-ui";
+import { EmptyState, dayIndex } from "@uwe/shared-ui";
 import { createFamilyService } from "@uwe/database/family-service";
 import { familyPrisma } from "@uwe/database/family-client";
 import { createFamilyMemberService } from "@uwe/family-core";
@@ -43,6 +43,11 @@ export default async function FamilyStartPage() {
       title="Family"
       eyebrow="Gemeinsamer Bereich"
       lede={`Hallo ${user.displayName}. Was hier steht, sehen alle mit dem Häkchen Family — ausser deinem privaten Chat.`}
+      // Die Bühne trägt den Einstieg, die Unterseiten bleiben ruhig. Ohne
+      // diesen Index rendert `FamilyShell` einen schlichten Kopf — und dann
+      // lief die App bis hierher ohne jede Szene, obwohl der family-Pool und
+      // die vier family-Clips erzeugt und ausgeliefert werden.
+      sceneIndex={dayIndex()}
     >
       <div className="family-kpis">
         <Link className="family-kpi" href="/chat">
