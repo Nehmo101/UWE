@@ -61,7 +61,7 @@ After generator Apply:
 | Cloud privacy | `packages/ai-brain/src/privacy.test.ts` |
 | Public leak scanner | `packages/security-tests/src/public-leak-scanner.ts` |
 
-## Manual smoke (with RTX or `AI_USE_MOCK=true`)
+## Manual smoke (with Maschinenraum or `AI_USE_MOCK=true`)
 
 See `docs/dnd-generator-upgrade.md` — NPC, handout, canon check, Apply/Discard flows.
 

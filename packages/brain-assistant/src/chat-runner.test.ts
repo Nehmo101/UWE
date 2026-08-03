@@ -12,8 +12,8 @@ import path from "node:path";
 const runnerSource = readFileSync(path.join(import.meta.dirname, "chat-runner.ts"), "utf8");
 
 describe("chat-runner privacy invariants", () => {
-  it("pins providerMode to local_rtx", () => {
-    assert.match(runnerSource, /providerMode:\s*"local_rtx"/);
+  it("pins providerMode to local_engine", () => {
+    assert.match(runnerSource, /providerMode:\s*"local_engine"/);
     assert.doesNotMatch(runnerSource, /providerMode:\s*"(cloud|auto)"/);
   });
 

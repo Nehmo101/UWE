@@ -4,7 +4,7 @@
  * Exported to window for index.html to mount.
  */
 const { Button, Card, StatCard, Badge, Tag, PageHeader, Breadcrumb,
-        VisibilityBadge, PageTypeBadge, RtxStatusBadge, SecretReveal } = window.UWEDesignSystem_f43eab;
+        VisibilityBadge, PageTypeBadge, EngineStatusBadge, SecretReveal } = window.UWEDesignSystem_f43eab;
 
 const Icon = ({ n, s = 16 }) => React.createElement("i", { "data-lucide": n, style: { width: s, height: s, display: "inline-flex", flex: "none" } });
 
@@ -24,7 +24,7 @@ function TodayScreen() {
       <PageHeader
         title="Heute"
         summary="Dein tägliches Admin-Cockpit — Capture, Projekte, Sessions und Systemstatus auf einen Blick."
-        meta={<><Badge tone="neutral">Dienstag, 1. Juli</Badge><RtxStatusBadge state="online" /></>}
+        meta={<><Badge tone="neutral">Dienstag, 1. Juli</Badge><EngineStatusBadge state="online" /></>}
         actions={<><Button variant="secondary" icon={<Icon n="inbox" />}>Capture</Button><Button variant="accent" icon={<Icon n="plus" />}>Notiz</Button></>}
       />
 
@@ -79,9 +79,9 @@ function TodayScreen() {
             ))}
           </Card>
           <div style={{ height: 16 }} />
-          <Card title="KI & RTX">
+          <Card title="KI & Maschinenraum">
             <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: "var(--uwe-text-sm)", color: "var(--uwe-fg-muted)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span>Lokale RTX</span><RtxStatusBadge state="online" /></div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span>Lokaler Maschinenraum</span><EngineStatusBadge state="online" /></div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span>Cloud-Fallback</span><Badge tone="neutral">Nur Allg. Chat</Badge></div>
               <p style={{ margin: "4px 0 0", lineHeight: 1.5 }}>Brain & Weltwissen bleiben lokal — kein Cloud-Zugriff.</p>
             </div>

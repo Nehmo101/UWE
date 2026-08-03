@@ -221,7 +221,7 @@ export interface ImageStudioPortalSettings {
 export interface ImageStudioSettings {
   enabled: boolean;
   backgroundRemovalEnabled: boolean;
-  rtxAgentConfigured: boolean;
+  engineAgentConfigured: boolean;
   connectorImageEnabled: boolean;
   localImageBackendReady: boolean;
   source: "portal" | "env";
@@ -287,7 +287,7 @@ function buildImageStudioSettings(stored?: ImageStudioPortalSettings): ImageStud
   return {
     enabled: status.enabled,
     backgroundRemovalEnabled: status.backgroundRemovalEnabled,
-    rtxAgentConfigured: status.rtxAgentConfigured,
+    engineAgentConfigured: status.engineAgentConfigured,
     connectorImageEnabled: status.connectorImageEnabled,
     localImageBackendReady: status.localImageBackendReady,
     source: status.source,

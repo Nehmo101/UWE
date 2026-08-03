@@ -178,7 +178,7 @@ Siehe auch `docs/cloudflare-access.md` und Tab **Cloudflare** im System-Hub.
 |-------|----------------|
 | Tunnel aktiv | `/system?tab=cloudflare` → „Tunnel aktiv“ |
 | TRUST_PROXY | Env + Studio Security Karte |
-| RTX nicht öffentlich | RTX Exposure Karte = „Privates Netz“ |
+| Maschinenraum nicht öffentlich | Maschinenraum Exposure Karte = „Privates Netz“ |
 | Studio hinter Access | `/studio/*` erfordert Cloudflare Access |
 
 ---

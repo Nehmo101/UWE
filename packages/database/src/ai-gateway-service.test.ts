@@ -45,7 +45,7 @@ describe("ai-gateway-service", () => {
   });
 
   it("DEFAULT_PRIVACY_RULES reflects W0 policy: dnd_world CLOUD_ALLOWED, personal_brain hard-blocked", () => {
-    // W0 policy: DnD world context may go to cloud (RTX preferred, cloud fallback OK)
+    // W0 policy: DnD world context may go to cloud (Maschinenraum preferred, cloud fallback OK)
     assert.equal(DEFAULT_PRIVACY_RULES.dnd_world, "CLOUD_ALLOWED");
     // personal_brain remains permanently CLOUD_FORBIDDEN — not configurable
     assert.equal(DEFAULT_PRIVACY_RULES.personal_brain, "CLOUD_FORBIDDEN");

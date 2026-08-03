@@ -47,7 +47,7 @@ export function AiGatewayModelsTab({
               render: (featureKey) => {
                 const override = data.config.featureModels?.[featureKey] ?? {};
                 if (featureKey === "personal_brain") {
-                  return <span className="text-muted-foreground">RTX (fest)</span>;
+                  return <span className="text-muted-foreground">Maschinenraum (fest)</span>;
                 }
                 return (
                   <select
@@ -59,7 +59,7 @@ export function AiGatewayModelsTab({
                     }
                   >
                     <option value="">— Standard —</option>
-                    <option value="local_rtx">RTX (lokal)</option>
+                    <option value="local_engine">Maschinenraum (lokal)</option>
                   </select>
                 );
               },

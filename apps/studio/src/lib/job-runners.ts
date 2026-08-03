@@ -39,8 +39,8 @@ import {
   reindexPersonalBrain,
   resolveAiBrainSettings,
   runBrainAction,
-  buildRtxCaptureProposalPrompt,
-  parseRtxCaptureProposalResponse,
+  buildEngineCaptureProposalPrompt,
+  parseEngineCaptureProposalResponse,
   type AiProviderId,
   type AiTaskType,
 } from "@uwe/ai-brain";
@@ -321,7 +321,7 @@ export interface BrainActionJobPayload {
 export interface DeferredAiPromptJobPayload {
   deferredAiPrompt: true;
   prompt: string;
-  providerMode: "auto" | "local_rtx" | "cloud";
+  providerMode: "auto" | "local_engine" | "cloud";
   contextMode:
     | "general_chat"
     | "brain"
@@ -339,7 +339,7 @@ async function runDeferredAiPromptJob(ctx: JobRunnerContext): Promise<Record<str
     throw new Error("Deferred KI-Prompt ohne prompt.");
   }
 
-  await ctx.jobs.updateProgress(ctx.jobId, 10, "Warte auf RTX…");
+  await ctx.jobs.updateProgress(ctx.jobId, 10, "Warte auf Maschinenraum…");
   await assertNotCancelled(ctx.jobs, ctx.jobId);
 
   const gatewayUser = await resolveGatewayUserById(ctx.job.userId);
@@ -361,7 +361,7 @@ async function runDeferredAiPromptJob(ctx: JobRunnerContext): Promise<Record<str
   );
 
   if (result.kind === "deferred") {
-    throw new Error("RTX weiterhin offline — Job wird erneut versucht.");
+    throw new Error("Maschinenraum weiterhin offline — Job wird erneut versucht.");
   }
 
   await ctx.jobs.updateProgress(ctx.jobId, 100, "KI-Prompt abgeschlossen");
@@ -388,14 +388,14 @@ async function runCaptureTriageProposalJob(ctx: JobRunnerContext): Promise<Recor
   }
 
   const fallback = buildCaptureAiProposal(capture);
-  const prompt = buildRtxCaptureProposalPrompt({
+  const prompt = buildEngineCaptureProposalPrompt({
     title: capture.title,
     content: capture.content,
     captureType: capture.captureType,
     url: capture.url,
   });
 
-  await ctx.jobs.updateProgress(ctx.jobId, 20, "RTX-Klassifikation…");
+  await ctx.jobs.updateProgress(ctx.jobId, 20, "Maschinenraum-Klassifikation…");
   await assertNotCancelled(ctx.jobs, ctx.jobId);
 
   const gatewayUser = await resolveGatewayUserById(ctx.job.userId);
@@ -407,7 +407,7 @@ async function runCaptureTriageProposalJob(ctx: JobRunnerContext): Promise<Recor
   const result = await executeAiPrompt(
     {
       prompt,
-      providerMode: "local_rtx",
+      providerMode: "local_engine",
       contextMode: "general_chat",
       useMock: payload.useMock ?? process.env.AI_USE_MOCK === "true",
     },
@@ -415,10 +415,10 @@ async function runCaptureTriageProposalJob(ctx: JobRunnerContext): Promise<Recor
   );
 
   if (result.kind === "deferred") {
-    throw new Error("RTX offline — Capture-Vorschlag wird erneut versucht.");
+    throw new Error("Maschinenraum offline — Capture-Vorschlag wird erneut versucht.");
   }
 
-  const proposal = parseRtxCaptureProposalResponse(result.text, fallback);
+  const proposal = parseEngineCaptureProposalResponse(result.text, fallback);
   await createCaptureTriageService(prisma).applyAiProposal(captureId, proposal);
   await ctx.jobs.updateProgress(ctx.jobId, 100, "Capture-Vorschlag aktualisiert");
   return { captureId, source: proposal.source, suggestedTarget: proposal.suggestedTarget };

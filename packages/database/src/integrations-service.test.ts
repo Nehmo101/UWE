@@ -19,8 +19,8 @@ describe("image studio status helpers", () => {
 
   it("extracts lastError from project metadata", () => {
     assert.equal(
-      extractImageStudioErrorMessage({ lastError: "RTX offline" }),
-      "RTX offline",
+      extractImageStudioErrorMessage({ lastError: "Maschinenraum offline" }),
+      "Maschinenraum offline",
     );
     assert.equal(extractImageStudioErrorMessage({}), null);
     assert.equal(extractImageStudioErrorMessage(null), null);
@@ -52,9 +52,9 @@ describe("ImageStudioService markProjectFailed", () => {
 
   it("sets failed status and stores error metadata", async () => {
     const imageStudio = createImageStudioService(db);
-    const failed = await imageStudio.markProjectFailed(projectId, "RTX Agent offline");
+    const failed = await imageStudio.markProjectFailed(projectId, "Maschinenraum-Agent offline");
 
     assert.equal(failed.status, "failed");
-    assert.equal(extractImageStudioErrorMessage(failed.metadata), "RTX Agent offline");
+    assert.equal(extractImageStudioErrorMessage(failed.metadata), "Maschinenraum-Agent offline");
   });
 });

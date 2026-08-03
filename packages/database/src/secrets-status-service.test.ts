@@ -48,7 +48,7 @@ describe("secrets status service", () => {
         ?.items.find((item) => item.id === "stale-cloud-key:openai-api-key");
       assert.ok(stale);
       assert.equal(stale?.maskedHint, null);
-      assert.match(stale?.description ?? "", /RTX-Host/);
+      assert.match(stale?.description ?? "", /Maschinenraum-Host/);
       assert.ok(!JSON.stringify(snapshot).includes(secret));
       assert.ok(!JSON.stringify(snapshot).includes("sk-openai-test-key-abcdefghij"));
     } finally {

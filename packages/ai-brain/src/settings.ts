@@ -4,7 +4,7 @@ import type { AiBrainSettings, AiProviderId, AiProviderSettings, ApiKeyStore } f
 const PROVIDER_DEFINITIONS: Omit<AiProviderSettings, "enabled" | "hasApiKey">[] = [
   {
     id: "ollama",
-    label: "Lokale KI (RTX)",
+    label: "Lokale KI (Maschinenraum)",
     isLocal: true,
     baseUrl: "http://localhost:11434",
     defaultModel: "llama3.2",
@@ -117,7 +117,7 @@ export function getProviderDefinition(providerId: AiProviderId) {
 
 /**
  * Placeholder key store. Cloud providers were removed, so nothing needs a key —
- * the local RTX provider talks to the host over the connector, not an API key.
+ * the local Maschinenraum provider talks to the host over the connector, not an API key.
  * Kept so the router keeps one uniform provider-construction path.
  */
 export function createEmptyApiKeyStore(): ApiKeyStore {

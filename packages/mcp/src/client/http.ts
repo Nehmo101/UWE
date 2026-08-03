@@ -3,7 +3,7 @@
  *
  * Requests carry no `Origin` header, so UWE's CSRF guard treats them as
  * non-browser clients and falls through to bearer-token / role checks — the same
- * path `tools/uwe-rtx-connector` uses. Token material never reaches a message
+ * path `tools/uwe-engine-connector` uses. Token material never reaches a message
  * body returned to the model.
  */
 import type { SurfaceEndpoint } from "./config";

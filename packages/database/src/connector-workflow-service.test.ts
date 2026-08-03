@@ -57,9 +57,9 @@ describe("ConnectorWorkflowService", () => {
     const workflow = createConnectorWorkflowService(isolatedDb);
 
     // Offline connector (never sends heartbeat) — must be excluded.
-    await connectors.createConnector("Offline RTX");
+    await connectors.createConnector("Offline Maschinenraum");
 
-    const online = await connectors.createConnector("Online RTX");
+    const online = await connectors.createConnector("Online Maschinenraum");
     await connectors.heartbeat(online.connector.id, {
       capabilities: ["llm_local"],
       models: [
@@ -84,7 +84,7 @@ describe("ConnectorWorkflowService", () => {
   });
 
   it("sets and reads a workflow default for a slot", async () => {
-    const connector = await onlineConnectorWithModels("Default RTX");
+    const connector = await onlineConnectorWithModels("Default Maschinenraum");
     const workflow = createConnectorWorkflowService(db);
 
     const saved = await workflow.setDefault("chat", connector.id, "ollama:llama3.1:8b");
@@ -105,7 +105,7 @@ describe("ConnectorWorkflowService", () => {
     const isolatedDb = createPrismaClient(createTestDatabaseUrl());
     const connectors = createConnectorService(isolatedDb);
     const workflow = createConnectorWorkflowService(isolatedDb);
-    const { connector } = await connectors.createConnector("Upsert RTX");
+    const { connector } = await connectors.createConnector("Upsert Maschinenraum");
     await connectors.heartbeat(connector.id, {
       capabilities: ["llm_local"],
       models: [
@@ -124,7 +124,7 @@ describe("ConnectorWorkflowService", () => {
   });
 
   it("rejects a default for a model the connector does not report", async () => {
-    const connector = await onlineConnectorWithModels("Validate RTX");
+    const connector = await onlineConnectorWithModels("Validate Maschinenraum");
     const workflow = createConnectorWorkflowService(db);
 
     await assert.rejects(
@@ -134,7 +134,7 @@ describe("ConnectorWorkflowService", () => {
   });
 
   it("clears a default", async () => {
-    const connector = await onlineConnectorWithModels("Clear RTX");
+    const connector = await onlineConnectorWithModels("Clear Maschinenraum");
     const workflow = createConnectorWorkflowService(db);
 
     await workflow.setDefault("embedding", connector.id, "ollama:nomic-embed-text");
@@ -148,7 +148,7 @@ describe("ConnectorWorkflowService", () => {
     const isolatedDb = createPrismaClient(createTestDatabaseUrl());
     const connectors = createConnectorService(isolatedDb);
     const workflow = createConnectorWorkflowService(isolatedDb);
-    const { connector } = await connectors.createConnector("Stale RTX");
+    const { connector } = await connectors.createConnector("Stale Maschinenraum");
     await connectors.heartbeat(connector.id, {
       capabilities: ["llm_local"],
       models: [

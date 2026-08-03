@@ -25,7 +25,7 @@ export const dynamic = "force-dynamic";
 const STATUS_ORDER: ScanDocumentStatus[] = [
   "unanalyzed",
   "analyzing",
-  "waiting_for_rtx",
+  "waiting_for_engine",
   "proposal_ready",
   "uncertain",
   "filed",

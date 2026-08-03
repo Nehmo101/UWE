@@ -8,8 +8,8 @@ import {
   InferenceUrlBlockedError,
   isInferenceUrlAllowed,
 } from "./inference-url-guard";
-import { evaluateRtxWorkerUrl } from "./rtx-worker-config";
-import { checkRtxHealth } from "./router/health/rtxHealthcheck";
+import { evaluateEngineWorkerUrl } from "./engine-worker-config";
+import { checkEngineHealth } from "./router/health/engineHealthcheck";
 import { createProvider, MockAiProvider } from "./providers/registry";
 import { InMemoryApiKeyStore } from "./settings";
 import { AiProviderError } from "./types";
@@ -26,7 +26,7 @@ const ENV_KEYS = [
   "OLLAMA_BASE_URL",
   "OPENAI_COMPATIBLE_BASE_URL",
   "AI_DEFAULT_PROVIDER",
-  "RTX_BASE_URL",
+  "ENGINE_BASE_URL",
 ] as const;
 
 const originalEnv: Record<string, string | undefined> = {};
@@ -123,7 +123,7 @@ describe("Inference status and test prompt", () => {
   beforeEach(() => snapshotEnv());
   afterEach(() => restoreEnv());
 
-  it("reports online with mock provider without contacting RTX", async () => {
+  it("reports online with mock provider without contacting Maschinenraum", async () => {
     process.env.AI_INFERENCE_ENABLED = "true";
     process.env.AI_INFERENCE_BASE_URL = "http://192.168.178.50:11434";
 
@@ -146,7 +146,7 @@ describe("Inference status and test prompt", () => {
     assert.ok(status.offlineReason);
   });
 
-  it("runs mock test prompt without throwing when RTX is offline", async () => {
+  it("runs mock test prompt without throwing when Maschinenraum is offline", async () => {
     process.env.AI_INFERENCE_ENABLED = "true";
     process.env.AI_INFERENCE_BASE_URL = "http://192.168.178.50:11434";
 
@@ -171,12 +171,12 @@ describe("Inference status and test prompt", () => {
   it("never exposes API keys in status JSON", async () => {
     process.env.AI_INFERENCE_ENABLED = "true";
     process.env.AI_INFERENCE_BASE_URL = "http://192.168.178.50:11434";
-    process.env.AI_INFERENCE_API_KEY = "super-secret-rtx-key";
+    process.env.AI_INFERENCE_API_KEY = "super-secret-engine-key";
 
     const status = await getInferenceStatus({ useMock: true });
     const json = JSON.stringify(status);
 
-    assert.ok(!json.includes("super-secret-rtx-key"));
+    assert.ok(!json.includes("super-secret-engine-key"));
     assert.ok(!json.includes("apiKey"));
   });
 });
@@ -201,7 +201,7 @@ describe("MockAiProvider", () => {
     assert.equal(result.provider, "ollama");
   });
 
-  it("createProvider useMock bypasses RTX network", () => {
+  it("createProvider useMock bypasses Maschinenraum network", () => {
     const provider = createProvider("ollama", new InMemoryApiKeyStore(), { useMock: true });
     assert.equal(provider.id, "ollama");
     assert.ok(provider instanceof MockAiProvider);
@@ -271,7 +271,7 @@ describe("Ollama provider offline and timeout", () => {
     );
   });
 
-  it("getInferenceStatus stays non-fatal when RTX is offline", async () => {
+  it("getInferenceStatus stays non-fatal when Maschinenraum is offline", async () => {
     snapshotEnv();
     process.env.AI_INFERENCE_ENABLED = "true";
     process.env.AI_INFERENCE_BASE_URL = "http://192.168.178.50:11434";
@@ -302,24 +302,24 @@ describe("createProvider URL guard", () => {
   });
 });
 
-describe("RTX worker URL evaluation", () => {
+describe("Maschinenraum worker URL evaluation", () => {
   beforeEach(() => snapshotEnv());
   afterEach(() => restoreEnv());
 
-  it("allows private RTX worker URLs", () => {
-    process.env.RTX_BASE_URL = "http://192.168.1.50:8787";
+  it("allows private Maschinenraum worker URLs", () => {
+    process.env.ENGINE_BASE_URL = "http://192.168.1.50:8787";
 
-    const evaluation = evaluateRtxWorkerUrl(process.env);
+    const evaluation = evaluateEngineWorkerUrl(process.env);
 
     assert.equal(evaluation.configured, true);
     assert.equal(evaluation.urlAllowed, true);
     assert.equal(evaluation.urlKind, "private");
   });
 
-  it("blocks public RTX worker URLs without throwing", () => {
-    process.env.RTX_BASE_URL = "https://rtx.public.example:8787";
+  it("blocks public Maschinenraum worker URLs without throwing", () => {
+    process.env.ENGINE_BASE_URL = "https://engine.public.example:8787";
 
-    const evaluation = evaluateRtxWorkerUrl(process.env);
+    const evaluation = evaluateEngineWorkerUrl(process.env);
 
     assert.equal(evaluation.configured, true);
     assert.equal(evaluation.urlAllowed, false);
@@ -327,10 +327,10 @@ describe("RTX worker URL evaluation", () => {
     assert.ok(evaluation.blockReason?.includes("öffentlich"));
   });
 
-  it("reports public exposure in RTX health status", async () => {
-    process.env.RTX_BASE_URL = "https://rtx.public.example:8787";
+  it("reports public exposure in Maschinenraum health status", async () => {
+    process.env.ENGINE_BASE_URL = "https://engine.public.example:8787";
 
-    const health = await checkRtxHealth({ env: process.env });
+    const health = await checkEngineHealth({ env: process.env });
 
     assert.equal(health.urlAllowed, false);
     assert.equal(health.ready, false);

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, it } from "node:test";
 import {
   AiRouterError,
   validateContextModeRequirements,
-  validateLocalRtxRequired,
+  validateLocalEngineRequired,
   providerIdToMode,
   legacyContextMode,
   resolveProviderRoute,
@@ -14,12 +14,12 @@ import {
  * Router behaviour after the cloud providers were removed.
  *
  * This file used to be a routing matrix: seventeen cases across provider mode ×
- * context mode × RTX availability, asserting which combinations were allowed to
- * leave the host. That matrix collapsed to a single row — the RTX host is the
+ * context mode × Maschinenraum availability, asserting which combinations were allowed to
+ * leave the host. That matrix collapsed to a single row — the Maschinenraum host is the
  * only backend — so what is worth testing changed shape entirely:
  *
- *  - every request resolves to `local_rtx`, whatever the context mode
- *  - an unreachable RTX host fails fast instead of falling back anywhere
+ *  - every request resolves to `local_engine`, whatever the context mode
+ *  - an unreachable Maschinenraum host fails fast instead of falling back anywhere
  *  - context modes still have to be handed the input they need
  */
 
@@ -30,8 +30,8 @@ const INFERENCE_ENV_KEYS = [
   "AI_INFERENCE_DEFAULT_MODEL",
   "AI_INFERENCE_ALLOW_PUBLIC_URL",
   "AI_BRAIN_ENABLED",
-  "RTX_BASE_URL",
-  "RTX_SERVICE_TOKEN",
+  "ENGINE_BASE_URL",
+  "ENGINE_SERVICE_TOKEN",
 ] as const;
 
 const ALL_CONTEXT_MODES: AiContextMode[] = [
@@ -62,18 +62,18 @@ function restoreEnv() {
   }
 }
 
-function configureRtxEnv() {
+function configureEngineEnv() {
   process.env.AI_INFERENCE_ENABLED = "true";
   process.env.AI_BRAIN_ENABLED = "true";
   process.env.AI_INFERENCE_BASE_URL = "http://192.168.178.50:11434";
   process.env.AI_INFERENCE_PROVIDER = "ollama";
   process.env.AI_INFERENCE_DEFAULT_MODEL = "llama3.2";
-  delete process.env.RTX_BASE_URL;
-  delete process.env.RTX_SERVICE_TOKEN;
+  delete process.env.ENGINE_BASE_URL;
+  delete process.env.ENGINE_SERVICE_TOKEN;
 }
 
-function configureOfflineRtxEnv() {
-  configureRtxEnv();
+function configureOfflineEngineEnv() {
+  configureEngineEnv();
   globalThis.fetch = async () => {
     throw new TypeError("fetch failed");
   };
@@ -90,30 +90,30 @@ afterEach(() => {
 });
 
 describe("provider routing", () => {
-  it("resolves every context mode to the local RTX route", async () => {
-    configureRtxEnv();
+  it("resolves every context mode to the local Maschinenraum route", async () => {
+    configureEngineEnv();
 
     for (const contextMode of ALL_CONTEXT_MODES) {
       const resolution = await resolveProviderRoute(contextMode, { useMock: true });
-      assert.equal(resolution.route, "local_rtx", `${contextMode} must route to RTX`);
+      assert.equal(resolution.route, "local_engine", `${contextMode} must route to Maschinenraum`);
     }
   });
 
-  it("fails fast when the RTX host is unreachable — there is nothing to fall back to", async () => {
-    configureOfflineRtxEnv();
+  it("fails fast when the Maschinenraum host is unreachable — there is nothing to fall back to", async () => {
+    configureOfflineEngineEnv();
 
     for (const contextMode of ALL_CONTEXT_MODES) {
       await assert.rejects(
         () => resolveProviderRoute(contextMode, { useMock: false }),
         AiRouterError,
-        `${contextMode} must fail when RTX is offline`,
+        `${contextMode} must fail when Maschinenraum is offline`,
       );
     }
   });
 
-  it("reports local_rtx for every provider id", () => {
-    assert.equal(providerIdToMode("local_rtx"), "local_rtx");
-    assert.equal(providerIdToMode("ollama"), "local_rtx");
+  it("reports local_engine for every provider id", () => {
+    assert.equal(providerIdToMode("local_engine"), "local_engine");
+    assert.equal(providerIdToMode("ollama"), "local_engine");
   });
 });
 
@@ -137,14 +137,14 @@ describe("context mode requirements", () => {
   });
 });
 
-describe("RTX availability guard", () => {
+describe("Maschinenraum availability guard", () => {
   it("passes when the host is up", () => {
-    assert.doesNotThrow(() => validateLocalRtxRequired("personal_brain", true));
+    assert.doesNotThrow(() => validateLocalEngineRequired("personal_brain", true));
   });
 
   it("throws for every context mode when the host is down", () => {
     for (const contextMode of ALL_CONTEXT_MODES) {
-      assert.throws(() => validateLocalRtxRequired(contextMode, false), AiRouterError);
+      assert.throws(() => validateLocalEngineRequired(contextMode, false), AiRouterError);
     }
   });
 });

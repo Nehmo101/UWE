@@ -6,10 +6,10 @@ import {
   getSystemSettings,
   prisma,
 } from "@uwe/database/server";
-import { checkRtxReadiness } from "@uwe/ai-brain/router";
+import { checkEngineReadiness } from "@uwe/ai-brain/router";
 import { createMailPortalService } from "@uwe/mail/portal";
 import { MAIL_PRIORITY_CATEGORIES, MAIL_PRIORITY_LABELS } from "@uwe/mail/portal-types";
-import { mapRtxReadinessToConnectorState, type RtxConnectorState } from "@uwe/shared-ui";
+import { mapEngineReadinessToConnectorState, type EngineConnectorState } from "@uwe/shared-ui";
 import { getBrainOwner } from "@/src/lib/page-owner";
 import { BrainShell, BrainDenied } from "@/src/components/BrainShell";
 import { MailCenter } from "@/src/components/mail/MailCenter";
@@ -81,7 +81,7 @@ export default async function BrainMailPage({
     markedOnly: activeFolder === "marked",
   };
 
-  const [portalAccounts, portalResult, sentMessages, drafts, logs, config, rtxStatus] =
+  const [portalAccounts, portalResult, sentMessages, drafts, logs, config, engineStatus] =
     await Promise.all([
       portal.listAccounts(),
       activeFolder === "sent" || activeFolder === "drafts"
@@ -93,12 +93,12 @@ export default async function BrainMailPage({
       accountService.listDrafts(),
       createMailLogService(brainPrisma).list({ limit: 10 }),
       mailService.getConfigStatus(),
-      checkRtxReadiness({ prisma }).catch(() => null),
+      checkEngineReadiness({ prisma }).catch(() => null),
     ]);
 
   const portalMessages = portalResult.items;
-  const rtxState: RtxConnectorState = rtxStatus
-    ? mapRtxReadinessToConnectorState(rtxStatus)
+  const engineState: EngineConnectorState = engineStatus
+    ? mapEngineReadinessToConnectorState(engineStatus)
     : "offline";
 
   const accounts = portalAccounts.map((account) => ({
@@ -202,7 +202,7 @@ export default async function BrainMailPage({
   })).filter((category) => category.count > 0);
 
   const data: MailCenterData = {
-    rtxState,
+    engineState,
     accounts,
     messages,
     sentMessages: sentMessages.map(asSentVM),

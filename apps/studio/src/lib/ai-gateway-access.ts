@@ -2,10 +2,10 @@ import { createAiGatewayService, prisma } from "@uwe/database/server";
 import type { AuthUser } from "@uwe/auth";
 
 const AI_CHAT_BLOCKED_MESSAGE =
-  "KI-Chat ist für deinen Account nicht freigeschaltet. Bitte den Master-Admin, dir AI-Freigaben unter KI & RTX Fallback zu vergeben.";
+  "KI-Chat ist für deinen Account nicht freigeschaltet. Bitte den Master-Admin, dir AI-Freigaben unter KI & Maschinenraum Fallback zu vergeben.";
 
 const AI_KNOWLEDGE_BLOCKED_MESSAGE =
-  "Wissens-KI ist für deinen Account nicht freigeschaltet. Bitte den Master-Admin, dir AI-Freigaben unter KI & RTX Fallback zu vergeben.";
+  "Wissens-KI ist für deinen Account nicht freigeschaltet. Bitte den Master-Admin, dir AI-Freigaben unter KI & Maschinenraum Fallback zu vergeben.";
 
 async function resolveGatewayFeatureAccess(
   user: AuthUser | null,
@@ -23,7 +23,7 @@ async function resolveGatewayFeatureAccess(
     return { allowed: false, message: "KI ist systemweit deaktiviert." };
   }
 
-  // Per-user AI grants existed to ration cloud spend. With the RTX host as the
+  // Per-user AI grants existed to ration cloud spend. With the Maschinenraum host as the
   // only backend there is nothing to ration: whoever reaches the app may use it.
   void permission;
   void blockedMessage;

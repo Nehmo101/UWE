@@ -16,7 +16,7 @@ import { jsonError } from "@/src/lib/api-response";
 const ideaIdParamSchema = z.object({ id: idSchema });
 
 const ideaPromptBodySchema = z.object({
-  providerMode: z.enum(["auto", "local_rtx", "cloud"]).default("auto"),
+  providerMode: z.enum(["auto", "local_engine", "cloud"]).default("auto"),
 });
 
 const ideaPromptPatchSchema = z.object({

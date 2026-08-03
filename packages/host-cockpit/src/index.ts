@@ -12,7 +12,7 @@
  * `@uwe/database/server` is explicit for the same reason.
  */
 export { getAdminDashboardStatus, type AdminDashboardStatus } from "./admin-status";
-export type { InferenceStatus, RtxHealthStatus } from "./admin-status";
+export type { InferenceStatus, EngineHealthStatus } from "./admin-status";
 export { getHomelabCockpitData, probePortalHealth, type HomelabCockpitData } from "./homelab";
 export {
   resolveBriefingSchedulePath,

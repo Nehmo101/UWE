@@ -18,7 +18,7 @@ describe("admin dashboard status shape", () => {
         urlAllowed: true,
         urlKind: "private",
         online: false,
-        message: "RTX-Inference nicht erreichbar",
+        message: "Maschinenraum-Inference nicht erreichbar",
         offlineReason: "fetch failed",
       },
       mail: {

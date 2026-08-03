@@ -7,8 +7,8 @@
  * verlieren.
  *
  * Wie `ai-suggest.ts` läuft der Aufruf **direkt über die Connector-Queue**
- * (lokale RTX-Inferenz), nicht über `routeAiRequest`. Ist kein `llm_local`-
- * Connector online, kommt ein sauberer „RTX offline"-Zustand zurück statt einer
+ * (lokale Maschinenraum-Inferenz), nicht über `routeAiRequest`. Ist kein `llm_local`-
+ * Connector online, kommt ein sauberer „Maschinenraum offline"-Zustand zurück statt einer
  * Exception — die Karte lässt sich dann eben unaufbereitet drucken.
  *
  * Kontext-Bau und Parser sind rein und getestet; nur der Connector-Call nicht.
@@ -38,7 +38,7 @@ export interface RecipeCardDraft {
 export type RecipeFormatResult =
   | { status: "ok"; draft: RecipeCardDraft }
   | { status: "parse_error"; error: string }
-  | { status: "rtx_offline"; error: string };
+  | { status: "engine_offline"; error: string };
 
 const SYSTEM_PROMPT = [
   "Du bereitest Kochrezepte für eine kleine Rezeptkarte auf (6×4 Zoll).",
@@ -122,7 +122,7 @@ export interface FormatRecipeInput {
 
 /**
  * Lässt ein Rezept für die Karte kürzen. Ohne laufenden lokalen Connector
- * kommt `rtx_offline` zurück — der Aufrufer druckt dann unaufbereitet.
+ * kommt `engine_offline` zurück — der Aufrufer druckt dann unaufbereitet.
  */
 export async function formatRecipeForCard(
   db: PrismaClient,
@@ -165,8 +165,8 @@ export async function formatRecipeForCard(
 
   if (!queueAvailable) {
     return {
-      status: "rtx_offline",
-      error: "Kein lokaler KI-Connector (RTX) online — Rezept wird unaufbereitet gedruckt.",
+      status: "engine_offline",
+      error: "Kein lokaler KI-Connector (Maschinenraum) online — Rezept wird unaufbereitet gedruckt.",
     };
   }
 

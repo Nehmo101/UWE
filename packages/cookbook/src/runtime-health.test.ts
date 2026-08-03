@@ -15,12 +15,12 @@ const ONLINE_PROBE: CookbookRuntimeProbeInput = {
     urlAllowed: true,
     modelCount: 2,
   },
-  rtx: {
+  engineHost: {
     ready: true,
     online: true,
     endpoint: "http://192.168.1.50:8787",
     defaultModel: "llama3.2",
-    message: "RTX agent ready",
+    message: "Maschinenraum agent ready",
     urlAllowed: true,
     modelCount: 2,
     agentConfigured: true,
@@ -29,7 +29,7 @@ const ONLINE_PROBE: CookbookRuntimeProbeInput = {
 };
 
 describe("runtime-health", () => {
-  it("reports healthy when inference and rtx are ready", async () => {
+  it("reports healthy when inference and engine are ready", async () => {
     const health = await buildCookbookRuntimeHealth(ONLINE_PROBE, { localOnlyMode: false });
     assert.equal(health.ok, true);
     assert.equal(health.engines.length > 0, true);
@@ -40,7 +40,7 @@ describe("runtime-health", () => {
       {
         ...ONLINE_PROBE,
         inference: { ...ONLINE_PROBE.inference, online: false, message: "offline" },
-        rtx: { ...ONLINE_PROBE.rtx, ready: false, online: false, message: "offline" },
+        engineHost: { ...ONLINE_PROBE.engineHost, ready: false, online: false, message: "offline" },
       },
       { localOnlyMode: true },
     );

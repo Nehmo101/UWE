@@ -12,7 +12,7 @@ interface Props {
   sessionId: string;
   buttons: SoundboardButtonView[];
   campaignSlug?: string | null;
-  rtxAudioOnline: boolean;
+  engineAudioOnline: boolean;
 }
 
 function lastPlayedStorageKey(sessionId: string): string {
@@ -47,7 +47,7 @@ export function SessionLiveSoundboard({
   sessionId,
   buttons,
   campaignSlug,
-  rtxAudioOnline,
+  engineAudioOnline,
 }: Props) {
   const [open, setOpen] = useState(true);
   const [lastPlayedTitle, setLastPlayedTitle] = useState<string | null>(null);
@@ -99,12 +99,12 @@ export function SessionLiveSoundboard({
       <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
         <span>{buttons.length} Button(s) — direkt während der Live-Session abspielen.</span>
         {lastPlayedTitle ? <span>Zuletzt: „{lastPlayedTitle}“</span> : null}
-        {!rtxAudioOnline ? (
+        {!engineAudioOnline ? (
           <span title={capabilityOfflineMessage("audio_local")}>
             {capabilityOfflineMessage("audio_local")} Browser-Wiedergabe bleibt verfügbar.
           </span>
         ) : (
-          <span>RTX-Audio online — lokale Ausgabe möglich.</span>
+          <span>Maschinenraum-Audio online — lokale Ausgabe möglich.</span>
         )}
       </div>
 

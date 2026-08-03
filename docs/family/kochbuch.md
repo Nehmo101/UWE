@@ -6,8 +6,8 @@ Papier: **6×4 Zoll**, derselbe Drucker wie für die Etiketten.
 ```mermaid
 flowchart LR
   R["Rezept<br/>uwe-family.db"] --> KI{"KI-Aufbereitung<br/>optional"}
-  KI -->|"RTX an"| K["gekürzte Schritte"]
-  KI -->|"RTX aus"| R2["unverändert"]
+  KI -->|"Maschinenraum an"| K["gekürzte Schritte"]
+  KI -->|"Maschinenraum aus"| R2["unverändert"]
   K --> B["buildRecipeCards"]
   R2 --> B
   B -->|compact| C1["1 Karte"]
@@ -51,11 +51,11 @@ dreizeilige Sätze für „Zwiebeln würfeln". Der Knopf **Schritte per KI für 
 schreibt jeden Arbeitsschritt auf einen knappen Imperativsatz um — ohne Mengen, Zeiten oder
 Temperaturen zu verlieren.
 
-Der Aufruf läuft **direkt über die Connector-Queue** (lokale RTX-Inferenz), nach dem Muster
+Der Aufruf läuft **direkt über die Connector-Queue** (lokale Maschinenraum-Inferenz), nach dem Muster
 von `ai-suggest.ts` — kein Cloud-Provider. Ist der Rechner aus, bleibt das Rezept
 unverändert und lässt sich trotzdem drucken: ein halb aufbereitetes Rezept wäre schlimmer
 als ein unaufbereitetes.
 
-Voraussetzung ist `User.aiAccess` (`canUseRtxAi`), geprüft über `requireFamilyAiActionAuth`.
+Voraussetzung ist `User.aiAccess` (`canUseEngineAi`), geprüft über `requireFamilyAiActionAuth`.
 
 Code: `packages/kitchen/src/ai-recipe-format.ts`.

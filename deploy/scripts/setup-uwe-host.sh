@@ -702,10 +702,10 @@ main() {
   write_systemd_unit
   install_host_update_assets
   install_host_restart_assets
-  install_rtx_connector_unit
+  install_engine_connector_unit
   restore_selinux_contexts
   start_or_restart_service
-  start_or_restart_rtx_connector
+  start_or_restart_engine_connector
 
   sleep 8
   verify_http_healthchecks

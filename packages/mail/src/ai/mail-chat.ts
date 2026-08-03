@@ -1,6 +1,6 @@
 import {
   executeAiGatewayRequest,
-  isRtxReadinessReady,
+  isEngineReadinessReady,
 } from "@uwe/ai-brain";
 import {
   createBrainStoreService,
@@ -53,12 +53,12 @@ export async function executeMailChat(
     throw new Error("KI ist deaktiviert.");
   }
 
-  const rtxReady = await isRtxReadinessReady({ useMock: body.useMock, prisma });
-  if (!rtxReady) {
+  const engineReady = await isEngineReadinessReady({ useMock: body.useMock, prisma });
+  if (!engineReady) {
     return {
       kind: "unavailable",
       message:
-        "Lokale RTX-Inference ist offline. Der Mail-Assistent nutzt niemals Cloud-KI — bitte Maschinenraum starten.",
+        "Lokale Maschinenraum-Inference ist offline. Der Mail-Assistent nutzt niemals Cloud-KI — bitte Maschinenraum starten.",
     };
   }
 
@@ -69,7 +69,7 @@ export async function executeMailChat(
     },
     {
       user,
-      providerMode: "local_rtx",
+      providerMode: "local_engine",
       contextMode: "mail",
       taskType: "answer_mail_question",
       userPrompt,

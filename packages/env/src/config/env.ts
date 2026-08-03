@@ -53,8 +53,8 @@ export interface ResolvedRawEnv {
   DATABASE_URL: string;
   SESSION_SECRET?: string;
   UWE_SETUP_TOKEN?: string;
-  RTX_BASE_URL?: string;
-  RTX_SERVICE_TOKEN?: string;
+  ENGINE_BASE_URL?: string;
+  ENGINE_SERVICE_TOKEN?: string;
   MAX_UPLOAD_MB: number;
   PUBLIC_BASE_URL?: string;
   AUTH_SECRET?: string;
@@ -67,8 +67,8 @@ export interface UweEnv {
   databaseUrl: string;
   sessionSecret: string | null;
   setupToken: string | null;
-  rtxBaseUrl: string | null;
-  rtxServiceToken: string | null;
+  engineBaseUrl: string | null;
+  engineServiceToken: string | null;
   maxUploadMb: number;
   maxUploadBytes: number;
   publicBaseUrl: string | null;
@@ -109,8 +109,8 @@ function normalizePublicBaseUrl(value: string | undefined): string | undefined {
 export function resolveRawEnv(env: NodeJS.ProcessEnv = process.env): ResolvedRawEnv {
   const sessionSecret = trimOrUndefined(env.SESSION_SECRET) ?? trimOrUndefined(env.AUTH_SECRET);
   const setupToken = trimOrUndefined(env.UWE_SETUP_TOKEN);
-  const rtxBaseUrl = trimOrUndefined(env.RTX_BASE_URL);
-  const rtxServiceToken = trimOrUndefined(env.RTX_SERVICE_TOKEN);
+  const engineBaseUrl = trimOrUndefined(env.ENGINE_BASE_URL);
+  const engineServiceToken = trimOrUndefined(env.ENGINE_SERVICE_TOKEN);
   const publicBaseUrl =
     normalizePublicBaseUrl(env.PUBLIC_BASE_URL) ?? normalizePublicBaseUrl(env.PUBLIC_APP_URL);
   const databaseUrl = trimOrUndefined(env.DATABASE_URL) ?? DEFAULT_DATABASE_URL;
@@ -126,8 +126,8 @@ export function resolveRawEnv(env: NodeJS.ProcessEnv = process.env): ResolvedRaw
     DATABASE_URL: databaseUrl,
     SESSION_SECRET: sessionSecret,
     UWE_SETUP_TOKEN: setupToken,
-    RTX_BASE_URL: rtxBaseUrl,
-    RTX_SERVICE_TOKEN: rtxServiceToken,
+    ENGINE_BASE_URL: engineBaseUrl,
+    ENGINE_SERVICE_TOKEN: engineServiceToken,
     MAX_UPLOAD_MB: maxUploadMb,
     PUBLIC_BASE_URL: publicBaseUrl,
     AUTH_SECRET: sessionSecret,
@@ -171,23 +171,23 @@ function validateSecretField(
   return issues;
 }
 
-function validateRtxPair(raw: ResolvedRawEnv): string[] {
-  const hasBaseUrl = Boolean(raw.RTX_BASE_URL);
-  const hasServiceToken = Boolean(raw.RTX_SERVICE_TOKEN);
+function validateEnginePair(raw: ResolvedRawEnv): string[] {
+  const hasBaseUrl = Boolean(raw.ENGINE_BASE_URL);
+  const hasServiceToken = Boolean(raw.ENGINE_SERVICE_TOKEN);
 
   if (hasBaseUrl !== hasServiceToken) {
-    return ["RTX_BASE_URL und RTX_SERVICE_TOKEN müssen gemeinsam gesetzt oder beide leer sein."];
+    return ["ENGINE_BASE_URL und ENGINE_SERVICE_TOKEN müssen gemeinsam gesetzt oder beide leer sein."];
   }
 
-  if (hasBaseUrl && raw.RTX_BASE_URL) {
-    const parsed = optionalUrlSchema.safeParse(raw.RTX_BASE_URL);
+  if (hasBaseUrl && raw.ENGINE_BASE_URL) {
+    const parsed = optionalUrlSchema.safeParse(raw.ENGINE_BASE_URL);
     if (!parsed.success) {
-      return ["RTX_BASE_URL ist keine gültige URL."];
+      return ["ENGINE_BASE_URL ist keine gültige URL."];
     }
   }
 
-  if (hasServiceToken && isWeakSecret(raw.RTX_SERVICE_TOKEN)) {
-    return ["RTX_SERVICE_TOKEN ist unsicher."];
+  if (hasServiceToken && isWeakSecret(raw.ENGINE_SERVICE_TOKEN)) {
+    return ["ENGINE_SERVICE_TOKEN ist unsicher."];
   }
 
   return [];
@@ -217,7 +217,7 @@ export function collectEnvValidationIssues(
     }),
   );
 
-  issues.push(...validateRtxPair(raw));
+  issues.push(...validateEnginePair(raw));
 
   if (isProduction && !raw.PUBLIC_BASE_URL) {
     issues.push("PUBLIC_BASE_URL fehlt in Production.");
@@ -260,8 +260,8 @@ export function parseUweEnv(env: NodeJS.ProcessEnv = process.env): UweEnv {
     databaseUrl: raw.DATABASE_URL,
     sessionSecret: raw.SESSION_SECRET ?? null,
     setupToken: raw.UWE_SETUP_TOKEN ?? null,
-    rtxBaseUrl: raw.RTX_BASE_URL ?? null,
-    rtxServiceToken: raw.RTX_SERVICE_TOKEN ?? null,
+    engineBaseUrl: raw.ENGINE_BASE_URL ?? null,
+    engineServiceToken: raw.ENGINE_SERVICE_TOKEN ?? null,
     maxUploadMb: raw.MAX_UPLOAD_MB,
     maxUploadBytes: raw.MAX_UPLOAD_MB * 1024 * 1024,
     publicBaseUrl: raw.PUBLIC_BASE_URL ?? null,
@@ -288,12 +288,12 @@ export function syncLegacyEnvAliases(env: NodeJS.ProcessEnv = process.env): void
     env.PUBLIC_APP_URL = raw.PUBLIC_BASE_URL;
   }
 
-  if (raw.RTX_BASE_URL) {
-    env.RTX_BASE_URL = raw.RTX_BASE_URL;
+  if (raw.ENGINE_BASE_URL) {
+    env.ENGINE_BASE_URL = raw.ENGINE_BASE_URL;
   }
 
-  if (raw.RTX_SERVICE_TOKEN) {
-    env.RTX_SERVICE_TOKEN = raw.RTX_SERVICE_TOKEN;
+  if (raw.ENGINE_SERVICE_TOKEN) {
+    env.ENGINE_SERVICE_TOKEN = raw.ENGINE_SERVICE_TOKEN;
   }
 
   if (raw.DATABASE_URL) {

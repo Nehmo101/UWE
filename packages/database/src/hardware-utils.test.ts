@@ -18,18 +18,18 @@ describe("hardware URL policy warnings", () => {
     assert.match(warnings[0]!.message, /öffentlich/i);
   });
 
-  it("warns when RTX device has non-local public URL", () => {
+  it("warns when Maschinenraum device has non-local public URL", () => {
     const warnings = detectHardwareUrlWarnings([
       {
-        id: "rtx-1",
-        name: "RTX Agent",
-        publicUrl: "https://rtx.example.com",
-        role: "rtx-inference",
+        id: "engine-1",
+        name: "Maschinenraum-Agent",
+        publicUrl: "https://engine.example.com",
+        role: "engine-inference",
       },
     ]);
 
     assert.ok(warnings.length >= 1);
-    assert.ok(warnings.some((w) => w.message.includes("RTX")));
+    assert.ok(warnings.some((w) => w.message.includes("Maschinenraum")));
   });
 
   it("allows loopback and private URLs without warnings", () => {
@@ -39,7 +39,7 @@ describe("hardware URL policy warnings", () => {
         name: "Local Ollama",
         publicUrl: "http://127.0.0.1:11434",
         localUrl: "http://192.168.1.50:11434",
-        role: "rtx-inference",
+        role: "engine-inference",
       },
     ]);
 

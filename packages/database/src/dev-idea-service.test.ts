@@ -127,11 +127,11 @@ describe("parseDevIdeaTranscript", () => {
     const parsed = parseDevIdeaTranscript([
       { role: "user", content: "hi", createdAt: "2026-01-01T00:00:00.000Z" },
       { role: "bogus", content: "drop me" },
-      { role: "assistant", content: "yo", createdAt: "2026-01-01T00:01:00.000Z", via: "local_rtx" },
+      { role: "assistant", content: "yo", createdAt: "2026-01-01T00:01:00.000Z", via: "local_engine" },
     ]);
     assert.equal(parsed.length, 2);
     assert.equal(parsed[0]?.content, "hi");
-    assert.equal(parsed[1]?.via, "local_rtx");
+    assert.equal(parsed[1]?.via, "local_engine");
   });
 });
 

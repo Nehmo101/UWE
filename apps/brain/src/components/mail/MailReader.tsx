@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { NavIcon, RtxStatusBadge, type RtxConnectorState } from "@uwe/shared-ui";
+import { NavIcon, EngineStatusBadge, type EngineConnectorState } from "@uwe/shared-ui";
 import { MailButton, IconButton, Avatar, ActionChip } from "./mail-ui";
 import {
   CATEGORY_COLORS,
@@ -15,7 +15,7 @@ import {
 interface MailReaderProps {
   message: MailMessageDetailVM | null;
   loading: boolean;
-  rtxState: RtxConnectorState;
+  engineState: EngineConnectorState;
   busy: boolean;
   onReply: () => void;
   onForward: () => void;
@@ -34,7 +34,7 @@ interface MailReaderProps {
 export function MailReader({
   message,
   loading,
-  rtxState,
+  engineState,
   busy,
   onBack,
   onReply,
@@ -220,7 +220,7 @@ export function MailReader({
           </MailButton>
           {onOpenChat ? (
             <MailButton variant="subtle" size="sm" icon="message-circle" onClick={onOpenChat} disabled={busy}>
-              RTX fragen
+              Maschinenraum fragen
             </MailButton>
           ) : null}
           {message.hasUnsubscribeTarget && onUnsubscribe ? (
@@ -308,10 +308,10 @@ export function MailReader({
                 color: "var(--uwe-fg)",
               }}
             >
-              Von RTX lokal zusammengefasst
+              Von Maschinenraum lokal zusammengefasst
             </span>
             <span style={{ flex: 1 }} />
-            <RtxStatusBadge state={rtxState} />
+            <EngineStatusBadge state={engineState} />
           </div>
           {summaryLines.length > 0 ? (
             <ul
@@ -332,7 +332,7 @@ export function MailReader({
             </ul>
           ) : (
             <p style={{ margin: "0 0 11px", fontSize: 13, color: "var(--uwe-fg-muted)", lineHeight: 1.55 }}>
-              Noch keine Zusammenfassung. RTX kann diese Nachricht lokal zusammenfassen — nichts verlässt deinen
+              Noch keine Zusammenfassung. Maschinenraum kann diese Nachricht lokal zusammenfassen — nichts verlässt deinen
               Host.
             </p>
           )}
@@ -357,7 +357,7 @@ export function MailReader({
             }}
           >
             <NavIcon name="shield-check" width={13} height={13} />
-            Läuft auf deinem RTX-Host — es gibt keinen Cloud-Anbieter mehr.
+            Läuft auf deinem Maschinenraum-Host — es gibt keinen Cloud-Anbieter mehr.
           </div>
         </div>
 

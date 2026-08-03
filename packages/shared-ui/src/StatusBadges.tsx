@@ -246,10 +246,10 @@ export function AssetTypeBadge({ type }: { type: AssetType }) {
   );
 }
 
-/** Connector / local-AI runtime state shown in the RTX status badge. */
-export type RtxConnectorState = "online" | "offline" | "disabled" | "starting" | "error";
+/** Connector / local-AI runtime state shown in the Maschinenraum status badge. */
+export type EngineConnectorState = "online" | "offline" | "disabled" | "starting" | "error";
 
-export const RTX_STATE_LABELS: Record<RtxConnectorState, string> = {
+export const ENGINE_STATE_LABELS: Record<EngineConnectorState, string> = {
   online: "Maschinenraum online",
   offline: "Maschinenraum offline",
   disabled: "Maschinenraum deaktiviert",
@@ -257,32 +257,32 @@ export const RTX_STATE_LABELS: Record<RtxConnectorState, string> = {
   error: "Maschinenraum Fehler",
 };
 
-export const RTX_STATE_DESCRIPTIONS: Record<RtxConnectorState, string> = {
+export const ENGINE_STATE_DESCRIPTIONS: Record<EngineConnectorState, string> = {
   online: "Maschinenraum verbunden — lokale KI ist verfügbar.",
   offline:
-    "Maschinenraum nicht erreichbar. KI-Jobs werden vorgemerkt und starten automatisch, sobald RTX wieder online ist — kein Cloud-Fallback.",
+    "Maschinenraum nicht erreichbar. KI-Jobs werden vorgemerkt und starten automatisch, sobald der Maschinenraum wieder online ist — kein Cloud-Fallback.",
   disabled: "Maschinenraum deaktiviert. Aktiviere ihn, um lokale KI zu nutzen.",
   starting: "Maschinenraum wird gestartet — bitte kurz warten.",
   error: "Maschinenraum meldet einen Fehler. Prüfe den Systemstatus.",
 };
 
 /**
- * Die Felder der RTX-Bereitschaft, die für die Anzeige zählen.
+ * Die Felder der Maschinenraum-Bereitschaft, die für die Anzeige zählen.
  *
- * Absichtlich strukturell statt `RtxReadinessStatus` aus `@uwe/ai-brain`: so
+ * Absichtlich strukturell statt `EngineReadinessStatus` aus `@uwe/ai-brain`: so
  * bleibt shared-ui frei von einer Abhängigkeit auf ein Logik-Paket, und beide
  * Apps rechnen trotzdem mit derselben Funktion. Vorher lag sie nur in Studio —
  * Brain hätte sie für das Mail-Center abschreiben müssen.
  */
-export interface RtxReadinessLike {
+export interface EngineReadinessLike {
   ready: boolean;
   agentStatus?: string;
   connectorDegraded?: boolean;
   urlAllowed?: boolean;
 }
 
-/** Bereitschaft des RTX-Hosts auf den Zustand des Abzeichens abbilden. */
-export function mapRtxReadinessToConnectorState(status: RtxReadinessLike): RtxConnectorState {
+/** Bereitschaft des Maschinenraum-Hosts auf den Zustand des Abzeichens abbilden. */
+export function mapEngineReadinessToConnectorState(status: EngineReadinessLike): EngineConnectorState {
   if (status.agentStatus === "disabled" && !status.ready) {
     return "disabled";
   }
@@ -301,8 +301,8 @@ export function mapRtxReadinessToConnectorState(status: RtxReadinessLike): RtxCo
   return "offline";
 }
 
-/** Per-state tone for the RTX status badge (badge chrome + dot fill). */
-const RTX_TONE: Record<RtxConnectorState, { badge: string; dot: string }> = {
+/** Per-state tone for the Maschinenraum status badge (badge chrome + dot fill). */
+const ENGINE_TONE: Record<EngineConnectorState, { badge: string; dot: string }> = {
   online: {
     badge:
       "border-[color-mix(in_srgb,var(--uwe-success)_30%,transparent)] bg-[color-mix(in_srgb,var(--uwe-success)_14%,transparent)] text-[color-mix(in_srgb,var(--uwe-success)_72%,var(--uwe-fg)_28%)]",
@@ -330,28 +330,28 @@ const RTX_TONE: Record<RtxConnectorState, { badge: string; dot: string }> = {
 };
 
 /**
- * Consistent RTX/local-AI status indicator. Uses a colored dot + label and a
- * tooltip so the technical RTX state stays understandable across Studio.
+ * Consistent Maschinenraum/local-AI status indicator. Uses a colored dot + label and a
+ * tooltip so the technical Maschinenraum state stays understandable across Studio.
  */
-export function RtxStatusBadge({
+export function EngineStatusBadge({
   state,
   label,
   className,
 }: {
-  state: RtxConnectorState;
+  state: EngineConnectorState;
   label?: string;
   className?: string;
 }) {
-  const tone = RTX_TONE[state];
+  const tone = ENGINE_TONE[state];
   return (
     <span
       className={`${BADGE_BASE} ${tone.badge}${className ? ` ${className}` : ""}`}
-      data-rtx-state={state}
-      title={RTX_STATE_DESCRIPTIONS[state]}
-      aria-label={`Maschinenraum-Status: ${RTX_STATE_LABELS[state]}. ${RTX_STATE_DESCRIPTIONS[state]}`}
+      data-engine-state={state}
+      title={ENGINE_STATE_DESCRIPTIONS[state]}
+      aria-label={`Maschinenraum-Status: ${ENGINE_STATE_LABELS[state]}. ${ENGINE_STATE_DESCRIPTIONS[state]}`}
     >
       <span className={`inline-block h-2 w-2 rounded-full ${tone.dot}`} aria-hidden />
-      {label ?? RTX_STATE_LABELS[state]}
+      {label ?? ENGINE_STATE_LABELS[state]}
     </span>
   );
 }

@@ -13,21 +13,21 @@ import {
 } from "./ai-prompt-ui";
 
 function baseCaps(overrides: Partial<AiPromptCapabilities> = {}): AiPromptCapabilities {
-  const rtxEnabled = overrides.rtxEnabled ?? true;
-  const rtxOnline = overrides.rtxOnline ?? true;
-  const rtxState =
-    overrides.rtxState ??
-    (!rtxEnabled ? "disabled" : rtxOnline ? "online" : "offline");
+  const engineEnabled = overrides.engineEnabled ?? true;
+  const engineOnline = overrides.engineOnline ?? true;
+  const engineState =
+    overrides.engineState ??
+    (!engineEnabled ? "disabled" : engineOnline ? "online" : "offline");
 
   return {
-    rtxEnabled,
-    rtxOnline,
-    localAiReady: overrides.localAiReady ?? rtxOnline,
+    engineEnabled,
+    engineOnline,
+    localAiReady: overrides.localAiReady ?? engineOnline,
     cloudAvailable: true,
     brainLocal: true,
     hasCurrentObject: true,
     ...overrides,
-    rtxState,
+    engineState,
   };
 }
 
@@ -45,10 +45,10 @@ describe("ai-prompt-ui — privacy gating", () => {
     assert.equal(personal?.disabledReason, HINT_PERSONAL_BRAIN_LOCAL_ONLY);
   });
 
-  it("allows DnD brain context when RTX is offline in auto mode if cloud is available", () => {
+  it("allows DnD brain context when Maschinenraum is offline in auto mode if cloud is available", () => {
     const caps = baseCaps({
-      rtxState: "offline",
-      rtxOnline: false,
+      engineState: "offline",
+      engineOnline: false,
       localAiReady: false,
       cloudAvailable: true,
     });
@@ -64,7 +64,7 @@ describe("ai-prompt-ui — privacy gating", () => {
     const ui = computePromptUiState(
       "cloud",
       "general_chat",
-      baseCaps({ rtxState: "offline", rtxOnline: false, localAiReady: false }),
+      baseCaps({ engineState: "offline", engineOnline: false, localAiReady: false }),
       "Erkläre mir Initiative in DnD",
     );
 
@@ -72,11 +72,11 @@ describe("ai-prompt-ui — privacy gating", () => {
     assert.equal(ui.sendBlockedReason, undefined);
   });
 
-  it("blocks send with understandable error when local_rtx is offline", () => {
+  it("blocks send with understandable error when local_engine is offline", () => {
     const ui = computePromptUiState(
-      "local_rtx",
+      "local_engine",
       "general_chat",
-      baseCaps({ rtxState: "offline", localAiReady: false, rtxOnline: false }),
+      baseCaps({ engineState: "offline", localAiReady: false, engineOnline: false }),
       "Test",
     );
 
@@ -84,14 +84,14 @@ describe("ai-prompt-ui — privacy gating", () => {
     assert.equal(ui.sendBlockedReason, HINT_LOCAL_NOT_READY);
   });
 
-  it("allows auto + brain when RTX offline if cloud is available (W0 policy)", () => {
+  it("allows auto + brain when Maschinenraum offline if cloud is available (W0 policy)", () => {
     const ui = computePromptUiState(
       "auto",
       "brain",
       baseCaps({
-        rtxState: "offline",
+        engineState: "offline",
         localAiReady: false,
-        rtxOnline: false,
+        engineOnline: false,
         cloudAvailable: true,
       }),
       "Brain-Frage",
@@ -101,14 +101,14 @@ describe("ai-prompt-ui — privacy gating", () => {
     assert.equal(ui.sendBlockedReason, undefined);
   });
 
-  it("blocks auto + personal_brain when RTX offline even if cloud is available", () => {
+  it("blocks auto + personal_brain when Maschinenraum offline even if cloud is available", () => {
     const ui = computePromptUiState(
       "auto",
       "personal_brain",
       baseCaps({
-        rtxState: "offline",
+        engineState: "offline",
         localAiReady: false,
-        rtxOnline: false,
+        engineOnline: false,
         cloudAvailable: true,
       }),
       "Life-Brain-Frage",
@@ -135,15 +135,15 @@ describe("ai-prompt-ui — privacy gating", () => {
     assert.equal(requiresLocalContext("personal_brain"), true);
   });
 
-  it("deriveStatusChips reflects RTX offline and cloud availability", () => {
+  it("deriveStatusChips reflects Maschinenraum offline and cloud availability", () => {
     const chips = deriveStatusChips(
-      baseCaps({ rtxState: "offline", rtxOnline: false, localAiReady: false, cloudAvailable: false }),
+      baseCaps({ engineState: "offline", engineOnline: false, localAiReady: false, cloudAvailable: false }),
     );
 
-    const rtx = chips.find((chip) => chip.id === "rtx");
+    const engine = chips.find((chip) => chip.id === "engine");
     const cloud = chips.find((chip) => chip.id === "cloud");
-    assert.equal(rtx?.value, "offline");
-    assert.equal(rtx?.level, "error");
+    assert.equal(engine?.value, "offline");
+    assert.equal(engine?.level, "error");
     assert.equal(cloud?.value, "nicht konfiguriert");
   });
 
@@ -154,14 +154,14 @@ describe("ai-prompt-ui — privacy gating", () => {
     );
   });
 
-  it("shows cloud fallback hint for DnD context when RTX offline in auto mode", () => {
+  it("shows cloud fallback hint for DnD context when Maschinenraum offline in auto mode", () => {
     const ui = computePromptUiState(
       "auto",
       "current_object_plus_brain",
       baseCaps({
-        rtxState: "offline",
+        engineState: "offline",
         localAiReady: false,
-        rtxOnline: false,
+        engineOnline: false,
         cloudAvailable: true,
       }),
       "Frage",

@@ -31,7 +31,7 @@ Image-Studio-Jobs verknüpfen Ergebnisse automatisch über `syncImageStudioProje
 **Harte Regel:** Kein privater Welt-/Brain-/Objekt-Kontext an Cloud-Provider.
 
 - `contextMode: "prompt_only"` — einziger Cloud-sicherer Modus
-- `page_context`, `brain_context`, `object_context` — nur RTX/lokal
+- `page_context`, `brain_context`, `object_context` — nur Maschinenraum/lokal
 - `assembleImageStudioPrompt()` strippt Kontext für Cloud
 - `scanPromptForPrivateDataLeak()` warnt bei verdächtigen Prompt-Markern
 

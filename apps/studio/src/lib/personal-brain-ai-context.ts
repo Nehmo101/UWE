@@ -15,7 +15,7 @@ export interface LoadStudioPersonalBrainContextOptions {
 }
 
 /**
- * Loads serialized Life-Brain prompt context for local agents (RTX).
+ * Loads serialized Life-Brain prompt context for local agents (Maschinenraum).
  * Uses semantic chunk retrieval when a query is present; falls back to keyword search
  * when embeddings are unavailable.
  */

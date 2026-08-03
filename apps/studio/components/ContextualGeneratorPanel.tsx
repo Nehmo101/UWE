@@ -12,8 +12,8 @@ interface ContextualGeneratorPanelProps {
   pageTitle: string;
   actions: GeneratorActionDefinition[];
   missingHints: MissingContentHint[];
-  rtxReady: boolean;
-  rtxEnabled: boolean;
+  engineReady: boolean;
+  engineEnabled: boolean;
 }
 
 export function ContextualGeneratorPanel({
@@ -22,8 +22,8 @@ export function ContextualGeneratorPanel({
   pageTitle,
   actions,
   missingHints,
-  rtxReady,
-  rtxEnabled,
+  engineReady,
+  engineEnabled,
 }: ContextualGeneratorPanelProps) {
   const [status, setStatus] = useState<string | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
@@ -64,7 +64,7 @@ export function ContextualGeneratorPanel({
         setJobId(id);
         setStatus(
           payload.message ??
-            "RTX offline — Job vorgemerkt. Kein Cloud-Fallback. Ausführung sobald RTX bereit ist.",
+            "Maschinenraum offline — Job vorgemerkt. Kein Cloud-Fallback. Ausführung sobald der Maschinenraum bereit ist.",
         );
         return;
       }
@@ -92,15 +92,15 @@ export function ContextualGeneratorPanel({
           KI-Aktionen für {pageTitle} — alle Vorschläge erfordern Review vor Übernahme.
         </p>
 
-        {!rtxEnabled && (
+        {!engineEnabled && (
           <Alert tone="danger" role="alert">
-            RTX-Inference ist deaktiviert. Generator-Aktionen sind nicht verfügbar.
+            Maschinenraum-Inference ist deaktiviert. Generator-Aktionen sind nicht verfügbar.
           </Alert>
         )}
 
-        {rtxEnabled && !rtxReady && (
+        {engineEnabled && !engineReady && (
           <p className="text-sm text-muted-foreground">
-            RTX ist offline — Aktionen werden als Job vorgemerkt (kein Cloud-Fallback).
+            Der Maschinenraum ist offline — Aktionen werden als Job vorgemerkt (kein Cloud-Fallback).
           </p>
         )}
 
@@ -127,7 +127,7 @@ export function ContextualGeneratorPanel({
                   type="button"
                   variant="secondary"
                   size="sm"
-                  disabled={!rtxEnabled || busyAction !== null}
+                  disabled={!engineEnabled || busyAction !== null}
                   onClick={() => void runAction(action)}
                   className="self-start"
                 >

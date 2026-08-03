@@ -18,7 +18,7 @@ import {
   validateStructuredGeneratorInput,
   type GeneratorActionId,
 } from "@uwe/database/server";
-import { checkRtxReadiness, getInferenceStatus } from "@uwe/ai-brain";
+import { checkEngineReadiness, getInferenceStatus } from "@uwe/ai-brain";
 import { enforceAiRequestLimits } from "@uwe/security";
 import { postGenerate } from "./ai-handlers";
 import { buildGeneratorUserPrompt, mapGeneratorActionToTaskType } from "./generator-action-map";
@@ -52,11 +52,11 @@ export async function getGeneratorPanelData(worldSlug: string, pageSlug: string)
     prepStatus: page.prepStatus,
   });
 
-  const [inference, rtxHealth] = await Promise.all([
+  const [inference, engineHealth] = await Promise.all([
     getInferenceStatus({
       useMock: process.env.AI_USE_MOCK === "true",
     }),
-    checkRtxReadiness({
+    checkEngineReadiness({
       useMock: process.env.AI_USE_MOCK === "true",
       prisma,
     }),
@@ -66,8 +66,8 @@ export async function getGeneratorPanelData(worldSlug: string, pageSlug: string)
     context,
     actions,
     missingHints,
-    rtxReady: rtxHealth.ready,
-    rtxEnabled: inference.enabled,
+    engineReady: engineHealth.ready,
+    engineEnabled: inference.enabled,
   };
 }
 
@@ -136,9 +136,9 @@ export async function postGeneratorAction(body: {
   } else {
     userPrompt = buildGeneratorUserPrompt(body.actionId, page.title, structuredInput);
   }
-  const [inference, rtxHealth] = await Promise.all([
+  const [inference, engineHealth] = await Promise.all([
     getInferenceStatus({ useMock: body.useMock }),
-    checkRtxReadiness({ useMock: body.useMock, prisma }),
+    checkEngineReadiness({ useMock: body.useMock, prisma }),
   ]);
   const model =
     process.env.AI_INFERENCE_DEFAULT_MODEL?.trim() ||
@@ -153,7 +153,7 @@ export async function postGeneratorAction(body: {
     model,
     userPrompt,
     useMock: body.useMock,
-    sync: body.sync ?? !rtxHealth.ready,
+    sync: body.sync ?? !engineHealth.ready,
   });
 
   const payload = (await response.json()) as {

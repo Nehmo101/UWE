@@ -29,13 +29,13 @@ Stand: 2026-07-01 (Doku-Sync nach PR #394) · Rest-Batches 1–5 + Backlog-Welle
 | 6 | Import Preview / Undo | Preview ja, Undo Beta | Ja (Preview + Undo) | Preview ja, Undo Beta |
 | 7 | Secrets-/Reveal-System | Stable (Page + Block) | Ja | Ja (Kern) |
 | 8 | Kanon-Konfliktprüfung | Regeln + AI + Inspector | Ja | Teilweise |
-| 9 | Prepare-for-next-session | Generator + Review | Ja | Teilweise (RTX) |
+| 9 | Prepare-for-next-session | Generator + Review | Ja | Teilweise (Maschinenraum) |
 | 10 | Global Search 2.0 | Cross-domain lexikalisch (#391) | Ja | Ja (Kern) |
 | 11 | Performance-Budget + Testwelt | Phase 1 (CI smoke + sandbox) | Ja (perf-test sandbox) | Nein |
 | 12 | Medienverwaltung | Phase 2 (Alben) | Ja | Ja (Kern) |
 | 13 | Tag-/Taxonomie-Aufräumer | EntityTag-Primärquelle (#393) | Ja (Admin-UI + Merge) | Teilweise (Backfill unverifiziert) |
 | 14 | Hard UI/UX Reset — Shells + Nav | Wave 3 (C4) | Ja (Studio/Portal/Connector) | Ja (Kern) |
-| 15 | Label-Druck via RTX + CUPS | Wave 1 + QF10 | Ja | Ja (CUPS-gestützt) |
+| 15 | Label-Druck via Maschinenraum + CUPS | Wave 1 + QF10 | Ja | Ja (CUPS-gestützt) |
 
 ---
 
@@ -57,9 +57,9 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 - DnD API (Open5e/SRD — Kern fertig)
 - Daily Admin OS (Today/Capture/Projekte/… — teilweise)
 - Secrets/Reveal (Page + Block — production-ready Kern)
-- Kanon-Konfliktprüfung, Prepare-for-next-session (modell-/RTX-abhängig)
-- Life-Brain Retrieval — implementiert (RTX-Embeddings + Keyword-Fallback,
-  `/life-brain`-UI + `/api/life-brain/search`), Qualität RTX-abhängig
+- Kanon-Konfliktprüfung, Prepare-for-next-session (modell-/Maschinenraum-abhängig)
+- Life-Brain Retrieval — implementiert (Maschinenraum-Embeddings + Keyword-Fallback,
+  `/life-brain`-UI + `/api/life-brain/search`), Qualität Maschinenraum-abhängig
 - Charaktersheet Voll-5e (Kern + Level-Up + Spell-Slots), Party-Treasury/Inventar (Studio + Portal)
 - Strukturierte Generatoren NPC/Quest/Item (Review-pflichtig), Statblock Studio (JSON-Editor + Exporte + Label)
 - Bug Center (`/bugs`), NL-Admin-Kommandos (Whitelist-Intents), Unified Activity + Owner Cockpit (#394)
@@ -74,7 +74,7 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 ### ⛔ Deprecated / Removed
 
 - **Docker** und **Windows-One-Click-Installer** — entfernt ([removed-legacy-runtime.md](removed-legacy-runtime.md)).
-- **Inbound RTX-Agent** — Standalone-Tool entfernt; nur noch deprecateter
+- **Inbound Maschinenraum-Agent** — Standalone-Tool entfernt; nur noch deprecateter
   Client-Shim. Aktiv: outbound **Maschinenraum** + direktes Ollama/LM Studio.
 
 ---
@@ -89,10 +89,10 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 | API | Ja — `GET/POST /api/image-studio` |
 | DB | Ja — `ImageStudioProject`, `ImageStudioVersion`, `ImageStudioLink` |
 | Tests | Minimal — 1 Config-Test, Route-Authz, Smoke |
-| Nutzbar | **Ja** für `generate` / `variant` / `inpaint` (RTX + Maske) |
+| Nutzbar | **Ja** für `generate` / `variant` / `inpaint` (Maschinenraum + Maske) |
 | Production-ready | **Teilweise** — Masken-Canvas für Inpaint; Cloud nur generate/variant |
 
-**Was funktioniert:** Prompt → Job → RTX/Cloud → Asset; Inpaint auf Projektseite; Capture→Studio; Retry bei Fehlern; Medienbibliothek-Shortcut.
+**Was funktioniert:** Prompt → Job → Maschinenraum/Cloud → Asset; Inpaint auf Projektseite; Capture→Studio; Retry bei Fehlern; Medienbibliothek-Shortcut.
 
 **Was nicht:** Vollständiger Canvas-Editor; Cloud-Edit-Policy in allen Pfaden dokumentiert.
 
@@ -253,7 +253,7 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 | DB | Inspector-Findings, AI Runs |
 | Tests | Ja — `canon-rules.ts`, `dnd-generator.test.ts` |
 | Nutzbar | **Ja** |
-| Production-ready | **Teilweise** — kleine Regelmenge, RTX-abhängig |
+| Production-ready | **Teilweise** — kleine Regelmenge, Maschinenraum-abhängig |
 
 Kein dedizierter „Kanon-Konflikt“-Screen — verteilt über Inspector, Generator und AI-Proposals (nie Auto-Kanon).
 
@@ -461,15 +461,15 @@ Wave-Übersicht:
 
 ---
 
-## 15. Label-Druck via RTX + CUPS
+## 15. Label-Druck via Maschinenraum + CUPS
 
 | Kriterium | Status |
 |-----------|--------|
 | Vorhanden | **Ja** — `packages/connector/src/label-printing.ts` |
 | Host-Connector | `label_printing` Capability, Queue-Claim, CUPS-Fallback |
-| RTX-Client UI | `PrintersPanel` — zeigt Konfigurationshinweise |
+| Maschinenraum-Client UI | `PrintersPanel` — zeigt Konfigurationshinweise |
 | Env-Doku | `UWE_CONNECTOR_PRINTERS`, `UWE_CONNECTOR_PRINT_CMD` — `.env.example` |
-| Docs | `docs/rtx-connector.md` — "Label printing (CUPS / local printers)" |
+| Docs | `docs/engine-connector.md` — "Label printing (CUPS / local printers)" |
 | Production-ready | **Ja** (CUPS-gestützt; Custom-Cmd optional) |
 
 ---

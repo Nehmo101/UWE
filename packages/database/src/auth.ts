@@ -251,7 +251,7 @@ export class AuthService {
       studioAccess: true,
       brainAccess: true,
       familyAccess: true,
-      // Der Owner geht über `canUseRtxAi` ohnehin durch; gesetzt wird es
+      // Der Owner geht über `canUseEngineAi` ohnehin durch; gesetzt wird es
       // trotzdem, damit die Zeile das Gleiche sagt wie die Oberfläche.
       aiAccess: true,
     });
@@ -348,7 +348,7 @@ export class AuthService {
       toAreaAccess(existing).studio !== toAreaAccess(updated).studio ||
       toAreaAccess(existing).brain !== toAreaAccess(updated).brain ||
       toAreaAccess(existing).family !== toAreaAccess(updated).family ||
-      // Wer den RTX-Host beschäftigen darf, ist eine Rechteänderung und
+      // Wer den Maschinenraum-Host beschäftigen darf, ist eine Rechteänderung und
       // gehört ins Audit — genau wie die Häkchen darüber.
       existing.aiAccess !== updated.aiAccess ||
       existing.isOwner !== updated.isOwner;

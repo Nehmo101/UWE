@@ -151,7 +151,7 @@ export interface PersonalBrainAgentContextOptions {
 }
 
 /**
- * Loads a query-focused Life-Brain context block for local agents (RTX/Ollama).
+ * Loads a query-focused Life-Brain context block for local agents (Maschinenraum/Ollama).
  * Falls back to recent entries when no query is provided.
  */
 export async function loadPersonalBrainAgentContext(

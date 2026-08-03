@@ -45,8 +45,8 @@ const DIAGNOSIS_PATTERNS: Array<{
     pattern: /connection refused|ECONNREFUSED|fetch failed/i,
     summary: "Lokaler Inference-Endpunkt nicht erreichbar.",
     suggestions: [
-      "Ollama/RTX-Worker starten",
-      "AI_INFERENCE_BASE_URL und RTX_BASE_URL prüfen",
+      "Ollama/Maschinenraum-Worker starten",
+      "AI_INFERENCE_BASE_URL und ENGINE_BASE_URL prüfen",
       "Firewall/Heimnetz-Routing prüfen",
     ],
   },
@@ -71,16 +71,16 @@ const DIAGNOSIS_PATTERNS: Array<{
     pattern: /401|403|unauthorized|invalid.*token/i,
     summary: "Authentifizierung am lokalen Agent fehlgeschlagen.",
     suggestions: [
-      "RTX_SERVICE_TOKEN in UWE .env mit RTX-Worker-Konfiguration abgleichen",
+      "ENGINE_SERVICE_TOKEN in UWE .env mit Maschinenraum-Worker-Konfiguration abgleichen",
       "Token nicht in Logs oder UI anzeigen",
     ],
   },
   {
     pattern: /public.*url|öffentlich|exposure/i,
-    summary: "RTX/Inference-URL ist öffentlich erreichbar — Datenschutzrisiko.",
+    summary: "Maschinenraum/Inference-URL ist öffentlich erreichbar — Datenschutzrisiko.",
     suggestions: [
       "Nur loopback oder private IP (192.168.x.x) verwenden",
-      "Cloudflare Tunnel mit Access Policy für Studio, nicht für RTX",
+      "Cloudflare Tunnel mit Access Policy für Studio, nicht für Maschinenraum",
     ],
   },
 ];

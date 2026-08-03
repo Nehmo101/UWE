@@ -3,7 +3,7 @@ import { getInferenceStatus, runInferenceTestPrompt } from "@uwe/ai-brain";
 import { inferenceHealthQuerySchema, parseQuery } from "@uwe/security";
 
 /**
- * RTX inference health — no secrets, only reachability and config facts.
+ * Maschinenraum inference health — no secrets, only reachability and config facts.
  */
 export async function GET(request: Request) {
   const authError = await guardStudioApiRequest(request, { rateLimit: "ai" });

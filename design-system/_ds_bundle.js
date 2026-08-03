@@ -1,4 +1,4 @@
-/* @ds-bundle: {"format":3,"namespace":"UWEDesignSystem_f43eab","components":[{"name":"Badge","sourcePath":"components/core/Badge.jsx"},{"name":"Button","sourcePath":"components/core/Button.jsx"},{"name":"Card","sourcePath":"components/core/Card.jsx"},{"name":"EmptyState","sourcePath":"components/core/EmptyState.jsx"},{"name":"StatCard","sourcePath":"components/core/StatCard.jsx"},{"name":"Tag","sourcePath":"components/core/Tag.jsx"},{"name":"PAGE_TYPE_LABELS","sourcePath":"components/domain/PageTypeBadge.jsx"},{"name":"PageTypeBadge","sourcePath":"components/domain/PageTypeBadge.jsx"},{"name":"RTX_STATE_LABELS","sourcePath":"components/domain/RtxStatusBadge.jsx"},{"name":"RtxStatusBadge","sourcePath":"components/domain/RtxStatusBadge.jsx"},{"name":"SecretReveal","sourcePath":"components/domain/SecretReveal.jsx"},{"name":"VISIBILITY_LABELS","sourcePath":"components/domain/VisibilityBadge.jsx"},{"name":"VisibilityBadge","sourcePath":"components/domain/VisibilityBadge.jsx"},{"name":"Input","sourcePath":"components/forms/Input.jsx"},{"name":"Select","sourcePath":"components/forms/Select.jsx"},{"name":"Textarea","sourcePath":"components/forms/Textarea.jsx"},{"name":"Brand","sourcePath":"components/navigation/Brand.jsx"},{"name":"Breadcrumb","sourcePath":"components/navigation/Breadcrumb.jsx"},{"name":"PageHeader","sourcePath":"components/navigation/PageHeader.jsx"},{"name":"SidebarNav","sourcePath":"components/navigation/SidebarNav.jsx"}],"sourceHashes":{"components/core/Badge.jsx":"6334a3bf6114","components/core/Button.jsx":"2d853cb3b4ee","components/core/Card.jsx":"ae80f0fb6204","components/core/EmptyState.jsx":"7e1fe61f2179","components/core/StatCard.jsx":"61db12f1fce0","components/core/Tag.jsx":"f97bff6cd24a","components/domain/PageTypeBadge.jsx":"f569fbbbaf96","components/domain/RtxStatusBadge.jsx":"695ba893a468","components/domain/SecretReveal.jsx":"8c4a5dd37fe3","components/domain/VisibilityBadge.jsx":"1d369f723da5","components/forms/Input.jsx":"a667743d0189","components/forms/Select.jsx":"d01b28388c83","components/forms/Textarea.jsx":"ac35f88cb2cd","components/navigation/Brand.jsx":"3bebbcb82334","components/navigation/Breadcrumb.jsx":"68b1f3222890","components/navigation/PageHeader.jsx":"08c7aeb78f6d","components/navigation/SidebarNav.jsx":"1e6cd2311b0d","ui_kits/portal/screens.jsx":"29a5e4be3af6","ui_kits/studio/screens.jsx":"6c082eac5e1f"},"inlinedExternals":[],"unexposedExports":[{"name":"uweFieldStyle","sourcePath":"components/forms/Input.jsx"}]} */
+/* @ds-bundle: {"format":3,"namespace":"UWEDesignSystem_f43eab","components":[{"name":"Badge","sourcePath":"components/core/Badge.jsx"},{"name":"Button","sourcePath":"components/core/Button.jsx"},{"name":"Card","sourcePath":"components/core/Card.jsx"},{"name":"EmptyState","sourcePath":"components/core/EmptyState.jsx"},{"name":"StatCard","sourcePath":"components/core/StatCard.jsx"},{"name":"Tag","sourcePath":"components/core/Tag.jsx"},{"name":"PAGE_TYPE_LABELS","sourcePath":"components/domain/PageTypeBadge.jsx"},{"name":"PageTypeBadge","sourcePath":"components/domain/PageTypeBadge.jsx"},{"name":"ENGINE_STATE_LABELS","sourcePath":"components/domain/EngineStatusBadge.jsx"},{"name":"EngineStatusBadge","sourcePath":"components/domain/EngineStatusBadge.jsx"},{"name":"SecretReveal","sourcePath":"components/domain/SecretReveal.jsx"},{"name":"VISIBILITY_LABELS","sourcePath":"components/domain/VisibilityBadge.jsx"},{"name":"VisibilityBadge","sourcePath":"components/domain/VisibilityBadge.jsx"},{"name":"Input","sourcePath":"components/forms/Input.jsx"},{"name":"Select","sourcePath":"components/forms/Select.jsx"},{"name":"Textarea","sourcePath":"components/forms/Textarea.jsx"},{"name":"Brand","sourcePath":"components/navigation/Brand.jsx"},{"name":"Breadcrumb","sourcePath":"components/navigation/Breadcrumb.jsx"},{"name":"PageHeader","sourcePath":"components/navigation/PageHeader.jsx"},{"name":"SidebarNav","sourcePath":"components/navigation/SidebarNav.jsx"}],"sourceHashes":{"components/core/Badge.jsx":"6334a3bf6114","components/core/Button.jsx":"2d853cb3b4ee","components/core/Card.jsx":"ae80f0fb6204","components/core/EmptyState.jsx":"7e1fe61f2179","components/core/StatCard.jsx":"61db12f1fce0","components/core/Tag.jsx":"f97bff6cd24a","components/domain/PageTypeBadge.jsx":"f569fbbbaf96","components/domain/EngineStatusBadge.jsx":"695ba893a468","components/domain/SecretReveal.jsx":"8c4a5dd37fe3","components/domain/VisibilityBadge.jsx":"1d369f723da5","components/forms/Input.jsx":"a667743d0189","components/forms/Select.jsx":"d01b28388c83","components/forms/Textarea.jsx":"ac35f88cb2cd","components/navigation/Brand.jsx":"3bebbcb82334","components/navigation/Breadcrumb.jsx":"68b1f3222890","components/navigation/PageHeader.jsx":"08c7aeb78f6d","components/navigation/SidebarNav.jsx":"1e6cd2311b0d","ui_kits/portal/screens.jsx":"29a5e4be3af6","ui_kits/studio/screens.jsx":"6c082eac5e1f"},"inlinedExternals":[],"unexposedExports":[{"name":"uweFieldStyle","sourcePath":"components/forms/Input.jsx"}]} */
 
 (() => {
 
@@ -403,23 +403,23 @@ function PageTypeBadge({
 Object.assign(__ds_scope, { PAGE_TYPE_LABELS, PageTypeBadge });
 })(); } catch (e) { __ds_ns.__errors.push({ path: "components/domain/PageTypeBadge.jsx", error: String((e && e.message) || e) }); }
 
-// components/domain/RtxStatusBadge.jsx
+// components/domain/EngineStatusBadge.jsx
 try { (() => {
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
-const RTX_STATE_LABELS = {
-  online: "RTX online",
-  offline: "RTX offline",
-  disabled: "RTX deaktiviert",
-  starting: "RTX startet",
-  error: "RTX Fehler"
+const ENGINE_STATE_LABELS = {
+  online: "Maschinenraum online",
+  offline: "Maschinenraum offline",
+  disabled: "Maschinenraum deaktiviert",
+  starting: "Maschinenraum startet",
+  error: "Maschinenraum Fehler"
 };
 
 /**
- * UWE RtxStatusBadge — the local-AI connector status pill. A colored dot plus
- * label. Appears across Studio to show whether the optional RTX Host Connector
+ * UWE EngineStatusBadge — the local-AI connector status pill. A colored dot plus
+ * label. Appears across Studio to show whether the optional Maschinenraum
  * (local GPU worker) is reachable. Never uppercased (unlike other badges).
  */
-function RtxStatusBadge({
+function EngineStatusBadge({
   state = "offline",
   label,
   style = {},
@@ -444,7 +444,7 @@ function RtxStatusBadge({
   };
   const dot = map[state]?.c ?? "var(--uwe-fg-subtle)";
   return /*#__PURE__*/React.createElement("span", _extends({
-    "data-rtx-state": state,
+    "data-engine-state": state,
     style: {
       display: "inline-flex",
       alignItems: "center",
@@ -468,10 +468,10 @@ function RtxStatusBadge({
       background: dot,
       flex: "none"
     }
-  }), label ?? RTX_STATE_LABELS[state]);
+  }), label ?? ENGINE_STATE_LABELS[state]);
 }
-Object.assign(__ds_scope, { RTX_STATE_LABELS, RtxStatusBadge });
-})(); } catch (e) { __ds_ns.__errors.push({ path: "components/domain/RtxStatusBadge.jsx", error: String((e && e.message) || e) }); }
+Object.assign(__ds_scope, { ENGINE_STATE_LABELS, EngineStatusBadge });
+})(); } catch (e) { __ds_ns.__errors.push({ path: "components/domain/EngineStatusBadge.jsx", error: String((e && e.message) || e) }); }
 
 // components/domain/SecretReveal.jsx
 try { (() => {
@@ -1408,7 +1408,7 @@ const {
   Breadcrumb,
   VisibilityBadge,
   PageTypeBadge,
-  RtxStatusBadge,
+  EngineStatusBadge,
   SecretReveal
 } = window.UWEDesignSystem_f43eab;
 const Icon = ({
@@ -1451,7 +1451,7 @@ function TodayScreen() {
     summary: "Dein t\xE4gliches Admin-Cockpit \u2014 Capture, Projekte, Sessions und Systemstatus auf einen Blick.",
     meta: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Badge, {
       tone: "neutral"
-    }, "Dienstag, 1. Juli"), /*#__PURE__*/React.createElement(RtxStatusBadge, {
+    }, "Dienstag, 1. Juli"), /*#__PURE__*/React.createElement(EngineStatusBadge, {
       state: "online"
     })),
     actions: /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Button, {
@@ -1611,7 +1611,7 @@ function TodayScreen() {
       height: 16
     }
   }), /*#__PURE__*/React.createElement(Card, {
-    title: "KI & RTX"
+    title: "KI & Maschinenraum"
   }, /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -1626,7 +1626,7 @@ function TodayScreen() {
       justifyContent: "space-between",
       alignItems: "center"
     }
-  }, /*#__PURE__*/React.createElement("span", null, "Lokale RTX"), /*#__PURE__*/React.createElement(RtxStatusBadge, {
+  }, /*#__PURE__*/React.createElement("span", null, "Lokaler Maschinenraum"), /*#__PURE__*/React.createElement(EngineStatusBadge, {
     state: "online"
   })), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -1894,9 +1894,9 @@ __ds_ns.PAGE_TYPE_LABELS = __ds_scope.PAGE_TYPE_LABELS;
 
 __ds_ns.PageTypeBadge = __ds_scope.PageTypeBadge;
 
-__ds_ns.RTX_STATE_LABELS = __ds_scope.RTX_STATE_LABELS;
+__ds_ns.ENGINE_STATE_LABELS = __ds_scope.ENGINE_STATE_LABELS;
 
-__ds_ns.RtxStatusBadge = __ds_scope.RtxStatusBadge;
+__ds_ns.EngineStatusBadge = __ds_scope.EngineStatusBadge;
 
 __ds_ns.SecretReveal = __ds_scope.SecretReveal;
 

@@ -9,7 +9,7 @@
 > Brain-Inhalte sind hart local-only; D&D-Kontext ist konfigurierbar und hat
 > den Default `CLOUD_ALLOWED`, nachdem `dm_only` entfernt wurde.
 
-Gilt für UWE Studio, Brain, Maschinenraum / lokale RTX Worker und Cloud-KI.
+Gilt für UWE Studio, Brain, Maschinenraum / lokale Maschinenraum-Worker und Cloud-KI.
 
 ---
 
@@ -20,11 +20,11 @@ UWE ist **alleiniger Besitzer** aller Kampagnen- und Brain-Daten. Die Architektu
 | Komponente | Speichert UWE-Daten? | Erreichbarkeit |
 |------------|----------------------|----------------|
 | **UWE Host** (Laptop) | Ja — DB, Brain, Embeddings, Mail | Studio/Portal optional über Tunnel/Proxy; Brain nur lokal/LAN |
-| **Maschinenraum / lokaler RTX Worker** (RTX-PC) | Nein — nur Inferenz-/Job-Worker | Connector outbound; direkte Worker nur Heimnetz, Token-geschützt |
+| **Maschinenraum / lokaler Worker** (Rechner mit der Hardware) | Nein — nur Inferenz-/Job-Worker | Connector outbound; direkte Worker nur Heimnetz, Token-geschützt |
 | **Cloud-KI** | Keine UWE-Source-of-Truth; verarbeitet nur policy-konformen, minimierten Kontext | Internet |
 
 **Grundregel:** Die persistente Source of Truth bleibt lokal in UWE. Der
-RTX-Rechner berechnet Text/Embeddings, speichert aber keine UWE-Inhalte
+Maschinenraum-Rechner berechnet Text/Embeddings, speichert aber keine UWE-Inhalte
 dauerhaft. D&D-Kontext darf nach Gateway-Policy vorübergehend durch Cloud-KI
 verarbeitet werden; private Brain-Inhalte niemals.
 
@@ -49,31 +49,31 @@ Die Durchsetzung erfolgt **serverseitig** (Privacy Guard / AI Router) — nicht 
 | Cloud | Allgemeiner Chat | Erlaubt |
 | Cloud | D&D-Brain / Objekt / Objekt+Brain | Nach Gateway-Policy, Default `CLOUD_ALLOWED` |
 | Cloud | `personal_brain` / private Brain-Inhalte | **Immer blockiert** |
-| Auto | Allgemeiner Chat, RTX offline | Cloud-Fallback (wenn konfiguriert) |
-| Auto | D&D-Brain / Objekt / Objekt+Brain, RTX offline | Cloud-Fallback nur bei `CLOUD_ALLOWED` |
-| Auto | `personal_brain`, RTX offline | **Blockiert** — kein Cloud-Fallback |
-| Lokale RTX | D&D- oder Personal-Brain-Kontext (RTX ready) | Erlaubt |
+| Auto | Allgemeiner Chat, Maschinenraum offline | Cloud-Fallback (wenn konfiguriert) |
+| Auto | D&D-Brain / Objekt / Objekt+Brain, Maschinenraum offline | Cloud-Fallback nur bei `CLOUD_ALLOWED` |
+| Auto | `personal_brain`, Maschinenraum offline | **Blockiert** — kein Cloud-Fallback |
+| Lokaler Maschinenraum | D&D- oder Personal-Brain-Kontext (Maschinenraum ready) | Erlaubt |
 
 ---
 
-## RTX nicht öffentlich exposen
+## Maschinenraum nicht öffentlich exposen
 
-Der Maschinenraum arbeitet outbound und braucht keinen öffentlichen Port. Direkte RTX Worker, Ollama oder LM Studio dürfen ebenfalls **nicht** über das Internet erreichbar sein:
+Der Maschinenraum arbeitet outbound und braucht keinen öffentlichen Port. Direkte Maschinenraum-Worker, Ollama oder LM Studio dürfen ebenfalls **nicht** über das Internet erreichbar sein:
 
-- Kein Port-Forwarding am Router auf den RTX-PC
-- Kein Cloudflare-Tunnel zu Ollama, LM Studio oder direkten RTX Worker-Endpunkten
+- Kein Port-Forwarding am Router auf den Maschinenraum-PC
+- Kein Cloudflare-Tunnel zu Ollama, LM Studio oder direkten Maschinenraum-Worker-Endpunkten
 - Keine Bindung an `0.0.0.0` ohne Firewall — bevorzugt private LAN-IP
 - Nur der UWE-Host im Heimnetz spricht mit direkten Worker-Endpunkten
 
-Cloudflare leitet **nur** an UWE weiter, nicht an lokale RTX-Dienste.
+Cloudflare leitet **nur** an UWE weiter, nicht an lokale Maschinenraum-Dienste.
 
 ---
 
 ## Token verwenden
 
-- `RTX_SERVICE_TOKEN` muss **lang/zufällig** sein, wenn ein direkter RTX Worker-Endpunkt genutzt wird
+- `ENGINE_SERVICE_TOKEN` muss **lang/zufällig** sein, wenn ein direkter Maschinenraum-Worker-Endpunkt genutzt wird
 - Connector-Tokens werden im Studio erzeugt und vom Maschinenraum outbound verwendet
-- Token nur in `.env` auf Server/RTX-PC — **nie** in Git, Frontend, URLs oder Logs
+- Token nur in `.env` auf Server/Maschinenraum-PC — **nie** in Git, Frontend, URLs oder Logs
 - Jeder Request an sensible direkte Worker-Endpunkte erfordert `Authorization: Bearer <token>`
 - Fehlender oder falscher Token → Request abgelehnt
 
@@ -83,7 +83,7 @@ Zusätzlich: `STUDIO_API_TOKEN` für sensible Studio-APIs, wenn UWE aus untruste
 
 ## Keine Promptlogs
 
-Standardmäßig **keine** dauerhafte Speicherung von Prompts oder Antworten auf dem RTX-PC:
+Standardmäßig **keine** dauerhafte Speicherung von Prompts oder Antworten auf dem Maschinenraum-PC:
 
 - `LOG_PROMPTS=false` (Standard, falls ein Worker diese Option kennt)
 - Debug-Logging nur bewusst und kurzzeitig aktivieren
@@ -97,9 +97,9 @@ Standardmäßig **keine** dauerhafte Speicherung von Prompts oder Antworten auf 
 
 Der Modus **Auto** wählt den Provider automatisch:
 
-1. **Allgemeiner Chat:** RTX ready → lokale RTX; RTX offline + Cloud konfiguriert → Cloud; sonst blockieren
-2. **D&D-Brain, Aktuelles Objekt, Objekt + Brain:** lokale RTX bevorzugt; RTX nicht ready → Cloud nur bei `CLOUD_ALLOWED`, nachdem `dm_only` entfernt wurde
-3. **`personal_brain` und private Brain-Inhalte:** nur lokale RTX; RTX nicht ready → **blockieren**, niemals Cloud
+1. **Allgemeiner Chat:** Maschinenraum ready → lokaler Maschinenraum; Maschinenraum offline + Cloud konfiguriert → Cloud; sonst blockieren
+2. **D&D-Brain, Aktuelles Objekt, Objekt + Brain:** lokaler Maschinenraum bevorzugt; Maschinenraum nicht ready → Cloud nur bei `CLOUD_ALLOWED`, nachdem `dm_only` entfernt wurde
+3. **`personal_brain` und private Brain-Inhalte:** nur der lokale Maschinenraum; Maschinenraum nicht ready → **blockieren**, niemals Cloud
 
 Diese Regeln verhindern den schwerwiegendsten Fehler: versehentliches Senden
 privater Brain-Inhalte oder von `dm_only` an Cloud-KI über Auto-Fallback.
@@ -110,7 +110,7 @@ privater Brain-Inhalte oder von `dm_only` an Cloud-KI über Auto-Fallback.
 
 | Risiko | Mitigation |
 |--------|------------|
-| Lokaler RTX-Dienst öffentlich erreichbar | Nur Heimnetz; Firewall; Token; keine Portfreigabe |
+| Lokaler Maschinenraum-Dienst öffentlich erreichbar | Nur Heimnetz; Firewall; Token; keine Portfreigabe |
 | Token in Logs oder Git | `.env` in `.gitignore`; keine Token in Fehlermeldungen |
 | UI-only Security | Serverseitiger Privacy Guard für alle KI-Routen |
 | Auto-Fallback mit falsch klassifiziertem Kontext | Harte Sperre für `personal_brain`, `dm_only`-Filter und Policy-Tests |
@@ -126,7 +126,7 @@ Bei Sicherheitsvorfällen: [SECURITY.md](SECURITY.md) — Reporting a Vulnerabil
 
 ## Verwandte Dokumentation
 
-- [README.md — KI-System](README.md#ki-system-brain--rtx)
+- [README.md — KI-System](README.md#ki-system-brain--engine)
 - [SECURITY.md — Cloud AI Context Boundaries](SECURITY.md#cloud-ai-context-boundaries)
 - [ADR 006 — KI- und Privacy-Policy](docs/adr/006-ai-privacy-policy.md)
 - [docs/deployment-hardening.md](docs/deployment-hardening.md)

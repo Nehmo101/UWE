@@ -46,7 +46,7 @@ export interface ResolvedApiToken {
   /** Whether the creating/owning account is the owner (admin scopes need it). */
   isOwner: boolean;
   /**
-   * Whether the owning account may use the RTX AI (G-KI).
+   * Whether the owning account may use the Maschinenraum AI (G-KI).
    *
    * Reist mit, damit ein Token kein Schleichweg wird: wer die KI selbst nicht
    * benutzen darf, darf sie auch nicht über ein Token benutzen, das er sich

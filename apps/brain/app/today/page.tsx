@@ -119,7 +119,7 @@ export default async function BrainTodayPage() {
           ) : (
             <p className="brain-muted">
               Noch kein Briefing. Es fasst Termine, Fristen, Aufgaben und die Nachrichtenlage
-              lokal auf dem RTX-Host zusammen.
+              lokal auf dem Maschinenraum-Host zusammen.
             </p>
           )}
           {canTriggerBriefing ? (

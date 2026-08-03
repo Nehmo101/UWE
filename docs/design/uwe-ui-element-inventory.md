@@ -133,7 +133,7 @@
 | Route | Shell | Nav elements | Primary UI | Known states | Mobile bottomNav | Theme issues |
 |-------|-------|--------------|------------|--------------|------------------|--------------|
 | `/life-brain` | AdminModuleShell | Sidebar **Wissen** | Dokument-/Fact-Listen, Suche | Empty | Ja | Studio-only |
-| `/life-brain/documents/[id]`, `/facts/[id]` | AdminModuleShell | — | Detail-Ansichten | — | Ja | RTX-only context |
+| `/life-brain/documents/[id]`, `/facts/[id]` | AdminModuleShell | — | Detail-Ansichten | — | Ja | Maschinenraum-only context |
 | `/brain` | AdminModuleShell | Sidebar Wissen | Global Brain Store Liste | Empty | Ja | — |
 
 ---

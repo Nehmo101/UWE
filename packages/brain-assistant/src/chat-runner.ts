@@ -1,7 +1,7 @@
 /**
  * Runs one Brain assistant turn.
  *
- * Hard invariant: **local only**. `providerMode` is pinned to `local_rtx` and the
+ * Hard invariant: **local only**. `providerMode` is pinned to `local_engine` and the
  * context mode is always a local-only one, so the router's privacy guards can
  * never route a Brain conversation to a cloud provider — matching ADR 006 and
  * the existing Life-Brain chat.
@@ -15,7 +15,7 @@
 
 import {
   executeAiGatewayRequest,
-  isRtxReadinessReady,
+  isEngineReadinessReady,
   resolveAiBrainSettings,
   type ApiKeyStore,
 } from "@uwe/ai-brain";
@@ -143,8 +143,8 @@ export async function runAssistantTurn(
     return unavailable("KI ist in den Einstellungen deaktiviert.");
   }
 
-  const rtxReady = await isRtxReadinessReady({ useMock: input.useMock, prisma: deps.db });
-  if (!rtxReady) {
+  const engineReady = await isEngineReadinessReady({ useMock: input.useMock, prisma: deps.db });
+  if (!engineReady) {
     return unavailable(
       "Lokale KI ist offline. Der Brain-Assistent nutzt niemals Cloud-KI — bitte den Command Center bzw. Maschinenraum starten.",
     );
@@ -232,7 +232,7 @@ export async function runAssistantTurn(
       {
         user: input.user,
         // Pinned: the Brain assistant is local-only and has no cloud fallback.
-        providerMode: "local_rtx",
+        providerMode: "local_engine",
         contextMode: contextModeFor(conversation.contextMode),
         taskType: "answer_life_question",
         userPrompt,

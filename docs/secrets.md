@@ -23,13 +23,13 @@ Also set:
 
 | Variable | Purpose |
 |----------|---------|
-| `RTX_BASE_URL` | Direct RTX worker URL for the remaining image-worker/security-boundary path |
-| `RTX_SERVICE_TOKEN` | Bearer token for that direct RTX worker URL |
+| `ENGINE_BASE_URL` | Direct Maschinenraum worker URL for the remaining image-worker/security-boundary path |
+| `ENGINE_SERVICE_TOKEN` | Bearer token for that direct Maschinenraum worker URL |
 | `MAX_UPLOAD_MB` | Maximum upload size for Studio assets (default: `50`) |
 | `STUDIO_API_TOKEN` | Bearer token for sensitive Studio APIs |
 | `SMTP_PASSWORD`, `CLOUD_AI_API_KEY`, provider API keys | Feature-specific secrets |
 
-`RTX_BASE_URL` and `RTX_SERVICE_TOKEN` must be set together or not at all. For local LLM work prefer direct Ollama/LM Studio through `AI_INFERENCE_BASE_URL` and the outbound Maschinenraum.
+`ENGINE_BASE_URL` and `ENGINE_SERVICE_TOKEN` must be set together or not at all. For local LLM work prefer direct Ollama/LM Studio through `AI_INFERENCE_BASE_URL` and the outbound Maschinenraum.
 
 ## Development defaults
 

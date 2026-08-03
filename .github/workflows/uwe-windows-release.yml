@@ -53,7 +53,7 @@ jobs:
       - name: Rust cache
         uses: swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
-          workspaces: "apps/rtx-connector-client/src-tauri -> target"
+          workspaces: "apps/engine-connector-client/src-tauri -> target"
 
       # Auf einem Tag-Push ist der Tag die Quelle der Version; beim manuellen Lauf
       # die VERSION-Datei (bzw. die übereinstimmende Eingabe). In beiden Fällen
@@ -129,7 +129,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          RUNTIME="apps/rtx-connector-client/src-tauri/resources/host-runtime"
+          RUNTIME="apps/engine-connector-client/src-tauri/resources/host-runtime"
           rm -f "$RUNTIME/README.txt"
           pnpm --filter @uwe/host-command-center bundle-cli -- --out "$RUNTIME/host-cli.cjs"
           NODE_VERSION="$(node -p 'process.version.slice(1)')"
@@ -163,7 +163,7 @@ jobs:
           ls -la "$RUNTIME"
 
       - name: Build Windows Command Center
-        run: pnpm --filter @uwe/rtx-connector-client tauri:build -- --bundles nsis,msi
+        run: pnpm --filter @uwe/engine-connector-client tauri:build -- --bundles nsis,msi
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -173,7 +173,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          BUNDLE_ROOT="apps/rtx-connector-client/src-tauri/target/release/bundle"
+          BUNDLE_ROOT="apps/engine-connector-client/src-tauri/target/release/bundle"
           mkdir -p release-assets
           NSIS="$(find "$BUNDLE_ROOT/nsis" -type f \( -name '*.exe' -o -name '*-setup.exe' \) | head -n 1 || true)"
           MSI="$(find "$BUNDLE_ROOT/msi" -type f -name '*.msi' | head -n 1 || true)"

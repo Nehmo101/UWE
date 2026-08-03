@@ -74,7 +74,7 @@ export const BRAIN_NAV_SECTIONS: BrainNavSection[] = [
         href: "/system",
         label: "System",
         icon: "⚙",
-        keywords: ["status", "homelab", "diagnose", "host", "betrieb", "rtx", "cloudflare"],
+        keywords: ["status", "homelab", "diagnose", "host", "betrieb", "engine", "cloudflare"],
       },
     ],
   },

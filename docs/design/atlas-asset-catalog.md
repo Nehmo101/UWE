@@ -4,7 +4,7 @@ Wunsch- und Ideenliste für die Gouache-Asset-Bibliothek. **Spezifikation,
 kein Code** — dies ist der Vorrat, aus dem die Asset-Rezepte entstehen.
 
 > **Diese Datei ist ein Laufzeitpfad, kein blosses Dokument.** Ihr Pfad steht
-> als Konstante in der RTX-Asset-Action (`packages/ai-brain`, Prompt-Kontext)
+> als Konstante in der Maschinenraum-Asset-Action (`packages/ai-brain`, Prompt-Kontext)
 > und wird von einem Test geprüft. Nicht umbenennen, nicht verschieben.
 
 **Umsetzungs-Tags** (wie das Asset in die Engine passt):

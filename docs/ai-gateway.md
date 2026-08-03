@@ -10,8 +10,8 @@ User Prompt
   → Permission Check (User-Freigaben / Master-Admin)
   → Privacy Check (Kontext-Kategorie)
   → Budget Check (Tages-/Monats-/User-Limits)
-  → RTX Health Check
-  → Local RTX Provider oder Cloud Provider
+  → Maschinenraum-Health Check
+  → Local Maschinenraum Provider oder Cloud Provider
   → Usage Log
 ```
 
@@ -19,7 +19,7 @@ User Prompt
 
 | Modus | Verhalten |
 |-------|-----------|
-| `LOCAL_ONLY` | Nur RTX/lokale Inference |
+| `LOCAL_ONLY` | Nur Maschinenraum/lokale Inference |
 | `LOCAL_THEN_CLOUD` | Historisch — verhält sich seit N.3 wie `LOCAL_ONLY` |
 | `CLOUD_ONLY` | Historisch — es gibt keinen Cloud-Anbieter mehr |
 | `DISABLED` | KI systemweit aus |
@@ -33,7 +33,7 @@ sie in der Datenbank stehen; ein Enum-Umbau wäre eine Migration ohne Nutzen.
 | Level | Bedeutung |
 |-------|-----------|
 | `CLOUD_ALLOWED` | Cloud-Fallback erlaubt (wenn global freigegeben) |
-| `CLOUD_FORBIDDEN` | Kein Cloud — nur lokale RTX |
+| `CLOUD_FORBIDDEN` | Kein Cloud — nur der lokale Maschinenraum |
 | `LOCAL_REQUIRED` | Erzwingt lokale Route |
 
 ## Code-Platzierung

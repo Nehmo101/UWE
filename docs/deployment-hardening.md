@@ -25,10 +25,10 @@ Cloudflare Tunnel (cloudflared auf dem Laptop)
   ↓ http://127.0.0.1:3001  Portal
 Alter Linux-Laptop (UWE Host)
   ↓ nur Heimnetz (kein Port-Forward)
-RTX-Rechner (Ollama / UWE RTX-Agent — niemals öffentlich)
+Maschinenraum-Rechner (Ollama / UWE Maschinenraum-Agent — niemals öffentlich)
 ```
 
-**Wichtig:** Der RTX-Rechner und Ollama dürfen **nicht** im Tunnel oder Router freigegeben werden. Nur UWE Studio/Portal laufen hinter Cloudflare.
+**Wichtig:** Der Maschinenraum-Rechner und Ollama dürfen **nicht** im Tunnel oder Router freigegeben werden. Nur UWE Studio/Portal laufen hinter Cloudflare.
 
 ---
 
@@ -302,7 +302,7 @@ Cloudflare Health Checks und externe Uptime-Dienste sollten **`/api/health/publi
 
 ### Grundsätze
 
-- **Keine Secrets** in Logs oder Health-JSON: keine Werte von `AUTH_SECRET`, `STUDIO_API_TOKEN`, SMTP-Passwörter, API-Keys, RTX-Tokens.
+- **Keine Secrets** in Logs oder Health-JSON: keine Werte von `AUTH_SECRET`, `STUDIO_API_TOKEN`, SMTP-Passwörter, API-Keys, Maschinenraum-Tokens.
 - UWE loggt Fehler über **stderr** → **journald** (`journalctl -u uwe.service`).
 - Activity-/Mail-Logs in der Datenbank enthalten keine Passwörter (siehe `SECURITY.md`).
 
@@ -366,7 +366,7 @@ Backups regelmäßig **off-site** kopieren (USB, NAS, rsync). Siehe [backup-rest
 
 ## 10a. Morning Briefing (systemd timer, optional)
 
-Erzeugt täglich lokal per RTX ein Morning Briefing. **An/Aus und Uhrzeit werden in
+Erzeugt täglich lokal per Maschinenraum ein Morning Briefing. **An/Aus und Uhrzeit werden in
 UWE gesetzt** (Einstellungen → Briefing) und zur host-lesbaren
 `data/briefings/schedule.json` gesynct. Der Timer tickt alle 15 min; das Skript
 triggert einmal täglich zur konfigurierten Zeit einen internen Endpoint (Guard:
@@ -435,7 +435,7 @@ sudo fail2ban-client status sshd
 - [ ] `/etc/uwe/uwe.env` mode `600`, starke `AUTH_SECRET` und `STUDIO_API_TOKEN`
 - [ ] `RUN_DB_SEED=false`
 - [ ] `AUTH_REQUIRED=true`, `SESSION_COOKIE_SECURE=true` hinter HTTPS
-- [ ] `AI_INFERENCE_ALLOW_PUBLIC_URL=false`, RTX nur im LAN
+- [ ] `AI_INFERENCE_ALLOW_PUBLIC_URL=false`, Maschinenraum nur im LAN
 - [ ] User `uwe` (nicht root) betreibt Node
 - [ ] `/var/lib/uwe` (Daten) und `/var/backups/uwe` (Backups) getrennt
 - [ ] `unattended-upgrades` aktiv

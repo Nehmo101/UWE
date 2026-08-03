@@ -114,7 +114,7 @@ describe("Embeddings — indexing and search", () => {
     assert.ok(stored.chunks.every((chunk) => chunk.embedding == null));
   });
 
-  it("rejects reindex when RTX provider is offline", async () => {
+  it("rejects reindex when Maschinenraum provider is offline", async () => {
     const brainStore = createBrainStoreService(databaseUrl);
     const world = await createWorld({ name: "Reindex", slug: "brain-reindex" }, databaseUrl);
     const provider = createEmbeddingProvider({ useMock: true });

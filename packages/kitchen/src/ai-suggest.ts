@@ -1,12 +1,12 @@
 /**
  * KI-Wochenvorschlag der Küche (K3). Baut aus Rezepten, Vorrat und Wochenzielen
- * einen kompakten Kontext und ruft die **Connector-Queue direkt** (lokale RTX-
+ * einen kompakten Kontext und ruft die **Connector-Queue direkt** (lokale Maschinenraum-
  * Inferenz via `llm_generate`-Job) — kein `routeAiRequest`, kein neuer
  * `AiContextMode`. Muster: `connectorQueueProvider.ts` aus `@uwe/ai-brain`.
  *
  * Der Kontext-Bau und der Parser sind reine, getestete Helfer. Der Connector-
  * Call selbst ist Best-Effort: ist kein `llm_local`-Connector online, liefern
- * wir einen sauberen „RTX offline"-Zustand statt zu crashen.
+ * wir einen sauberen „Maschinenraum offline"-Zustand statt zu crashen.
  */
 import {
   createConnectorService,
@@ -68,7 +68,7 @@ export interface WeekSuggestionDraft {
 export type WeekSuggestionResult =
   | { status: "ok"; draft: WeekSuggestionDraft }
   | { status: "parse_error"; error: string }
-  | { status: "rtx_offline"; error: string };
+  | { status: "engine_offline"; error: string };
 
 const WEEKDAY_INDEX: Record<string, number> = {
   montag: 0,
@@ -244,7 +244,7 @@ export interface SuggestWeekInput {
 
 /**
  * Fordert einen KI-Wochenvorschlag über die Connector-Queue an. Ist kein
- * `llm_local`-Connector online, wird ein „RTX offline"-Zustand zurückgegeben —
+ * `llm_local`-Connector online, wird ein „Maschinenraum offline"-Zustand zurückgegeben —
  * ohne Exception. Bei kaputter Antwort kommt ein sauberer Parse-Fehler zurück.
  */
 export async function suggestWeek(
@@ -287,8 +287,8 @@ export async function suggestWeek(
   );
   if (!queueAvailable) {
     return {
-      status: "rtx_offline",
-      error: "Kein lokaler KI-Connector (RTX) online — Wochenvorschlag nicht verfügbar.",
+      status: "engine_offline",
+      error: "Kein lokaler KI-Connector (Maschinenraum) online — Wochenvorschlag nicht verfügbar.",
     };
   }
 

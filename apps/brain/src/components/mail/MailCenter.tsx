@@ -319,7 +319,7 @@ export function MailCenter({ data }: { data: MailCenterData }) {
           accounts={data.accounts}
           config={data.config}
           logs={data.logs}
-          rtxState={data.rtxState}
+          engineState={data.engineState}
         />
       );
     }
@@ -327,7 +327,7 @@ export function MailCenter({ data }: { data: MailCenterData }) {
       return (
         <MailTriage
           messages={data.messages}
-          rtxState={data.rtxState}
+          engineState={data.engineState}
           onOpen={selectMessage}
           onReplyDraft={(id) => selectMessage(id)}
           onTask={(id) => void taskMessage(id)}
@@ -441,7 +441,7 @@ export function MailCenter({ data }: { data: MailCenterData }) {
             <MailReader
               message={detail}
               loading={loadingDetail}
-              rtxState={data.rtxState}
+              engineState={data.engineState}
               busy={busy}
               onBack={() => {
                 setSelectedId(null);
@@ -461,7 +461,7 @@ export function MailCenter({ data }: { data: MailCenterData }) {
             {chatOpen && detail ? (
               <MailChatPanel
                 message={detail}
-                rtxState={data.rtxState}
+                engineState={data.engineState}
                 onClose={() => setChatOpen(false)}
                 onActionComplete={() => {
                   router.refresh();

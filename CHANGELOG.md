@@ -15,17 +15,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > (`uwe.db`/`uwe-brain.db`/`uwe-family.db`), Terra-Karteneditor (Atlas/Atlas-3D
 > vollständig entfernt), Passkeys + Google-Login, Mail-Center nach Brain.
 
+### Changed
+
+- **RTX-Namen vollständig entfernt (Breaking)** — „RTX“ ist eine NVIDIA-Produktlinie; UWE hat nie eine vorausgesetzt, und OCR, Audio, Spotify, Diktat und Etikettendruck brauchen überhaupt keine GPU. Der Name ist jetzt aus Oberfläche, Bezeichnern, Pfaden, Env-Vars und DB-Enums verschwunden. Vokabular: **Maschinenraum** (Produktname) und `engine…` / `ENGINE_…` (Code). Umbenannt: `tools/uwe-rtx-connector` → `tools/uwe-engine-connector`, `apps/rtx-connector-client` → `apps/engine-connector-client`, `uwe-rtx-connector.service` → `uwe-engine-connector.service`, alle `RTX_*`-Env-Vars → `ENGINE_*` (**ohne Fallback**), `/soundboard/rtx` → `/soundboard/engine`, `ConnectorType.rtx_connector` → `engine_connector`, `ScanDocumentStatus.waiting_for_rtx` → `waiting_for_engine`. Migrationen schreiben Bestandsdaten inkl. KI-Nutzungslogs um; das Command Center übernimmt sein Datenverzeichnis und räumt alte Autostart-Einträge selbst auf, das Host-Setup-Skript Unit, State-Ordner und Connector-`.env`. `UWE_CONNECTOR_*`, `UWE_HOST_URL` und das Token-Präfix `uwec_` bleiben unverändert — Tokens müssen nicht neu ausgestellt werden. Checkliste: `docs/engineering/engine-rename-migration.md`. Historische Einträge weiter unten in dieser Datei nennen die alten Namen bewusst nicht mehr, damit kein Leser auf NVIDIA-only schließt
+
 ### Added
 
 - **UWE Windows Releases** — GitHub Actions workflow publishes Command Center NSIS/MSI under tag `uwe-vX.Y.Z`; Command Center **Update** button syncs the checkout to the release, rebuilds Studio/Portal, and opens the Windows installer when the desktop app is behind
 - **Release über Release-Tags** — den Tag `uwe-vX.Y.Z` erzeugt weiterhin die Pipeline; zusätzlich baut der Workflow jetzt auch aus einem **gepushten** `uwe-v*`-Tag und prüft dabei Tag gegen `VERSION`. `pnpm release:version X.Y.Z --pr` (`scripts/set-release-version.mjs`) schneidet den Versions-PR in einem Befehl: fünf Fassungsangaben inkl. `src-tauri/Cargo.toml`, `[Unreleased]` → `[X.Y.Z] - <heute>` nach Keep a Changelog, Branch `release/vX.Y.Z` und Commit — ohne Push und ohne den CHANGELOG-Text zu erfinden. Ohne `--pr` schreibt es nur die fünf Dateien; genau so ruft es der Release-Build auf, damit Build und PR nicht auseinanderlaufen. `pnpm release:version --check` findet Drift
 - **Update-Check der Bundle-Installation** — „Nach Updates suchen“ liest in einer Installation ohne git das Release-Manifest `uwe-release.json` statt lokaler git-Tags (vorher schlug der Check dort mit einem git-Fehler fehl); der Update-Lauf öffnet den Command-Center-Installer auch dann, wenn nur die Desktop-App hinter dem Release-Tag liegt. Der Installer-Name kommt aus dem Manifest — keine `gh`-CLI und kein Token auf dem Zielrechner
 - **UWE Daily Admin OS** — private admin cockpit: `/today`, `/capture`, `/projects`, `/workshop`, `/contracts`, `/hardware`, `/life-brain`
-- **Studio Security Step 1** — URL classification, RTX exposure assessment, admin status cards
+- **Studio Security Step 1** — URL classification, Maschinenraum exposure assessment, admin status cards
 - **Life Admin data models** — Capture, PersonalProject, WorkshopProject, ContractExpense, HardwareDevice, PersonalBrain, Generator presets/outputs
 - **Mobile bottom nav** — Heute, Capture, Suche, KI, Mehr + global Capture FAB
-- **Personal Brain privacy** — `personal_brain` context mode, local-only, RTX offline job queue
-- **Contextual Generator panel** — page edit KI actions with review flow and RTX-deferred jobs
+- **Personal Brain privacy** — `personal_brain` context mode, local-only, Maschinenraum offline job queue
+- **Contextual Generator panel** — page edit KI actions with review flow and Maschinenraum-deferred jobs
 - **Favorite world setting** — `app.favoriteWorldSlug` for /today without hardcoding Terra
 - Docs: `docs/daily-admin-os.md`, `docs/life-brain-privacy.md`
 

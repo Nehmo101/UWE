@@ -21,8 +21,8 @@ interface Props {
   pageType: string;
   pageId: string;
   worldId: string;
-  rtxReady: boolean;
-  rtxEnabled: boolean;
+  engineReady: boolean;
+  engineEnabled: boolean;
 }
 
 export async function MagicItemBuilderSection({
@@ -32,8 +32,8 @@ export async function MagicItemBuilderSection({
   pageType,
   pageId,
   worldId,
-  rtxReady,
-  rtxEnabled,
+  engineReady,
+  engineEnabled,
 }: Props) {
   if (pageType !== "item") {
     return null;
@@ -83,8 +83,8 @@ export async function MagicItemBuilderSection({
         action={action}
         presets={presets}
         searchEquipmentUrl={studioApiUrl("/api/dnd/equipment/search")}
-        rtxReady={rtxReady}
-        rtxEnabled={rtxEnabled}
+        engineReady={engineReady}
+        engineEnabled={engineEnabled}
       />
     </div>
   );

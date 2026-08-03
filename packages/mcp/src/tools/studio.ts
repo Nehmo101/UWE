@@ -125,7 +125,7 @@ function readTools(context: ToolContext): ToolDefinition[] {
       description:
         "Verfügbare KI-Modelle je Provider (lokaler Maschinenraum, Cloud-Provider). Zeigt, was der AI-Router gerade anbieten kann.",
       inputSchema: objectSchema({
-        provider: stringArg("Optionaler Provider-Filter, z. B. 'local_rtx'."),
+        provider: stringArg("Optionaler Provider-Filter, z. B. 'local_engine'."),
       }),
       path: () => "/api/ai/models",
       query: (args) => ({ provider: optionalString(args, "provider") }),

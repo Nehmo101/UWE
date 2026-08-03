@@ -70,7 +70,7 @@ export async function runImageStudioJob(ctx: JobRunnerContext): Promise<Record<s
   let activeProjectId = payload.projectId;
 
   try {
-    await ctx.jobs.updateProgress(ctx.jobId, 10, "RTX-Host anfragen");
+    await ctx.jobs.updateProgress(ctx.jobId, 10, "Maschinenraum-Host anfragen");
     await assertNotCancelled(ctx.jobs, ctx.jobId);
 
     const result = await executeAiGatewayImageRequest({
@@ -233,7 +233,7 @@ export async function runResearchJob(ctx: JobRunnerContext): Promise<Record<stri
         await ctx.jobs.updateProgress(ctx.jobId, 55, "KI-Synthese erstellen");
         await assertNotCancelled(ctx.jobs, ctx.jobId);
 
-        // LLM synthesis with brain context; on failure (RTX offline, permission,
+        // LLM synthesis with brain context; on failure (Maschinenraum offline, permission,
         // budget) the plain source list stays available as fallback report.
         let reportMd: string;
         let synthesized = false;

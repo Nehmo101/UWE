@@ -222,7 +222,7 @@ export async function updateLabelAction(formData: FormData) {
   } else if (action === "restore_original") {
     content = restoreOriginalText(content);
   } else if (action === "ai_shorten") {
-    // Nur DIESER Zweig beschäftigt den RTX-Host. Die Prüfung sitzt deshalb im
+    // Nur DIESER Zweig beschäftigt den Maschinenraum-Host. Die Prüfung sitzt deshalb im
     // Zweig und nicht am Kopf der Action: „Etikett bearbeiten" ist keine
     // KI-Funktion und darf es auch für Konten ohne KI-Häkchen nicht werden.
     await requireStudioAiActionAuth();

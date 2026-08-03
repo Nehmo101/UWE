@@ -72,7 +72,7 @@ vorher — Link-Ziel und Ingress waren getrennt gepflegt, also lief der Link auf
 | Ingress + DNS anwenden (API-Client) | `packages/cloudflare-edge/src/tunnel-client.ts` |
 | Op (Token lesen, Zugangsdaten auflösen) | `tools/uwe-host-command-center/src/ops/cloudflare-tunnel-ops.ts` |
 | CLI-Aktion | `cloudflare-tunnel-status` / `cloudflare-tunnel-apply` in `ops-cli.ts` |
-| UI | `apps/rtx-connector-client/src/components/CloudflareRoutesCard.tsx` |
+| UI | `apps/engine-connector-client/src/components/CloudflareRoutesCard.tsx` |
 | Bootstrap-/Wiederherstellungspfad (Host) | `deploy/scripts/configure-cloudflare-tunnel.sh` |
 
 ### Auto-Briefing

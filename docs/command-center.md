@@ -6,9 +6,12 @@ laufen auf demselben PC und werden aus einer Oberfläche bedient.
 
 Die früheren Produktnamen „UWE RTX Connector Client“ (App) und „RTX Host
 Connector“ (Worker) heißen heute **UWE Command Center** und **Maschinenraum**.
-In internen Paket-, Release- und Datenpfaden bleiben die alten Bezeichner
-bewusst stehen — dadurch bleiben bestehende Konfigurationen, Tokens, Modelle und
-Updater-Installationen kompatibel. Details: [rtx-connector.md](./rtx-connector.md).
+Seit 2026-08 ist „RTX“ auch aus Paket-, Release- und Datenpfaden verschwunden:
+UWE läuft auf jeder GPU, die Ollama, LM Studio oder ein OpenAI-kompatibler
+Server ansprechen kann — und ein guter Teil des Maschinenraums braucht gar keine.
+Bestandsinstallationen brauchen einen einmaligen Umzug; die Checkliste steht in
+[engine-rename-migration.md](./engineering/engine-rename-migration.md), die
+Namenslogik in [engine-connector.md](./engine-connector.md).
 
 ## Verantwortungsgrenzen
 
@@ -58,7 +61,7 @@ aktuellen Stand ohne Remote-Sync.
 | Inhalt | Pfad |
 |---|---|
 | Checkout | frei wählbar, z. B. `C:\git\UWE` |
-| Kompatibler AppData-Stamm | `%LOCALAPPDATA%\UWE\rtx-connector-client` |
+| Kompatibler AppData-Stamm | `%LOCALAPPDATA%\UWE\engine-connector-client` |
 | Host-Daten | `...\host\data` |
 | Backups | `...\host\data\backups` |
 | Logs | `...\host\logs` |
@@ -191,7 +194,7 @@ Entwicklungs- und Build-Befehle:
 ```powershell
 pnpm command-center:dev
 pnpm command-center:build
-pnpm --filter @uwe/rtx-connector-client typecheck
+pnpm --filter @uwe/engine-connector-client typecheck
 ```
 
 Die Host-Steuerung kann separat geprüft werden (Node 22.18+ bzw. Node 24):
@@ -210,12 +213,12 @@ Windows-Releases baut GitHub Actions
 (`.github/workflows/uwe-windows-release.yml`): der Lauf erzeugt den Tag
 `uwe-vX.Y.Z`, Installer, App-Bundles, leere Datenbanken und `uwe-release.json`.
 Ein bereits vorhandener `uwe-v*`-Tag löst denselben Build per Push aus.
-Details: [docs/engineering/rtx-connector-release.md](./engineering/rtx-connector-release.md).
+Details: [docs/engineering/engine-connector-release.md](./engineering/engine-connector-release.md).
 
 ## Sicherheit
 
 - Studio, Portal und Ollama werden nicht automatisch ins Internet exponiert.
-- Der Maschinenraum bleibt outbound-only; auf dem RTX-PC wird kein API-Port
+- Der Maschinenraum bleibt outbound-only; auf dem Maschinenraum-PC wird kein API-Port
   geöffnet.
 - Secrets werden weder in Statusantworten noch in Logs ausgegeben.
 - UWE-Daten und Modelle bleiben außerhalb des Git-Checkouts erhalten.
@@ -224,9 +227,9 @@ Details: [docs/engineering/rtx-connector-release.md](./engineering/rtx-connector
 
 ## Weiterhin unterstütztes Split-Modell
 
-Ein Linux-Host mit systemd und ein separater RTX-PC bleiben vollständig
+Ein Linux-Host mit systemd und ein separater Maschinenraum-PC bleiben vollständig
 unterstützt. Im Split-Modell ist der Linux-Host die Source of Truth und das
-Command Center verwaltet auf dem RTX-PC primär den ausgehenden Connector. So
+Command Center verwaltet auf dem Maschinenraum-PC primär den ausgehenden Connector. So
 bleibt die bestehende Always-on-Topologie verfügbar, ohne den All-in-one-Pfad
 mit Linux-spezifischer Komplexität zu belasten.
 

@@ -747,14 +747,14 @@ export type {
 } from "./campaign-job-presets";
 
 export {
-  assessRtxExposure,
+  assessEngineExposure,
   assessStudioSecurity,
   classifyEndpointUrl,
 } from "./studio-security";
 
 export type {
   EndpointExposureCheck,
-  RtxExposureAssessment,
+  EngineExposureAssessment,
   StudioSecurityAssessment,
   StudioSecurityLevel,
   StudioSecuritySeverity,
@@ -1134,13 +1134,13 @@ export type {
 export { validateSettingsUpdate } from "./settings-validation";
 
 export {
-  jobRequiresLocalRtx,
-  isRtxOfflineError,
-  RTX_REQUIRED_JOB_TYPES,
+  jobRequiresLocalEngine,
+  isEngineOfflineError,
+  ENGINE_REQUIRED_JOB_TYPES,
   DEFERRED_JOB_PROGRESS_LABEL,
-} from "./rtx-deferred-jobs";
+} from "./engine-deferred-jobs";
 
-export type { RtxDeferCheckInput } from "./rtx-deferred-jobs";
+export type { EngineDeferCheckInput } from "./engine-deferred-jobs";
 
 export type {
   SettingsValidationError,

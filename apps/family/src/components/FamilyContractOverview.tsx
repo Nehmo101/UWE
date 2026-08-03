@@ -10,7 +10,7 @@ import type { FinanceOverview, FinancePeriod } from "@uwe/database/finance-overv
  * auswertet.
  *
  * Die KI-Kosten-Kachel ist nicht mitgekommen: seit dem Wegfall der
- * Cloud-Anbieter (N.3) läuft jede Anfrage über den RTX-Host und kostet nichts.
+ * Cloud-Anbieter (N.3) läuft jede Anfrage über den Maschinenraum-Host und kostet nichts.
  */
 
 const PERIOD_LABELS: Record<FinancePeriod, string> = {

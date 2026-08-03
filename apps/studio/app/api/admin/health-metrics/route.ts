@@ -3,7 +3,7 @@ import { prisma } from "@uwe/database/server";
 import { createHealthMetricsService } from "@uwe/database/health-metrics";
 import { requireAdminApiAuth } from "@uwe/security";
 import { resolveStudioApiAuthContext } from "@/src/lib/studio-admin-auth";
-import { loadStudioRtxDisplayState } from "@/src/lib/rtx-display-state";
+import { loadStudioEngineDisplayState } from "@/src/lib/engine-display-state";
 
 export async function GET(request: Request) {
   const context = await resolveStudioApiAuthContext(request);
@@ -13,14 +13,14 @@ export async function GET(request: Request) {
   });
   if (authError) return authError;
 
-  const [metrics, rtxDisplay] = await Promise.all([
+  const [metrics, engineDisplay] = await Promise.all([
     createHealthMetricsService(prisma).getMetrics(),
-    loadStudioRtxDisplayState(prisma).catch(() => null),
+    loadStudioEngineDisplayState(prisma).catch(() => null),
   ]);
 
   return NextResponse.json({
     metrics,
-    rtxDisplay,
+    engineDisplay,
     checkedAt: new Date().toISOString(),
   });
 }

@@ -162,7 +162,7 @@ export function TerraSpielerRahmen({ worldSlug, karteId, version, daten, quelle 
         setZustand("fehler");
       }
       /* `welt-vorgabe-ergebnis` fällt hier durch: die KI-Weltvorgabe ist eine
-         Studio-Sache (sie läuft über den RTX-Host und die Brain-Aktionen des
+         Studio-Sache (sie läuft über den Maschinenraum-Host und die Brain-Aktionen des
          Spielleiters). Das Werkzeug im Frame ist davon unberührt — der
          Spieler baut von Hand, ohne Einschränkung. */
     }

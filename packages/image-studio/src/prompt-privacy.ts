@@ -8,7 +8,7 @@ export type ImageStudioPromptContextMode =
 /**
  * Kontexte, die private Inhalte mitschicken.
  *
- * Solange der einzige Weg der lokale RTX-Host ist, verlässt keiner davon das
+ * Solange der einzige Weg der lokale Maschinenraum-Host ist, verlässt keiner davon das
  * Haus — die Unterscheidung bleibt trotzdem, weil sie beschreibt, *was* im
  * Prompt steht, und weil ein zweiter Weg sonst unbemerkt privaten Kontext
  * mitnehmen könnte.
@@ -51,7 +51,7 @@ export interface AssembledImagePrompt {
 }
 
 /**
- * Baut den Prompt, der an den RTX-Host geht. Kontext wird angehängt, wenn einer
+ * Baut den Prompt, der an den Maschinenraum-Host geht. Kontext wird angehängt, wenn einer
  * gewählt ist und ein Textausschnitt vorliegt — sonst bleibt es beim Prompt.
  */
 export function assembleImageStudioPrompt(input: AssembleImagePromptInput): AssembledImagePrompt {

@@ -59,10 +59,10 @@ describe("JobService", () => {
     });
 
     await jobs.markRunning(job.id);
-    const failed = await jobs.markFailed(job.id, "RTX offline", { code: "offline" });
+    const failed = await jobs.markFailed(job.id, "Maschinenraum offline", { code: "offline" });
     assert.ok(failed);
     assert.equal(failed!.status, "failed");
-    assert.equal(failed!.errorMessage, "RTX offline");
+    assert.equal(failed!.errorMessage, "Maschinenraum offline");
     assert.equal(failed!.canRetry, true);
 
     const retried = await jobs.retry(job.id);

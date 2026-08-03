@@ -7,7 +7,7 @@ import { createEmptyApiKeyStore } from "../settings";
  *
  * This used to merge API keys for the configured cloud providers, with the
  * database taking precedence over the environment. Cloud providers were removed
- * — the RTX host is the only backend, and it authenticates over the connector
+ * — the Maschinenraum host is the only backend, and it authenticates over the connector
  * rather than with an API key — so there is nothing left to look up. The
  * function stays so the gateway keeps one provider-construction path.
  */

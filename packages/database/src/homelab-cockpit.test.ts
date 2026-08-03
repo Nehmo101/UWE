@@ -109,14 +109,14 @@ describe("homelab cockpit", () => {
         },
       }),
       studioSecurity,
-      rtxExposure: {
+      engineExposure: {
         ok: true,
         severity: "ok",
         message: "OK",
         endpoints: [],
         nextSteps: [],
       },
-      rtx: {
+      engine: {
         ready: false,
         online: false,
         message: "offline",
@@ -141,21 +141,21 @@ describe("homelab cockpit", () => {
 
     const db = statuses.find((entry) => entry.id === "database");
     const backup = statuses.find((entry) => entry.id === "backup");
-    const rtx = statuses.find((entry) => entry.id === "rtx_connector");
+    const engine = statuses.find((entry) => entry.id === "engine_connector");
 
     assert.equal(db?.ok, false);
     assert.equal(backup?.severity, "error");
-    assert.equal(rtx?.severity, "error");
+    assert.equal(engine?.severity, "error");
   });
 
-  it("blocks public RTX exposure in security checklist", () => {
+  it("blocks public Maschinenraum exposure in security checklist", () => {
     const checks = buildHomelabSecurityChecklist({
       system: baseSystem(),
       studioSecurity,
-      rtxExposure: {
+      engineExposure: {
         ok: false,
         severity: "critical",
-        message: "RTX public",
+        message: "Maschinenraum public",
         endpoints: [],
         nextSteps: [],
       },
@@ -164,7 +164,7 @@ describe("homelab cockpit", () => {
       hardwareUrlWarnings: [
         {
           deviceId: "1",
-          deviceName: "RTX",
+          deviceName: "Maschinenraum",
           field: "publicUrl",
           url: "https://bad.example",
           message: "bad",
@@ -172,9 +172,9 @@ describe("homelab cockpit", () => {
       ],
     });
 
-    const rtxCheck = checks.find((entry) => entry.id === "no_public_rtx");
-    assert.equal(rtxCheck?.ok, false);
-    assert.equal(rtxCheck?.severity, "error");
+    const engineCheck = checks.find((entry) => entry.id === "no_public_engine");
+    assert.equal(engineCheck?.ok, false);
+    assert.equal(engineCheck?.severity, "error");
   });
 
   it("aggregates today alerts from hardware and services", () => {
@@ -183,7 +183,7 @@ describe("homelab cockpit", () => {
       hardwareUrlWarnings: [
         {
           deviceId: "1",
-          deviceName: "RTX",
+          deviceName: "Maschinenraum",
           field: "publicUrl",
           url: "https://bad.example",
           message: "bad",
@@ -208,14 +208,14 @@ describe("homelab cockpit", () => {
 
   it("stores and parses hardware error history in metadata", () => {
     const metadata = appendHardwareErrorEntry(null, {
-      problem: "RTX Agent timeout",
+      problem: "Maschinenraum-Agent timeout",
       resolution: "Ollama neu gestartet",
-      affectedServices: ["rtx_connector", "ollama"],
+      affectedServices: ["engine_connector", "ollama"],
     });
 
     const history = parseHardwareErrorHistory(metadata);
     assert.equal(history.length, 1);
-    assert.equal(history[0]?.problem, "RTX Agent timeout");
-    assert.deepEqual(history[0]?.affectedServices, ["rtx_connector", "ollama"]);
+    assert.equal(history[0]?.problem, "Maschinenraum-Agent timeout");
+    assert.deepEqual(history[0]?.affectedServices, ["engine_connector", "ollama"]);
   });
 });

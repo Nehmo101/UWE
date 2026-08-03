@@ -63,7 +63,7 @@ export default async function ImageStudioPage({ searchParams }: Props) {
       <ShellBreadcrumb items={[{ label: "Image Studio" }]} />
       <PageHeader
         title="Image Studio"
-        summary="Prompt-Generierung und Inpainting (RTX) — optional Cloud nur für generate/variant."
+        summary="Prompt-Generierung und Inpainting (Maschinenraum) — optional Cloud nur für generate/variant."
       />
 
       <div className="flex flex-col gap-6">

@@ -3,7 +3,7 @@
  *
  * Enforces, statically and with zero dependencies:
  *  - No app imports another app: apps/* (studio, portal, brain, family,
- *    landing, rtx-connector-client) must never import each other (via
+ *    landing, engine-connector-client) must never import each other (via
  *    `@uwe/<app>` or a relative path that escapes into a sibling app).
  *  - No package/tool imports an app: shared engines and tools must not depend on
  *    a specific product app.
@@ -19,7 +19,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const APP_NAMES = new Set(["studio", "portal", "brain", "family", "landing", "rtx-connector-client"]);
+const APP_NAMES = new Set(["studio", "portal", "brain", "family", "landing", "engine-connector-client"]);
 const SCAN_DIRS = ["apps", "packages", "tools"];
 const EXCLUDED_DIRS = new Set([
   "node_modules",
@@ -44,7 +44,7 @@ function isLibPath(fileRel) {
 
 /** The app a specifier targets (via @uwe/<app> or a relative escape), or null. */
 function targetAppOf(fileRel, specifier) {
-  const scoped = /^@uwe\/(studio|portal|brain|family|landing|rtx-connector-client)(?:\/|$)/.exec(specifier);
+  const scoped = /^@uwe\/(studio|portal|brain|family|landing|engine-connector-client)(?:\/|$)/.exec(specifier);
   if (scoped) return scoped[1];
   if (specifier.startsWith(".")) {
     const resolved = path.posix.normalize(

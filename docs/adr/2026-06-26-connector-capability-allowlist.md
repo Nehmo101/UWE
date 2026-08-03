@@ -5,7 +5,7 @@ Status: implemented
 
 ## Context
 
-The RTX Host Connector reports its local capabilities in every heartbeat. The
+The Maschinenraum reports its local capabilities in every heartbeat. The
 host already normalizes reported values with `normalizeCapabilities`, so unknown
 strings are discarded before they can affect queue eligibility. That prevents a
 connector from inventing a new capability name.

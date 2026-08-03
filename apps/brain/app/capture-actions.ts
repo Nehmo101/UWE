@@ -43,7 +43,7 @@ export async function createCaptureAction(formData: FormData) {
     url,
   });
 
-  // Der KI-Vorschlag entsteht sofort; ohne RTX fällt er auf die Heuristik zurück.
+  // Der KI-Vorschlag entsteht sofort; ohne Maschinenraum fällt er auf die Heuristik zurück.
   await triage().ensureAiProposal(capture.id);
   revalidateBrainPaths();
 }
@@ -91,7 +91,7 @@ export async function bulkArchiveCapturesAction() {
 /**
  * Stellt sicher, dass ein KI-Vorschlag existiert.
  *
- * Heuristik, nicht RTX: die Job-Queue läuft im Studio-Prozess, und ein
+ * Heuristik, nicht Maschinenraum: die Job-Queue läuft im Studio-Prozess, und ein
  * Sortiervorschlag ist keinen zweiten Queue-Pfad wert.
  */
 export async function generateCaptureProposalAction(formData: FormData) {

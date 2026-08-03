@@ -97,7 +97,7 @@ describe("generator service", () => {
     const action = actions.find((entry) => entry.id === "generate_item");
     assert.ok(action);
     assert.equal(action.reviewRequired, true);
-    assert.equal(action.requiresLocalRtx, true);
+    assert.equal(action.requiresLocalEngine, true);
   });
 
   it("provides item builder default presets", () => {

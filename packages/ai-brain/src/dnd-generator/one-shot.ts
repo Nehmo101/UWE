@@ -3,7 +3,7 @@
  * bekannten NPCs ein deterministisches One-Shot-Gerüst. Kanon-safe und mit klarer
  * Trennung von Spielerwissen (playerBrief) und DM-Geheimnissen — ein Entwurf zum
  * Review, nie automatisch Kanon. Pure Funktionen, testbar ohne KI. Eine spätere
- * RTX-lokale LLM-Ausschmückung kann darauf aufsetzen.
+ * Maschinenraum-lokale LLM-Ausschmückung kann darauf aufsetzen.
  */
 
 export type OneShotTone = "duester" | "lustig" | "horror" | "mystery";

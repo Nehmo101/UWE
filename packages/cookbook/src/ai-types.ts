@@ -11,7 +11,7 @@
  * now reads BOTH files as text and fails when the sets differ — the compiler
  * cannot see this file, so a test has to.
  */
-export type CookbookAiProviderMode = "auto" | "local_rtx" | "cloud";
+export type CookbookAiProviderMode = "auto" | "local_engine" | "cloud";
 
 export type CookbookAiContextMode =
   | "general_chat"
@@ -78,7 +78,7 @@ export interface CookbookInferenceProbe {
   modelCount?: number;
 }
 
-export interface CookbookRtxProbe {
+export interface CookbookEngineHostProbe {
   ready: boolean;
   online: boolean;
   endpoint: string;
@@ -91,6 +91,6 @@ export interface CookbookRtxProbe {
 
 export interface CookbookRuntimeProbeInput {
   inference: CookbookInferenceProbe;
-  rtx: CookbookRtxProbe;
+  engineHost: CookbookEngineHostProbe;
   skipDocker?: boolean;
 }

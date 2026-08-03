@@ -18,7 +18,7 @@ import {
 import {
   PageTypeBadge,
   QuestStatusBadge,
-  RtxStatusBadge,
+  EngineStatusBadge,
 } from "./StatusBadges";
 import { SearchResultsList } from "./SearchResults";
 import { GraphView } from "./GraphView";
@@ -232,28 +232,28 @@ describe("shared-ui components", () => {
     assert.match(uweCss, /--uwe-card-bg/);
   });
 
-  it("renders the RTX status badge with state, label and tooltip", () => {
-    const online = renderToStaticMarkup(<RtxStatusBadge state="online" />);
+  it("renders the Maschinenraum status badge with state, label and tooltip", () => {
+    const online = renderToStaticMarkup(<EngineStatusBadge state="online" />);
     assert.match(online, /--uwe-success/);
-    assert.match(online, /data-rtx-state="online"/);
+    assert.match(online, /data-engine-state="online"/);
     assert.match(online, /bg-\[var\(--uwe-success\)\]/);
     assert.match(online, /Maschinenraum online/);
     assert.match(online, /title="/);
 
     const offline = renderToStaticMarkup(
-      <RtxStatusBadge state="offline" label="RTX offline · 0/1" />,
+      <EngineStatusBadge state="offline" label="Maschinenraum offline · 0/1" />,
     );
-    assert.match(offline, /data-rtx-state="offline"/);
-    assert.match(offline, /RTX offline · 0\/1/);
+    assert.match(offline, /data-engine-state="offline"/);
+    assert.match(offline, /Maschinenraum offline · 0\/1/);
     assert.match(offline, /aria-label="Maschinenraum-Status: Maschinenraum offline/);
   });
 
-  it("renders distinct visual tones per RTX state", () => {
-    const starting = renderToStaticMarkup(<RtxStatusBadge state="starting" />);
+  it("renders distinct visual tones per Maschinenraum state", () => {
+    const starting = renderToStaticMarkup(<EngineStatusBadge state="starting" />);
     assert.match(starting, /--uwe-warning/);
-    assert.match(starting, /data-rtx-state="starting"/);
-    const offline = renderToStaticMarkup(<RtxStatusBadge state="offline" />);
-    assert.match(offline, /data-rtx-state="offline"/);
+    assert.match(starting, /data-engine-state="starting"/);
+    const offline = renderToStaticMarkup(<EngineStatusBadge state="offline" />);
+    assert.match(offline, /data-engine-state="offline"/);
   });
 });
 

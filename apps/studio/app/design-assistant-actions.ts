@@ -44,7 +44,7 @@ export async function runDesignAssistantTurnAction(
         { repo: createUweRepository() },
         {
           user,
-          providerMode: "local_rtx",
+          providerMode: "local_engine",
           contextMode: "general_chat",
           taskType: "generate_theme_palette",
           feature: "AI_KNOWLEDGE_USE",

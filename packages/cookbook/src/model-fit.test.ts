@@ -4,19 +4,19 @@ import { COOKBOOK_MODEL_REGISTRY, estimateModelVramGb, getCookbookModel } from "
 import { computeModelFit, rankModelsForHardware } from "./model-fit";
 import type { CookbookHardwareProfile } from "./types";
 
-const RTX_4060_PROFILE: CookbookHardwareProfile = {
+const GPU_8GB_PROFILE: CookbookHardwareProfile = {
   platform: "linux",
   arch: "x64",
   cpuCores: 8,
   ramGb: 32,
   backend: "cuda",
-  gpuName: "NVIDIA GeForce RTX 4060",
+  gpuName: "Test-GPU 8 GB",
   gpuVramGb: 8,
   gpuCount: 1,
-  gpus: [{ index: 0, name: "NVIDIA GeForce RTX 4060", vramGb: 8 }],
+  gpus: [{ index: 0, name: "Test-GPU 8 GB", vramGb: 8 }],
   gpuGroups: [
     {
-      name: "NVIDIA GeForce RTX 4060",
+      name: "Test-GPU 8 GB",
       vramEachGb: 8,
       count: 1,
       indices: [0],
@@ -36,8 +36,8 @@ describe("model-fit", () => {
     const large = getCookbookModel("llama3.1:70b");
     assert.ok(small && large);
 
-    const smallFit = computeModelFit(RTX_4060_PROFILE, small, { useCase: "editor_rewrite" });
-    const largeFit = computeModelFit(RTX_4060_PROFILE, large, { useCase: "deep_research" });
+    const smallFit = computeModelFit(GPU_8GB_PROFILE, small, { useCase: "editor_rewrite" });
+    const largeFit = computeModelFit(GPU_8GB_PROFILE, large, { useCase: "deep_research" });
 
     assert.ok(smallFit.score > largeFit.score);
     assert.equal(smallFit.fitsGpu, true);
@@ -45,7 +45,7 @@ describe("model-fit", () => {
   });
 
   it("ranks models for dnd_generator use case", () => {
-    const ranked = rankModelsForHardware(RTX_4060_PROFILE, {
+    const ranked = rankModelsForHardware(GPU_8GB_PROFILE, {
       useCase: "dnd_generator",
       models: COOKBOOK_MODEL_REGISTRY.filter((m) => m.useCases.includes("dnd_generator")),
       limit: 3,
@@ -66,13 +66,13 @@ describe("model-fit", () => {
     // 32GB rig: an added strong GPU means the bigger model that still fits
     // should out-score a tiny one for the same use case (capability bonus).
     const bigRig: CookbookHardwareProfile = {
-      ...RTX_4060_PROFILE,
-      gpuName: "NVIDIA GeForce RTX 3090",
+      ...GPU_8GB_PROFILE,
+      gpuName: "NVIDIA GeForce Maschinenraum 3090",
       gpuVramGb: 32,
       gpuCount: 2,
       gpus: [
-        { index: 0, name: "NVIDIA GeForce RTX 4060", vramGb: 8 },
-        { index: 1, name: "NVIDIA GeForce RTX 3090", vramGb: 24 },
+        { index: 0, name: "Test-GPU 8 GB", vramGb: 8 },
+        { index: 1, name: "NVIDIA GeForce Maschinenraum 3090", vramGb: 24 },
       ],
       homogeneousGpus: false,
     };
@@ -92,8 +92,8 @@ describe("model-fit", () => {
     );
 
     // The 14B must not fit on the 8GB laptop, so small still wins there.
-    const smallOn8 = computeModelFit(RTX_4060_PROFILE, small, { useCase: "canon_check" });
-    const largeOn8 = computeModelFit(RTX_4060_PROFILE, large, { useCase: "canon_check" });
+    const smallOn8 = computeModelFit(GPU_8GB_PROFILE, small, { useCase: "canon_check" });
+    const largeOn8 = computeModelFit(GPU_8GB_PROFILE, large, { useCase: "canon_check" });
     assert.equal(largeOn8.fitsGpu, false);
     assert.ok(smallOn8.score > largeOn8.score);
   });

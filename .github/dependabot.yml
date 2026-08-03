@@ -79,7 +79,7 @@ updates:
 
   # --- Rust / Tauri (Command Center) -----------------------------------------
   - package-ecosystem: cargo
-    directory: "/apps/rtx-connector-client/src-tauri"
+    directory: "/apps/engine-connector-client/src-tauri"
     schedule:
       interval: monthly
       time: "05:00"

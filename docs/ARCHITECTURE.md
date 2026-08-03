@@ -46,7 +46,7 @@ graph TD
   Core --> UI["@uwe/shared-ui<br/>gemeinsame React-Komponenten"]
 
   Export --> StaticSite["exports/<world>-static<br/>HTML, CSS, JS, Search Index"]
-  Integrations --> RTX["Maschinenraum<br/>optionaler outbound KI-Worker"]
+  Integrations --> Maschinenraum["Maschinenraum<br/>optionaler outbound KI-Worker"]
   Integrations --> Spotify["Spotify Web API<br/>DM-seitiges Soundboard"]
   Integrations --> Calendar["Kalender / Mail / Jobs<br/>Admin- und Automationsfunktionen"]
 ```
@@ -68,7 +68,7 @@ flowchart LR
   Core --> Backups["data/backups<br/>Backup-ZIPs"]
   Studio --> Exports["exports/<world>-static<br/>Static HTML Export"]
 
-  Studio -->|optional, outbound Connector| RTX["Maschinenraum<br/>Ollama / lokale KI"]
+  Studio -->|optional, outbound Connector| Maschinenraum["Maschinenraum<br/>Ollama / lokale KI"]
   Studio -->|optional| Spotify["Spotify Web API"]
   Studio -->|optional| MailCalendar["Mail / Kalender / Jobs"]
 
@@ -81,8 +81,8 @@ flowchart LR
 - **Studio ist die Schreib- und Admin-Oberfläche.** Hier entstehen Inhalte, Imports, Generator-Ausgaben, Inspector-Fixes, Backups und Exporte.
 - **Portal ist die Spieler-Ausgabe.** Es rendert nur veröffentlichte und freigegebene Inhalte. DM-only Inhalte dürfen dort nicht erscheinen.
 - **Persistente Daten bleiben auf dem UWE Host.** Datenbank, Uploads, Backups und Exporte liegen lokal/self-hosted.
-- **Der Maschinenraum ist nur Inferenz-Worker.** Er verbindet sich **outbound** zum Host, soll keine UWE-Daten dauerhaft speichern und nicht öffentlich exposed werden. Der alte inbound `RTX-Agent` bleibt nur als **deprecated** Kompatibilität bestehen.
-- **Es gibt keine Cloud-KI.** Jede KI-Aktion läuft über den RTX-Host (Notiz Lasse, N.3). Anbieter, Schlüssel und Fallback-Pfade sind entfernt — nicht abgeschaltet.
+- **Der Maschinenraum ist nur Inferenz-Worker.** Er verbindet sich **outbound** zum Host, soll keine UWE-Daten dauerhaft speichern und nicht öffentlich exposed werden. Der alte inbound `Maschinenraum-Agent` bleibt nur als **deprecated** Kompatibilität bestehen.
+- **Es gibt keine Cloud-KI.** Jede KI-Aktion läuft über den Maschinenraum-Host (Notiz Lasse, N.3). Anbieter, Schlüssel und Fallback-Pfade sind entfernt — nicht abgeschaltet.
 
 ---
 
@@ -124,7 +124,7 @@ graph TD
   Repo --> Apps["apps/"]
   Apps --> StudioApp["apps/studio<br/>@uwe/studio"]
   Apps --> PortalApp["apps/portal<br/>@uwe/portal"]
-  Apps --> RtxClient["UWE Command Center<br/>apps/rtx-connector-client<br/>Tauri Desktop App + lokaler Host-Orchestrator"]
+  Apps --> EngineClient["UWE Command Center<br/>apps/engine-connector-client<br/>Tauri Desktop App + lokaler Host-Orchestrator"]
 
   Repo --> Packages["packages/"]
   Packages --> Config["config<br/>TypeScript / Shared Config"]
@@ -137,11 +137,11 @@ graph TD
   Packages --> AssetsPkg["assets<br/>Uploads / Assettypen"]
   Packages --> StaticExportPkg["static-export<br/>HTML-Export"]
   Packages --> SoundboardPkg["soundboard<br/>Audio, YouTube, Spotify"]
-  Packages --> AIBrainPkg["ai-brain<br/>Router, Privacy, Connector/RTX"]
+  Packages --> AIBrainPkg["ai-brain<br/>Router, Privacy, Connector/Maschinenraum"]
   Packages --> FeaturePkgs["Feature-Pakete<br/>backup, calendar, mail, dnd-api,<br/>image-studio, knoteforge-import, github-issues"]
 
   Repo --> Tools["tools/"]
-  Tools --> RtxConnector["uwe-rtx-connector<br/>optionaler outbound Worker (aktiv)"]
+  Tools --> EngineConnector["uwe-engine-connector<br/>optionaler outbound Worker (aktiv)"]
 
   Repo --> Deploy["deploy/"]
   Deploy --> Systemd["systemd-Units + Setup-Scripts<br/>uwe.service, setup-uwe-host.sh"]
@@ -205,7 +205,7 @@ steht in [../CONTRIBUTING.md](../CONTRIBUTING.md#2-modul-disziplin-anti-monolith
 | **UWE Portal** | Nein / sehr begrenzt | Alles in den zugeordneten Welten | Spieler-Wiki, Handouts — Login immer erforderlich |
 | **Static Export** | Nein | Was bewusst exportiert wurde | Statisches Hosting ohne Serverlogik |
 | **UWE Core Packages** | Indirekt über Apps | Ja | Datenlogik, Auth, Rendering, Security, Assets |
-| **Maschinenraum** | Nein in UWE-Daten | Nur explizit gesendeten Prompt/Kontext | Lokale KI-Inferenz (outbound Worker); alter inbound `RTX-Agent` nur deprecated |
+| **Maschinenraum** | Nein in UWE-Daten | Nur explizit gesendeten Prompt/Kontext | Lokale KI-Inferenz (outbound Worker); alter inbound `Maschinenraum-Agent` nur deprecated |
 | **Cloud-KI** | — | — | Entfällt: seit N.3 gibt es keinen Cloud-Anbieter mehr |
 
 ---
@@ -213,7 +213,7 @@ steht in [../CONTRIBUTING.md](../CONTRIBUTING.md#2-modul-disziplin-anti-monolith
 ## 6. Deployment-Flow
 
 Es gibt zwei aktive, bewusst getrennte Betriebsmodelle: Das **UWE Command
-Center** betreibt Hosting und RTX auf einem Windows-PC; der **Linux-Split-Host**
+Center** betreibt Hosting und Maschinenraum auf einem Windows-PC; der **Linux-Split-Host**
 bleibt für Always-on- und öffentliche Installationen erhalten. Beide verwenden
 dieselben Apps, Datenregeln und den outbound-only Maschinenraum.
 
@@ -268,7 +268,7 @@ Jede App definiert ihre Navigation in einer eigenen `*-nav.ts`-Datei:
 |---|---|
 | Studio | `apps/studio/src/navigation/studio-nav.ts` |
 | Portal | `apps/portal/src/navigation/portal-nav.ts` |
-| UWE Command Center | `apps/rtx-connector-client/src/navigation/connector-nav.ts` |
+| UWE Command Center | `apps/engine-connector-client/src/navigation/connector-nav.ts` |
 
 Alle drei nutzen `@uwe/shared-utils/navigation` für die Nav-Typen und `resolveNavGroups()`.
 
@@ -308,7 +308,7 @@ flowchart LR
   Core --> Data["Lokale Daten<br/>DB + Uploads + Backups"]
   Core --> Portal["Spieler lesen<br/>UWE Portal"]
   Core --> Export["Static Export"]
-  Studio --> RTX["Optional Maschinenraum<br/>lokale KI (outbound)"]
+  Studio --> Maschinenraum["Optional Maschinenraum<br/>lokale KI (outbound)"]
 
   Data --> Studio
   Data --> Portal

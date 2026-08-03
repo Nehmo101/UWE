@@ -32,7 +32,7 @@
 <div id="app"></div>
 <script type="text/babel" src="screens.jsx"></script>
 <script type="text/babel">
-  const { Brand, SidebarNav, RtxStatusBadge, Button } = window.UWEDesignSystem_f43eab;
+  const { Brand, SidebarNav, EngineStatusBadge, Button } = window.UWEDesignSystem_f43eab;
 
   function App() {
     const { TodayScreen, WorldScreen, WikiPageScreen, Icon } = window.UWEStudioScreens;
@@ -85,7 +85,7 @@
           <Brand appName="UWE" subtitle="Studio" />
           <div className="spacer" />
           <span className="search"><Icon n="search" s={14} />Seiten, Welten, Befehle…<span className="kbd">⌘K</span></span>
-          <RtxStatusBadge state="online" />
+          <EngineStatusBadge state="online" />
           <Button variant="ghost" size="sm" icon={<Icon n="settings" s={16} />} aria-label="Einstellungen" />
         </header>
         <div className="body">

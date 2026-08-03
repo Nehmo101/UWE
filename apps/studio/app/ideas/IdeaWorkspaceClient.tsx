@@ -38,7 +38,7 @@ import {
 } from "../ideas-actions";
 
 export type IdeaStatus = "in_planning" | "implemented" | "rejected";
-export type ProviderMode = "auto" | "local_rtx" | "cloud";
+export type ProviderMode = "auto" | "local_engine" | "cloud";
 
 export interface IdeaChatMessage {
   role: "user" | "assistant";
@@ -86,7 +86,7 @@ const STATUS_ORDER: IdeaStatus[] = ["in_planning", "implemented", "rejected"];
 
 const PROVIDER_LABELS: Record<ProviderMode, string> = {
   auto: "Automatisch",
-  local_rtx: "Lokal (RTX)",
+  local_engine: "Lokal (Maschinenraum)",
   cloud: "Cloud",
 };
 
@@ -420,7 +420,7 @@ function ChatColumn({
             <div key={`${msg.role}-${index}`} className={cn("rounded-[var(--radius)] p-2.5", msg.role === "user" ? "bg-primary/15" : "bg-primary/10")}>
               <span className="mb-0.5 block text-xs font-semibold opacity-70">
                 {msg.role === "user" ? "Du" : "KI"}
-                {msg.via ? ` · ${msg.via === "local_rtx" ? "RTX" : "Cloud"}` : ""}
+                {msg.via ? ` · ${msg.via === "local_engine" ? "Maschinenraum" : "Cloud"}` : ""}
               </span>
               <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
             </div>

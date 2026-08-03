@@ -1,4 +1,4 @@
-import { isRtxReadinessReady } from "@uwe/ai-brain";
+import { isEngineReadinessReady } from "@uwe/ai-brain";
 import {
   isConnectorSttAvailable,
   isConnectorVisionAvailable,
@@ -30,7 +30,7 @@ export async function loadAssistantCapabilities(
   }
 
   const [localAiReady, visionAvailable, sttAvailable] = await Promise.all([
-    isRtxReadinessReady({ prisma: db }),
+    isEngineReadinessReady({ prisma: db }),
     isConnectorVisionAvailable(db),
     isConnectorSttAvailable(db),
   ]);

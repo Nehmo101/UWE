@@ -83,7 +83,7 @@ function readLocalVersion(root: string): string | null {
 function readCommandCenterVersion(root: string): string | null {
   const laufend = runningCommandCenterVersion();
   if (laufend) return laufend;
-  const configPath = path.join(root, "apps", "rtx-connector-client", "src-tauri", "tauri.conf.json");
+  const configPath = path.join(root, "apps", "engine-connector-client", "src-tauri", "tauri.conf.json");
   if (!fs.existsSync(configPath)) return readLocalVersion(root);
   try {
     const config = JSON.parse(fs.readFileSync(configPath, "utf8")) as { version?: unknown };

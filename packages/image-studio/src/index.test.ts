@@ -9,8 +9,8 @@ describe("resolveImageProviderConfig", () => {
     assert.equal(config.useConnectorImage, true);
   });
 
-  it("respektiert RTX_USE_CONNECTOR_IMAGE=false", () => {
-    assert.equal(resolveImageProviderConfig({ RTX_USE_CONNECTOR_IMAGE: "false" }).useConnectorImage, false);
+  it("respektiert ENGINE_USE_CONNECTOR_IMAGE=false", () => {
+    assert.equal(resolveImageProviderConfig({ ENGINE_USE_CONNECTOR_IMAGE: "false" }).useConnectorImage, false);
   });
 
   it("respektiert IMAGE_STUDIO_ENABLED=false", () => {
@@ -43,12 +43,12 @@ describe("runImageStudioTask", () => {
         useConnectorImage: true,
         connectorImageGenerate: async (request) => {
           seen = request.prompt;
-          return { success: true, providerUsed: "local_rtx", imageBase64: "x" };
+          return { success: true, providerUsed: "local_engine", imageBase64: "x" };
         },
       },
     );
     assert.equal(result.success, true);
-    assert.equal(result.providerUsed, "local_rtx");
+    assert.equal(result.providerUsed, "local_engine");
     // Privater Kontext darf mitgehen: er verlässt den Host nicht.
     assert.match(seen, /\[Kontext: Moos und Nebel\]/);
   });

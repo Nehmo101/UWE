@@ -56,8 +56,8 @@ const FORBIDDEN_CLIENT_SECRET_PATTERNS = [
   /process\.env\.SESSION_SECRET/,
   /process\.env\.AUTH_SECRET/,
   /process\.env\.UWE_SETUP_TOKEN/,
-  /process\.env\.RTX_SERVICE_TOKEN/,
-  /process\.env\.RTX_AGENT_TOKEN/,
+  /process\.env\.ENGINE_SERVICE_TOKEN/,
+  /process\.env\.ENGINE_AGENT_TOKEN/,
   /process\.env\.CLOUD_AI_API_KEY/,
   /process\.env\.STUDIO_API_TOKEN/,
   /process\.env\.SMTP_PASSWORD/,
@@ -518,7 +518,7 @@ describe("integration smoke — agent CI quality gate", () => {
   });
 });
 
-describe("integration smoke — RTX public URL guard", () => {
+describe("integration smoke — Maschinenraum public URL guard", () => {
   it("blocks public inference URLs by default", () => {
     // The implementation moved to the low-level @uwe/security layer; ai-brain
     // re-exports it. Assert the guard logic at its real home, and that the

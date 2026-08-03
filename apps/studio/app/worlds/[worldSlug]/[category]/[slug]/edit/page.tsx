@@ -305,8 +305,8 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
               pageId={page.id}
               pageType={page.type}
               worldId={world.id}
-              rtxReady={generatorPanel?.rtxReady ?? false}
-              rtxEnabled={generatorPanel?.rtxEnabled ?? false}
+              engineReady={generatorPanel?.engineReady ?? false}
+              engineEnabled={generatorPanel?.engineEnabled ?? false}
             />
           </>
         )}
@@ -353,8 +353,8 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
               pageType={page.type}
               pageId={page.id}
               worldId={world.id}
-              rtxReady={generatorPanel?.rtxReady ?? false}
-              rtxEnabled={generatorPanel?.rtxEnabled ?? false}
+              engineReady={generatorPanel?.engineReady ?? false}
+              engineEnabled={generatorPanel?.engineEnabled ?? false}
             />
           ) : page.type === PageTypeEnum.item ? (
             <MagicItemBuilderSection
@@ -364,8 +364,8 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
               pageType={page.type}
               pageId={page.id}
               worldId={world.id}
-              rtxReady={generatorPanel?.rtxReady ?? false}
-              rtxEnabled={generatorPanel?.rtxEnabled ?? false}
+              engineReady={generatorPanel?.engineReady ?? false}
+              engineEnabled={generatorPanel?.engineEnabled ?? false}
             />
           ) : (
             <StructuredGeneratorSection
@@ -375,8 +375,8 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
               pageType={page.type}
               pageId={page.id}
               worldId={world.id}
-              rtxReady={generatorPanel?.rtxReady ?? false}
-              rtxEnabled={generatorPanel?.rtxEnabled ?? false}
+              engineReady={generatorPanel?.engineReady ?? false}
+              engineEnabled={generatorPanel?.engineEnabled ?? false}
             />
           )}
 
@@ -399,8 +399,8 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
                   : generatorPanel.actions
               }
               missingHints={generatorPanel.missingHints}
-              rtxReady={generatorPanel.rtxReady}
-              rtxEnabled={generatorPanel.rtxEnabled}
+              engineReady={generatorPanel.engineReady}
+              engineEnabled={generatorPanel.engineEnabled}
             />
           )}
         </CollapsibleSection>

@@ -21,7 +21,7 @@ import { readStdin } from "./cli-env";
  * Per address there are four checkboxes — Portal, Studio, Brain, Family — plus
  * the owner flag. The role enum is gone (Notiz Lasse, 2026-07-26).
  *
- * Dazu kommt `ai`: darf diese Adresse die RTX-KI benutzen (G-KI)? Das ist
+ * Dazu kommt `ai`: darf diese Adresse die Maschinenraum-KI benutzen (G-KI)? Das ist
  * KEIN fünftes App-Häkchen — die vier sagen, welche App jemand betreten darf,
  * `ai` sagt, ob er darin die lokale Inferenz auslösen darf. Es wird deshalb
  * getrennt gelesen und nicht in die Häkchen-Schleife gemischt.
@@ -44,7 +44,7 @@ interface AreaInput {
   studio?: unknown;
   brain?: unknown;
   family?: unknown;
-  /** RTX-KI. Kein App-Häkchen — siehe Modulkopf. */
+  /** Maschinenraum-KI. Kein App-Häkchen — siehe Modulkopf. */
   ai?: unknown;
 }
 

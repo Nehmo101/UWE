@@ -1,6 +1,6 @@
 ---
 name: image-studio-workflows
-description: Implement Image Studio jobs, RTX/cloud provider routing, asset linking, and Capture pipeline in UWE. Use for generate/variant/inpaint, dm_only assets, and label workflows.
+description: Implement Image Studio jobs, Maschinenraum/cloud provider routing, asset linking, and Capture pipeline in UWE. Use for generate/variant/inpaint, dm_only assets, and label workflows.
 ---
 
 # Image Studio Workflows
@@ -21,17 +21,17 @@ Docs: `docs/IMAGE_STUDIO.md`, `docs/FEATURE_MATURITY_MATRIX.md` §1.
 | Studio UI | `apps/studio/app/image-studio/` |
 | API | `apps/studio/app/api/image-studio/` |
 | Assets | `packages/assets/` — storage keys, MIME validation |
-| RTX | `tools/uwe-rtx-connector` (active) — `/v1/images`; legacy inbound `RTX_AGENT_URL` deprecated |
+| Maschinenraum | `tools/uwe-engine-connector` (active) — `/v1/images`; legacy inbound `ENGINE_AGENT_URL` deprecated |
 
 ## Provider routing
 
 | Provider | Allowed operations | Context |
 |----------|-------------------|---------|
-| `local_rtx` | generate, variant, inpaint, edit | Full prompts (user responsibility) |
+| `local_engine` | generate, variant, inpaint, edit | Full prompts (user responsibility) |
 | `cloud` | generate, variant only (policy) | **No** auto brain/world injection |
-| `auto` | Prefer RTX, fallback per ENV | Respect `IMAGE_STUDIO_ALLOW_CLOUD` |
+| `auto` | Prefer Maschinenraum, fallback per ENV | Respect `IMAGE_STUDIO_ALLOW_CLOUD` |
 
-ENV: `IMAGE_STUDIO_ALLOW_CLOUD`, RTX endpoint in inference settings.
+ENV: `IMAGE_STUDIO_ALLOW_CLOUD`, Maschinenraum endpoint in inference settings.
 
 ## Security rules
 

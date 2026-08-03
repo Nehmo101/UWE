@@ -18,15 +18,15 @@ import {
 interface Props {
   worldSlug: string;
   sessionId: string;
-  rtxReady: boolean;
-  rtxEnabled: boolean;
+  engineReady: boolean;
+  engineEnabled: boolean;
 }
 
 export function SessionRecapAiButton({
   worldSlug,
   sessionId,
-  rtxReady,
-  rtxEnabled,
+  engineReady,
+  engineEnabled,
 }: Props) {
   const [userPrompt, setUserPrompt] = useState("");
   const [status, setStatus] = useState<string | null>(null);
@@ -67,7 +67,7 @@ export function SessionRecapAiButton({
         setJobId(payload.job?.id ?? null);
         setStatus(
           payload.job?.status === "deferred"
-            ? "RTX offline — Job vorgemerkt. Ergebnis unter AI Runs prüfen."
+            ? "Maschinenraum offline — Job vorgemerkt. Ergebnis unter AI Runs prüfen."
             : "KI-Recap gestartet — Vorschlag unter AI Runs prüfen und übernehmen.",
         );
         return;
@@ -89,7 +89,7 @@ export function SessionRecapAiButton({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>KI-Recap (RTX)</CardTitle>
+        <CardTitle>KI-Recap (Maschinenraum)</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         <p className="text-sm text-muted-foreground">
@@ -97,14 +97,14 @@ export function SessionRecapAiButton({
           Kanon.
         </p>
 
-        {!rtxEnabled ? (
+        {!engineEnabled ? (
           <Alert tone="danger" role="alert">
-            RTX-Inference ist deaktiviert.
+            Maschinenraum-Inference ist deaktiviert.
           </Alert>
         ) : null}
 
-        {rtxEnabled && !rtxReady ? (
-          <p className="text-sm text-muted-foreground">RTX offline — wird als Job vorgemerkt.</p>
+        {engineEnabled && !engineReady ? (
+          <p className="text-sm text-muted-foreground">Maschinenraum offline — wird als Job vorgemerkt.</p>
         ) : null}
 
         <div className="flex flex-col gap-1.5">
@@ -122,7 +122,7 @@ export function SessionRecapAiButton({
           <Button
             type="button"
             variant="secondary"
-            disabled={!rtxEnabled || busy}
+            disabled={!engineEnabled || busy}
             onClick={() => void runSessionRecap()}
           >
             {busy ? "Läuft…" : "KI-Recap erstellen"}

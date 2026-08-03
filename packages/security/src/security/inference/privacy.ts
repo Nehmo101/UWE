@@ -3,7 +3,7 @@
  *
  * This module used to hold the DM-only sanitizer that stripped context before
  * it left for a cloud provider. There is no cloud provider left (every AI
- * action runs on the RTX host) and no dm_only marker left to strip, so all
+ * action runs on the Maschinenraum host) and no dm_only marker left to strip, so all
  * that remains is the serialization.
  */
 import type { AiContext } from "./ai-context-types";
