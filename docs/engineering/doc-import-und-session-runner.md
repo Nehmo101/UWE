@@ -176,6 +176,27 @@ Beschreibung. Und getrennt wird nur, wo es etwas zu trennen gibt — ein Block g
 Wertezeilen („Kein Kampf. Er kämpft nie.") bleibt eine Seite. Eine leere Hauptseite
 wäre schlimmer als die Doppelung, die hier vermieden werden soll.
 
+### DM-Bereiche überleben die Zerlegung
+
+Ein `:::dm … :::` im Quelltext kennt die Seitengrenzen nicht, die beim Umbau erst
+entstehen. Ohne Gegenmaßnahme landet die öffnende Marke auf der Wurzelseite und die
+schließende drei Kapitel später — und das Ergebnis zeigt genau in die falsche
+Richtung: Die Wurzelseite schneidet sich fail-closed selbst ab, **die Kapitel
+dazwischen tragen gar keine Marke mehr** und stehen offen. Ein Autor, der einen
+Band ausdrücklich als DM-Material gekennzeichnet hat, hätte ihn damit veröffentlicht.
+
+`semantic/dm-balance.ts` läuft deshalb einmal über die Seiten **in
+Dokumentreihenfolge** und trägt mit, ob gerade ein Bereich offen ist: Wer in einem
+offenen Bereich auf einer Seite ankommt, bekommt die Marke dort neu gesetzt; wer
+eine Seite mit offenem Bereich verlässt, bekommt sie geschlossen. Der Titel wandert
+mit, damit im Studio über jedem Teilstück derselbe Kasten steht.
+
+Die abgelegte Originaldatei (`import/quelltext`) bleibt außen vor — sie ist der
+unveränderte Beleg und trägt ihre Marken ohnehin ausgeglichen.
+
+> **Für den Bulk-Wiki-Modus gilt das nicht**, dort ist eine Datei eine Seite und
+> eine Marke kann keine Grenze überschreiten.
+
 ### Was die Welt schon weiß
 
 Der Import las ein Dokument lange, als wäre es das erste in dieser Welt. Das ist fast
