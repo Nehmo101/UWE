@@ -94,6 +94,7 @@ export default async function StudioBrainPage({ params, searchParams }: Props) {
       <ShellContextPanel>
         <CampaignSidebar
           items={campaignNavItems(`/worlds/${worldSlug}/brain`, campaigns, campaignSlug)}
+          manageHref={`/worlds/${worldSlug}/campaigns`}
         />
         <SidebarSection title="Kontext">
           <p className="text-sm text-muted-foreground">

@@ -301,7 +301,16 @@ export interface StudioPaletteCommand {
   icon?: string;
 }
 
-/** Sub-routes and deep links missing from the main Studio sidebar IA. */
+/**
+ * Sub-routes and deep links missing from the main Studio sidebar IA.
+ *
+ * Nur echte Studio-Routen. Vier Einträge sind hier herausgeflogen, weil sie das
+ * nicht (mehr) waren: `/workshop/rental` und `/workshop/print-profiles` (die
+ * Werkstatt liegt in Brain), `/life-brain` (owner-privater Alltag, ebenfalls
+ * Brain) und `/mail/compose` — letzteres existiert zwar, ruft aber `notFound()`,
+ * sobald `?kind=` fehlt, und ist damit kein Sprungziel, sondern ein Ziel mit
+ * Kontext (Session-Recap, Handout).
+ */
 export const STUDIO_PALETTE_EXTRA: {
   id: string;
   label: string;
@@ -309,11 +318,7 @@ export const STUDIO_PALETTE_EXTRA: {
   group: string;
   keywords?: string[];
 }[] = [
-  { id: "workshop-rental", label: "Terrain-Verleih", href: "/workshop/rental", group: "Organisation / Werkstatt", keywords: ["rental", "verleih"] },
-  { id: "workshop-print-profiles", label: "Druckprofile", href: "/workshop/print-profiles", group: "Organisation / Werkstatt", keywords: ["print", "3d"] },
   { id: "command-center", label: "NL Command Center", href: "/command", group: "System / Übersicht", keywords: ["command", "nl", "admin"] },
-  { id: "mail-compose", label: "E-Mail verfassen", href: "/mail/compose", group: "AI & Generatoren / Mail", keywords: ["mail", "compose", "email"] },
-  { id: "life-brain", label: "Life Brain", href: "/life-brain", group: "Knowledge & Brain", keywords: ["life", "personal", "brain"] },
   { id: "brain-store", label: "Brain Store", href: "/brain", group: "Knowledge & Brain", keywords: ["brain", "wissen", "canon"] },
 ];
 
@@ -349,14 +354,8 @@ export function studioCommandPaletteCommands(options: {
   const { worlds, worldSlug, pathname = "" } = options;
   const list: StudioPaletteCommand[] = [];
 
-  list.push({
-    id: "quick-capture",
-    label: "Schnell erfassen",
-    href: "/capture?quick=1",
-    group: "Aktionen",
-    icon: "zap",
-    keywords: ["capture", "notiz", "erfassen", "todo", "idee", "inbox", "quick"],
-  });
+  // „Schnell erfassen" auf `/capture?quick=1` stand hier an erster Stelle der
+  // Palette — die Route gibt es in Studio nicht, Capture liegt in Brain.
 
   if (worldSlug) {
     const base = `/worlds/${worldSlug}`;

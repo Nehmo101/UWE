@@ -39,25 +39,17 @@ export const ORGANIZATION_NAV: NavGroup[] = [
       },
     ],
   },
-  {
-    id: "org-comms",
-    title: "Kommunikation",
-    items: [
-      {
-        // Das Postfach liegt seit H10 in Brain — ein Postfach ist Alltag, und
-        // Alltag ist owner-privat. In Studio bleibt das Verfassen aus Vorlagen:
-        // Session-Recap, Handout und die Welt-Mails sind DM-Arbeit.
-        id: "org-mail-compose",
-        label: "E-Mail verfassen",
-        href: "/mail/compose",
-        icon: "mail",
-        group: "Kommunikation",
-        section: SECTION,
-        permission: ["owner", "admin"],
-        status: "active",
-        source: "organization",
-        keywords: ["mail", "email", "vorlage", "compose", "recap", "handout"],
-      },
-    ],
-  },
 ];
+
+/*
+ * Hier stand die Gruppe „Kommunikation" mit einem Eintrag: „E-Mail verfassen"
+ * auf `/mail/compose`. Diese Route ist kein Einstieg, sondern ein Ziel — sie
+ * ruft `notFound()`, sobald `?kind=` fehlt, und braucht zusätzlich `worldSlug`
+ * und `sourceId`. Aus der Seitenleiste aufgerufen kam deshalb immer eine leere
+ * Seite heraus.
+ *
+ * Die Route bleibt: erreicht wird sie da, wo sie ihren Kontext mitbringt — aus
+ * dem Session-Recap, aus einem Handout und aus den Welt-Mails. Das Postfach
+ * selbst liegt seit H10 in Brain (ein Postfach ist Alltag, und Alltag ist
+ * owner-privat).
+ */

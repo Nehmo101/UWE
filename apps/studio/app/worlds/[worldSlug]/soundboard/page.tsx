@@ -97,6 +97,7 @@ export default async function StudioSoundboardPage({ params, searchParams }: Pro
       <ShellContextPanel>
         <CampaignSidebar
           items={campaignNavItems(`/worlds/${worldSlug}/soundboard`, campaigns, campaignSlug)}
+          manageHref={`/worlds/${worldSlug}/campaigns`}
         />
         <SidebarSection title="Kontext">
           <p className="text-sm text-muted-foreground">

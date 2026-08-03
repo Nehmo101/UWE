@@ -608,7 +608,9 @@ export function ImportWorkspace({
 
             <Alert tone="warning">
               Dieser Import kann aktuell <strong>nicht automatisch zurückgerollt</strong> werden.
-              Erstelle vorher ein Backup — <a href="/backup">Backup erstellen</a>. Ein Rollback ist
+              Erstelle vorher ein Backup —{" "}
+              {/* `/backup` war eine Studio-Route ohne Welt; Backups liegen im Welt-Cockpit. */}
+              <a href={`/worlds/${worldSlug}/backup`}>Backup erstellen</a>. Ein Rollback ist
               sonst nur über ein vorhandenes Backup möglich.
             </Alert>
 

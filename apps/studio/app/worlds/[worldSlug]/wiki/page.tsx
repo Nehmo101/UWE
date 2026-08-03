@@ -117,16 +117,12 @@ export default async function StudioWorldWikiPage({ params, searchParams }: Prop
     <>
       <ShellBreadcrumb items={worldSectionBreadcrumb(world.name, worldSlug, "Wiki / Seiten", wikiBase)} />
       <ShellContextPanel>
-        <CampaignSidebar
-          items={[
-            { label: "Alle Kampagnen", href: wikiBase, active: !campaignSlug },
-            ...campaignItems.map((item) => ({
-              label: item.label,
-              href: item.href,
-              active: item.active,
-            })),
-          ]}
-        />
+        {/*
+          `campaignNavItems` stellt „Alle Kampagnen" bereits selbst voran. Hier
+          stand der Eintrag ein zweites Mal davor — die Kontextspalte zeigte ihn
+          doppelt, beide als aktiv markiert.
+        */}
+        <CampaignSidebar items={campaignItems} manageHref={`/worlds/${worldSlug}/campaigns`} />
       </ShellContextPanel>
       <PageHeader
         title="Wiki / Seiten"
