@@ -214,19 +214,64 @@ const ABBREVIATIONS = new Set([
 
 const MAX_CELL_CHARS = 170;
 
-/** Erste echte Satzgrenze — die Tabelle soll lesbar bleiben, nicht vollständig sein. */
+function isWhitespace(char: string | undefined): boolean {
+  return char === " " || char === "\t" || char === "\n" || char === "\r";
+}
+
+/** Anfang des Worts, das bei `index` endet. */
+function tokenStart(text: string, index: number): number {
+  let start = index;
+  while (start > 0 && !isWhitespace(text[start - 1]) && text[start - 1] !== ".") {
+    start -= 1;
+  }
+  return start;
+}
+
+/**
+ * Wort ohne führende Klammern oder Anführungszeichen — sonst wäre „(z" nicht „z"
+ * und die Abkürzungsliste liefe ins Leere. Ein Wort aus reiner Interpunktion
+ * (etwa „…)") bleibt als leerer String übrig; das ist keine Abkürzung, sondern
+ * eine ganz normale Satzgrenze.
+ */
+function strippedToken(text: string, start: number, end: number): string {
+  let offset = start;
+  while (offset < end && !/[\p{L}\p{N}]/u.test(text[offset])) {
+    offset += 1;
+  }
+  return text.slice(offset, end);
+}
+
+/**
+ * Erste echte Satzgrenze — die Tabelle soll lesbar bleiben, nicht vollständig sein.
+ *
+ * Bewusst ohne Regex-Scan: `([^\s.]+)\.(\s+|$)` backtrackt auf punktlosen
+ * Abschnitten je Startposition durch den ganzen Wortlauf und wird damit
+ * quadratisch (CodeQL: polynomial regular expression). Die Suche über `indexOf`
+ * berührt jedes Zeichen konstant oft.
+ */
 function firstSentence(text: string): string {
   let sentence = text;
-  for (const match of text.matchAll(/([^\s.]+)\.(\s+|$)/g)) {
-    // Führende Klammern/Anführungszeichen abziehen, sonst ist „(z" nicht „z".
-    if (ABBREVIATIONS.has(match[1].replace(/^[^\p{L}\p{N}]+/u, ""))) continue;
-    sentence = text.slice(0, (match.index ?? 0) + match[0].trimEnd().length);
+
+  for (let dot = text.indexOf("."); dot !== -1; dot = text.indexOf(".", dot + 1)) {
+    // Satzgrenze ist ein Punkt am Textende oder vor Leerraum.
+    const next = text[dot + 1];
+    if (next !== undefined && !isWhitespace(next)) continue;
+
+    // Vor dem Punkt muss ein Wort stehen — ".." oder " ." ist keine Grenze.
+    const start = tokenStart(text, dot);
+    if (start === dot) continue;
+    if (ABBREVIATIONS.has(strippedToken(text, start, dot))) continue;
+
+    sentence = text.slice(0, dot + 1);
     break;
   }
+
   if (sentence.length > MAX_CELL_CHARS) {
-    sentence = `${sentence.slice(0, MAX_CELL_CHARS).replace(/\s+\S*$/, "")} …`;
+    const cut = sentence.lastIndexOf(" ", MAX_CELL_CHARS);
+    sentence = `${sentence.slice(0, cut > 0 ? cut : MAX_CELL_CHARS)} …`;
   }
-  return sentence.replace(/\|/g, "\\|");
+
+  return sentence.replaceAll("|", "\\|");
 }
 
 function renderMcpBlock(area: AreaDefinition): string {
