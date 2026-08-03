@@ -10,6 +10,7 @@ import { terraMat, tintedMats } from '../render/materials.js';
 import { M, mergeGeos, part, prismGeo } from '../assets/geometrie-hilfen.js';
 import { baueWeltschildkroetenKopf } from './weltschildkroete-kopf.js';
 import { landmarkenBereich, landmarkenSkala } from './landmarken-bereich.js';
+import { externesAsset } from '../assets/external-assets.js';
 
 const BX = THREE.BoxGeometry;
 const CY = THREE.CylinderGeometry;
@@ -448,7 +449,7 @@ function genWeltschildkroete(el) {
     gruppe.add(koerper);
 
     var vorX = Math.sin(yaw), vorZ = Math.cos(yaw);
-    var kopf = new THREE.Mesh(BASIS_KOPF.clone(), kopfMat);
+    var kopf = externesAsset('weltschildkroete') || new THREE.Mesh(BASIS_KOPF.clone(), kopfMat);
     setzeTransform(kopf,
       pt.x + vorX * 7.15 * groesse,
       boden + 4.75 * groesse,

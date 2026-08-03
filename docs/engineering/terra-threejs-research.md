@@ -60,6 +60,14 @@ Fremdcode prüfen. Ein MCP gehört **nicht** in Terras Browser-Import-Map.
    Ladepfad rechtfertigen. Für ein einzelnes Asset wäre das unnötige
    Komplexität.
 
+## Umgesetzter Produktionsweg
+
+Die fünf Schritte sind inzwischen als agentenunabhängige Terra Art Factory
+umgesetzt. Der kanonische Ablauf, die `/uweterra`-Prompts, Abnahme-Gates und
+CLI-Befehle stehen in `docs/engineering/terra-art-workflow.md`. Blender MCP ist
+optional: der reproduzierbare Kern verwendet Blender headless, versionierte
+Python-Skripte, JSON-Briefs und normale `pnpm terra:art:*`-Befehle.
+
 ## Nicht empfohlen
 
 - Ungeprüfte „Three.js MCP“-Verzeichniseinträge ohne gepflegtes Repository,
