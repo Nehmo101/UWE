@@ -25,7 +25,14 @@ import path from "node:path";
 import { describe, it } from "node:test";
 
 import { createServer } from "../packages/mcp/src/servers";
-import { AREAS, readBlock, renderAreaBlocks } from "./generate-area-skills";
+import {
+  AREAS,
+  markerEnd,
+  markerStart,
+  readBlock,
+  renderAreaBlocks,
+  writeBlock,
+} from "./generate-area-skills";
 
 const root = path.resolve(import.meta.dirname, "..");
 
@@ -136,6 +143,38 @@ describe("Bereichs-Skills: generierte Blöcke", () => {
       );
     });
   }
+});
+
+/**
+ * Der Generator baut immer LF, unter Windows liegen die Dateien per
+ * `core.autocrlf=true` aber mit CRLF im Baum. Ohne Normalisierung wäre der
+ * Drift-Test dort dauerhaft rot und `pnpm skills:sync` schriebe bei jedem Lauf
+ * alle acht Blöcke neu, ohne dass sich am Inhalt etwas geändert hat.
+ */
+describe("Bereichs-Skills: Zeilenenden", () => {
+  const body = "Zeile eins\n\nZeile zwei";
+  const framed = (eol: string, inner: string) =>
+    [`# Titel`, markerStart("karte"), inner, markerEnd("karte"), `Prosa danach`].join(eol);
+
+  it("readBlock liefert LF, egal wie die Datei endet", () => {
+    const fromLf = readBlock(framed("\n", body), "karte", "test.md");
+    const fromCrlf = readBlock(framed("\r\n", body.replaceAll("\n", "\r\n")), "karte", "test.md");
+    assert.equal(fromLf, body);
+    assert.equal(fromCrlf, body);
+  });
+
+  it("writeBlock behält das Zeilenende der Datei bei", () => {
+    const crlfSource = framed("\r\n", "alt");
+    const result = writeBlock(crlfSource, "karte", body, "test.md");
+    assert.ok(!/(?<!\r)\n/.test(result), "keine nackten LF in einer CRLF-Datei");
+    assert.equal(readBlock(result, "karte", "test.md"), body);
+  });
+
+  it("unveränderter Inhalt schreibt eine CRLF-Datei nicht neu", () => {
+    // Genau die Bedingung aus main(): `before !== after` darf hier nicht greifen.
+    const source = framed("\r\n", body.replaceAll("\n", "\r\n"));
+    assert.equal(writeBlock(source, "karte", body, "test.md"), source);
+  });
 });
 
 describe("Bereichs-Skills: Verweise stimmen", () => {

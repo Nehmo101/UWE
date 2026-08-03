@@ -366,7 +366,21 @@ export function markerEnd(id: string): string {
   return `<!-- uwe:generated:${id} end -->`;
 }
 
-/** Liest den aktuellen Inhalt zwischen den Markern. Wirft, wenn sie fehlen. */
+/**
+ * Zeilenende der Datei. Unter Windows checkt Git mit `core.autocrlf=true` CRLF
+ * aus, während der Generator immer LF baut. Ohne diese Unterscheidung hielte
+ * `main()` jede Datei für verändert und schriebe sie bei jedem Lauf neu — und
+ * der Drift-Test vergliche einen CRLF-Block mit einem LF-Block und wäre auf
+ * Windows dauerhaft rot, ohne dass etwas gedriftet ist.
+ */
+function lineEndingOf(source: string): string {
+  return source.includes("\r\n") ? "\r\n" : "\n";
+}
+
+/**
+ * Liest den aktuellen Inhalt zwischen den Markern, auf LF normalisiert.
+ * Wirft, wenn die Marker fehlen.
+ */
 export function readBlock(source: string, id: string, file: string): string {
   const start = source.indexOf(markerStart(id));
   const end = source.indexOf(markerEnd(id));
@@ -376,16 +390,22 @@ export function readBlock(source: string, id: string, file: string): string {
         "Ohne Marker weiß der Generator nicht, wohin — Datei von Hand reparieren.",
     );
   }
-  return source.slice(start + markerStart(id).length, end).replace(/^\n|\n$/g, "");
+  return source
+    .slice(start + markerStart(id).length, end)
+    .replaceAll("\r\n", "\n")
+    .replace(/^\n|\n$/g, "");
 }
 
+/** Setzt den Block ein — mit dem Zeilenende, das die Datei schon benutzt. */
 export function writeBlock(source: string, id: string, body: string, file: string): string {
   const start = source.indexOf(markerStart(id));
   const end = source.indexOf(markerEnd(id));
   if (start === -1 || end === -1 || end < start) {
     throw new Error(`${file}: Marker \`uwe:generated:${id}\` fehlt oder ist verdreht.`);
   }
-  return `${source.slice(0, start + markerStart(id).length)}\n${body}\n${source.slice(end)}`;
+  const eol = lineEndingOf(source);
+  const rendered = body.replaceAll("\r\n", "\n").replaceAll("\n", eol);
+  return `${source.slice(0, start + markerStart(id).length)}${eol}${rendered}${eol}${source.slice(end)}`;
 }
 
 // ---------------------------------------------------------------------------
