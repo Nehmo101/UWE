@@ -17,6 +17,6 @@
     "@types/node": "^22.15.32",
     "@uwe/config": "workspace:*",
     "tsx": "^4.23.1",
-    "typescript": "^5.8.3"
+    "typescript": "^7.0.2"
   }
 }
