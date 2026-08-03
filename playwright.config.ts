@@ -2,8 +2,12 @@ import { defineConfig, devices } from "@playwright/test";
 
 const studioPort = process.env.E2E_STUDIO_PORT ?? "3199";
 const portalPort = process.env.E2E_PORTAL_PORT ?? "3200";
+const brainPort = process.env.E2E_BRAIN_PORT ?? "3201";
+const familyPort = process.env.E2E_FAMILY_PORT ?? "3202";
 const studioBaseURL = process.env.E2E_STUDIO_URL ?? `http://127.0.0.1:${studioPort}`;
 const portalBaseURL = process.env.E2E_PORTAL_URL ?? `http://127.0.0.1:${portalPort}`;
+const brainBaseURL = process.env.E2E_BRAIN_URL ?? `http://127.0.0.1:${brainPort}`;
+const familyBaseURL = process.env.E2E_FAMILY_URL ?? `http://127.0.0.1:${familyPort}`;
 
 /**
  * Ausführbare Chromium-Datei aus der Umgebung statt aus Playwrights Download.
@@ -43,6 +47,31 @@ export default defineConfig({
         baseURL: portalBaseURL,
       },
     },
+    /**
+     * Brain und Family. Beide haben kein eigenes Anmeldeformular — die Sitzung
+     * entsteht auf der Studio-Origin und trägt über das gemeinsame Cookie
+     * herüber (`loginBrain` / `loginFamily` in e2e/helpers/auth.ts). Die
+     * `baseURL` zeigt trotzdem auf die jeweilige App, damit ein `page.goto("/")`
+     * im Test dort landet, wo er hingehört.
+     */
+    {
+      name: "brain",
+      testMatch: /brain-.*\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        ...launchOptions,
+        baseURL: brainBaseURL,
+      },
+    },
+    {
+      name: "family",
+      testMatch: /family-.*\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        ...launchOptions,
+        baseURL: familyBaseURL,
+      },
+    },
   ],
   use: {
     trace: "on-first-retry",
@@ -51,8 +80,12 @@ export default defineConfig({
     command: "node scripts/e2e-servers.mjs",
     url: `${studioBaseURL}/login`,
     reuseExistingServer: !process.env.CI,
-    // e2e-servers.mjs runs migrate + seed + zwei next-Builds vor dem Start;
-    // auf GitHub-Runnern dauert das inzwischen >5 Minuten (CI-Job-Budget: 20).
-    timeout: 900_000,
+    // e2e-servers.mjs runs migrate + seed + **vier** next-Builds vor dem Start.
+    // Waren es zwei (Studio, Portal) und rund fünf Minuten; Brain und Family
+    // kamen dazu, damit ihre Flächen überhaupt im Browser geprüft werden.
+    // Beide sind deutlich kleiner als Studio, die Verdopplung der Anzahl ist
+    // also keine Verdopplung der Zeit — der Puffer verdoppelt sich trotzdem,
+    // weil ein Timeout hier den ganzen Lauf ohne einen einzigen Test beendet.
+    timeout: 1_800_000,
   },
 });

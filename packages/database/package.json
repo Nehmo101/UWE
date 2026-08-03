@@ -22,6 +22,7 @@
     "./connector-service": "./src/connector-service.ts",
     "./server": "./src/server.ts",
     "./terra": "./src/terra-service.ts",
+    "./campaign": "./src/campaign-service.ts",
     "./campaign-radar": "./src/campaign-radar-service.ts",
     "./player-questions": "./src/player-question-service.ts",
     "./player-question-notify": "./src/player-question-notify.ts",
@@ -102,7 +103,7 @@
     "@uwe/mail-core": "workspace:*",
     "@uwe/shared-utils": "workspace:*",
     "@uwe/soundboard": "workspace:*",
-    "isomorphic-dompurify": "^3.20.0",
+    "isomorphic-dompurify": "^3.21.0",
     "pdf-lib": "^1.17.1",
     "pdf-parse": "^2.4.5",
     "pg": "^8.22.0"

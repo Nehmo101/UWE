@@ -76,21 +76,31 @@ export function parseFeatureMatrixOverviewTable(markdown: string): FeatureMatrix
     }
     if (!inOverview) continue;
 
-    const match = line.match(
-      /^\|\s*(\d+)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|$/,
-    );
-    if (!match) continue;
+    /* Von Hand aufgeteilt statt per Regex. Der frühere Ausdruck
+       `^\|\s*(\d+)\s*\|\s*(.+?)\s*\|…` stellte pro Zelle ein `\s*` neben ein
+       `.+?` — und `.` schließt Leerraum ein. Bei einer Zeile aus vielen
+       Leerzeichen probierte der Backtracker jede Kombination der Zellgrenzen
+       durch: bei drei solchen Zellen kubische Laufzeit, ab etwa 800 Zeichen
+       schon über eine Sekunde. Aufteilen ist linear und liest sich besser;
+       `.trim()` stand ohnehin schon an jeder Zelle. */
+    const cells = line.split("|");
+    // "| a | b | c | d | e |" ergibt zwei leere Randfelder plus fünf Zellen.
+    if (cells.length !== 7) continue;
+    if (cells[0]!.trim() !== "" || cells[6]!.trim() !== "") continue;
 
-    const number = Number(match[1]);
+    // Nur reine Ziffern, wie zuvor `(\d+)` — so fallen Kopf- und Trennzeile raus.
+    const numberCell = cells[1]!.trim();
+    if (!/^\d+$/.test(numberCell)) continue;
+    const number = Number(numberCell);
     if (!Number.isInteger(number) || number < 1 || number > 15) continue;
 
-    rows.push({
-      number,
-      title: match[2]!.trim(),
-      overallStatus: match[3]!.trim(),
-      usable: match[4]!.trim(),
-      productionReady: match[5]!.trim(),
-    });
+    const title = cells[2]!.trim();
+    const overallStatus = cells[3]!.trim();
+    const usable = cells[4]!.trim();
+    const productionReady = cells[5]!.trim();
+    if (!title || !overallStatus || !usable || !productionReady) continue;
+
+    rows.push({ number, title, overallStatus, usable, productionReady });
   }
 
   return rows.sort((a, b) => a.number - b.number);

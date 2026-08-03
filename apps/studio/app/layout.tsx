@@ -10,6 +10,7 @@ import {
   ThemeDocumentSync,
   TopBarSessionMount,
   buildVisualThemeHtmlAttributes,
+  dayIndex,
   toCustomThemeDefinitions,
   toUweThemePreferences,
   type ThemeAppearance,
@@ -146,7 +147,10 @@ export default async function RootLayout({
               children
             ) : (
               <ShellProvider worlds={worlds} initialWorldSlug={initialWorldSlug}>
-                <AppShell>{children}</AppShell>
+                {/* Der Szenen-Index wird hier auf dem Server bestimmt — der
+                    Shell ist eine Client-Komponente und dürfte ihn nicht
+                    selbst aus der Uhr lesen (siehe AppShell). */}
+                <AppShell sceneIndex={dayIndex()}>{children}</AppShell>
               </ShellProvider>
             )}
           </AppUrlsProvider>

@@ -16,6 +16,8 @@ import { studioCommands, studioSidebar } from "../../navigation/studio-nav";
 import { worldCommands, worldLiveNav, worldSidebar } from "../../navigation/world-nav";
 import { deriveShellBreadcrumb } from "../../navigation/derive-breadcrumb";
 import { liveSessionIdFromPathname } from "@/src/lib/active-world";
+import { hasStudioSceneBand } from "@/src/lib/studio-scene";
+import { StudioSceneBand } from "./StudioSceneBand";
 import { NavIcon } from "../ui/icon";
 import { Sheet, SheetContent, SheetClose, SheetTrigger } from "../ui/sheet";
 import { ScrollArea } from "../ui/scroll-area";
@@ -41,8 +43,26 @@ const BRAND_HREF = "/worlds";
  * ist, darüber den Welt-Block mit dem Switcher im Kopf. Keine Route rendert
  * noch eigene Navigation; Brotkrumen und Kontextspalte melden die Seiten über
  * `ShellBreadcrumb` / `ShellContextPanel` an (siehe ShellContext.tsx).
+ *
+ * Aus demselben Grund entscheidet der Shell auch über die gemalte Bühne: sie
+ * ist Rahmen, keine Seiteneigenschaft. Welche Routen sie tragen, steht in
+ * `src/lib/studio-scene.ts`.
  */
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({
+  children,
+  sceneIndex,
+}: {
+  children: React.ReactNode;
+  /**
+   * Tagesindex der Szenen-Rotation, im Root-Layout berechnet.
+   *
+   * Bewusst als Prop und nicht hier per `dayIndex()`: der Shell ist eine
+   * Client-Komponente und würde den Wert bei SSR und Hydration je einmal
+   * bestimmen. Über den Jahreswechsel einer Zeitzone hinweg wären das zwei
+   * verschiedene Bilder und damit ein Hydration-Mismatch.
+   */
+  sceneIndex: number;
+}) {
   const pathname = usePathname() ?? "/";
   const { activeWorld } = useShellWorld();
   const { breadcrumb, contextPanel } = useShellSlots();
@@ -106,6 +126,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const trail = breadcrumb ?? deriveShellBreadcrumb(pathname, activeWorld);
 
+  // Die Bühne trägt die Einstiege, nicht die Arbeitsflächen — hinter einem
+  // Wiki-Editor oder der Job-Liste läuft kein Hintergrundvideo.
+  const showSceneBand = hasStudioSceneBand(pathname);
+
   return (
     <SidebarContextProvider closeSidebar={() => undefined}>
       <div
@@ -154,8 +178,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               // zwar an die Stelle, landet aber auf keinem Element — die
               // nächste Tab-Taste führte zurück in die Navigation.
               tabIndex={-1}
-              className="min-w-0 flex-1 overflow-y-auto p-4 studio-main-with-bottom-nav md:p-6"
+              // `relative isolate` trägt das Band: es liegt mit z-index -1
+              // hinter dem Seiteninhalt, aber im eigenen Stacking-Context —
+              // ohne `isolate` fiele es hinter den Grund des Shell-Rahmens und
+              // wäre unsichtbar. Der Seiteninhalt braucht dadurch keinen
+              // Wrapper und keine z-index-Angabe.
+              className="relative isolate min-w-0 flex-1 overflow-y-auto p-4 studio-main-with-bottom-nav md:p-6"
             >
+              {showSceneBand ? <StudioSceneBand sceneIndex={sceneIndex} /> : null}
               {children}
             </main>
             {contextPanel ? (

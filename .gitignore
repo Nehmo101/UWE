@@ -58,5 +58,6 @@ exports/*
 *.tsbuildinfo
 perf-results.json
 qa-artifacts/
+.artifacts/terra-art/
 .worktrees/
 tools/uwe-host-command-center/dist/

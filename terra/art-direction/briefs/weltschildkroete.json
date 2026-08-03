@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "assetId": "weltschildkroete",
+  "type": "hero-landmark",
+  "intent": {
+    "character": ["uralt", "freundlich", "monumental", "weise"],
+    "avoid": ["niedlich", "plastisch", "aggressiv", "schlangenartig"],
+    "focus": "Breiter organischer Halsansatz, schwerer Landschildkroetenschaedel und ruhiger Blick"
+  },
+  "preserve": ["Panzer", "Schloss", "Animation", "Bereichsskalierung"],
+  "candidateCount": 3,
+  "scenes": ["turtle-hero", "turtle-head", "turtle-region"]
+}

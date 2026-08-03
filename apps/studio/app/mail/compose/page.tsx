@@ -94,10 +94,9 @@ export default async function MailComposePage({ searchParams }: Props) {
   return (
     <>
       <ShellBreadcrumb
-        items={[
-          { label: "Mail Center", href: "/mail" },
-          { label: `Mail vorbereiten: ${KIND_LABELS[kind]}` },
-        ]}
+        // Ohne `href`: das Mail Center liegt in Brain, in Studio führt `/mail`
+        // ins Leere.
+        items={[{ label: "Mail" }, { label: `Mail vorbereiten: ${KIND_LABELS[kind]}` }]}
       />
       <PageHeader
         title={`Mail vorbereiten: ${KIND_LABELS[kind]}`}

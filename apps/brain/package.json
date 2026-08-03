@@ -28,7 +28,7 @@
     "@uwe/product-contracts": "workspace:*",
     "@uwe/security": "workspace:*",
     "@uwe/shared-ui": "workspace:*",
-    "isomorphic-dompurify": "^3.20.0",
+    "isomorphic-dompurify": "^3.21.0",
     "next": "^16.2.12",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

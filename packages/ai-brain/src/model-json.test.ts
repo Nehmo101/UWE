@@ -232,4 +232,25 @@ describe("generateWithJsonRepair — bounded at exactly one retry", () => {
     assert.equal(rec.calls, 1, "stripping a fence is free — it must not cost a round trip");
     assert.equal(outcome.ok, true);
   });
+
+  /* Ohne den Fix stehen in der Info-Zeile zwei Sternquantoren ueber derselben
+     Zeichenmenge nebeneinander, und die Laufzeit waechst quadratisch mit der
+     Zahl der Leerzeichen. Gemessen: 8000 Zeichen brauchten rund 77 ms, 16000
+     schon ueber eine Sekunde. Die Schranke ist grosszuegig, damit langsame
+     CI-Runner nicht flackern — quadratisches Verhalten reisst sie trotzdem. */
+  it("bricht bei einer Fence-Zeile aus lauter Leerzeichen nicht ein", () => {
+    const hostile = "```" + " ".repeat(50_000);
+    const started = Date.now();
+    assert.equal(stripCodeFence(hostile), null);
+    const elapsed = Date.now() - started;
+    assert.ok(elapsed < 1000, `stripCodeFence brauchte ${elapsed} ms — erwartet linear`);
+  });
+
+  it("liest die Fence-Varianten unveraendert", () => {
+    assert.equal(stripCodeFence('```json\n{"a":1}\n```'), '{"a":1}');
+    assert.equal(stripCodeFence('```JSON\n{"a":1}\n```'), '{"a":1}');
+    assert.equal(stripCodeFence('```  json  \n{"a":1}\n```'), '{"a":1}');
+    assert.equal(stripCodeFence('```\n{"a":1}\n```'), '{"a":1}');
+    assert.equal(stripCodeFence('```json\r\n{"a":1}\r\n```'), '{"a":1}');
+  });
 });

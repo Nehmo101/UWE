@@ -83,6 +83,7 @@ export default async function StudioSessionsPage({ params, searchParams }: Props
       <ShellContextPanel>
         <CampaignSidebar
           items={campaignNavItems(`/worlds/${worldSlug}/sessions`, campaigns, campaignSlug)}
+          manageHref={`/worlds/${worldSlug}/campaigns`}
         />
         <SidebarSection title="Kontext">
           <p className="text-sm text-muted-foreground">

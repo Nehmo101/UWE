@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { resolveCrossAppUrls } from "@uwe/auth";
 import { prisma } from "@uwe/database/server";
 import {
   createKnowledgeAssistantService,
@@ -42,6 +43,9 @@ const CONFIDENCE_LABEL: Record<ConfidenceLevel, string> = {
 
 export default async function KnowledgePage({ searchParams }: Props) {
   await requireStudioAccess();
+  // Life Brain und Capture leben in Brain (:3002) — Verweise dorthin gehen über
+  // die Laufzeit-Origin, nicht über einen Studio-Pfad.
+  const brainUrl = resolveCrossAppUrls().brain;
   const { q, synth } = await searchParams;
   const query = (q ?? "").trim();
   const answer = query ? await createKnowledgeAssistantService(prisma).ask(query) : null;
@@ -53,18 +57,16 @@ export default async function KnowledgePage({ searchParams }: Props) {
       <ShellBreadcrumb items={[{ label: "Wissensassistent" }]} />
       <PageHeader
         title="Wissensassistent"
-        summary="Life Brain, DnD-Brain und lokaler Q&A-Assistent — drei Einstiege, ein Knowledge-Bereich."
+        summary="DnD-Brain und lokaler Q&A-Assistent — Frage stellen, Antwort mit Quellen zurückbekommen."
       />
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
-        <Link href="/life-brain" className="block no-underline">
-          <Card className="h-full transition-colors hover:border-primary/40">
-            <CardHeader>
-              <CardTitle>Life Brain</CardTitle>
-              <CardDescription>Persönliche Dokumente &amp; Fakten (Maschinenraum-only)</CardDescription>
-            </CardHeader>
-          </Card>
-        </Link>
+      {/*
+        Hier stand eine dritte Karte „Life Brain" auf `/life-brain`. Diese Route
+        gibt es in Studio nicht: Life Brain ist owner-privater Alltag und liegt
+        in Brain (:3002). Der Link führte ins Leere — genau wie die
+        Capture-Verweise weiter unten, die aus demselben Umzug übrig waren.
+      */}
+      <div className="mb-6 grid gap-3 sm:grid-cols-2">
         <Link href="/brain" className="block no-underline">
           <Card className="h-full transition-colors hover:border-primary/40">
             <CardHeader>
@@ -143,27 +145,28 @@ export default async function KnowledgePage({ searchParams }: Props) {
               <CardTitle>Quellen</CardTitle>
             </CardHeader>
             <CardContent>
+              {/*
+                Die Titel standen als Links auf `/life-brain/documents/<id>`
+                bzw. `/life-brain/facts/<id>`. Beide Routen gibt es weder in
+                Studio noch in Brain — Brain hat nur die Übersicht
+                `/life-brain`. Der Titel steht deshalb als Text; der Weg zur
+                Quelle führt über den Brain-Link unter der Liste.
+              */}
               {answer.citations.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  Keine passenden Quellen im Life-Brain. Vielleicht als{" "}
-                  <Link href="/capture">Capture</Link> festhalten?
+                  Keine passenden Quellen im Life-Brain. Festhalten lässt sich das im Brain unter{" "}
+                  <a href={`${brainUrl}/capture`}>Capture</a>.
                 </p>
               ) : (
-                <ul className="flex flex-col gap-3">
-                  {answer.citations.map((cite) => {
-                    const href =
-                      cite.kind === "document"
-                        ? `/life-brain/documents/${cite.id}`
-                        : `/life-brain/facts/${cite.id}`;
-                    return (
+                <>
+                  <ul className="flex flex-col gap-3">
+                    {answer.citations.map((cite) => (
                       <li
                         key={`${cite.kind}-${cite.id}`}
                         className="border-b border-border/60 pb-3 last:border-0 last:pb-0"
                       >
                         <div className="flex flex-wrap items-center gap-2">
-                          <Link href={href} className="font-medium">
-                            {cite.title}
-                          </Link>
+                          <span className="font-medium">{cite.title}</span>
                           <Badge>{cite.sourceType}</Badge>
                           {cite.ageNote ? (
                             <span className="text-sm text-muted-foreground">{cite.ageNote}</span>
@@ -171,9 +174,12 @@ export default async function KnowledgePage({ searchParams }: Props) {
                         </div>
                         <p className="mt-1 text-sm text-muted-foreground">{cite.snippet}</p>
                       </li>
-                    );
-                  })}
-                </ul>
+                    ))}
+                  </ul>
+                  <p className="mt-4 text-sm text-muted-foreground">
+                    Quellen bearbeiten: <a href={`${brainUrl}/life-brain`}>Life Brain in Brain</a>
+                  </p>
+                </>
               )}
             </CardContent>
           </Card>

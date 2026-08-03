@@ -20,7 +20,14 @@ export interface ThreadResolveInput {
   subject: string;
 }
 
-const REPLY_PREFIX = /^\s*(re|aw|fwd|fw|wg|antwort|antw)\s*(\[\d+\])?\s*:\s*/i;
+/* Der Zähler ist als `(?:\[\d+\]\s*)?` geschrieben und nicht als `(\[\d+\])?\s*`.
+   In der zweiten Fassung stehen zwei `\s*` nebeneinander, sobald die Klammer
+   fehlt, und der Backtracker probiert bei einem Betreff aus vielen Leerzeichen
+   jeden Aufteilungspunkt durch — quadratische Laufzeit, multipliziert mit den
+   Durchläufen der Schleife unten. Betreffzeilen kommen von außen: jeder, der
+   eine Mail an dieses Konto schicken kann, bestimmt sie. Beide Gruppen sind
+   ausserdem nicht-einfangend, denn gebraucht wird hier nur der Ersetzungseffekt. */
+const REPLY_PREFIX = /^\s*(?:re|aw|fwd|fw|wg|antwort|antw)\s*(?:\[\d+\]\s*)?:\s*/i;
 
 /** Strips reply/forward prefixes (Re:/AW:/Fwd:/WG: …) and collapses whitespace. */
 export function normalizeSubjectForThreading(subject: string): string {

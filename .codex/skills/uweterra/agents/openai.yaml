@@ -1,0 +1,4 @@
+interface:
+  display_name: "UWE Terra"
+  short_description: "Prompt-gesteuerte Terra-Art- und Asset-Pipeline"
+  default_prompt: "Nutze den Terra-Art-Vertrag, erzeuge drei geprüfte Varianten und stoppe bei der Zwischenabnahme."

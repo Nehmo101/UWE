@@ -72,3 +72,20 @@ test("bei abgeschalteter Bewegung wird gar kein Video geladen", async ({ page })
   // erst erzeugt, also auch keine Netzwerklast.
   await expect(page.locator("video")).toHaveCount(0);
 });
+
+/**
+ * Der Welten-Hub ist die erste Seite nach der Anmeldung und trug lange keine
+ * Bühne — die Weltseite dahinter schon. Der Test hält den Einstieg fest, damit
+ * die beiden nicht wieder auseinanderlaufen.
+ */
+test("der Welten-Hub trägt dieselbe Bühne wie die Weltseite", async ({ page }) => {
+  await loginPortalPlayer(page);
+  await page.goto("/auth/worlds");
+  await expect(page.getByRole("heading", { name: "Meine Welten" }).first()).toBeVisible();
+
+  const video = page.locator("video").first();
+  await expect(video).toBeAttached({ timeout: 15000 });
+  expect(await video.evaluate((el: HTMLVideoElement) => el.currentSrc)).toContain(
+    "/scenes/motion/portal-",
+  );
+});

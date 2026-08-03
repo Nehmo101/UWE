@@ -31,6 +31,7 @@ var letzterBeschriftungsAbgleich = -1e9;
 import { tickWind } from './world/wind.js';
 import { tickWeltschildkroeten } from './generators/weltschildkroete.js';
 import { tickWeltschloesser } from './generators/weltschloss.js';
+import { ladeExterneAssets } from './assets/external-assets.js';
 import { ARCHITEKTUR_STILE, architekturAssetId } from './assets/architektur-katalog.js';
 import { erstelleLuftschauPlan } from './generators/luftschau.js';
 import {
@@ -299,6 +300,10 @@ if (SCHAU_MODUS === "assets") setzeKartenGroesseFuerSchau(ASSET_SCHAU_KARTENGROE
 // Farbrampe des Startbioms setzen (F1) — muss nach initIO stehen, weil die
 // Funktion dort lebt und BIOME liest.
 palettePassend();
+
+// Freigegebene Hero-Assets vor dem synchronen Kartenaufbau laden. Bei leerem
+// Manifest oder Fehler bleibt die prozedurale Geometrie unveraendert aktiv.
+await ladeExterneAssets();
 
 genBase(S.worldSeed);
 if (SCHAU_MODUS === "assets") assetSchauGelaende();

@@ -70,6 +70,54 @@ Fehlt danach eine Datei, bricht `copy-scenes.mjs` mit einer Fehlermeldung ab —
 absichtlich, denn ein toter `<source>` wäre ein Netzwerkfehler im Browser des
 Nutzers.
 
+### `available: true` heißt nicht „eingebunden"
+
+Der Satz oben hat einmal genau diesen Irrtum ausgelöst, deshalb steht er hier
+ausdrücklich: `available` sagt nur, dass die **Dateien** da sind und
+ausgeliefert werden. Ob sie jemand *anfragt*, entscheidet etwas ganz anderes —
+ob eine Route `PaintedScene` rendert.
+
+Eine Zeit lang standen alle zwanzig Schalter auf `true`, alle achtzig Dateien
+lagen in fünf `public/scenes/motion/`-Ordnern — und drei Bereiche haben nie
+eine einzige davon abgerufen: Studio band überhaupt keine Route ein, Family
+reichte den Szenen-Index an keiner Stelle in seine Shell, Brain und Portal
+hatten je genau einen Auftritt. Aufgefallen ist es nicht, weil
+`e2e/portal-motion.spec.ts` nur das Portal kannte.
+
+Dagegen stehen jetzt zwei Wächter:
+
+- `scripts/scene-motion-coverage.test.ts` — ein Bereich mit `available: true`
+  ohne Auftritt ist ein roter Build, und ein eingetragener Auftritt, der den
+  Index nicht mehr übergibt, ebenfalls. Kostet keinen Browser und läuft in
+  `pnpm test`.
+- Vier Playwright-Projekte statt zwei. Studio, Portal, **Brain** und **Family**
+  haben je ein `*-motion.spec.ts`, das bis `readyState >= 2` geht — bis wirklich
+  Bilddaten da sind — und den Bereichsnamen in der Quell-URL prüft. Dass die
+  e2e-Abdeckung nur das Portal kannte, ist genau der Grund, warum vier Bereiche
+  leer laufen konnten.
+
+Der Aufbau baut dafür vier Apps statt zwei (`scripts/e2e-servers.mjs`). Läufe,
+die Brain und Family nicht brauchen — der Auth-Smoke bei jedem Push, die
+Perf-, a11y- und Theme-Matrix-Läufe — schneiden sie über `E2E_APPS=studio,portal`
+samt Build weg.
+
+## Wo die Bühne steht
+
+Die zweite Hälfte der Wahrheit — die erste ist die Datei-Tabelle oben.
+
+| Bereich | Auftritt | Form |
+|---|---|---|
+| Landing | `apps/landing/app/page.tsx`, `apps/studio/app/page.tsx` | Vollbild |
+| Studio | Shell-Band auf den Einstiegen (`src/lib/studio-scene.ts`) | Band |
+| Portal | Welten-Hub und Weltseite | `SceneHero` |
+| Brain | Start und `/today` | `SceneHero` |
+| Family | Start | `SceneHero` |
+
+**Die Regel dahinter:** die Bühne trägt die Stellen, an denen man *ankommt* —
+Startseiten, Hubs, Einstiege. Unterseiten bleiben ruhig. Ein 16-Sekunden-Loop
+hinter einer Einkaufsliste oder einem Wiki-Editor ist Unruhe, kein Design.
+Wer eine Bühne hinzufügt, trägt sie in `scene-motion-coverage.test.ts` nach.
+
 ## Bildsprache
 
 Alle zehn Szenen folgen derselben Anweisung. Der Prompt-Kern steht hier, damit

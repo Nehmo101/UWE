@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "scenes": [
+    {
+      "id": "turtle-hero",
+      "query": "?schau=assets&blick=held",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 5000
+    },
+    {
+      "id": "turtle-head",
+      "query": "?schau=assets&blick=kopf",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 5000
+    },
+    {
+      "id": "turtle-region",
+      "query": "?schau=assets&blick=welt-links",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 5000
+    },
+    {
+      "id": "architecture",
+      "query": "?schau=assets&blick=architektur",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 5000
+    }
+  ]
+}

@@ -27,7 +27,8 @@ export const ADMIN_HUB_SECTIONS = [
     title: "Betrieb",
     links: [
       { href: "/admin/activity", label: "Verlauf" },
-      { href: "/mail", label: "Mail Center" },
+      // „Mail Center" auf `/mail` stand hier noch — die Route gibt es in Studio
+      // nicht mehr, das Postfach liegt seit H10 in Brain (`/mail` auf :3002).
       { href: "/worlds", label: "Welten verwalten", primary: true },
     ],
   },

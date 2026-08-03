@@ -121,9 +121,38 @@ genau dort wird sie nicht erzwungen.
 `/maintenance` lief vorher mit voller Seitenleiste, obwohl im Wartungsmodus
 jedes Ziel dorthin zurückleitet und die Seite ohne Anmeldung erreichbar ist.
 
+## Die gemalte Bühne
+
+Auch die Szene ist Rahmen und keine Seiteneigenschaft — der Shell entscheidet,
+nicht die Route. `hasStudioSceneBand` (`src/lib/studio-scene.ts`) führt die
+Einstiege, die sie tragen: `/worlds`, `/brain`, `/knowledge`, `/continue`,
+`/ai`. Die Liste ist **exakt**, kein Präfix: `/worlds` trägt die Bühne,
+`/worlds/terra/wiki` nicht. Studio ist die Arbeitsfläche, und hinter einem
+Editor oder einer Job-Liste hat kein Hintergrundvideo zu laufen.
+
+Studio zeigt sie als **Band** am oberen Rand von `<main>`, nicht als Vollbild
+wie Portal, Brain und Family — dort trägt ein `SceneHero` zusätzlich Titel und
+Subline. Im Studio bringt jede Seite ihren `PageHeader` selbst mit; ein zweiter
+Titel auf dem Bild wäre eine Dopplung. Das Band ist deshalb reine Kulisse
+(`StudioSceneBand`).
+
+Zwei Dinge daran sind nicht beliebig:
+
+- Der Szenen-Index kommt als Prop aus dem Root-Layout. Der Shell ist eine
+  Client-Komponente und würde `dayIndex()` bei SSR und Hydration je einmal
+  auswerten — über eine Tagesgrenze hinweg wären das zwei Bilder.
+- `<main>` trägt `relative isolate`, das Band `z-index: -1`. Ohne `isolate`
+  fiele es hinter den Grund des Shell-Rahmens und wäre unsichtbar; mit dieser
+  Kombination braucht der Seiteninhalt weder Wrapper noch eigene z-index-Angabe.
+
+Dass eine Bühne wirklich rendert, hält `scripts/scene-motion-coverage.test.ts`
+fest — die Assets allein sagen darüber nichts.
+
 ## Beim Bauen beachten
 
 - Neue Seite: kein Wrapper, kein Layout, keine Sidebar. Inhalt zurückgeben.
+- Neuer Einstieg, der die Bühne tragen soll: in `src/lib/studio-scene.ts`
+  eintragen, nicht im Seiteninhalt einbauen.
 - Neues Navigationsziel: in `src/navigation/studio-nav.ts` bzw. `world-nav.ts`.
   Seitenleiste, Schublade, Suche, Palette und Brotkrumen ziehen von dort.
 - Bereichs-Unternavigation im Inhalt (`SettingsShell`-Tabs, Filterleisten,
