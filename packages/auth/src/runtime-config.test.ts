@@ -351,6 +351,18 @@ describe("landing link target (UWE Start)", () => {
     );
   });
 
+  it("matches the subdomain label exactly, not as a prefix", () => {
+    // `meinportal.uwe.example` trägt kein Label `portal` — daraus einen Apex zu
+    // schnitzen hieße, aus einem fremden Hostnamen ein Linkziel abzuleiten.
+    assert.equal(
+      resolveLandingPublicBaseUrl({
+        NEXT_PUBLIC_STUDIO_URL: "https://meinstudio.uwe.example",
+        NEXT_PUBLIC_PORTAL_URL: "https://meinportal.uwe.example",
+      }),
+      "https://meinstudio.uwe.example",
+    );
+  });
+
   it("hands the same landing origin to the cross-app navigation", () => {
     const urls = resolveCrossAppUrls({
       PUBLIC_APP_URL: "https://uwe.example",

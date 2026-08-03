@@ -191,18 +191,21 @@ function deriveApexOriginFromSiblings(
       if (url.port) {
         continue;
       }
-      const host = url.hostname.toLowerCase();
-      const label = APP_SUBDOMAIN_LABELS.find((entry) => host.startsWith(`${entry}.`));
-      if (!label) {
+      // Labelweise zerlegen und das erste Label **exakt** vergleichen. Ein
+      // Präfix-Test auf der ganzen Adresse (`startsWith("portal.")`) täte hier
+      // dasselbe, liest sich für einen Prüfer aber wie eine unvollständige
+      // URL-Prüfung — und genau die ist der klassische Weg, an einer
+      // Hostnamen-Prüfung vorbeizukommen.
+      const [subdomain, ...apexLabels] = url.hostname.toLowerCase().split(".");
+      if (!subdomain || !APP_SUBDOMAIN_LABELS.some((entry) => entry === subdomain)) {
         continue;
       }
-      const apex = host.slice(label.length + 1);
-      // Ein Apex ohne Punkt wäre ein reiner Hostname (LAN) — dort gibt es keine
-      // Subdomain-Konvention, auf die man sich verlassen könnte.
-      if (!apex.includes(".")) {
+      // Weniger als zwei Labels wäre ein reiner Hostname (LAN) — dort gibt es
+      // keine Subdomain-Konvention, auf die man sich verlassen könnte.
+      if (apexLabels.length < 2) {
         continue;
       }
-      return { protocol: url.protocol, host: apex };
+      return { protocol: url.protocol, host: apexLabels.join(".") };
     } catch {
       // Ungültige Geschwister-URL — nächste Quelle versuchen.
     }
