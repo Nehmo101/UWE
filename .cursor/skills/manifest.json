@@ -121,6 +121,11 @@
       "id": "uwe-design-system",
       "path": ".cursor/skills/uwe-design-system/SKILL.md",
       "trigger": "Parchment OS, colors/type/spacing tokens, UI kits, on-brand mocks/prototypes"
+    },
+    {
+      "id": "uwe-terra",
+      "path": ".cursor/skills/uwe-terra/SKILL.md",
+      "trigger": "Terra, Three.js, Hero-Assets, Blender, glTF, Biome, Shader, visuelle Regression"
     }
   ]
 }

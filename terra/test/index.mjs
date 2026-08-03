@@ -57,3 +57,5 @@ import './37-luftschau.test.mjs';
 import './38-final-art-pass.test.mjs';
 import './43-render-masse.test.mjs';
 import './44-leistungsregler.test.mjs';
+import './45-landmarken-bereich.test.mjs';
+import './46-art-factory.test.mjs';

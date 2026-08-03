@@ -282,10 +282,10 @@ test('Weltschildkroete - direkte Meshes, bewegter Kopf und endliche Transforms',
   assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraHalsTopologie,
     'catmull-rom-tube', 'Der S-Hals muss eine echte Spline-Roehre sein');
   assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraHalsSplinePunkte, 8);
-  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraHalsSegmente, 24);
-  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraHalsRinge, 25,
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraHalsSegmente, 32);
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraHalsRinge, 33,
     'Die kontinuierliche Spline-Roehre braucht 25 Ringquerschnitte');
-  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraHalsRadialSegmente, 12);
+  assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraHalsRadialSegmente, 16);
   assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraHalsKontinuierlich, true,
     'Der Hals darf keine Zylindernaehte mehr besitzen');
   assert.equal(SCHILDKROETE.BASIS_KOPF.userData.terraStatischeGeometrie, true,

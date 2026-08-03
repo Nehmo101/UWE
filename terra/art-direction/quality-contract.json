@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "style": {
+    "name": "UWE Terra painterly fantasy",
+    "principles": [
+      "Klare Silhouette vor Mikrodetail",
+      "Organische Formen ohne Plastikglanz",
+      "Warme Lichter und kuehle Schatten",
+      "Monumental und glaubwuerdig, nicht niedlich",
+      "In Held-, Region- und Kontinentansicht lesbar"
+    ]
+  },
+  "budgets": {
+    "heroAsset": {
+      "maxTriangles": 150000,
+      "maxMaterials": 4,
+      "maxTextures": 6,
+      "maxTextureEdge": 2048,
+      "maxDownloadBytes": 6000000
+    },
+    "frame": {
+      "targetFps": 60,
+      "maxFrameMs": 20,
+      "maxRegressionPercent": 5
+    }
+  },
+  "workflow": {
+    "candidateCount": 3,
+    "requireIntermediateApproval": true,
+    "requireFinalApproval": true,
+    "approvedBaselineMayOnlyChangeWithApproval": true
+  }
+}

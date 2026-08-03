@@ -9,6 +9,8 @@ import { heightAt } from '../world/terrain.js';
 import { terraMat, tintedMats } from '../render/materials.js';
 import { M, mergeGeos, part, prismGeo } from '../assets/geometrie-hilfen.js';
 import { baueWeltschildkroetenKopf } from './weltschildkroete-kopf.js';
+import { landmarkenBereich, landmarkenSkala } from './landmarken-bereich.js';
+import { externesAsset } from '../assets/external-assets.js';
 
 const BX = THREE.BoxGeometry;
 const CY = THREE.CylinderGeometry;
@@ -428,7 +430,8 @@ function setzeTransform(mesh, x, y, z, yaw, groesse) {
 /** Erzeugt eine Landmarke je Klickpunkt. */
 function genWeltschildkroete(el) {
   var p = el.params || {};
-  var groesse = clamp(Number(p.groesse) || 1, 0.55, 2.2);
+  var bereich = landmarkenBereich(p);
+  var groesse = landmarkenSkala(p, 0.55, 2.2);
   var yaw = (Number(p.drehung) || 0) * DEG;
   var amplitude = clamp(Number(p.kopfbewegung), 0, 1);
   if (!Number.isFinite(amplitude)) amplitude = 0.65;
@@ -442,10 +445,11 @@ function genWeltschildkroete(el) {
     koerper.castShadow = true;
     koerper.receiveShadow = true;
     koerper.userData.el = el;
+    koerper.userData.terraBereich = bereich.id;
     gruppe.add(koerper);
 
     var vorX = Math.sin(yaw), vorZ = Math.cos(yaw);
-    var kopf = new THREE.Mesh(BASIS_KOPF.clone(), kopfMat);
+    var kopf = externesAsset('weltschildkroete') || new THREE.Mesh(BASIS_KOPF.clone(), kopfMat);
     setzeTransform(kopf,
       pt.x + vorX * 7.15 * groesse,
       boden + 4.75 * groesse,

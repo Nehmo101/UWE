@@ -30,6 +30,8 @@ var beschriftungen = holeBeschriftungsschicht();
 var letzterBeschriftungsAbgleich = -1e9;
 import { tickWind } from './world/wind.js';
 import { tickWeltschildkroeten } from './generators/weltschildkroete.js';
+import { tickWeltschloesser } from './generators/weltschloss.js';
+import { ladeExterneAssets } from './assets/external-assets.js';
 import { ARCHITEKTUR_STILE, architekturAssetId } from './assets/architektur-katalog.js';
 import { erstelleLuftschauPlan } from './generators/luftschau.js';
 import {
@@ -299,6 +301,10 @@ if (SCHAU_MODUS === "assets") setzeKartenGroesseFuerSchau(ASSET_SCHAU_KARTENGROE
 // Funktion dort lebt und BIOME liest.
 palettePassend();
 
+// Freigegebene Hero-Assets vor dem synchronen Kartenaufbau laden. Bei leerem
+// Manifest oder Fehler bleibt die prozedurale Geometrie unveraendert aktiv.
+await ladeExterneAssets();
+
 genBase(S.worldSeed);
 if (SCHAU_MODUS === "assets") assetSchauGelaende();
 refreshTerrainFull();
@@ -357,6 +363,7 @@ function animate() {
   tickWind(now * 0.001);
   updateBirds(dt, now * 0.001);
   tickWeltschildkroeten(now * 0.001);
+  tickWeltschloesser(now * 0.001);
   tickFlugrouten(now * 0.001);
   updateRauch(now * 0.001);
   vfxFokus.x = cam.focus.x; vfxFokus.y = cam.focusY; vfxFokus.z = cam.focus.z;
