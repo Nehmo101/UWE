@@ -1,6 +1,6 @@
 "use client";
 
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useEditor, EditorContent, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useEffect, useRef } from "react";
 import { DM_SECTION_CLOSE, DM_SECTION_OPEN } from "@uwe/auth/dm-section";
@@ -117,7 +117,13 @@ export function RichTextBlockEditor({
  * KI bearbeitet wird. Ein Knoten, den nur dieser Editor kennt, ginge dabei
  * verloren.
  */
-function insertDmSection(editor: ReturnType<typeof useEditor>): void {
+function insertDmSection(editor: Editor | null): void {
+  // Bewusst `Editor | null` statt `ReturnType<typeof useEditor>`: tiptap 3 hat
+  // die Überladungen von `useEditor` so geändert, dass der abgeleitete Typ das
+  // `null` nicht mehr enthält — mit `immediatelyRender: false` liefert der Hook
+  // beim ersten Rendern aber weiterhin `null`. Der abgeleitete Typ log also,
+  // und die Prüfung darunter sah wie toter Code aus, obwohl sie den ersten
+  // Klick vor der Hydration abfängt.
   if (!editor) return;
   const selected = editor.state.doc.textBetween(
     editor.state.selection.from,
