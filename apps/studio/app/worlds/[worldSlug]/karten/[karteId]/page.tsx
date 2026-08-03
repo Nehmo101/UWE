@@ -37,6 +37,11 @@ export default async function TerraKartePage({ params, searchParams }: Props) {
 
   const editor = (
     <TerraRahmen
+      // Ohne diesen Key behält React beim Wechsel zu einer anderen Karte
+      // (gleiche Position im Baum, gleicher Komponententyp) den iframe-Knoten
+      // bei — er lädt nie neu, und Terra schickt "terra-bereit" nur einmal
+      // pro Sitzung. Ergebnis: man landet immer in der zuerst geladenen Karte.
+      key={karte.id}
       worldSlug={worldSlug}
       karteId={karte.id}
       version={karte.version}
