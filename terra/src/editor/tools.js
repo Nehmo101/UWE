@@ -448,11 +448,20 @@ var PARAMS = {
 };
 
 PARAMS["objekt:weltschildkroete"] = [
+  { k: "bereich", l: "Bereich", o: [["ort", "Ort"], ["region", "Region"],
+      ["nation", "Nation"]], d: "region" },
   { k: "groesse", l: "Gr\u00f6\u00dfe", min: 0.55, max: 2.2, st: 0.05, d: 1 },
   { k: "drehung", l: "Drehung", min: 0, max: 359, st: 1, d: 35 },
   { k: "kopfbewegung", l: "Kopfbewegung", min: 0, max: 1, st: 0.05, d: 0.65 }
 ];
 VARIANTS.objekt.push(["weltschildkroete", "Weltschildkr\u00f6te \u00b7 Schloss"]);
+PARAMS["objekt:weltschloss"] = [
+  { k: "bereich", l: "Bereich", o: [["ort", "Ort \u00b7 Kernburg"],
+      ["region", "Region \u00b7 Schloss"], ["nation", "Nation \u00b7 Residenz"]], d: "region" },
+  { k: "groesse", l: "Gr\u00f6\u00dfe", min: 0.55, max: 2.2, st: 0.05, d: 1 },
+  { k: "drehung", l: "Drehung", min: 0, max: 359, st: 1, d: 0 }
+];
+VARIANTS.objekt.push(["weltschloss", "Weltschloss \u00b7 Bereich"]);
 registriereLuftWerkzeuge(VARIANTS, PARAMS);
 
 function ergaenzeArchitekturOption(schema, key, option) {
