@@ -60,3 +60,27 @@ describe("resolveThreadId", () => {
     assert.equal(threadId, "subject:angebot");
   });
 });
+
+describe("normalizeSubjectForThreading — Laufzeit", () => {
+  /* Betreffzeilen kommen von aussen. Ohne den Fix stehen zwei `\s*`
+     nebeneinander, sobald der optionale Zaehler `[12]` fehlt; die Laufzeit
+     waechst dann quadratisch — und weil normalizeSubjectForThreading die Regex
+     in einer Schleife anwendet, multipliziert sich das noch. */
+  it("bricht bei einem Betreff aus lauter Leerzeichen nicht ein", () => {
+    /* Die Leerzeichen muessen INNEN liegen: normalizeSubjectForThreading
+       trimmt zuerst, ein Betreff mit Leerzeichen am Ende waere also harmlos. */
+    const hostile = "Re" + " ".repeat(50_000) + "x";
+    const started = Date.now();
+    const result = normalizeSubjectForThreading(hostile);
+    const elapsed = Date.now() - started;
+    assert.equal(result, "re x");
+    assert.ok(elapsed < 1000, `Normalisierung brauchte ${elapsed} ms — erwartet linear`);
+  });
+
+  it("entfernt Praefixe mit und ohne Zaehler unveraendert", () => {
+    assert.equal(normalizeSubjectForThreading("Re[2]: Angebot"), "angebot");
+    assert.equal(normalizeSubjectForThreading("AW[10]: Termin"), "termin");
+    assert.equal(normalizeSubjectForThreading("Re : Angebot"), "angebot");
+    assert.equal(normalizeSubjectForThreading("Fwd: Re: Rechnung"), "rechnung");
+  });
+});

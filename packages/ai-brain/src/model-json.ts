@@ -76,9 +76,17 @@ function fail(reason: ModelJsonFailureReason): ModelJsonFailure {
  * count; anything else on the info line (```JSON5, ```javascript) does not —
  * a fence that announces a different language is not a JSON answer.
  */
+/* Die Info-Zeile ist bewusst als `[ \t]*(?:json[ \t]*)?` geschrieben und nicht
+   als `[ \t]*(json)?[ \t]*`. In der zweiten Fassung stehen zwei Sternquantoren
+   über derselben Zeichenmenge nebeneinander, sobald `json` fehlt — der
+   Backtracker probiert dann bei einer langen Folge aus Leerzeichen jeden
+   Aufteilungspunkt durch, und die Laufzeit wächst quadratisch. Die Eingabe ist
+   eine Modellantwort, und die entsteht aus Prompts. Hier folgt auf `[ \t]*`
+   entweder das Literal `json` oder der Zeilenumbruch — beides disjunkt von
+   `[ \t]`, also gibt es nichts aufzuteilen. */
 export function stripCodeFence(text: string): string | null {
-  const match = /```[ \t]*(json)?[ \t]*\r?\n([\s\S]*?)```/i.exec(text);
-  return match ? (match[2]?.trim() ?? null) : null;
+  const match = /```[ \t]*(?:json[ \t]*)?\r?\n([\s\S]*?)```/i.exec(text);
+  return match ? (match[1]?.trim() ?? null) : null;
 }
 
 /**

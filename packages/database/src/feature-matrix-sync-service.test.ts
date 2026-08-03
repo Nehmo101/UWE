@@ -45,6 +45,24 @@ describe("parseFeatureMatrixOverviewTable", () => {
     assert.equal(rows[13]?.number, 15);
     assert.ok(rows.every((row) => FEATURE_MATRIX_ENRICHMENT[row.number]));
   });
+
+  /* Der frühere Ausdruck stellte pro Zelle ein `\s*` neben ein `.+?`, und `.`
+     schließt Leerraum ein. Bei einer Zeile aus lauter Leerzeichen probierte der
+     Backtracker jede Kombination der Zellgrenzen durch — kubisch, ab etwa 800
+     Zeichen über eine Sekunde. */
+  it("bricht bei einer Tabellenzeile aus lauter Leerzeichen nicht ein", () => {
+    const hostile = `## Übersicht\n| 1 |${" ".repeat(50_000)}\n`;
+    const started = Date.now();
+    assert.deepEqual(parseFeatureMatrixOverviewTable(hostile), []);
+    const elapsed = Date.now() - started;
+    assert.ok(elapsed < 1000, `Parsen brauchte ${elapsed} ms — erwartet linear`);
+  });
+
+  it("überspringt Zeilen mit falscher Spaltenzahl und leeren Zellen", () => {
+    assert.deepEqual(parseFeatureMatrixOverviewTable("## Übersicht\n| 1 | A | B |\n"), []);
+    assert.deepEqual(parseFeatureMatrixOverviewTable("## Übersicht\n| 1 | A | B | C |  |\n"), []);
+    assert.deepEqual(parseFeatureMatrixOverviewTable("## Übersicht\n| 99 | A | B | C | D |\n"), []);
+  });
 });
 
 describe("rowToUpsertCandidate", () => {
