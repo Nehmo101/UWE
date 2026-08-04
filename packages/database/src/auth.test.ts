@@ -106,7 +106,7 @@ describe("UWE auth and permissions", () => {
     await db.$disconnect();
   });
 
-  it("shows an assigned player every released page of the world", async () => {
+  it("shows an assigned player every page of the world", async () => {
     const db = createPrismaClient(databaseUrl);
     const auth = createAuthService(db);
 
@@ -121,8 +121,7 @@ describe("UWE auth and permissions", () => {
     assert.ok(slugs.includes("public-notice"));
     assert.ok(slugs.includes("player-lore"));
     assert.ok(slugs.includes("amans-geheimnis"));
-    // Ohne Portal-Haken bleibt die Seite dem Spieler verborgen (#85).
-    assert.ok(!slugs.includes("archivierte-notiz"));
+    assert.ok(slugs.includes("archivierte-notiz"));
 
     const playerLore = await auth.getPageForViewer(worldSlug, "player-lore", ctx);
     assert.ok(playerLore);
@@ -165,9 +164,7 @@ describe("UWE auth and permissions", () => {
     const slugs = pages.map((page) => page.slug);
 
     assert.ok(slugs.includes("amans-geheimnis"));
-    // Die Vorschau als Spieler legt das Studio-Häkchen ab — nicht freigegebene
-    // Seiten verschwinden, genau das soll sie zeigen (#85).
-    assert.ok(!slugs.includes("archivierte-notiz"));
+    assert.ok(slugs.includes("archivierte-notiz"));
 
     const previewBlocks = await auth.getPageForViewer(worldSlug, "player-lore", previewCtx);
     assert.ok(previewBlocks);

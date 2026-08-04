@@ -60,6 +60,31 @@ export async function updatePageAction(formData: FormData) {
       .filter(Boolean),
   });
 
+  // „Seite speichern" speichert die Blöcke mit: das Bearbeiten-Formular trägt
+  // die Blockfelder mit `blocks.<id>.`-Präfix. Nur Blöcke, die wirklich zu
+  // dieser Seite gehören, werden angefasst — fremde IDs im FormData laufen leer.
+  if (oldPage && oldPage.id === pageId) {
+    for (const block of oldPage.contentBlocks) {
+      const typeValue = formData.get(`blocks.${block.id}.type`);
+      if (typeValue === null) continue;
+
+      const newType = typeValue as ContentBlockType;
+      // Nur Bild-Blöcke verweisen auf ein Asset; beim Wechsel weg vom Bild-Typ
+      // wird die Verknüpfung wieder gelöst.
+      const assetId =
+        newType === "image"
+          ? String(formData.get(`blocks.${block.id}.assetId`) || "") || null
+          : null;
+
+      await repo().updateContentBlock(block.id, {
+        type: newType,
+        sortOrder: block.sortOrder,
+        content: String(formData.get(`blocks.${block.id}.content`) || ""),
+        assetId,
+      });
+    }
+  }
+
   const newSlug = String(formData.get("slug"));
   const type = formData.get("type") as PageType;
   const category = navCategoryForPageType(type);
@@ -82,7 +107,58 @@ export async function updatePageAction(formData: FormData) {
     revalidatePath(buildPageUrl(worldSlug, oldPage.type, oldPage.slug));
   }
   revalidatePath(newHref);
+
+  // „Speichern & zur Ansicht" springt direkt in den Ansichtsmodus zurück;
+  // die Seitenansicht zeigt über `?saved=1` dieselbe Erfolgsmeldung.
+  if (String(formData.get("returnTo") || "") === "view") {
+    redirect(`${newHref}?saved=1`);
+  }
   redirect(`/worlds/${worldSlug}/${category}/${newSlug}/edit?saved=1`);
+}
+
+/**
+ * Portal-Freigabe einer Seite direkt umschalten — aus dem Ansichtsmodus oder
+ * der Wiki-Seitenliste, ohne den Bearbeitungsmodus zu öffnen.
+ */
+export async function setPagePortalReleasedAction(
+  worldSlug: string,
+  pageId: string,
+  released: boolean,
+): Promise<{ ok: boolean; message: string }> {
+  await requireStudioActionAuth();
+  await requireStudioContentEdit(worldSlug, pageId);
+
+  const page = await repo().getPageById(pageId);
+  if (!page) {
+    return { ok: false, message: "Seite nicht gefunden." };
+  }
+
+  await repo().updatePage(pageId, { portalReleased: released });
+
+  const pageHref = buildPageUrl(worldSlug, page.type, page.slug);
+
+  await activity().log({
+    worldId: page.worldId,
+    worldSlug,
+    action: "content_updated",
+    targetType: "page",
+    targetId: pageId,
+    targetLabel: page.title,
+    targetHref: pageHref,
+    summary: released
+      ? `Seite „${page.title}“ fürs Spieler-Wiki freigegeben.`
+      : `Portal-Freigabe für „${page.title}“ entfernt.`,
+  });
+
+  revalidateWorldRootAndWiki(worldSlug);
+  revalidatePath(pageHref);
+
+  return {
+    ok: true,
+    message: released
+      ? "Seite ist jetzt im Spieler-Wiki sichtbar."
+      : "Seite ist nicht mehr im Spieler-Wiki sichtbar.",
+  };
 }
 
 export async function createPageAction(formData: FormData) {
@@ -168,48 +244,6 @@ export async function createPageAction(formData: FormData) {
   const category = navCategoryForPageType(type);
   revalidateWorldRootAndWiki(worldSlug);
   redirect(`/worlds/${worldSlug}/${category}/${slug}/edit`);
-}
-
-export async function updateContentBlockAction(formData: FormData) {
-  await requireStudioActionAuth();
-  const blockId = String(formData.get("blockId"));
-  const worldSlug = String(formData.get("worldSlug"));
-  const pageSlug = String(formData.get("pageSlug"));
-  const category = String(formData.get("category"));
-
-  await requireStudioWorldEdit(worldSlug);
-
-  const oldBlock = await prisma.contentBlock.findUnique({
-    where: { id: blockId },
-    include: { page: { select: { worldId: true, title: true } } },
-  });
-  if (!oldBlock) {
-    throw new Error("Block nicht gefunden");
-  }
-
-  const world = await repo().getWorldBySlug(worldSlug);
-  if (!world || oldBlock.page.worldId !== world.id) {
-    throw new Error("Block nicht gefunden");
-  }
-
-  const newType = formData.get("type") as ContentBlockType;
-  // Nur Bild-Blöcke verweisen auf ein Asset; beim Wechsel weg vom Bild-Typ wird
-  // die Verknüpfung wieder gelöst.
-  const assetId =
-    newType === "image" ? String(formData.get("assetId") || "") || null : null;
-
-  await repo().updateContentBlock(blockId, {
-    type: newType,
-    sortOrder: Number(formData.get("sortOrder")),
-    content: String(formData.get("content") || ""),
-    assetId,
-  });
-
-  const editHref = `/worlds/${worldSlug}/${category}/${pageSlug}/edit`;
-
-
-  revalidatePath(editHref);
-  redirect(`${editHref}?saved=1`);
 }
 
 export async function createContentBlockAction(formData: FormData) {

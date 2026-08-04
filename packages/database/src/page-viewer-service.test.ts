@@ -58,10 +58,8 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
     await auth.createWorldMembership({ userId: dm.id, worldId });
     await auth.createWorldMembership({ userId: player.id, worldId });
 
-    // Focus page every source links to. Portal-released so both a DM and a
-    // player may read it (backlinks require the focus page to be readable).
-    // Every page in this world is released: the suite pins the H2 cache
-    // equivalence, not the portal-release gate (#85).
+    // Focus page every source links to. Player-visible + published so both a DM
+    // and a player may read it (backlinks require the focus page to be readable).
     const focus = await repo.createPage({
       worldId,
       title: "Zielort",
@@ -87,8 +85,8 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       ],
     });
 
-    // B: the link to the focus sits in a second block. Since per-item visibility
-    // was removed (26.07.), players see it too — the suite pins that equality.
+    // B: the ONLY link to the focus sits in a dm_only block → backlink for the DM,
+    // hidden from players (block-level visibility filtering).
     await repo.createPage({
       worldId,
       title: "Quelle B",
@@ -101,7 +99,8 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       ],
     });
 
-    // C: another released page links to the focus → backlink for everyone.
+    // C: a dm_only PAGE links to the focus → backlink for the DM, hidden from
+    // players (page-level visibility filtering).
     await repo.createPage({
       worldId,
       title: "Geheime Quelle",
@@ -209,7 +208,6 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       title: "Quelle E",
       slug: "quelle-e",
       type: "lore",
-      portalReleased: true,
       contentBlocks: [
         { type: "rich_text", sortOrder: 0, content: "Neuer Pfad nach [[Zielort]]." },
       ],

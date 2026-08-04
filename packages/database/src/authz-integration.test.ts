@@ -137,7 +137,7 @@ describe("authz integration — IDOR/BOLA", () => {
     assert.equal(leakedViaViewer, null);
   });
 
-  it("lets a world member read every released page of their own world", async () => {
+  it("lets a world member read every page of their own world", async () => {
     await repo.createPage({
       worldId: worldAId,
       title: "DM Plan",

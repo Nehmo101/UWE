@@ -26,6 +26,37 @@ const DESKTOP_HOST_CLI_REL: &str = "tools/uwe-host-command-center/src/desktop-ho
 /// `tauri.conf.json` auf derselben Version.
 const COMMAND_CENTER_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+/// Host-Aktionen, deren CLI-Lauf Dauerprozesse hinterlässt (die abgekoppelt
+/// gestarteten Next.js-Dienste). Nur diese Aufrufe müssen aus dem Job Object
+/// ausbrechen, wenn die Dienste das Command Center überleben sollen.
+const SERVICE_SPAWNING_HOST_ACTIONS: &[&str] = &[
+    "start",
+    "restart",
+    "start-service",
+    "restart-service",
+    "update",
+];
+
+/// `stopServicesOnExit: false` heißt: Dienste und Tunnel überleben das Beenden
+/// der App. Fehlt oder klemmt die Config, gilt der sichere Standard (aufräumen).
+fn services_survive_app_exit() -> bool {
+    !super::read_config_from_disk()
+        .map(|config| config.stop_services_on_exit)
+        .unwrap_or(true)
+}
+
+/// Ob der CLI-Prozess dieser Host-Aktion mit `CREATE_BREAKAWAY_FROM_JOB`
+/// starten muss. `open` bricht immer aus (der geöffnete Browser darf die App
+/// überleben); Dienst-startende Aktionen nur, wenn der Nutzer per
+/// `stopServicesOnExit: false` will, dass die Dienste weiterlaufen — die
+/// Kindprozesse erben die Nicht-Mitgliedschaft im Job Object. Trade-off: für
+/// diese Dienste gibt es keine Kernel-Aufräumgarantie bei einem App-Absturz
+/// mehr; das ist die bewusste Bedeutung des Schalters. Die Wirkung greift erst
+/// beim nächsten Dienststart — bereits laufende Dienste bleiben im Job.
+fn host_action_needs_breakaway(action: &str, services_survive_exit: bool) -> bool {
+    action == "open" || (services_survive_exit && SERVICE_SPAWNING_HOST_ACTIONS.contains(&action))
+}
+
 fn resolve_requested_root(root: Option<String>) -> Result<PathBuf, String> {
     if let Some(value) = root
         .map(|value| value.trim().to_string())
@@ -56,6 +87,7 @@ fn build_host_command(
     target: Option<String>,
 ) -> Result<Command, String> {
     let root = resolve_requested_root(root)?;
+    let breakaway = host_action_needs_breakaway(action, services_survive_app_exit());
     let script = root.join(DESKTOP_HOST_CLI_REL);
     if !script.exists() {
         // Kein Entwickler-Checkout: die Bundle-Installation steuert den Host
@@ -71,7 +103,7 @@ fn build_host_command(
                 } else {
                     Command::new("node")
                 };
-                if action == "open" {
+                if breakaway {
                     configure_breakaway_process(&mut command);
                 } else {
                     configure_hidden_process(&mut command);
@@ -98,10 +130,12 @@ fn build_host_command(
     }
 
     let mut command = Command::new("node");
-    // `open` startet über die CLI einen Browser bzw. Explorer. Dieser Teilbaum
+    // `open` startet über die CLI einen Browser bzw. Explorer — dieser Teilbaum
     // muss aus dem Job Object ausbrechen, sonst nimmt das Beenden des Command
-    // Centers den geöffneten Browser mit.
-    if action == "open" {
+    // Centers den geöffneten Browser mit. Dienst-startende Aktionen brechen nur
+    // aus, wenn die Dienste das Beenden überleben sollen (siehe
+    // `host_action_needs_breakaway`).
+    if breakaway {
         configure_breakaway_process(&mut command);
     } else {
         configure_hidden_process(&mut command);
@@ -326,8 +360,12 @@ pub async fn update_host(app: tauri::AppHandle, root: Option<String>) -> Result<
 
 const USER_ADMIN_CLI_REL: &str = "tools/uwe-host-command-center/src/user-admin-cli.ts";
 
-fn build_user_admin_command(action: &str, extra_args: &[&str]) -> Result<Command, String> {
-    let root = resolve_monorepo_root();
+fn build_user_admin_command(
+    action: &str,
+    extra_args: &[&str],
+    root: Option<String>,
+) -> Result<Command, String> {
+    let root = resolve_requested_root(root)?;
     let script = root.join(USER_ADMIN_CLI_REL);
     if !script.exists() {
         return Err(format!(
@@ -351,8 +389,9 @@ fn run_user_admin(
     action: &str,
     extra_args: &[&str],
     stdin_json: Option<String>,
+    root: Option<String>,
 ) -> Result<Value, String> {
-    let mut command = build_user_admin_command(action, extra_args)?;
+    let mut command = build_user_admin_command(action, extra_args, root)?;
     command.stdout(Stdio::piped()).stderr(Stdio::piped());
     if stdin_json.is_some() {
         command.stdin(Stdio::piped());
@@ -398,37 +437,38 @@ async fn run_user_admin_async(
     action: &'static str,
     extra_args: Vec<String>,
     stdin_json: Option<String>,
+    root: Option<String>,
 ) -> Result<Value, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let args: Vec<&str> = extra_args.iter().map(String::as_str).collect();
-        run_user_admin(action, &args, stdin_json)
+        run_user_admin(action, &args, stdin_json, root)
     })
     .await
     .map_err(|error| format!("Benutzerverwaltung wurde unerwartet beendet: {error}"))?
 }
 
 #[tauri::command]
-pub async fn list_users() -> Result<Value, String> {
-    run_user_admin_async("list", Vec::new(), None).await
+pub async fn list_users(root: Option<String>) -> Result<Value, String> {
+    run_user_admin_async("list", Vec::new(), None, root).await
 }
 
 #[tauri::command]
-pub async fn create_user(user: Value) -> Result<Value, String> {
+pub async fn create_user(user: Value, root: Option<String>) -> Result<Value, String> {
     let payload = serde_json::to_string(&user)
         .map_err(|error| format!("Benutzerdaten konnten nicht serialisiert werden: {error}"))?;
-    run_user_admin_async("create", Vec::new(), Some(payload)).await
+    run_user_admin_async("create", Vec::new(), Some(payload), root).await
 }
 
 #[tauri::command]
-pub async fn set_user_password(payload: Value) -> Result<Value, String> {
+pub async fn set_user_password(payload: Value, root: Option<String>) -> Result<Value, String> {
     let body = serde_json::to_string(&payload)
         .map_err(|error| format!("Daten konnten nicht serialisiert werden: {error}"))?;
-    run_user_admin_async("set-password", Vec::new(), Some(body)).await
+    run_user_admin_async("set-password", Vec::new(), Some(body), root).await
 }
 
 #[tauri::command]
-pub async fn delete_user(id: String) -> Result<Value, String> {
-    run_user_admin_async("delete", vec![id], None).await
+pub async fn delete_user(id: String, root: Option<String>) -> Result<Value, String> {
+    run_user_admin_async("delete", vec![id], None, root).await
 }
 
 // ── Cloudflare tunnel control ──────────────────────────────────────────────
@@ -438,8 +478,8 @@ pub async fn delete_user(id: String) -> Result<Value, String> {
 
 const CLOUDFLARE_CLI_REL: &str = "tools/uwe-host-command-center/src/cloudflare-tunnel-cli.ts";
 
-fn build_cloudflare_command(action: &str) -> Result<Command, String> {
-    let root = resolve_monorepo_root();
+fn build_cloudflare_command(action: &str, root: Option<String>) -> Result<Command, String> {
+    let root = resolve_requested_root(root)?;
     let script = root.join(CLOUDFLARE_CLI_REL);
     if !script.exists() {
         return Err(format!(
@@ -448,7 +488,15 @@ fn build_cloudflare_command(action: &str) -> Result<Command, String> {
         ));
     }
     let mut command = Command::new("node");
-    configure_hidden_process(&mut command);
+    // `start` hinterlässt den abgekoppelt gestarteten cloudflared. Soll der
+    // Tunnel das Beenden der App überleben (`stopServicesOnExit: false`), muss
+    // dieser Aufruf aus dem Job Object ausbrechen — sonst stirbt cloudflared
+    // trotz Einstellung mit dem Command Center.
+    if action == "start" && services_survive_app_exit() {
+        configure_breakaway_process(&mut command);
+    } else {
+        configure_hidden_process(&mut command);
+    }
     command
         .arg("--import")
         .arg("tsx")
@@ -462,8 +510,12 @@ fn build_cloudflare_command(action: &str) -> Result<Command, String> {
     Ok(command)
 }
 
-fn run_cloudflare(action: &str, stdin_json: Option<String>) -> Result<Value, String> {
-    let mut command = build_cloudflare_command(action)?;
+fn run_cloudflare(
+    action: &str,
+    root: Option<String>,
+    stdin_json: Option<String>,
+) -> Result<Value, String> {
+    let mut command = build_cloudflare_command(action, root)?;
     command.stdout(Stdio::piped()).stderr(Stdio::piped());
     if stdin_json.is_some() {
         command.stdin(Stdio::piped());
@@ -505,38 +557,39 @@ fn run_cloudflare(action: &str, stdin_json: Option<String>) -> Result<Value, Str
 
 async fn run_cloudflare_async(
     action: &'static str,
+    root: Option<String>,
     stdin_json: Option<String>,
 ) -> Result<Value, String> {
-    tauri::async_runtime::spawn_blocking(move || run_cloudflare(action, stdin_json))
+    tauri::async_runtime::spawn_blocking(move || run_cloudflare(action, root, stdin_json))
         .await
         .map_err(|error| format!("Cloudflare-Steuerung wurde unerwartet beendet: {error}"))?
 }
 
 #[tauri::command]
-pub async fn cloudflare_status() -> Result<Value, String> {
-    run_cloudflare_async("status", None).await
+pub async fn cloudflare_status(root: Option<String>) -> Result<Value, String> {
+    run_cloudflare_async("status", root, None).await
 }
 
 #[tauri::command]
-pub async fn cloudflare_set_token(token: String) -> Result<Value, String> {
+pub async fn cloudflare_set_token(token: String, root: Option<String>) -> Result<Value, String> {
     let body = serde_json::to_string(&serde_json::json!({ "token": token }))
         .map_err(|error| format!("Token konnte nicht serialisiert werden: {error}"))?;
-    run_cloudflare_async("set-token", Some(body)).await
+    run_cloudflare_async("set-token", root, Some(body)).await
 }
 
 #[tauri::command]
-pub async fn cloudflare_clear_token() -> Result<Value, String> {
-    run_cloudflare_async("clear-token", None).await
+pub async fn cloudflare_clear_token(root: Option<String>) -> Result<Value, String> {
+    run_cloudflare_async("clear-token", root, None).await
 }
 
 #[tauri::command]
-pub async fn cloudflare_start() -> Result<Value, String> {
-    run_cloudflare_async("start", None).await
+pub async fn cloudflare_start(root: Option<String>) -> Result<Value, String> {
+    run_cloudflare_async("start", root, None).await
 }
 
 #[tauri::command]
-pub async fn cloudflare_stop() -> Result<Value, String> {
-    run_cloudflare_async("stop", None).await
+pub async fn cloudflare_stop(root: Option<String>) -> Result<Value, String> {
+    run_cloudflare_async("stop", root, None).await
 }
 
 // ── Teardown beim Beenden ──────────────────────────────────────────────────
@@ -552,7 +605,7 @@ pub async fn cloudflare_stop() -> Result<Value, String> {
 pub fn shutdown_hosted_services_blocking(root: Option<String>) -> Vec<String> {
     let mut problems = Vec::new();
 
-    if let Err(error) = run_cloudflare("stop", None) {
+    if let Err(error) = run_cloudflare("stop", root.clone(), None) {
         problems.push(format!("Cloudflare-Tunnel: {error}"));
     }
     if let Err(error) = run_host_command("stop", root, None) {
@@ -700,12 +753,12 @@ const OPS_ACTIONS: &[&str] = &[
     "doc-import-execute",
 ];
 
-fn build_ops_command(action: &str) -> Result<Command, String> {
+fn build_ops_command(action: &str, root: Option<String>) -> Result<Command, String> {
     if !OPS_ACTIONS.contains(&action) {
         return Err(format!("Unbekannte Betriebs-Aktion: {action}"));
     }
 
-    let root = resolve_monorepo_root();
+    let root = resolve_requested_root(root)?;
     let script = root.join(OPS_CLI_REL);
     if !script.exists() {
         return Err(format!(
@@ -725,8 +778,12 @@ fn build_ops_command(action: &str) -> Result<Command, String> {
     Ok(command)
 }
 
-fn run_ops(action: &str, stdin_json: Option<String>) -> Result<Value, String> {
-    let mut command = build_ops_command(action)?;
+fn run_ops(
+    action: &str,
+    stdin_json: Option<String>,
+    root: Option<String>,
+) -> Result<Value, String> {
+    let mut command = build_ops_command(action, root)?;
     // stdin immer als Pipe, auch ohne Nutzlast: die CLI liest es für Aktionen
     // mit optionalem Eingabe-Objekt (`audit-log`, `api-tokens-list`) und wartet
     // auf dessen Ende. Geerbtes stdin einer fensterlosen App liefert dieses Ende
@@ -775,7 +832,11 @@ fn run_ops(action: &str, stdin_json: Option<String>) -> Result<Value, String> {
 }
 
 #[tauri::command]
-pub async fn ops_invoke(action: String, payload: Option<Value>) -> Result<Value, String> {
+pub async fn ops_invoke(
+    action: String,
+    payload: Option<Value>,
+    root: Option<String>,
+) -> Result<Value, String> {
     let stdin_json = match payload {
         Some(value) => Some(
             serde_json::to_string(&value)
@@ -784,7 +845,7 @@ pub async fn ops_invoke(action: String, payload: Option<Value>) -> Result<Value,
         None => None,
     };
 
-    tauri::async_runtime::spawn_blocking(move || run_ops(&action, stdin_json))
+    tauri::async_runtime::spawn_blocking(move || run_ops(&action, stdin_json, root))
         .await
         .map_err(|error| format!("Betriebs-Werkzeuge wurden unerwartet beendet: {error}"))?
 }
@@ -885,10 +946,10 @@ pub async fn restart_service(root: Option<String>, service: String) -> Result<Va
 }
 
 #[tauri::command]
-pub async fn update_user(user: Value) -> Result<Value, String> {
+pub async fn update_user(user: Value, root: Option<String>) -> Result<Value, String> {
     let payload = serde_json::to_string(&user)
         .map_err(|error| format!("Benutzerdaten konnten nicht serialisiert werden: {error}"))?;
-    run_user_admin_async("update", Vec::new(), Some(payload)).await
+    run_user_admin_async("update", Vec::new(), Some(payload), root).await
 }
 
 // ── Backups ────────────────────────────────────────────────────────────────
@@ -901,4 +962,58 @@ pub async fn list_backups(root: Option<String>) -> Result<Value, String> {
 #[tauri::command]
 pub async fn restore_backup(root: Option<String>, name: String) -> Result<Value, String> {
     run_host_command_async("restore-backup", root, Some(name)).await
+}
+
+#[cfg(test)]
+mod breakaway_tests {
+    use super::host_action_needs_breakaway;
+
+    /// `open` muss immer ausbrechen — der geöffnete Browser darf nie mit dem
+    /// Command Center sterben, unabhängig von `stopServicesOnExit`.
+    #[test]
+    fn open_always_breaks_away() {
+        assert!(host_action_needs_breakaway("open", false));
+        assert!(host_action_needs_breakaway("open", true));
+    }
+
+    /// Kern des Fixes für `stopServicesOnExit: false`: Dienst-startende
+    /// Aktionen brechen aus dem Job Object aus, damit die abgekoppelt
+    /// gestarteten Dienste das Beenden der App überleben.
+    #[test]
+    fn service_spawning_actions_break_away_when_services_survive_exit() {
+        for action in [
+            "start",
+            "restart",
+            "start-service",
+            "restart-service",
+            "update",
+        ] {
+            assert!(
+                host_action_needs_breakaway(action, true),
+                "{action} muss bei stopServicesOnExit=false ausbrechen"
+            );
+            assert!(
+                !host_action_needs_breakaway(action, false),
+                "{action} muss bei stopServicesOnExit=true im Job Object bleiben"
+            );
+        }
+    }
+
+    /// Aktionen ohne Dauerprozesse bleiben immer im Job Object — sie brauchen
+    /// die Kernel-Aufräumgarantie und hinterlassen nichts, das überleben soll.
+    #[test]
+    fn short_lived_actions_stay_in_the_job() {
+        for action in [
+            "status",
+            "stop",
+            "stop-service",
+            "setup",
+            "backup",
+            "logs",
+            "get-env",
+        ] {
+            assert!(!host_action_needs_breakaway(action, true));
+            assert!(!host_action_needs_breakaway(action, false));
+        }
+    }
 }

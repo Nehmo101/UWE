@@ -1,7 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Lock, LockOpen, Maximize, Minus, Plus, Search, X } from "lucide-react";
+import {
+  ArrowRight,
+  Lock,
+  LockOpen,
+  Maximize,
+  Maximize2,
+  Minimize2,
+  Minus,
+  Plus,
+  Search,
+  X,
+} from "lucide-react";
 import type { GraphEdge, GraphNode, GraphNodeCategory } from "@uwe/database/graph-types";
 import { GRAPH_NODE_CATEGORY_LABELS } from "@uwe/database/graph-types";
 import { GraphEngine, GRAPH_CATEGORY_COLORS, isGraphPositionCacheValid } from "./graph-engine";
@@ -95,6 +106,7 @@ export function GraphView({
 }: GraphViewProps) {
   const canvasElRef = useRef<HTMLCanvasElement | null>(null);
   const miniElRef = useRef<HTMLCanvasElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const engineRef = useRef<GraphEngine | null>(null);
   const posCacheRef = useRef<Record<string, { x: number; y: number }>>({});
 
@@ -102,6 +114,7 @@ export function GraphView({
   const [hidden, setHidden] = useState<Set<GraphNodeCategory>>(new Set());
   const [query, setQuery] = useState("");
   const [locked, setLocked] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
 
   // Spiegel des Chrome-States, damit ein Rebuild (neue Daten) den aktuellen Filter
   // übernimmt, ohne die Engine bei jedem Tastendruck neu zu erzeugen.
@@ -208,6 +221,26 @@ export function GraphView({
     setSelected(null);
     engineRef.current?.select(null);
   }, []);
+  // Vollbild: bevorzugt die native Fullscreen-API auf dem Graph-Container;
+  // ohne Unterstützung (z. B. iOS Safari) greift ein CSS-Overlay-Fallback.
+  const toggleFullscreen = useCallback(() => {
+    const doc = typeof document !== "undefined" ? document : null;
+    if (doc?.fullscreenElement) {
+      void doc.exitFullscreen().catch(() => undefined);
+      setFullscreen(false);
+      return;
+    }
+    setFullscreen((prev) => {
+      if (prev) return false; // CSS-Fallback verlassen
+      const el = containerRef.current;
+      if (el?.requestFullscreen) {
+        // Erfolg/Abbruch meldet sich über "fullscreenchange"; der State steht
+        // schon jetzt auf Vollbild, damit der Fallback nahtlos übernimmt.
+        el.requestFullscreen().catch(() => undefined);
+      }
+      return true;
+    });
+  }, []);
   const selectConnection = useCallback((id: string) => {
     engineRef.current?.select(id);
   }, []);
@@ -221,6 +254,43 @@ export function GraphView({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [selected, closePanel]);
+
+  // Natives Vollbild mit dem React-State synchron halten (Escape/F11 des Browsers).
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const onChange = () => {
+      setFullscreen(document.fullscreenElement === containerRef.current);
+    };
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  // Escape beendet den CSS-Fallback (natives Vollbild regelt der Browser selbst;
+  // ein offenes Detail-Panel hat Vorrang und wird zuerst geschlossen).
+  useEffect(() => {
+    if (!fullscreen || selected) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (typeof document !== "undefined" && document.fullscreenElement) return;
+      setFullscreen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fullscreen, selected]);
+
+  // Nach dem Moduswechsel neu einpassen — erst nachdem der ResizeObserver der
+  // Engine die neue Canvas-Größe übernommen hat (daher doppeltes rAF).
+  useEffect(() => {
+    if (typeof requestAnimationFrame === "undefined") return;
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => engineRef.current?.fit());
+    });
+    return () => {
+      cancelAnimationFrame(outer);
+      cancelAnimationFrame(inner);
+    };
+  }, [fullscreen]);
 
   const presentCategories = useMemo(() => {
     const present = new Set(nodes.map((node) => node.category));
@@ -264,11 +334,15 @@ export function GraphView({
      die GraphEngine per getBoundingClientRect() vom Canvas ausliest (Zoom, Pan,
      Minimap-Skalierung). Bewusst nicht auf Utilities migriert, um die Render-
      Fläche des Canvas 2D nicht zu verändern. */
-  const containerClass = `uwe-fdgraph${compact ? " uwe-fdgraph-compact" : " uwe-fdgraph-full"}`;
-  const containerStyle = height ? { height: `${height}px` } : undefined;
+  const containerClass = `uwe-fdgraph${compact ? " uwe-fdgraph-compact" : " uwe-fdgraph-full"}${
+    fullscreen ? " uwe-fdgraph-fullscreen" : ""
+  }`;
+  // Im Vollbild gewinnt die CSS-Höhe des Fullscreen-Modus über die height-Prop.
+  const containerStyle = height && !fullscreen ? { height: `${height}px` } : undefined;
 
   return (
     <div
+      ref={containerRef}
       className={containerClass}
       style={containerStyle}
       role="group"
@@ -376,6 +450,17 @@ export function GraphView({
             aria-pressed={locked}
           >
             {locked ? <Lock size={16} aria-hidden /> : <LockOpen size={16} aria-hidden />}
+          </button>
+        )}
+        {!compact && (
+          <button
+            type="button"
+            className={iconBtnClass(compact, fullscreen)}
+            onClick={toggleFullscreen}
+            title={fullscreen ? "Vollbild verlassen" : "Vollbild"}
+            aria-label={fullscreen ? "Vollbild verlassen" : "Vollbild öffnen"}
+          >
+            {fullscreen ? <Minimize2 size={16} aria-hidden /> : <Maximize2 size={16} aria-hidden />}
           </button>
         )}
       </div>

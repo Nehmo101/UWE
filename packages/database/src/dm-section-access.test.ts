@@ -61,8 +61,6 @@ describe("DM-Bereich im Wikitext — Lesepfade", () => {
       title: "Hauptmann Roderick",
       slug: "hauptmann-roderick",
       type: "npc",
-      // Fürs Portal freigegeben — der `:::dm`-Schnitt ist ja gerade für Seiten
-      // da, die die Spielerin ansonsten lesen darf (#85).
       portalReleased: true,
       summary: `Ein Offizier der Wache.\n:::dm\n${SECRET} ist geplant.\n:::`,
       contentBlocks: [

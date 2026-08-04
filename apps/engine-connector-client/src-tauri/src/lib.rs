@@ -98,6 +98,10 @@ struct ConnectorClientConfig {
     transport_mode: String,
     queue_enabled: bool,
     wizard_completed: bool,
+    /// Ersteinrichtungs-Assistent (UWE-Bereiche installieren) abgeschlossen oder
+    /// auf „Später" gesetzt. Defaulted für Config-Dateien von vor dem Assistenten.
+    #[serde(default)]
+    install_wizard_completed: bool,
     auto_connect: bool,
     minimized_start: bool,
     autostart_windows: bool,
@@ -119,6 +123,10 @@ struct ConnectorClientConfig {
     audio_command: String,
     #[serde(default)]
     image_command: String,
+    /// Lokales Diktat-Kommando (whisper.cpp, faster-whisper, …). Aktiviert die
+    /// Capability `stt_local` im Connector. Defaulted für ältere Config-Dateien.
+    #[serde(default)]
+    stt_command: String,
     #[serde(default)]
     print_command: String,
     #[serde(default)]
@@ -161,6 +169,7 @@ impl Default for ConnectorClientConfig {
             queue_enabled: true,
             transport_mode: default_transport_mode(),
             wizard_completed: false,
+            install_wizard_completed: false,
             auto_connect: true,
             minimized_start: false,
             autostart_windows: false,
@@ -171,6 +180,7 @@ impl Default for ConnectorClientConfig {
             spotify_redirect_uri: default_spotify_redirect_uri(),
             audio_command: String::new(),
             image_command: String::new(),
+            stt_command: String::new(),
             print_command: String::new(),
             default_printer_id: String::new(),
             local_host_root: String::new(),
@@ -302,7 +312,10 @@ fn build_node_script_command(script_rel: &str, args: &[&str]) -> Result<Command,
         .arg(script_rel)
         .args(args)
         .current_dir(&root)
-        .env("UWE_RUNTIME_ROLE", "engine-connector-client")
+        // `resolveRuntimeRole` kennt nur `host` und `engine-connector`; alles
+        // andere fällt still auf `host` zurück. Diese CLIs arbeiten für den
+        // Maschinenraum-Client, also dieselbe Rolle wie der Connector-Worker.
+        .env("UWE_RUNTIME_ROLE", "engine-connector")
         .env("UWE_CONNECTOR_CLIENT_DATA_DIR", &data_dir);
 
     Ok(command)
@@ -815,6 +828,7 @@ fn normalize_config(mut config: ConnectorClientConfig) -> Result<ConnectorClient
     }
     config.audio_command = config.audio_command.trim().to_string();
     config.image_command = config.image_command.trim().to_string();
+    config.stt_command = config.stt_command.trim().to_string();
     config.print_command = config.print_command.trim().to_string();
     config.default_printer_id = config.default_printer_id.trim().to_string();
     config.local_host_root = config.local_host_root.trim().to_string();
@@ -1379,6 +1393,9 @@ fn start_connector(app_state: State<'_, AppState>) -> Result<ConnectorRuntimeSta
     if !config.image_command.is_empty() {
         command.env("UWE_CONNECTOR_IMAGE_CMD", &config.image_command);
     }
+    if !config.stt_command.is_empty() {
+        command.env("UWE_CONNECTOR_STT_CMD", &config.stt_command);
+    }
     if !config.print_command.is_empty() {
         command.env("UWE_CONNECTOR_PRINT_CMD", &config.print_command);
     }
@@ -1761,6 +1778,37 @@ mod transport_config_tests {
         let config = parse_config_json(&raw).expect("explicit Direct config should parse");
         assert_eq!(config.transport_mode, "direct");
         assert!(!config.queue_enabled);
+    }
+
+    /// `write_config` deserialisiert das Frontend-JSON in den Struct; Felder,
+    /// die der Struct nicht kennt, verwirft serde still. Genau so gingen
+    /// `installWizardCompleted` (Ersteinrichtung sprang bei jedem Start wieder
+    /// auf) und `sttCommand` (lokales Diktat nie konfigurierbar) verloren.
+    #[test]
+    fn preserves_install_wizard_and_stt_command_across_roundtrip() {
+        let raw = LEGACY_CONFIG.replace(
+            "\"trayMode\": \"normal\"",
+            "\"trayMode\": \"normal\",\n        \"installWizardCompleted\": true,\n        \"sttCommand\": \"  bash deploy/scripts/uwe-stt-whisper.sh  \"",
+        );
+        let config = parse_config_json(&raw).expect("config with new fields should parse");
+        assert!(config.install_wizard_completed);
+        assert_eq!(config.stt_command, "bash deploy/scripts/uwe-stt-whisper.sh");
+
+        // Read→write-Roundtrip wie auf der Platte: serialisieren und erneut
+        // parsen darf die Werte nicht verlieren.
+        let json = serde_json::to_string(&config).expect("config should serialize");
+        let reread = parse_config_json(&json).expect("roundtrip should parse");
+        assert!(reread.install_wizard_completed);
+        assert_eq!(reread.stt_command, "bash deploy/scripts/uwe-stt-whisper.sh");
+    }
+
+    /// Bestandsdateien ohne die neuen Felder müssen weiter lesbar sein und die
+    /// Defaults bekommen: Assistent gilt als nicht durchlaufen, kein Diktat.
+    #[test]
+    fn defaults_install_wizard_and_stt_command_for_legacy_configs() {
+        let config = parse_config_json(LEGACY_CONFIG).expect("legacy config should parse");
+        assert!(!config.install_wizard_completed);
+        assert!(config.stt_command.is_empty());
     }
 
     #[test]

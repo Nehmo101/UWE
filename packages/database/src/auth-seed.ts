@@ -80,16 +80,13 @@ export async function seedAuthDemoContent(
   worldId: string,
   _playerUserIds: Record<string, string>,
 ) {
-  // Seit der Portal-Freigabe (#85) trägt jede Seite ihren Haken ausdrücklich:
-  // Spieler sehen nur `portalReleased: true`, die beiden gesperrten Seiten
-  // belegen in den Tests die Gegenrichtung.
   const secretForAman = await repo.createPage({
     worldId,
     title: "Amans Geheimnis",
     slug: "amans-geheimnis",
     type: "note",
-    summary: "Nur für Aman freigegeben.",
     portalReleased: true,
+    summary: "Nur für Aman freigegeben.",
     contentBlocks: [
       {
         type: "player_text",
@@ -104,8 +101,8 @@ export async function seedAuthDemoContent(
     title: "Nach der ersten Session",
     slug: "nach-der-ersten-session",
     type: "note",
+    portalReleased: true,
     summary: "Wird nach Session 1 freigeschaltet.",
-    portalReleased: false,
     contentBlocks: [
       {
         type: "player_text",
@@ -120,8 +117,8 @@ export async function seedAuthDemoContent(
     title: "Archivierte Notiz",
     slug: "archivierte-notiz",
     type: "note",
+    portalReleased: true,
     summary: "Sollte im Portal nicht erscheinen.",
-    portalReleased: false,
     contentBlocks: [
       {
         type: "rich_text",

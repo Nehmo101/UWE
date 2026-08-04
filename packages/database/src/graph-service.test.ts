@@ -47,8 +47,6 @@ describe("graph-service", () => {
       title: "Shagottar",
       slug: "shagottar",
       type: "location",
-      // Alle Seiten dieser Welt sind freigegeben: Die Viewer-Tests hier prüfen
-      // die Graph-Äquivalenz, nicht die Portal-Freigabe (#85).
       portalReleased: true,
       contentBlocks: [
         {

@@ -36,6 +36,7 @@ import {
   Label,
 } from "@/src/components/ui";
 import { DocImportPreviewTree } from "./DocImportPreviewTree";
+import { DungeonTemplateCard } from "./DungeonTemplateCard";
 
 interface Props {
   jobId: string;
@@ -304,6 +305,8 @@ export function DocImportPanel({ jobId, isObsidianSource, fileAccept, onComplete
           ) : null}
         </CardContent>
       </Card>
+
+      {isDocumentMode && settings.profile === "dungeon" ? <DungeonTemplateCard /> : null}
 
       {error ? <Alert tone="danger">{error}</Alert> : null}
 
