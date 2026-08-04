@@ -157,6 +157,12 @@ export interface DmLevelOverview {
    * es unsichtbar im Baum.
    */
   extras: DungeonEntitySummary[];
+  /**
+   * Der komplette Ebenentext, gerendert. Eine importierte Ebene trägt ihren
+   * Vorlesetext, die Leitmotive und die Uhren im Rumpf — ohne dieses HTML wäre
+   * am Spieltisch nur die Raumliste sichtbar, der Text selbst nicht.
+   */
+  html: string;
 }
 
 /**
@@ -332,6 +338,7 @@ export class DungeonCockpitService {
     worldSlug: string,
     dungeonSlug: string,
     levelSlug: string,
+    wikiIndex: WikiPageNode[] = [],
   ): Promise<DmLevelOverview | null> {
     const world = await this.db.world.findUnique({ where: { slug: worldSlug } });
     if (!world) return null;
@@ -349,7 +356,7 @@ export class DungeonCockpitService {
         type: DUNGEON_LEVEL_TYPE,
         parentPageId: dungeon.id,
       },
-      include: { campaign: true },
+      include: this.pageInclude(),
     });
     if (!level) return null;
 
@@ -366,6 +373,7 @@ export class DungeonCockpitService {
       level: toEntitySummary(level),
       rooms: summaries.filter((page) => page.type === DUNGEON_ROOM_TYPE),
       extras: summaries.filter((page) => page.type !== DUNGEON_ROOM_TYPE),
+      html: renderPageContentHtml(level, wikiIndex),
     };
   }
 
@@ -382,7 +390,7 @@ export class DungeonCockpitService {
       })
     | null
   > {
-    const levelOverview = await this.getLevelOverview(worldSlug, dungeonSlug, levelSlug);
+    const levelOverview = await this.getLevelOverview(worldSlug, dungeonSlug, levelSlug, wikiIndex);
     if (!levelOverview) return null;
 
     const world = await this.db.world.findUnique({ where: { slug: worldSlug } });

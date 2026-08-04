@@ -72,10 +72,13 @@ function readCargoVersion(cargo) {
 function setCargoVersion(cargo, version) {
   const { start, end } = cargoPackageSection(cargo);
   const section = cargo.slice(start, end);
-  const replaced = section.replace(/^version = "[^"]+"/m, `version = "${version}"`);
-  if (replaced === section) {
+  // Auf Vorhandensein prüfen, nicht auf Veränderung: der Release-Workflow ruft
+  // das Skript auf einem Stand auf, der die Zielversion schon trägt (der
+  // gemergte Versions-PR). „unverändert" hieße dort fälschlich „fehlt".
+  if (!/^version = "[^"]+"/m.test(section)) {
     throw new Error(`Keine version-Zeile im [package]-Abschnitt von ${CARGO_TOML}`);
   }
+  const replaced = section.replace(/^version = "[^"]+"/m, `version = "${version}"`);
   return cargo.slice(0, start) + replaced + cargo.slice(end);
 }
 

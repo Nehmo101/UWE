@@ -16,6 +16,7 @@ export const LOG_TARGETS = [
   { id: "brain", label: "Brain" },
   { id: "family", label: "Family" },
   { id: "landing", label: "Startseite" },
+  { id: "cloudflared", label: "Tunnel" },
 ] as const satisfies ReadonlyArray<{ id: LocalHostLogsResult["target"]; label: string }>;
 
 interface BackupsProps {

@@ -613,7 +613,7 @@ export default function App() {
         <p className="connector-muted">
           {config.stopServicesOnExit
             ? "Die Steuerungs-App wird vollständig geschlossen. Studio, Portal, Brain, Familie und Startseite werden gestoppt, der Cloudflare-Tunnel wird getrennt — uweanddragons.org ist danach nicht mehr erreichbar. Auch der laufende Maschinenraum wird getrennt."
-            : "Die Steuerungs-App wird vollständig geschlossen. Laufende UWE-Dienste (Studio, Portal) bleiben im Hintergrund aktiv und uweanddragons.org bleibt erreichbar; der laufende Maschinenraum wird beim Beenden getrennt."}
+            : "Die Steuerungs-App wird vollständig geschlossen. UWE-Dienste und Tunnel, die seit dem Abschalten von „Dienste beim Beenden stoppen“ gestartet wurden, laufen im Hintergrund weiter — uweanddragons.org bleibt dann erreichbar. Davor gestartete Dienste enden mit der App. Der laufende Maschinenraum wird beim Beenden getrennt."}
         </p>
         <div className="connector-actions connector-modal-actions">
           <Button variant="ghost" onClick={() => setShowQuitConfirm(false)} disabled={quitting} autoFocus>

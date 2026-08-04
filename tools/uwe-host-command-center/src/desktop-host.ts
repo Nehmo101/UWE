@@ -615,8 +615,11 @@ export async function restoreBackup(rootInput: string | undefined, name: string)
 
 export function readLogs(rootInput: string | undefined, target: string | undefined): { target: string; lines: string[] } {
   const paths = pathsFor(resolveDesktopHostRoot(rootInput));
+  // Neben den Diensten schreiben auch die Einrichtung (command-center.log) und
+  // der Tunnel-Connector (cloudflared.log, siehe cloudflare-tunnel-cli.ts) in
+  // den Logs-Ordner — beide sind bewusst lesbar.
   const safeTarget =
-    isHostServiceId(target) ? target : "command-center";
+    isHostServiceId(target) || target === "cloudflared" ? target : "command-center";
   const file = path.join(paths.logs, `${safeTarget}.log`);
   if (!fs.existsSync(file)) return { target: safeTarget, lines: [] };
   return { target: safeTarget, lines: readLogTail(file, 200) };
