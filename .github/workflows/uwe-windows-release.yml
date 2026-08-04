@@ -131,7 +131,8 @@ jobs:
           set -euo pipefail
           RUNTIME="apps/engine-connector-client/src-tauri/resources/host-runtime"
           rm -f "$RUNTIME/README.txt"
-          pnpm --filter @uwe/host-command-center bundle-cli -- --out "$RUNTIME/host-cli.cjs"
+          # Kein "--" vor den Script-Argumenten: pnpm reicht es woertlich weiter.
+          pnpm --filter @uwe/host-command-center bundle-cli --out "$RUNTIME/host-cli.cjs"
           NODE_VERSION="$(node -p 'process.version.slice(1)')"
           curl -fsSL -o "$RUNTIME/node.exe" \
             "https://nodejs.org/dist/v${NODE_VERSION}/win-x64/node.exe"
@@ -163,7 +164,10 @@ jobs:
           ls -la "$RUNTIME"
 
       - name: Build Windows Command Center
-        run: pnpm --filter @uwe/engine-connector-client tauri:build -- --bundles nsis,msi
+        # Kein "--" vor den Script-Argumenten: pnpm reicht es woertlich an die
+        # Tauri-CLI durch, und dort markiert "--" den Beginn der cargo-Argumente —
+        # cargo bricht dann an "--bundles" ab (Run 30890650044).
+        run: pnpm --filter @uwe/engine-connector-client tauri:build --bundles nsis,msi
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
