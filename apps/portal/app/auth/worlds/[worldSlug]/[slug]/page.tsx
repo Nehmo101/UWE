@@ -17,7 +17,6 @@ import {
   createAuthService,
   createCharacterService,
   createPartyTreasuryService,
-  createPrismaClient,
   getAppRepository,
   portalAssetUrl,
   renderAssetBlockHtml,
@@ -29,6 +28,7 @@ import {
   type LevelUpSuggestions,
   type QuestLifecycleStatus,
 } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 import { Badge } from "@/src/components/ui/badge";
 import {
   Card,
@@ -49,7 +49,7 @@ export default async function AuthWorldPageDetail({ params }: Props) {
     notFound();
   }
 
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
   const auth = createAuthService(db);
   const repo = getAppRepository();
 
@@ -65,18 +65,31 @@ export default async function AuthWorldPageDetail({ params }: Props) {
   let blockHtml: string[] = [];
 
   try {
-    page = await auth.getPageForViewer(worldSlug, slug, ctx);
+    // Seite und Render-Kontext hängen nicht voneinander ab — eine Runde statt
+    // zwei. Alles Weitere braucht die Seite und bleibt dahinter.
+    const [loadedPage, renderCtx] = await Promise.all([
+      auth.getPageForViewer(worldSlug, slug, ctx),
+      auth.buildViewerRenderContext(worldSlug, ctx),
+    ]);
+    page = loadedPage;
     if (!page) {
       notFound();
     }
 
     const visiblePage = page;
 
-    const renderCtx = await auth.buildViewerRenderContext(worldSlug, ctx);
+    // Der Kampagnen-Fallback fragt nur bei Seiten ohne eigene Kampagne nach.
+    campaignId =
+      visiblePage.campaignId ?? (await repo.listCampaignsByWorld(worldSlug))[0]?.id ?? null;
+
+    // Kein world.findUnique mehr: getAccessContextForWorld liefert nur für
+    // existierende, lesbare Welten einen Kontext — die Welt gibt es hier immer.
+    canComment = Boolean(campaignId && canCreatePlayerNote(ctx));
+
     // Bildblöcke bekommen ihr Bild dazu. Die Portal-Asset-Route verlangt den
     // `world`-Parameter und prüft den Zugriff gegen genau diese Welt.
     const assetUrl = portalAssetUrl(worldSlug);
-    blockHtml = await Promise.all(
+    const blockHtmlPromise = Promise.all(
       visiblePage.contentBlocks.map(async (block) => {
         const html = await auth.renderBlockContentForViewer(
           worldSlug,
@@ -88,53 +101,70 @@ export default async function AuthWorldPageDetail({ params }: Props) {
       }),
     );
 
-    campaignId =
-      visiblePage.campaignId ?? (await repo.listCampaignsByWorld(worldSlug))[0]?.id ?? null;
-
-    notes = campaignId
-      ? await auth.listPlayerNotesForViewer(worldSlug, ctx, {
+    const notesPromise = campaignId
+      ? auth.listPlayerNotesForViewer(worldSlug, ctx, {
           pageId: visiblePage.id,
           campaignId,
         })
-      : [];
+      : Promise.resolve([]);
 
-    const world = await db.world.findUnique({
-      where: { slug: worldSlug },
-      select: { id: true },
-    });
-    canComment = Boolean(campaignId && world && canCreatePlayerNote(ctx));
+    // Charakterbogen-Kette (nur player_character): getByPageId muss zuerst
+    // laufen, Bogen und Inventar dahinter sind voneinander unabhängig.
+    const characterPromise = (async () => {
+      if (visiblePage.type !== "player_character") {
+        return null;
+      }
+
+      const characters = createCharacterService(db);
+      const linked = await characters.getByPageId(visiblePage.id);
+      if (!linked) {
+        return null;
+      }
+
+      const treasury = createPartyTreasuryService(db);
+      const [sheet, inventory] = await Promise.all([
+        auth.getCharacterForViewer(worldSlug, linked.id, ctx),
+        treasury.listItemsForCharacterForViewer(worldSlug, linked.id, ctx),
+      ]);
+
+      return { linked, sheet, inventory };
+    })();
+
+    const [renderedBlocks, loadedNotes, characterData] = await Promise.all([
+      blockHtmlPromise,
+      notesPromise,
+      characterPromise,
+    ]);
+    blockHtml = renderedBlocks;
+    notes = loadedNotes;
 
     if (visiblePage.type === "player_character") {
       canEditCharacter = visiblePage.contentBlocks.some((block) =>
         canEditPlayerCharacterBlock(ctx, visiblePage, block),
       );
+    }
 
-      const characters = createCharacterService(db);
-      const linked = await characters.getByPageId(visiblePage.id);
-      if (linked) {
-        characterSheet = await auth.getCharacterForViewer(worldSlug, linked.id, ctx);
-        canEditSheet = Boolean(
-          characterSheet &&
-            ctx.user &&
-            characterSheet.ownerUserId === ctx.user.id &&
-            ctx.worldMembership !== null &&
-            !ctx.previewAsUserId,
-        );
-        if (characterSheet) {
-          const treasury = createPartyTreasuryService(db);
-          characterInventory =
-            (await treasury.listItemsForCharacterForViewer(worldSlug, linked.id, ctx)) ?? [];
-        }
-        levelUpSuggestions = buildLevelUpSuggestions({
-          level: linked.level,
-          classes: linked.classes,
-          abilities: linked.abilities,
-          combat: linked.combat,
-        });
-      }
+    if (characterData) {
+      characterSheet = characterData.sheet;
+      canEditSheet = Boolean(
+        characterSheet &&
+          ctx.user &&
+          characterSheet.ownerUserId === ctx.user.id &&
+          ctx.worldMembership !== null &&
+          !ctx.previewAsUserId,
+      );
+      // Inventar zählt nur mit sichtbarem Bogen — wie vorher, als die Abfrage
+      // hinter `if (characterSheet)` stand; parallel geladen wird es trotzdem.
+      characterInventory = characterSheet ? (characterData.inventory ?? []) : [];
+      levelUpSuggestions = buildLevelUpSuggestions({
+        level: characterData.linked.level,
+        classes: characterData.linked.classes,
+        abilities: characterData.linked.abilities,
+        combat: characterData.linked.combat,
+      });
     }
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 
   if (!page) {

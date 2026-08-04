@@ -17,12 +17,12 @@ import { Label } from "@/src/components/ui/label";
 import {
   createAuthService,
   createPartyTreasuryService,
-  createPrismaClient,
   DEFAULT_CURRENCIES,
   type CurrencyLedger,
   type PlayerSafeInventoryItemView,
   type PortalTreasuryView,
 } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -86,7 +86,7 @@ export default async function PortalTreasuryPage({ params }: Props) {
     notFound();
   }
 
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
   let view: PortalTreasuryView | null = null;
   let ownCharacters: OwnCharacterInventory[] = [];
   const canMoveItems = Boolean(
@@ -119,7 +119,7 @@ export default async function PortalTreasuryPage({ params }: Props) {
       );
     }
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 
   if (!view) {

@@ -7,14 +7,12 @@ import { TwoFactorSetupForm } from "@/src/components/TwoFactorSetupForm";
 import { PageHeader } from "@/src/components/shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/card";
 import { getCurrentSession } from "@/src/lib/auth";
-import {
-  createPrismaClient,
-} from "@uwe/database/server";
 import { listActiveSessionsForUser } from "@uwe/database/account-session";
 import { getSystemSettingsSnapshotSafe } from "@uwe/database/settings-service";
 import { createAuthIdentityService } from "@uwe/database/auth-identities";
 import { resolveLoginMethodsPublicConfig } from "@uwe/database/login-methods-settings";
 import { resolveStudioPublicBaseUrl } from "@uwe/auth";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 
 export default async function PortalAccountSecurityPage() {
   const session = await getCurrentSession();
@@ -23,7 +21,7 @@ export default async function PortalAccountSecurityPage() {
   }
 
   const user = session.user;
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
   let activeSessions;
   let googleIdentity = null;
   try {
@@ -33,7 +31,7 @@ export default async function PortalAccountSecurityPage() {
     const identities = await createAuthIdentityService(db).listForUser(user.id);
     googleIdentity = identities.find((identity) => identity.provider === "google") ?? null;
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
   const { settings } = await getSystemSettingsSnapshotSafe();
   const loginMethods = resolveLoginMethodsPublicConfig(settings.auth);

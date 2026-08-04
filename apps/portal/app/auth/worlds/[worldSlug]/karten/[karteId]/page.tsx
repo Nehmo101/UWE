@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { createPrismaClient } from "@uwe/database/server";
 import { createTerraService } from "@uwe/database/terra";
 import { canEditTerraKarte, canWithdrawTerraKarte, canDeleteTerraKarte } from "@uwe/auth";
 import { getAccessContextForWorld } from "@/src/lib/auth";
@@ -13,6 +12,7 @@ import {
   reicheSpielerKarteEinAction,
   ziehSpielerKarteZurueckAction,
 } from "@/app/terra-actions";
+import { getSharedPrismaClient } from "@uwe/database/client";
 
 interface Props {
   params: Promise<{ worldSlug: string; karteId: string }>;
@@ -43,7 +43,7 @@ export default async function PortalTerraKartePage({ params }: Props) {
   const ctx = await getAccessContextForWorld(worldSlug);
   if (!ctx) notFound();
 
-  const terra = createTerraService(createPrismaClient());
+  const terra = createTerraService(getSharedPrismaClient());
   const karte = await terra.holeFuerSpieler(worldSlug, karteId, ctx.user?.id ?? null);
   if (!karte) notFound();
 

@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import {
   auditRequestFromHeaders,
-  createPrismaClient,
   createUserService,
   logAuditEvent,
 } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 import { SESSION_COOKIE_NAME } from "@uwe/auth";
 import { requirePortalApiAuth } from "@/src/lib/portal-api-auth";
 import { getUserFromRequestCookieHeader } from "@/src/lib/auth";
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
   const rateKey = `portal-change-password:${ip}:${user.id}`;
   const rate = await checkRateLimitAsync(rateKey, { maxAttempts: 8, windowMs: 5 * 60_000 });
   if (!rate.allowed) {
-    const db = createPrismaClient();
+    const db = getSharedPrismaClient();
     try {
       await logAuditEvent(db, {
         actorUserId: user.id,
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
         metadata: { endpoint: "change-password" },
       });
     } finally {
-      await db.$disconnect();
+      await disconnectPrismaClientIfOwned(db);
     }
 
     return NextResponse.json(
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
 
   const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value ?? null;
 
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
   const users = createUserService(db);
 
   try {
@@ -120,6 +120,6 @@ export async function POST(request: Request) {
       message: "Passwort wurde geändert. Andere aktive Sitzungen wurden beendet.",
     });
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 }

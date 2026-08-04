@@ -1,45 +1,45 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GlobalSearchForm, PageTypeBadge } from "@uwe/shared-ui";
-import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import { createAuthService } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 import { PortalEmptyState } from "@/src/components/PortalEmptyState";
 import { getAccessContextForWorld } from "@/src/lib/auth";
+import { buildPageListMoreParams } from "@/src/lib/page-list-params";
 import { PageHeader } from "@/src/components/shell";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; cursor?: string }>;
 }
 
 export default async function AuthWorldNpcsPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
-  const { q } = await searchParams;
+  const { q, cursor } = await searchParams;
   const ctx = await getAccessContextForWorld(worldSlug);
 
   if (!ctx) {
     notFound();
   }
 
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
   const auth = createAuthService(db);
 
-  let npcs;
+  // Typ-/Text-Filter und Cursor in der DB-Query; das Freigabe-Tor
+  // (filterPagesForViewer) bleibt im Helfer.
+  let result;
   try {
-    const pages = await auth.listPagesForViewer(worldSlug, ctx);
-    npcs = pages.filter((page) => page.type === "npc");
+    result = await auth.listPagesForViewerPaged(worldSlug, ctx, {
+      type: "npc",
+      query: q,
+      cursor,
+    });
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 
-  const query = q?.trim().toLocaleLowerCase("de") ?? "";
-  const filtered = query
-    ? npcs.filter((page) => {
-        const haystack = [page.title, page.slug, page.summary ?? ""]
-          .join(" ")
-          .toLocaleLowerCase("de");
-        return haystack.includes(query);
-      })
-    : npcs;
+  const query = q?.trim() ?? "";
+  const filtered = result.pages;
 
   return (
     <>
@@ -73,12 +73,23 @@ export default async function AuthWorldNpcsPage({ params, searchParams }: Props)
         ))}
       </ul>
 
-      {filtered.length === 0 ? (
+      {filtered.length === 0 && !result.nextCursor ? (
         <PortalEmptyState
           title={query ? "Keine passenden NPCs gefunden" : "Keine NPCs freigeschaltet"}
           description={query ? "Probiere einen anderen Suchbegriff." : undefined}
           icon="users"
         />
+      ) : null}
+
+      {result.nextCursor ? (
+        <p className="mt-6">
+          <Link
+            href={`/auth/worlds/${worldSlug}/npcs?${buildPageListMoreParams(result.nextCursor, { q: query })}`}
+            className="text-primary hover:underline"
+          >
+            Mehr laden …
+          </Link>
+        </p>
       ) : null}
     </>
   );

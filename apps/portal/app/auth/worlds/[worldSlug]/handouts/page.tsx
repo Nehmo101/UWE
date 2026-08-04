@@ -1,32 +1,42 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageTypeBadge } from "@uwe/shared-ui";
-import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import { createAuthService } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 import { getAccessContextForWorld } from "@/src/lib/auth";
+import { buildPageListMoreParams } from "@/src/lib/page-list-params";
 import { PortalEmptyState } from "@/src/components/PortalEmptyState";
 import { PageHeader } from "@/src/components/shell";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
+  searchParams: Promise<{ cursor?: string }>;
 }
 
-export default async function PortalHandoutsPage({ params }: Props) {
+export default async function PortalHandoutsPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
+  const { cursor } = await searchParams;
   const ctx = await getAccessContextForWorld(worldSlug);
 
   if (!ctx) {
     notFound();
   }
 
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
   const auth = createAuthService(db);
 
+  // Typ-Filter und Cursor in der DB-Query; das Freigabe-Tor bleibt im Helfer.
   let handouts;
+  let nextCursor: string | null = null;
   try {
-    const pages = await auth.listPagesForViewer(worldSlug, ctx);
-    handouts = pages.filter((page) => page.type === "handout");
+    const result = await auth.listPagesForViewerPaged(worldSlug, ctx, {
+      type: "handout",
+      cursor,
+    });
+    handouts = result.pages;
+    nextCursor = result.nextCursor;
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 
   return (
@@ -55,8 +65,19 @@ export default async function PortalHandoutsPage({ params }: Props) {
         ))}
       </ul>
 
-      {handouts.length === 0 ? (
+      {handouts.length === 0 && !nextCursor ? (
         <PortalEmptyState title="Keine Handouts in dieser Welt" icon="mail" />
+      ) : null}
+
+      {nextCursor ? (
+        <p className="mt-4">
+          <Link
+            href={`/auth/worlds/${worldSlug}/handouts?${buildPageListMoreParams(nextCursor)}`}
+            className="text-primary hover:underline"
+          >
+            Mehr laden …
+          </Link>
+        </p>
       ) : null}
 
       <p className="mt-4 text-sm text-muted-foreground">

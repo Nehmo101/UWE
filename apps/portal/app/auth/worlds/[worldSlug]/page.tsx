@@ -20,7 +20,6 @@ import {
 } from "@uwe/shared-ui";
 import {
   createAuthService,
-  createPrismaClient,
   getDefaultDashboardLayout,
   portalWorldPageKey,
   SEARCH_ENTITY_FILTER_LABELS,
@@ -28,6 +27,7 @@ import {
   type SearchEntityFilter,
   type SearchResultItem,
 } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 
 
 interface Props {
@@ -44,7 +44,7 @@ export default async function AuthWorldPage({ params, searchParams }: Props) {
     notFound();
   }
 
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
   const auth = createAuthService(db);
 
   const isSearching = Boolean(q?.trim());
@@ -79,7 +79,7 @@ export default async function AuthWorldPage({ params, searchParams }: Props) {
       dashboard = await auth.getPortalDashboard(worldSlug, ctx);
     }
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 
   const previewEnabled = await canUsePreview(worldSlug);

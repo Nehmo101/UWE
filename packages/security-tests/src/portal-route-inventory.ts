@@ -17,11 +17,15 @@ export const PORTAL_API_ROOT = "apps/portal/app/api";
  * - `requirePortalApiAuth`   — central Portal API guard (`@/src/lib/portal-api-auth`
  *                              and the CSRF-only re-export from `@uwe/security`).
  * - `requirePortalOwnerAuth` — global-owner-only guard (private health).
- * - `canViewAuditLog`        — in-handler RBAC gate for the portal audit log.
- * - `canAccessStudio`        — in-handler gate for Studio-only world creation.
+ *
+ * Frühere Ausnahmen sind bewusst gestrichen: Der Audit-Log läuft inzwischen
+ * zusätzlich durch `requirePortalApiAuth`, und Weltenerstellung
+ * (`canAccessStudio`) gehört seit dem Rückbau von POST /api/worlds nur noch
+ * dem Studio. Das Muster eng zu halten ist fail-closed: ein neuer Portal-Route
+ * muss den zentralen Guard nehmen, nicht eine In-Handler-Prüfung erfinden.
  */
 export const PORTAL_AUTH_GUARD_PATTERN =
-  /requirePortalApiAuth|requirePortalOwnerAuth|canViewAuditLog|canAccessStudio/;
+  /requirePortalApiAuth|requirePortalOwnerAuth/;
 
 /**
  * Genuinely-public Portal endpoints that intentionally carry no auth guard.

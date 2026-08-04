@@ -18,7 +18,7 @@ import {
   createPlayerQuestionService,
   type PlayerQuestionView,
 } from "@uwe/database/player-questions";
-import { createPrismaClient } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -41,7 +41,7 @@ export default async function PortalQuestionsPage({ params }: Props) {
     notFound();
   }
 
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
   let questions: PlayerQuestionView[] = [];
 
   try {
@@ -62,7 +62,7 @@ export default async function PortalQuestionsPage({ params }: Props) {
     const service = createPlayerQuestionService(db);
     questions = await service.listForWorld(worldSlug);
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 
   const visible = questions.filter((question) => question.status !== "archived");

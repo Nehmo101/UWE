@@ -5,9 +5,9 @@ import {
   buildCharacterSheetPrintHtml,
   createAuthService,
   createPartyTreasuryService,
-  createPrismaClient,
   isInventoryItemDmOnly,
 } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 import { characterSheetPrintQuerySchema, parseQuery } from "@uwe/security";
 import { getAccessContextForWorld } from "@/src/lib/auth";
 import { requirePortalApiAuth } from "@/src/lib/portal-api-auth";
@@ -32,7 +32,7 @@ export async function GET(
     return parsed.response;
   }
 
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
   const auth = createAuthService(db);
 
   try {
@@ -56,6 +56,16 @@ export async function GET(
       }));
 
     if (parsed.data.format === "markdown") {
+      // Der Anzeigename ist Nutzereingabe und darf nicht roh in den Header:
+      // ein `"` oder Zeilenumbruch darin bräche die Quotierung auf (Header-
+      // Injection). ASCII-Fallback für alte Clients, `filename*` (RFC 5987)
+      // trägt den echten Namen UTF-8-prozentkodiert.
+      const safeAsciiName = character.displayName
+        .replace(/[^\x20-\x7e]/g, "")
+        .replace(/[\\";]/g, "")
+        .trim();
+      const asciiFallback = `${safeAsciiName || "charakter"}-charakterbogen.md`;
+      const utf8Name = encodeURIComponent(`${character.displayName}-charakterbogen.md`);
       return new NextResponse(
         buildCharacterSheetMarkdown({
           character,
@@ -65,7 +75,7 @@ export async function GET(
         {
           headers: {
             "Content-Type": "text/plain; charset=utf-8",
-            "Content-Disposition": `inline; filename="${character.displayName}-charakterbogen.md"`,
+            "Content-Disposition": `inline; filename="${asciiFallback}"; filename*=UTF-8''${utf8Name}`,
           },
         },
       );
@@ -81,6 +91,6 @@ export async function GET(
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 }

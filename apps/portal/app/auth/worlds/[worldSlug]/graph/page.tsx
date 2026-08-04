@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { PortalGraphView } from "@/src/components/PortalGraphView";
 import { getAccessContextForWorld } from "@/src/lib/auth";
 import { assertPortalCanReadWorld } from "@/src/lib/authz";
-import { createPrismaClient } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -18,7 +18,7 @@ export default async function AuthWorldGraphPage({ params, searchParams }: Props
     notFound();
   }
 
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
   let worldName = "";
   try {
     const world = await db.world.findUnique({
@@ -36,7 +36,7 @@ export default async function AuthWorldGraphPage({ params, searchParams }: Props
       notFound();
     }
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 
   return (

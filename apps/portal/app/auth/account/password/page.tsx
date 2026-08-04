@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createPrismaClient } from "@uwe/database/server";
 import { ChangePasswordForm } from "@/src/components/ChangePasswordForm";
 import { PageHeader } from "@/src/components/shell";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { getCurrentUser } from "@/src/lib/auth";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 
 export default async function PortalAccountPasswordPage() {
   const user = await getCurrentUser();
@@ -12,7 +12,7 @@ export default async function PortalAccountPasswordPage() {
     redirect("/login?redirect=/auth/account/password");
   }
 
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
   let initialPasswordOnly = false;
   try {
     const stored = await db.user.findUnique({
@@ -21,7 +21,7 @@ export default async function PortalAccountPasswordPage() {
     });
     initialPasswordOnly = !stored?.passwordHash;
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 
   return (

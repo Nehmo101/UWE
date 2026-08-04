@@ -1,6 +1,5 @@
 import {
   createAuthService,
-  createPrismaClient,
   createWorldCalendarService,
   countPortalTimelineEventsThroughDate,
   enrichPortalTimelineEvents,
@@ -11,6 +10,7 @@ import {
   parseWorldCalendarMonths,
   type PortalWorldEventView,
 } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 import type { AccessContext } from "@uwe/auth";
 
 export interface PortalTimelineData {
@@ -26,12 +26,19 @@ export async function loadPortalTimelineData(
   ctx: AccessContext,
   options: { pageId?: string } = {},
 ): Promise<PortalTimelineData | null> {
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
   const auth = createAuthService(db);
   const repo = getAppRepository();
 
   try {
-    const world = await repo.getWorldBySlug(worldSlug);
+    // Welt-Lookup und Events hängen nicht voneinander ab — parallel laden.
+    // Nur der Kalender braucht die world.id und bleibt dahinter.
+    const [world, events] = await Promise.all([
+      repo.getWorldBySlug(worldSlug),
+      options.pageId
+        ? auth.listWorldEventsForPageViewer(worldSlug, options.pageId, ctx)
+        : auth.listWorldEventsForViewer(worldSlug, ctx),
+    ]);
     if (!world) {
       return null;
     }
@@ -39,9 +46,6 @@ export async function loadPortalTimelineData(
     const calendars = createWorldCalendarService(db);
     const calendar = await calendars.getByWorldId(world.id);
     const months = parseWorldCalendarMonths(calendar?.months);
-    const events = options.pageId
-      ? await auth.listWorldEventsForPageViewer(worldSlug, options.pageId, ctx)
-      : await auth.listWorldEventsForViewer(worldSlug, ctx);
 
     const currentDate = calendar ? parseInGameDate(calendar.currentDate) : null;
     const enriched = enrichPortalTimelineEvents(events, months);
@@ -56,7 +60,7 @@ export async function loadPortalTimelineData(
         : enriched.length,
     };
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 }
 

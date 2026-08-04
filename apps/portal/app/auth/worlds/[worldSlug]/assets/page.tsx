@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ASSET_TYPE_LABELS, AssetTypeBadge } from "@uwe/shared-ui";
 import { ASSET_TYPES } from "@uwe/assets";
-import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import { createAuthService } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 import { getAccessContextForWorld } from "@/src/lib/auth";
 import { PortalEmptyState } from "@/src/components/PortalEmptyState";
 import { PageHeader } from "@/src/components/shell";
@@ -29,7 +30,7 @@ export default async function AuthWorldAssetsPage({ params, searchParams }: Prop
     notFound();
   }
 
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
   const auth = createAuthService(db);
 
   let assets;
@@ -38,7 +39,7 @@ export default async function AuthWorldAssetsPage({ params, searchParams }: Prop
       type: typeFilter,
     });
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 
   return (

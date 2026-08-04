@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import { createAuthService } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 import { applyNoteSyncOperations } from "@uwe/player-hub";
 import { parseBody, playerNoteSyncSchema } from "@uwe/security";
 import { getAccessContextForWorld } from "@/src/lib/auth";
@@ -41,7 +42,7 @@ export async function POST(
     return parsed.response;
   }
 
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
 
   try {
     const world = await db.world.findUnique({
@@ -64,6 +65,6 @@ export async function POST(
 
     return NextResponse.json({ results }, { headers: { "Cache-Control": "no-store" } });
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 }

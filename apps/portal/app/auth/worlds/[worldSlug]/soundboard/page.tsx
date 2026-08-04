@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { SoundboardWorkspace, type SoundboardButtonView } from "@uwe/shared-ui";
-import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import { createAuthService } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 import { getAccessContextForWorld } from "@/src/lib/auth";
 import { PortalEmptyState } from "@/src/components/PortalEmptyState";
 import { PageHeader } from "@/src/components/shell";
@@ -34,14 +35,14 @@ export default async function PortalSoundboardPage({ params }: Props) {
     notFound();
   }
 
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
   const auth = createAuthService(db);
 
   let buttons;
   try {
     buttons = await auth.listSoundboardForViewer(worldSlug, ctx);
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 
   const buttonViews: SoundboardButtonView[] = buttons.map((button) => ({

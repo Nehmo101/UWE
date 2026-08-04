@@ -156,6 +156,7 @@ export class PlayerNoteService {
       campaignId?: string | null;
       status?: PlayerNoteStatus | PlayerNoteStatus[];
       includeDeleted?: boolean;
+      limit?: number;
     },
   ): Promise<PlayerNoteWithRelations[]> {
     const world = await this.db.world.findUnique({ where: { slug: worldSlug } });
@@ -177,13 +178,14 @@ export class PlayerNoteService {
       },
       include: noteInclude(),
       orderBy: [{ updatedAt: "desc" }],
+      take: options?.limit,
     });
   }
 
   async listForPage(
     worldSlug: string,
     pageId: string,
-    options?: { campaignId?: string | null },
+    options?: { campaignId?: string | null; limit?: number },
   ): Promise<PlayerNoteWithRelations[]> {
     const world = await this.db.world.findUnique({ where: { slug: worldSlug } });
     if (!world) return [];
@@ -197,12 +199,14 @@ export class PlayerNoteService {
       },
       include: noteInclude(),
       orderBy: [{ createdAt: "asc" }],
+      take: options?.limit,
     });
   }
 
   async listForGameSession(
     worldSlug: string,
     gameSessionId: string,
+    options?: { limit?: number },
   ): Promise<PlayerNoteWithRelations[]> {
     const world = await this.db.world.findUnique({ where: { slug: worldSlug } });
     if (!world) return [];
@@ -215,6 +219,7 @@ export class PlayerNoteService {
       },
       include: noteInclude(),
       orderBy: [{ createdAt: "asc" }],
+      take: options?.limit,
     });
   }
 

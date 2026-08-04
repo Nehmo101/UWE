@@ -5,7 +5,8 @@ import { PlayerNotesPanel } from "@/src/components/PlayerNotesPanel";
 import { SessionRecapFeed } from "@/src/components/SessionRecapFeed";
 import { getAccessContextForWorld, getCurrentUser } from "@/src/lib/auth";
 import { canCreatePlayerNote } from "@uwe/auth";
-import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import { createAuthService } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 
 interface Props {
   params: Promise<{ worldSlug: string; sessionId: string }>;
@@ -20,7 +21,7 @@ export default async function PortalSessionDetailPage({ params }: Props) {
     notFound();
   }
 
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
   const auth = createAuthService(db);
 
   let session;
@@ -60,7 +61,7 @@ export default async function PortalSessionDetailPage({ params }: Props) {
       session.campaignId && world && canCreatePlayerNote(ctx),
     );
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 
   const returnPath = `/auth/worlds/${worldSlug}/sessions/${sessionId}`;

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import { createAuthService } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 import { getSessionToken } from "@/src/lib/auth";
 
 /**
@@ -12,7 +13,7 @@ export async function requirePortalOwnerAuth(): Promise<NextResponse | null> {
     return NextResponse.json({ error: "Anmeldung erforderlich." }, { status: 401 });
   }
 
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
   try {
     const auth = createAuthService(db);
     const session = await auth.getSessionByToken(token);
@@ -24,6 +25,6 @@ export async function requirePortalOwnerAuth(): Promise<NextResponse | null> {
     }
     return null;
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 }

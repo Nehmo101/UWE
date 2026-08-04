@@ -2,14 +2,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GlobalSearchForm, PageTypeBadge } from "@uwe/shared-ui";
 import { NAV_CATEGORY_LABELS, navCategoryForPageType, type NavCategory } from "@uwe/database/server";
-import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
+import { createAuthService } from "@uwe/database/server";
 import { getAccessContextForWorld } from "@/src/lib/auth";
+import { buildPageListMoreParams } from "@/src/lib/page-list-params";
 import { PortalEmptyState } from "@/src/components/PortalEmptyState";
 import { PageHeader } from "@/src/components/shell";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; cursor?: string }>;
 }
 
 const NAV_ORDER: NavCategory[] = [
@@ -24,32 +26,27 @@ const NAV_ORDER: NavCategory[] = [
 
 export default async function AuthWorldWikiPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
-  const { q } = await searchParams;
+  const { q, cursor } = await searchParams;
   const ctx = await getAccessContextForWorld(worldSlug);
 
   if (!ctx) {
     notFound();
   }
 
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
   const auth = createAuthService(db);
 
-  let pages;
+  // Text-Filter und Cursor laufen in der DB-Query; die Freigabe-Prüfung
+  // (portalReleased) bleibt im Helfer das fail-closed JS-Tor.
+  let result;
   try {
-    pages = await auth.listPagesForViewer(worldSlug, ctx);
+    result = await auth.listPagesForViewerPaged(worldSlug, ctx, { query: q, cursor });
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 
-  const query = q?.trim().toLocaleLowerCase("de") ?? "";
-  const filtered = query
-    ? pages.filter((page) => {
-        const haystack = [page.title, page.slug, page.summary ?? ""]
-          .join(" ")
-          .toLocaleLowerCase("de");
-        return haystack.includes(query);
-      })
-    : pages;
+  const query = q?.trim() ?? "";
+  const filtered = result.pages;
 
   const grouped = new Map<NavCategory, typeof filtered>();
   for (const page of filtered) {
@@ -103,12 +100,23 @@ export default async function AuthWorldWikiPage({ params, searchParams }: Props)
         );
       })}
 
-      {filtered.length === 0 ? (
+      {filtered.length === 0 && !result.nextCursor ? (
         <PortalEmptyState
           title={query ? "Keine passenden Wiki-Seiten gefunden" : "Keine Wiki-Seiten freigegeben"}
           description={query ? "Probiere einen anderen Suchbegriff." : undefined}
           icon="book-open"
         />
+      ) : null}
+
+      {result.nextCursor ? (
+        <p className="mt-6">
+          <Link
+            href={`/auth/worlds/${worldSlug}/wiki?${buildPageListMoreParams(result.nextCursor, { q: query })}`}
+            className="text-primary hover:underline"
+          >
+            Mehr laden …
+          </Link>
+        </p>
       ) : null}
     </>
   );

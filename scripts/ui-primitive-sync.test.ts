@@ -2,8 +2,8 @@
  * UI primitive sync guard.
  *
  * apps/studio and apps/portal each keep their OWN copy of a set of
- * shadcn-style UI primitives (button, card, dialog, ...). Sixteen of these are
- * byte-identical today and MUST be hand-synced: an a11y fix or bug fix to one
+ * shadcn-style UI primitives (button, card, dialog, ...). Seventeen of these
+ * are byte-identical today and MUST be hand-synced: an a11y fix or bug fix to one
  * app's copy has to be mirrored in the other, or the two apps silently drift.
  * Because nothing enforced that, some copies have already diverged
  * (dropdown-menu, data-table, the index barrel).

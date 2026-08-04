@@ -6,12 +6,14 @@ import {
   AUDIT_ACTION_LABELS,
   createAuditLogService,
   createAuthService,
-  createPrismaClient,
   logAuditEvent,
   type AuditAction,
 } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
+import { auditLogQuerySchema, parseQuery } from "@uwe/security";
+import { requirePortalApiAuth } from "@/src/lib/portal-api-auth";
 
-function parseActions(value: string | null): AuditAction[] | undefined {
+function parseActions(value: string | undefined): AuditAction[] | undefined {
   if (!value?.trim()) return undefined;
   const actions = value
     .split(",")
@@ -21,9 +23,18 @@ function parseActions(value: string | null): AuditAction[] | undefined {
 }
 
 export async function GET(request: Request) {
+  // Zentraler Guard ZUERST: er prüft CSRF, Session-Pflicht und den globalen
+  // Portal-Schalter. Die RBAC-Prüfung (canViewAuditLog) bleibt danach — sie
+  // beantwortet eine andere Frage (wer darf den Log lesen), nicht ob die
+  // Anfrage überhaupt ins Portal darf.
+  const authError = await requirePortalApiAuth(request);
+  if (authError) {
+    return authError;
+  }
+
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
   const auth = createAuthService(db);
 
   try {
@@ -46,16 +57,22 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Keine Berechtigung für Audit Log." }, { status: 403 });
     }
 
-    const { searchParams } = new URL(request.url);
+    // Geklemmt statt `Number(...)`: `?limit=abc` ergab NaN, und `take: NaN`
+    // lässt Prisma die gesamte Tabelle liefern (Vollscan).
+    const parsed = parseQuery(request.url, auditLogQuerySchema);
+    if (!parsed.success) {
+      return parsed.response;
+    }
+
     const audit = createAuditLogService(db);
     const entries = await audit.list({
-      actions: parseActions(searchParams.get("action")),
-      actorUserId: searchParams.get("actorUserId") ?? undefined,
-      worldId: searchParams.get("worldId") ?? undefined,
-      from: searchParams.get("from") ? new Date(searchParams.get("from")!) : undefined,
-      to: searchParams.get("to") ? new Date(searchParams.get("to")!) : undefined,
-      limit: Number(searchParams.get("limit") ?? "50"),
-      offset: Number(searchParams.get("offset") ?? "0"),
+      actions: parseActions(parsed.data.action),
+      actorUserId: parsed.data.actorUserId,
+      worldId: parsed.data.worldId,
+      from: parsed.data.from ?? undefined,
+      to: parsed.data.to ?? undefined,
+      limit: parsed.data.limit,
+      offset: parsed.data.offset,
     });
 
     return NextResponse.json({
@@ -66,6 +83,6 @@ export async function GET(request: Request) {
       })),
     });
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 }

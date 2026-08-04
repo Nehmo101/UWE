@@ -1,20 +1,37 @@
-import { CreateWorldForm } from "@/src/components/CreateWorldForm";
 import { PortalWorldsHubList } from "@/src/components/PortalWorldsHubList";
 import { getCurrentUser, listAuthWorlds } from "@/src/lib/auth";
 import { buttonVariants } from "@/src/components/ui/button";
 import { cn } from "@/src/components/ui/cn";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { EmptyState } from "@/src/components/ui/states";
-import { canAccessStudio } from "@uwe/auth";
-import { listWorldTemplateOptions } from "@uwe/database/server";
+import { canAccessStudio, resolveCrossAppUrls } from "@uwe/auth";
 import Link from "next/link";
+
+/**
+ * Welten entstehen im Studio, nicht im Portal: Das Portal hat keinen
+ * Erstellungs-Endpunkt mehr (der alte POST /api/worlds war ein Studio-Feature
+ * hinter einer Portal-Tür). Owner/Admins bekommen hier nur den Wegweiser.
+ */
+function CreateWorldInStudioHint() {
+  const { studio } = resolveCrossAppUrls();
+  return (
+    <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius)] border border-border p-4">
+      <div>
+        <h2 className="text-lg font-semibold">Neue Welt erstellen</h2>
+        <p className="text-sm text-muted-foreground">
+          Welten werden im Studio angelegt und dort für Spieler freigegeben.
+        </p>
+      </div>
+      <a href={`${studio}/worlds`} className={cn(buttonVariants())}>
+        Im Studio erstellen
+      </a>
+    </div>
+  );
+}
 
 export default async function AuthWorldsPage() {
   const user = await getCurrentUser();
-  const [worlds, templates] = await Promise.all([
-    listAuthWorlds(),
-    Promise.resolve(listWorldTemplateOptions()),
-  ]);
+  const worlds = await listAuthWorlds();
   const canCreateWorld = user ? canAccessStudio(user) : false;
 
   if (worlds.length === 0) {
@@ -22,7 +39,7 @@ export default async function AuthWorldsPage() {
       <Card>
         <CardContent className="pt-6">
           {canCreateWorld ? (
-            <CreateWorldForm templates={templates} />
+            <CreateWorldInStudioHint />
           ) : (
             <EmptyState
               title="Keine Welten gefunden"
@@ -48,7 +65,7 @@ export default async function AuthWorldsPage() {
   return (
     <Card>
       <CardContent className="pt-6">
-        {canCreateWorld ? <CreateWorldForm templates={templates} /> : null}
+        {canCreateWorld ? <CreateWorldInStudioHint /> : null}
 
         <PortalWorldsHubList
           worlds={worlds.map((world) => ({

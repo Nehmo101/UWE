@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { requirePortalApiAuth } from "@/src/lib/portal-api-auth";
 import { cookies } from "next/headers";
-import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import { createAuthService } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 import {
   getSessionCookieOptionsForRequest,
   PREVIEW_COOKIE_NAME,
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
   }
 
   if (previewAsUserId) {
-    const db = createPrismaClient();
+    const db = getSharedPrismaClient();
     const auth = createAuthService(db);
     try {
       const players = await auth.listWorldPlayers(worldSlug);
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Spieler nicht in dieser Welt." }, { status: 400 });
       }
     } finally {
-      await db.$disconnect();
+      await disconnectPrismaClientIfOwned(db);
     }
   }
 

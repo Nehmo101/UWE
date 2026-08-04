@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import { createAuthService } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 import { SESSION_COOKIE_NAME } from "@uwe/auth";
 import { requirePortalApiAuth } from "@/src/lib/portal-api-auth";
 
@@ -15,7 +16,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, reason: "no_session" }, { status: 401 });
   }
 
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
   const auth = createAuthService(db);
   try {
     const touched = await auth.touchSession(token);
@@ -25,6 +26,6 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({ ok: true });
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 }

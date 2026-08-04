@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import {
   createAuthService,
   createPartyTreasuryService,
-  createPrismaClient,
 } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 import { buildPortalOfflineSnapshot } from "@uwe/player-hub";
 import { getAccessContextForWorld } from "@/src/lib/auth";
 import { assertPortalCanReadWorld } from "@/src/lib/authz";
@@ -38,7 +38,7 @@ export async function GET(
     return NextResponse.json({ error: "Nicht angemeldet." }, { status: 401 });
   }
 
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
 
   try {
     const world = await db.world.findUnique({
@@ -73,6 +73,6 @@ export async function GET(
 
     return NextResponse.json(snapshot, { headers: { "Cache-Control": "no-store" } });
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 }

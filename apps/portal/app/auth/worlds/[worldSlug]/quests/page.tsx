@@ -8,11 +8,11 @@ import {
 } from "@uwe/shared-ui";
 import {
   createAuthService,
-  createPrismaClient,
   isOpenQuest,
   QUEST_LIFECYCLE_LABELS,
   type QuestLifecycleStatus,
 } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 import {
   createQuestFlagService,
   QUEST_PRIORITIES,
@@ -21,6 +21,7 @@ import {
   type QuestPriority,
 } from "@uwe/player-hub";
 import { getAccessContextForWorld } from "@/src/lib/auth";
+import { buildPageListMoreParams } from "@/src/lib/page-list-params";
 import { PortalEmptyState } from "@/src/components/PortalEmptyState";
 import { setQuestPriorityAction } from "@/app/player-hub-actions";
 import { PageHeader } from "@/src/components/shell";
@@ -29,7 +30,7 @@ import { Label } from "@/src/components/ui/label";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
-  searchParams: Promise<{ q?: string; status?: string; priority?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; priority?: string; cursor?: string }>;
 }
 
 type StatusFilter = "all" | "open" | QuestLifecycleStatus;
@@ -62,7 +63,7 @@ function matchesStatusFilter(
 
 export default async function AuthWorldQuestsPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
-  const { q, status: statusParam, priority: priorityParam } = await searchParams;
+  const { q, status: statusParam, priority: priorityParam, cursor } = await searchParams;
   const ctx = await getAccessContextForWorld(worldSlug);
 
   if (!ctx) {
@@ -74,14 +75,23 @@ export default async function AuthWorldQuestsPage({ params, searchParams }: Prop
   const viewerId = ctx.previewAsUserId ?? ctx.user?.id ?? null;
   const canFlag = Boolean(ctx.user) && !ctx.previewAsUserId;
 
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
   const auth = createAuthService(db);
 
+  // Typ- und Text-Filter laufen in der DB-Query (das Freigabe-Tor bleibt im
+  // Helfer); Status- und Prioritäts-Filter bleiben in-memory, weil die
+  // Prioritäten pro Betrachter in einer eigenen Tabelle liegen.
   let quests;
+  let nextCursor: string | null = null;
   let flags: Map<string, QuestFlagView> = new Map();
   try {
-    const pages = await auth.listPagesForViewer(worldSlug, ctx);
-    quests = pages.filter((page) => page.type === "quest");
+    const result = await auth.listPagesForViewerPaged(worldSlug, ctx, {
+      type: "quest",
+      query: q,
+      cursor,
+    });
+    quests = result.pages;
+    nextCursor = result.nextCursor;
     if (viewerId && quests.length > 0) {
       flags = await createQuestFlagService(db).listForUser(
         viewerId,
@@ -89,28 +99,19 @@ export default async function AuthWorldQuestsPage({ params, searchParams }: Prop
       );
     }
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 
   const priorityRank: Record<QuestPriority, number> = { high: 0, normal: 1, low: 2 };
 
   const priorityOnly = priorityParam === "high";
 
-  const query = q?.trim().toLocaleLowerCase("de") ?? "";
+  const query = q?.trim() ?? "";
   const filtered = quests
     .filter((page) => matchesStatusFilter(page.questStatus, statusFilter))
     .filter((page) => {
       if (!priorityOnly) return true;
       return flags.get(page.id)?.priority === "high";
-    })
-    .filter((page) => {
-      if (!query) {
-        return true;
-      }
-      const haystack = [page.title, page.slug, page.summary ?? ""]
-        .join(" ")
-        .toLocaleLowerCase("de");
-      return haystack.includes(query);
     })
     .sort((a, b) => {
       const aRank = priorityRank[flags.get(a.id)?.priority ?? "normal"];
@@ -231,12 +232,27 @@ export default async function AuthWorldQuestsPage({ params, searchParams }: Prop
         })}
       </ul>
 
-      {filtered.length === 0 ? (
+      {filtered.length === 0 && !nextCursor ? (
         <PortalEmptyState
           title={query ? "Keine passenden Quests gefunden" : "Keine Quests freigeschaltet"}
           description={query ? "Probiere einen anderen Suchbegriff." : undefined}
           icon="scroll"
         />
+      ) : null}
+
+      {nextCursor ? (
+        <p className="mt-6">
+          <Link
+            href={`${basePath}?${buildPageListMoreParams(nextCursor, {
+              q: query,
+              status: statusFilter !== "all" ? statusFilter : undefined,
+              priority: priorityOnly ? "high" : undefined,
+            })}`}
+            className="text-primary hover:underline"
+          >
+            Mehr laden …
+          </Link>
+        </p>
       ) : null}
     </>
   );

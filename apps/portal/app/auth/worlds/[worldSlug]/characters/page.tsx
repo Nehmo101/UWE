@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isDm } from "@uwe/auth";
-import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import { createAuthService } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 import { getAccessContextForWorld } from "@/src/lib/auth";
 import { PortalEmptyState } from "@/src/components/PortalEmptyState";
 import { PageHeader } from "@/src/components/shell";
@@ -38,14 +39,14 @@ export default async function PortalCharactersPage({ params }: Props) {
     notFound();
   }
 
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
   const auth = createAuthService(db);
 
   let characters;
   try {
     characters = await auth.listCharactersForViewer(worldSlug, ctx);
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 
   const membershipCharacterName = ctx.worldMembership?.characterName ?? null;

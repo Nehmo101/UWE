@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Map as MapIcon, PencilLine, Hourglass } from "lucide-react";
-import { createPrismaClient } from "@uwe/database/server";
 import { createTerraService, type TerraKarteKopf } from "@uwe/database/terra";
 import { canCreateTerraKarte } from "@uwe/auth";
 import { getAccessContextForWorld } from "@/src/lib/auth";
 import { PageHeader } from "@/src/components/shell";
 import { erstelleSpielerKarteAction } from "@/app/terra-actions";
+import { getSharedPrismaClient } from "@uwe/database/client";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
@@ -34,7 +34,7 @@ export default async function PortalTerraIndexPage({ params }: Props) {
   const ctx = await getAccessContextForWorld(worldSlug);
   if (!ctx) notFound();
 
-  const terra = createTerraService(createPrismaClient());
+  const terra = createTerraService(getSharedPrismaClient());
   const karten = await terra.listeFuerSpieler(worldSlug, ctx.user?.id ?? null);
 
   const freigegeben = karten.filter((karte) => karte.status === "freigegeben");

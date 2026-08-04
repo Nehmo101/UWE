@@ -421,7 +421,10 @@ export class GameSessionService {
   }
 
   /** Player-safe sessions: published recaps plus DM-announced upcoming sessions. */
-  async listVisibleToPlayersForPortal(worldSlug: string): Promise<GameSessionWithLinks[]> {
+  async listVisibleToPlayersForPortal(
+    worldSlug: string,
+    options?: { limit?: number },
+  ): Promise<GameSessionWithLinks[]> {
     const world = await this.db.world.findUnique({ where: { slug: worldSlug } });
     if (!world) return [];
 
@@ -438,6 +441,7 @@ export class GameSessionService {
       },
       include: this.sessionInclude(),
       orderBy: [{ sessionNumber: "desc" }],
+      take: options?.limit,
     });
   }
 }

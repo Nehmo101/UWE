@@ -2,7 +2,8 @@ import fs from "node:fs";
 import { requirePortalApiAuth } from "@/src/lib/portal-api-auth";
 import { NextResponse } from "next/server";
 import { resolveAssetFilePath, buildAssetDownloadHeaders } from "@uwe/assets";
-import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import { createAuthService } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 import { assertCanReadWorldWithContext } from "@uwe/auth";
 import { getAccessContextForWorld, getSessionToken } from "@/src/lib/auth";
 
@@ -32,7 +33,7 @@ export async function GET(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
   const auth = createAuthService(db);
 
   try {
@@ -77,6 +78,6 @@ export async function GET(request: Request, context: RouteContext) {
       }),
     });
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 }

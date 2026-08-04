@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import {
   auditRequestFromHeaders,
-  createPrismaClient,
   logAuditEvent,
 } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 import { createAuthIdentityService } from "@uwe/database/auth-identities";
 import { GOOGLE_IDENTITY_PROVIDER } from "@uwe/auth/server";
 import { getUserFromRequestCookieHeader } from "@/src/lib/auth";
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Anmeldung erforderlich." }, { status: 401 });
   }
 
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
   try {
     const identities = createAuthIdentityService(db);
     if (!(await identities.hasAlternativeLoginMethod(user.id))) {
@@ -51,6 +51,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true });
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 }

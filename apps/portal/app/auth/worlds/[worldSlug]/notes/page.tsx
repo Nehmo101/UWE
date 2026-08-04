@@ -5,7 +5,8 @@ import { getAccessContextForWorld, getCurrentUser } from "@/src/lib/auth";
 import { assertPortalCanReadWorld } from "@/src/lib/authz";
 import { canCreatePlayerNote } from "@uwe/auth";
 import { PlayerNoteStatusBadge } from "@uwe/shared-ui";
-import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import { createAuthService } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 import { PageHeader } from "@/src/components/shell";
 import {
   Card,
@@ -27,7 +28,7 @@ export default async function PortalPlayerNotesPage({ params }: Props) {
     notFound();
   }
 
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
   const auth = createAuthService(db);
 
   let notes;
@@ -56,7 +57,7 @@ export default async function PortalPlayerNotesPage({ params }: Props) {
     });
     campaignId = campaigns[0]?.id ?? null;
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 
   const myNotes = notes.filter((note) => note.userId === userId);

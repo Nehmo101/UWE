@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { PortalSessionsList } from "@/src/components/PortalSessionsList";
 import { getAccessContextForWorld } from "@/src/lib/auth";
-import { createAuthService, createPrismaClient } from "@uwe/database/server";
+import { createAuthService } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 import {
   createSessionAvailabilityService,
   type SessionAvailabilitySummary,
@@ -24,7 +25,7 @@ export default async function PortalSessionsPage({ params }: Props) {
   const viewerId = ctx.previewAsUserId ?? ctx.user?.id ?? null;
   const canVote = Boolean(ctx.user) && !ctx.previewAsUserId;
 
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
   const auth = createAuthService(db);
 
   let sessions;
@@ -36,7 +37,7 @@ export default async function PortalSessionsPage({ params }: Props) {
       .map((session) => session.id);
     availability = await createSessionAvailabilityService(db).listForSessions(upcomingIds);
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 
   const upcoming = sessions.filter(

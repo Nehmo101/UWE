@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requirePortalApiAuth } from "@/src/lib/portal-api-auth";
-import { completePasswordReset, createPrismaClient } from "@uwe/database/server";
+import { completePasswordReset } from "@uwe/database/server";
+import { disconnectPrismaClientIfOwned, getSharedPrismaClient } from "@uwe/database/client";
 import { checkRateLimitAsync, clientIpFromHeaders, RATE_LIMIT_PRESETS } from "@/src/lib/rate-limit";
 
 export async function POST(request: Request) {
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const db = createPrismaClient();
+  const db = getSharedPrismaClient();
 
   try {
     const result = await completePasswordReset({
@@ -48,6 +49,6 @@ export async function POST(request: Request) {
       message: "Passwort wurde zurückgesetzt. Du kannst dich jetzt anmelden.",
     });
   } finally {
-    await db.$disconnect();
+    await disconnectPrismaClientIfOwned(db);
   }
 }

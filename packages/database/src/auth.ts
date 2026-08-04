@@ -81,8 +81,20 @@ import {
 } from "./character-service";
 import { logAuditEvent } from "./audit-log-service";
 import { USER_SAFE_SELECT } from "./user-service";
+import {
+  listPagesForViewerPaged,
+  type ListPagesForViewerPagedOptions,
+  type ViewerPageListResult,
+} from "./portal-page-list";
 
 const SESSION_ACTIVITY_TOUCH_THROTTLE_MS = 60_000;
+
+/**
+ * Obergrenze der Viewer-Listen (Notizen, Sessions, Ereignisse, Assets), wenn
+ * der Aufrufer keine eigene nennt. Großzügig gewählt: kein Pagination-Ersatz,
+ * nur eine Bremse gegen den unbeschränkten Vollscan einer gewachsenen Welt.
+ */
+const VIEWER_LIST_DEFAULT_LIMIT = 500;
 
 /**
  * Die vier Häkchen plus das KI-Flag, alle optional. `aiAccess` ist kein
@@ -818,6 +830,20 @@ export class AuthService {
   }
 
   /**
+   * Cursor-paginierte Variante von {@link listPagesForViewer} mit Typ- und
+   * Textfilter in der DB-Query — siehe `portal-page-list.ts` für die
+   * Sicherheits-Invariante (DB-Vorfilterung ist nur Performance, das Tor
+   * bleibt `filterPagesForViewer`).
+   */
+  async listPagesForViewerPaged(
+    worldSlug: string,
+    ctx: AccessContext,
+    options?: ListPagesForViewerPagedOptions,
+  ): Promise<ViewerPageListResult> {
+    return listPagesForViewerPaged(this.db, worldSlug, ctx, options);
+  }
+
+  /**
    * Builds the wikilink lookup + access scope for a world exactly once, so a
    * page view can render all its blocks without re-querying the page index per
    * block. Pass the result into {@link renderBlockContentForViewer} as
@@ -968,6 +994,7 @@ export class AuthService {
   async listWorldEventsForViewer(
     worldSlug: string,
     ctx: AccessContext,
+    options?: { limit?: number },
   ): Promise<PortalWorldEventView[]> {
     const world = await this.db.world.findUnique({ where: { slug: worldSlug }, select: { id: true } });
     if (!world) {
@@ -980,7 +1007,9 @@ export class AuthService {
     }
 
     const events = createWorldEventService(this.db);
-    const rows = await events.listForWorld(world.id);
+    const rows = await events.listForWorld(world.id, {
+      limit: options?.limit ?? VIEWER_LIST_DEFAULT_LIMIT,
+    });
     const portalRows = rows as WorldEventWithLinks[];
 
     return portalRows
@@ -1012,7 +1041,11 @@ export class AuthService {
       .sort((a, b) => compareInGameDates(a.inGameDate, b.inGameDate));
   }
 
-  async listGameSessionsForViewer(worldSlug: string, ctx: AccessContext): Promise<PortalGameSessionView[]> {
+  async listGameSessionsForViewer(
+    worldSlug: string,
+    ctx: AccessContext,
+    options?: { limit?: number },
+  ): Promise<PortalGameSessionView[]> {
     const world = await this.db.world.findUnique({
       where: { slug: worldSlug },
       select: { id: true },
@@ -1026,14 +1059,16 @@ export class AuthService {
       return [];
     }
 
+    const limit = options?.limit ?? VIEWER_LIST_DEFAULT_LIMIT;
+
     if (isDm(ctx)) {
-      const sessions = await this.gameSessions.listByWorld(worldSlug);
+      const sessions = await this.gameSessions.listByWorld(worldSlug, { limit });
       return sessions
         .filter((session) => session.recapPublished)
         .map((session) => this.toPortalSessionViewForViewer(session, ctx));
     }
 
-    const sessions = await this.gameSessions.listVisibleToPlayersForPortal(worldSlug);
+    const sessions = await this.gameSessions.listVisibleToPlayersForPortal(worldSlug, { limit });
     return sessions.map((session) => this.toPortalSessionViewForViewer(session, ctx));
   }
 
@@ -1113,7 +1148,11 @@ export class AuthService {
     });
   }
 
-  async listAssetsForViewer(worldSlug: string, ctx: AccessContext, options?: { type?: string }) {
+  async listAssetsForViewer(
+    worldSlug: string,
+    ctx: AccessContext,
+    options?: { type?: string; limit?: number },
+  ) {
     const world = await this.db.world.findUnique({ where: { slug: worldSlug } });
     if (!world) return [];
 
@@ -1131,6 +1170,7 @@ export class AuthService {
         pageLinks: { select: { pageId: true } },
       },
       orderBy: [{ title: "asc" }],
+      take: options?.limit ?? VIEWER_LIST_DEFAULT_LIMIT,
     });
 
     const withLinks = assets.map((asset) => ({
@@ -1244,7 +1284,12 @@ export class AuthService {
   async listPlayerNotesForViewer(
     worldSlug: string,
     ctx: AccessContext,
-    options?: { campaignId?: string | null; pageId?: string; gameSessionId?: string },
+    options?: {
+      campaignId?: string | null;
+      pageId?: string;
+      gameSessionId?: string;
+      limit?: number;
+    },
   ): Promise<PortalPlayerNoteView[]> {
     const world = await this.db.world.findUnique({
       where: { slug: worldSlug },
@@ -1252,16 +1297,22 @@ export class AuthService {
     });
     if (!world) return [];
 
+    const limit = options?.limit ?? VIEWER_LIST_DEFAULT_LIMIT;
+
     let notes;
     if (options?.pageId) {
       notes = await this.playerNotes.listForPage(worldSlug, options.pageId, {
         campaignId: options.campaignId,
+        limit,
       });
     } else if (options?.gameSessionId) {
-      notes = await this.playerNotes.listForGameSession(worldSlug, options.gameSessionId);
+      notes = await this.playerNotes.listForGameSession(worldSlug, options.gameSessionId, {
+        limit,
+      });
     } else {
       notes = await this.playerNotes.listByWorld(worldSlug, {
         campaignId: options?.campaignId,
+        limit,
       });
     }
 
@@ -1347,11 +1398,14 @@ export class AuthService {
     ctx: AccessContext,
     options?: { campaignId?: string | null },
   ): Promise<PortalDashboardData | null> {
-    const pages = await this.listPagesForViewer(worldSlug, ctx);
-    const sessions = await this.listGameSessionsForViewer(worldSlug, ctx);
-    const notes = await this.listPlayerNotesForViewer(worldSlug, ctx, {
-      campaignId: options?.campaignId,
-    });
+    // Unabhängige Viewer-Listen — parallel statt drei DB-Runden nacheinander.
+    const [pages, sessions, notes] = await Promise.all([
+      this.listPagesForViewer(worldSlug, ctx),
+      this.listGameSessionsForViewer(worldSlug, ctx),
+      this.listPlayerNotesForViewer(worldSlug, ctx, {
+        campaignId: options?.campaignId,
+      }),
+    ]);
 
     return this.portalDashboard.buildDashboard(worldSlug, ctx, {
       visiblePages: pages,
