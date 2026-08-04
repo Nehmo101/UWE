@@ -161,6 +161,50 @@ export class ActivityLogService {
   }
 }
 
+/**
+ * Export-Aktivität von Labels/Drucklisten protokollieren.
+ *
+ * Lag früher als Server Action in apps/studio (label-actions/print-list-
+ * actions) und wurde von Route-Handlern importiert — ein Import aus einem
+ * `"use server"`-Modul in einen Route-Handler ist eine Grenzverletzung.
+ * Jetzt importieren beide Seiten von hier. Bewusst schluckend: das Protokoll
+ * darf einen Export nie scheitern lassen.
+ */
+export async function logExportActivity(
+  db: PrismaClient,
+  input: {
+    worldSlug: string;
+    targetType: "label" | "print_list";
+    targetId: string;
+    title: string;
+    summary: string;
+    targetHref: string;
+  },
+): Promise<void> {
+  try {
+    const world = await db.world.findUnique({
+      where: { slug: input.worldSlug },
+      select: { id: true },
+    });
+    if (!world) return;
+
+    await db.activityLog.create({
+      data: {
+        worldId: world.id,
+        worldSlug: input.worldSlug,
+        action: "export_executed",
+        targetType: input.targetType,
+        targetId: input.targetId,
+        targetLabel: input.title,
+        targetHref: input.targetHref,
+        summary: input.summary,
+      },
+    });
+  } catch {
+    // Activity log must not break exports.
+  }
+}
+
 export function createActivityLogService(db: PrismaClient): ActivityLogService {
   return new ActivityLogService(db);
 }

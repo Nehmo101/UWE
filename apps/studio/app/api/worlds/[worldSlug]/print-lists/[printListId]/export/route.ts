@@ -4,17 +4,29 @@ import { jsonError } from "@/src/lib/api-response";
 import {
   createPrintListService,
   getAppRepository,
+  logExportActivity,
   normalizeLabel,
+  prisma,
   renderMultiLabelHtml,
   renderMultiLabelPdfAsync,
 } from "@uwe/database/server";
-import { logPrintListExportActivity } from "@/app/print-list-actions";
 import { renderLabelPngExportAsync } from "@/src/lib/label-png-export";
 import { idSchema, parseParams, worldSlugParamSchema } from "@uwe/security";
 
 const printListExportParamsSchema = worldSlugParamSchema.extend({
   printListId: idSchema,
 });
+
+function logPrintListExport(worldSlug: string, printListId: string, name: string, format: string) {
+  return logExportActivity(prisma, {
+    worldSlug,
+    targetType: "print_list",
+    targetId: printListId,
+    title: name,
+    summary: `Druckliste exportiert (${format})`,
+    targetHref: `/worlds/${worldSlug}/labels/print-lists/${printListId}`,
+  });
+}
 
 interface Props {
   params: Promise<{ worldSlug: string; printListId: string }>;
@@ -87,7 +99,7 @@ export async function GET(request: Request, { params }: Props) {
     const exported = await renderLabelPngExportAsync(first);
     const body =
       typeof exported.body === "string" ? exported.body : Buffer.from(exported.body);
-    await logPrintListExportActivity(worldSlug, printListId, list.name, "png");
+    await logPrintListExport(worldSlug, printListId, list.name, "png");
     return new NextResponse(body, {
       headers: {
         "Content-Type": exported.contentType,
@@ -102,7 +114,7 @@ export async function GET(request: Request, { params }: Props) {
     try {
       const pdf = await renderMultiLabelPdfAsync(exportOptions);
       await printListService.markStatus(printListId, "exported");
-      await logPrintListExportActivity(worldSlug, printListId, list.name, "pdf");
+      await logPrintListExport(worldSlug, printListId, list.name, "pdf");
       return new NextResponse(Buffer.from(pdf), {
         headers: {
           "Content-Type": "application/pdf",
@@ -111,7 +123,7 @@ export async function GET(request: Request, { params }: Props) {
       });
     } catch (error) {
       const html = renderMultiLabelHtml(exportOptions, true);
-      await logPrintListExportActivity(worldSlug, printListId, list.name, "pdf-fallback");
+      await logPrintListExport(worldSlug, printListId, list.name, "pdf-fallback");
       return new NextResponse(html, {
         status: 422,
         headers: {
@@ -129,7 +141,7 @@ export async function GET(request: Request, { params }: Props) {
     await printListService.markStatus(printListId, "printed");
   }
 
-  await logPrintListExportActivity(worldSlug, printListId, list.name, format);
+  await logPrintListExport(worldSlug, printListId, list.name, format);
 
   return new NextResponse(html, {
     headers: {

@@ -373,29 +373,6 @@ export async function deleteTemplateAction(formData: FormData) {
   redirect(`/worlds/${worldSlug}/labels?tab=templates&deleted=1`);
 }
 
-export async function logLabelExportActivity(
-  worldSlug: string,
-  labelId: string,
-  title: string,
-  format: string,
-) {
-  await requireStudioActionAuth();
-  await requireStudioWorldEdit(worldSlug);
-
-  const world = await repo().getWorldBySlug(worldSlug);
-  if (!world) return;
-
-  await logLabelActivity(
-    worldSlug,
-    world.id,
-    "export_executed",
-    "label",
-    labelId,
-    title,
-    `Label exportiert (${format})`,
-    `/worlds/${worldSlug}/labels/${labelId}`,
-  );
-}
 
 export async function setLabelPrintStatusAction(formData: FormData) {
   await requireStudioActionAuth();

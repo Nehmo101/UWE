@@ -503,6 +503,7 @@ export {
   ACTIVITY_ACTION_LABELS,
   ActivityLogService,
   createActivityLogService,
+  logExportActivity,
 } from "./activity-log-service";
 
 export type {

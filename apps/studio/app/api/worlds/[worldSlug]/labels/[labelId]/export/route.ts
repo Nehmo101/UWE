@@ -4,10 +4,11 @@ import { jsonError } from "@/src/lib/api-response";
 import {
   createLabelService,
   getAppRepository,
+  logExportActivity,
   normalizeLabel,
+  prisma,
   renderLabelExportAsync,
 } from "@uwe/database/server";
-import { logLabelExportActivity } from "@/app/label-actions";
 import { renderLabelPngExportAsync } from "@/src/lib/label-png-export";
 import { idSchema, parseParams, worldSlugParamSchema } from "@uwe/security";
 
@@ -89,7 +90,14 @@ export async function GET(request: Request, { params }: Props) {
     await labelService.setPrintStatus(labelId, format === "pdf" ? "exported" : "printed");
   }
 
-  await logLabelExportActivity(worldSlug, labelId, label.title, format);
+  await logExportActivity(prisma, {
+    worldSlug,
+    targetType: "label",
+    targetId: labelId,
+    title: label.title,
+    summary: `Label exportiert (${format})`,
+    targetHref: `/worlds/${worldSlug}/labels/${labelId}`,
+  });
 
   return new NextResponse(body, {
     headers: {

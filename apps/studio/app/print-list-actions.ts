@@ -313,26 +313,3 @@ export async function deletePrintListAction(formData: FormData) {
   redirect(`/worlds/${worldSlug}/labels?tab=print-lists&deleted=1`);
 }
 
-export async function logPrintListExportActivity(
-  worldSlug: string,
-  printListId: string,
-  name: string,
-  format: string,
-) {
-  await requireStudioActionAuth();
-  await requireStudioWorldEdit(worldSlug);
-
-  const world = await repo().getWorldBySlug(worldSlug);
-  if (!world) return;
-
-  await logLabelActivity(
-    worldSlug,
-    world.id,
-    "export_executed",
-    "print_list",
-    printListId,
-    name,
-    `Druckliste exportiert (${format})`,
-    `/worlds/${worldSlug}/labels/print-lists/${printListId}`,
-  );
-}
