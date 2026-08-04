@@ -15,6 +15,9 @@ export function EditPageStickyBar({
       <Button type="submit" form={formId}>
         Speichern
       </Button>
+      <Button type="submit" form={formId} variant="secondary" name="returnTo" value="view">
+        Speichern & Ansicht
+      </Button>
       <a href={previewHref} className={buttonVariants({ variant: "secondary" })}>
         Vorschau
       </a>

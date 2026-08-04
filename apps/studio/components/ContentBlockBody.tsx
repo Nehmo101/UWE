@@ -19,6 +19,11 @@ interface ContentBlockBodyProps {
   defaultContent?: string;
   defaultAssetId?: string | null;
   rows?: number;
+  /**
+   * Präfix für die Feldnamen (`type`, `content`, `assetId`) — nötig, wenn
+   * mehrere Blöcke im selben Formular stecken (z. B. `blocks.<id>.`).
+   */
+  fieldPrefix?: string;
 }
 
 /**
@@ -35,6 +40,7 @@ export function ContentBlockBody({
   defaultContent = "",
   defaultAssetId = null,
   rows = 6,
+  fieldPrefix = "",
 }: ContentBlockBodyProps) {
   const [type, setType] = useState(defaultType);
 
@@ -42,7 +48,11 @@ export function ContentBlockBody({
     <>
       <label>
         Block-Typ
-        <select name="type" value={type} onChange={(event) => setType(event.target.value)}>
+        <select
+          name={`${fieldPrefix}type`}
+          value={type}
+          onChange={(event) => setType(event.target.value)}
+        >
           {typeOptions.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
@@ -55,18 +65,24 @@ export function ContentBlockBody({
         <ContentBlockImageField
           worldSlug={worldSlug}
           assets={imageAssets}
+          assetIdName={`${fieldPrefix}assetId`}
+          captionName={`${fieldPrefix}content`}
           defaultAssetId={defaultAssetId}
           defaultCaption={defaultContent}
         />
       ) : RICH_TEXT_TYPES.has(type) ? (
         <label>
           Inhalt
-          <RichTextBlockEditor name="content" defaultValue={defaultContent} rows={rows} />
+          <RichTextBlockEditor
+            name={`${fieldPrefix}content`}
+            defaultValue={defaultContent}
+            rows={rows}
+          />
         </label>
       ) : (
         <label>
           Inhalt
-          <textarea name="content" defaultValue={defaultContent} rows={rows} />
+          <textarea name={`${fieldPrefix}content`} defaultValue={defaultContent} rows={rows} />
         </label>
       )}
     </>
