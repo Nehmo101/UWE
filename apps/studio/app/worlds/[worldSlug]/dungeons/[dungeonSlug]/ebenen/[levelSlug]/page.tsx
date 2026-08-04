@@ -3,8 +3,10 @@ import { notFound } from "next/navigation";
 import {
   DungeonPrepStatusBadge,
   DUNGEON_PREP_STATUS_LABELS,
+  WikiContent,
 } from "@uwe/shared-ui";
 import {
+  buildWorldWikiIndex,
   createDungeonCockpitService,
   DungeonPrepStatusEnum,
   getAppRepository,
@@ -44,8 +46,9 @@ export default async function StudioDungeonLevelPage({ params, searchParams }: P
   const world = await repo.getWorldBySlug(worldSlug);
   if (!world) notFound();
 
+  const wikiIndex = await buildWorldWikiIndex(repo, worldSlug);
   const dungeons = createDungeonCockpitService();
-  const overview = await dungeons.getLevelOverview(worldSlug, dungeonSlug, levelSlug);
+  const overview = await dungeons.getLevelOverview(worldSlug, dungeonSlug, levelSlug, wikiIndex);
   if (!overview) notFound();
 
   const dungeonHref = `/worlds/${worldSlug}/dungeons/${dungeonSlug}`;
@@ -73,6 +76,13 @@ export default async function StudioDungeonLevelPage({ params, searchParams }: P
         meta={<DungeonPrepStatusBadge status={overview.level.prepStatus} />}
       />
       {created && <Alert tone="success" className="mb-4">Raum erstellt.</Alert>}
+
+      {overview.html.trim() !== "" && (
+        <section className={SECTION_CLASS}>
+          <h2 className={HEADING_CLASS}>Ebenentext</h2>
+          <WikiContent html={overview.html} />
+        </section>
+      )}
 
       <section className={SECTION_CLASS}>
         <h2 className={HEADING_CLASS}>Raum-Übersicht</h2>
