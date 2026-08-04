@@ -5,6 +5,8 @@ import {
   type SystemdUnitStatus,
 } from "@uwe/host-monitor";
 
+import { parseServicePort, SERVICE_PORT_ENV } from "./desktop-host-types.ts";
+
 export interface UweEndpointProbe {
   label: string;
   url: string;
@@ -88,15 +90,18 @@ function resolvePorts(): { studioPort: number; portalPort: number } {
   };
 }
 
-/** Owner-only Brain entry. Brain now runs as its own local app on port 3002, so
- *  the link points at the Brain origin + the configured Brain path. Hidden when
- *  BRAIN_EXPOSURE=off. Never a public/tunnel link — local only. */
-function brainQuickLink(): UweQuickLink | null {
+/** Owner-only Brain entry. Brain runs as its own local app; its port comes from
+ *  `BRAIN_PORT` in the loaded `.env` — same source as the Studio/Portal probes —
+ *  with the shared `SERVICE_PORT_ENV` fallback (a Command-Center-provisioned
+ *  host writes 3102; the dev scripts use 3002 and set no fallback here). Hidden
+ *  when BRAIN_EXPOSURE=off. Never a public/tunnel link — local only. */
+export function brainQuickLink(): UweQuickLink | null {
   const exposure = process.env.BRAIN_EXPOSURE?.trim().toLowerCase();
   if (exposure === "off") return null;
   const explicit = process.env.NEXT_PUBLIC_BRAIN_URL?.trim().replace(/\/$/, "");
   const path = process.env.BRAIN_PATH?.trim() || "/life-brain";
-  const base = explicit || "http://127.0.0.1:3002";
+  const { key, fallback } = SERVICE_PORT_ENV.brain;
+  const base = explicit || `http://127.0.0.1:${parseServicePort(process.env[key], fallback)}`;
   return { label: "Brain (privat)", href: `${base}${path}`, external: true };
 }
 
