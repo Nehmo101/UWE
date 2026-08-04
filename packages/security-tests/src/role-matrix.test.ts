@@ -56,9 +56,10 @@ const WORLD_MEMBER: RoleExpectations = {
   publicPage: "visible",
   playerVisiblePage: "visible",
   playerVisibleBlocks: "all",
-  // Zugeordnet sein reicht für alles — außer für den DM-Bereich im Text.
+  // Zugeordnet sein reicht für alles — außer für den DM-Bereich im Text und
+  // für Seiten ohne Portal-Freigabe.
   dmSection: "hidden",
-  dmOnlyPage: "visible",
+  dmOnlyPage: "hidden",
   hiddenSecretPage: "visible",
   revealedSecretPage: "visible",
   publicMedia: "visible",
@@ -70,6 +71,8 @@ const WORLD_MEMBER: RoleExpectations = {
 const STAFF: RoleExpectations = {
   ...WORLD_MEMBER,
   dmSection: "visible",
+  // Das Studio-Häkchen sieht auch, was nicht freigegeben ist.
+  dmOnlyPage: "visible",
   privateWorldDmPage: "visible",
 };
 

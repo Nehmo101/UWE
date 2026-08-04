@@ -757,6 +757,13 @@ export class AuthService {
       return null;
     }
 
+    // Dieselbe Freigabe wie in jeder Liste — sonst waere der Haken nur eine
+    // Empfehlung: Die Seite verschwaende aus dem Index, bliebe aber unter ihrem
+    // Direktlink erreichbar, und Slugs sind ratbar.
+    if (filterPagesForViewer(ctx, [page]).length === 0) {
+      return null;
+    }
+
     return {
       ...page,
       // Die Kurzbeschreibung ist auch Wikitext — eine dort hingeschriebene
@@ -793,6 +800,9 @@ export class AuthService {
         summary: true,
         questStatus: true,
         updatedAt: true,
+        // Muss mit: `filterPagesForViewer` ist fail-closed und wirft ohne dieses
+        // Feld jede Seite heraus.
+        portalReleased: true,
       },
       orderBy: [{ title: "asc" }],
     });

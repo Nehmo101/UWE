@@ -93,6 +93,8 @@ export interface CreatePageInput {
   type: PageType;
   summary?: string | null;
   canonicalStatus?: CanonicalStatus;
+  /** Freigegeben fuers Portal — siehe `filterPagesForViewer`. */
+  portalReleased?: boolean;
   prepStatus?: import("./generated/prisma/client").DungeonPrepStatus | null;
   questStatus?: import("./generated/prisma/client").QuestLifecycleStatus | null;
   tags?: string[];
@@ -109,6 +111,8 @@ export interface UpdatePageInput {
   parentPageId?: string | null;
   sortIndex?: number | null;
   canonicalStatus?: CanonicalStatus;
+  /** Freigegeben fuers Portal — siehe `filterPagesForViewer`. */
+  portalReleased?: boolean;
   prepStatus?: import("./generated/prisma/client").DungeonPrepStatus | null;
   questStatus?: import("./generated/prisma/client").QuestLifecycleStatus | null;
   tags?: string[];
@@ -227,6 +231,7 @@ export class UweRepository {
         type: input.type,
         summary: input.summary ?? null,
         canonicalStatus: input.canonicalStatus ?? defaults.defaultCanonicalStatus,
+        portalReleased: input.portalReleased ?? false,
         prepStatus: input.prepStatus ?? null,
         questStatus: input.questStatus ?? null,
         tags: toJsonArray(input.tags),
@@ -262,6 +267,7 @@ export class UweRepository {
         parentPageId: input.parentPageId,
         sortIndex: input.sortIndex,
         canonicalStatus: input.canonicalStatus,
+        portalReleased: input.portalReleased,
         prepStatus: input.prepStatus,
         questStatus: input.questStatus,
         tags: input.tags ? toJsonArray(input.tags) : undefined,

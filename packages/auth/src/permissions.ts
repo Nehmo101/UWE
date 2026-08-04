@@ -89,8 +89,56 @@ export function redactDmSectionsForViewer<T extends string | null | undefined>(
   return stripDmSections(text) as T;
 }
 
+/**
+ * Darf dieser Betrachter auch Seiten sehen, die nicht fürs Portal freigegeben
+ * sind?
+ *
+ * Dieselbe Linie wie beim DM-Bereich: das Studio-Häkchen, plus der Owner. Die
+ * Welt-Zuordnung reicht nicht — sie sagt, *welche* Welt jemand sieht, nicht
+ * welche Seiten daraus. Und die Vorschau als Spieler fällt heraus, sonst
+ * zeigte sie nicht, was sie zeigen soll.
+ */
+export function canSeeUnreleasedPages(ctx: AccessContext): boolean {
+  if (ctx.previewAsUserId) {
+    return false;
+  }
+  return ctx.user?.access.studio === true || ctx.user?.isOwner === true;
+}
+
+/**
+ * Trägt diese Seite den Portal-Haken?
+ *
+ * **Fail-closed, und zwar bewusst gegen den bequemen Fall.** Fehlt das Feld —
+ * weil eine Abfrage es nicht mitgeladen hat —, gilt die Seite als nicht
+ * freigegeben. Der Fehler ist dann laut (eine Liste bleibt leer) statt still
+ * (ein Kampagnenbuch steht im Spieler-Wiki).
+ */
+function isPortalReleased(page: unknown): boolean {
+  if (!page || typeof page !== "object") return false;
+  return (page as { portalReleased?: unknown }).portalReleased === true;
+}
+
+/**
+ * Das Tor für ganze Seiten.
+ *
+ * Zwei Stufen, und sie beantworten verschiedene Fragen: Die Welt-Zuordnung
+ * entscheidet, ob es überhaupt Seiten gibt; der Portal-Haken entscheidet je
+ * Seite, ob sie im Spieler-Wiki auftaucht.
+ *
+ * Der Unterschied zum `:::dm`-Bereich ist der Umfang. Der schneidet Zeilen aus
+ * einer Seite, die es weiterhin gibt — mit Titel, in der Suche, im Seitenbaum
+ * und im Inhaltsverzeichnis. Für „Der Tag der Asche (die volle Wahrheit für die
+ * SL)" genügt das nicht: Da verrät die Überschrift, was der Text verschweigt.
+ * Hier fällt die Seite als Ganzes weg.
+ */
 export function filterPagesForViewer<T>(ctx: AccessContext, pages: T[]): T[] {
-  return canViewWorldContent(ctx) ? pages : [];
+  if (!canViewWorldContent(ctx)) {
+    return [];
+  }
+  if (canSeeUnreleasedPages(ctx)) {
+    return pages;
+  }
+  return pages.filter(isPortalReleased);
 }
 
 /**

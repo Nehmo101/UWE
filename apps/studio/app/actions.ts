@@ -47,6 +47,9 @@ export async function updatePageAction(formData: FormData) {
     type: formData.get("type") as PageType,
     summary: String(formData.get("summary") || "") || null,
     canonicalStatus: formData.get("canonicalStatus") as CanonicalStatus,
+    // Ein nicht angehaktes Kontrollkaestchen schickt gar nichts — deshalb die
+    // ausdrueckliche Pruefung auf "on" statt auf Anwesenheit.
+    portalReleased: formData.get("portalReleased") === "on",
     tags: String(formData.get("tags") || "")
       .split(",")
       .map((t) => t.trim())

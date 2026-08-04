@@ -659,6 +659,18 @@ model Page {
   type            PageType
   summary         String?
   canonicalStatus CanonicalStatus    @default(draft) @map("canonical_status")
+  /// Freigegeben fuer das Portal.
+  ///
+  /// Die Welt-Zuordnung sagt, WELCHE Welt jemand sieht; dieses Haekchen sagt,
+  /// welche Seiten daraus im Spieler-Wiki auftauchen. Beides zusammen ersetzt
+  /// nicht den `:::dm`-Bereich: der schneidet Zeilen aus einer sichtbaren Seite,
+  /// dieses Feld entscheidet ueber die Seite als Ganzes — samt Titel, und damit
+  /// auch in Suche, Baum und Inhaltsverzeichnis.
+  ///
+  /// Vorgabe `false`, weil das die fail-closed Richtung ist: Eine neu angelegte
+  /// oder frisch importierte Seite ist erst einmal DM-Material, bis jemand sie
+  /// ausdruecklich freigibt. Das Studio-Haekchen geht immer vor.
+  portalReleased  Boolean            @default(false) @map("portal_released")
   prepStatus      DungeonPrepStatus? @map("prep_status")
   questStatus     QuestLifecycleStatus? @map("quest_status")
   tags            Json?

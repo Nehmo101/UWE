@@ -161,6 +161,7 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     title: "Öffentliche Notiz",
     slug: slugs.publicPage,
     type: "note",
+    portalReleased: true,
     contentBlocks: [
       {
         type: "rich_text",
@@ -175,6 +176,7 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     title: "Spieler sichtbar",
     slug: slugs.playerVisiblePage,
     type: "note",
+    portalReleased: true,
     contentBlocks: [
       {
         // Ein Block, zwei Zonen: der Vorlesetext ist für alle da, der
@@ -196,6 +198,9 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     title: "Nur DM",
     slug: slugs.dmOnlyPage,
     type: "lore",
+    // Kein Portal-Haken — die Seite heisst so, und seit der Freigabe je Seite
+    // stimmt der Name wieder.
+    portalReleased: false,
     contentBlocks: [
       {
         type: "rich_text",
@@ -210,6 +215,7 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     title: "Verborgenes Geheimnis",
     slug: slugs.hiddenSecretPage,
     type: "secret",
+    portalReleased: true,
     contentBlocks: [
       {
         type: "player_text",
@@ -224,6 +230,7 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     title: "Enthülltes Geheimnis",
     slug: slugs.revealedSecretPage,
     type: "secret",
+    portalReleased: true,
     contentBlocks: [
       {
         type: "player_text",

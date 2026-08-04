@@ -1,0 +1,22 @@
+-- Freigegeben fuer das Portal — ein Haken je Wiki-Seite.
+--
+-- Die Welt-Zuordnung sagt, WELCHE Welt jemand sieht. Sie sagt nicht, welche
+-- Seiten daraus im Spieler-Wiki auftauchen sollen: Ein Kampagnenbuch, ein
+-- Dungeon-Dossier und ein Bestiarium liegen in derselben Welt wie die Orte und
+-- Figuren, die am Tisch offen daliegen duerfen.
+--
+-- Der `:::dm`-Bereich loest das nur halb. Er schneidet Zeilen aus einer Seite,
+-- die es weiterhin gibt — mit Titel, in der Suche, im Seitenbaum und im
+-- Inhaltsverzeichnis der Leseansicht. Genau daran scheitert er bei Titeln wie
+-- „Der Tag der Asche (die volle Wahrheit fuer die SL)". Dieses Feld entscheidet
+-- ueber die Seite als Ganzes.
+--
+-- **Vorgabe `false`, mit Absicht.** Das ist die fail-closed Richtung: Was neu
+-- entsteht oder frisch importiert wird, ist erst einmal DM-Material, bis jemand
+-- es ausdruecklich freigibt. Der umgekehrte Vorgabewert waere bequemer und
+-- wuerde beim naechsten grossen Import ein Kampagnenbuch veroeffentlichen.
+--
+-- Bestandsseiten wandern damit ebenfalls auf `false` und muessen einmal
+-- freigegeben werden. Das ist gewollt: Ein stiller Wechsel auf „alles sichtbar"
+-- waere bei genau der Sorte Inhalt falsch, um die es hier geht.
+ALTER TABLE "pages" ADD COLUMN "portal_released" BOOLEAN NOT NULL DEFAULT 0;

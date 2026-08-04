@@ -186,6 +186,26 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
           </div>
 
           <div className={FIELD_CLASS}>
+            <Label htmlFor="edit-portal-released">Freigegeben fürs Portal</Label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                id="edit-portal-released"
+                name="portalReleased"
+                type="checkbox"
+                defaultChecked={page.portalReleased}
+                className="size-4 accent-primary"
+              />
+              <span>Diese Seite im Spieler-Wiki zeigen</span>
+            </label>
+            <p className="m-0 text-xs text-muted-foreground">
+              Ohne Haken bleibt die Seite vollständig im Studio — samt Titel, also auch aus
+              Suche, Seitenbaum und Inhaltsverzeichnis heraus. Das ist der Unterschied zum
+              <code className="mx-1">:::dm</code>-Bereich, der nur Zeilen aus einer sonst
+              sichtbaren Seite schneidet.
+            </p>
+          </div>
+
+          <div className={FIELD_CLASS}>
             <Label htmlFor="edit-tags">Tags (kommagetrennt)</Label>
             <Input id="edit-tags" name="tags" defaultValue={tags.join(", ")} />
           </div>
