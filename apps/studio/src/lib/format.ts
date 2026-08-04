@@ -24,8 +24,3 @@ export function formatStudioDate(
     timeStyle: "short",
   });
 }
-
-export function formatStudioDateOrDash(value: string | null | undefined): string {
-  if (!value) return "—";
-  return formatStudioDate(value);
-}

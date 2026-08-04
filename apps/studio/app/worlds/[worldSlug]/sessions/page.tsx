@@ -15,7 +15,7 @@ import {
 } from "@uwe/database/server";
 import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { CampaignSidebar } from "@/src/components/wiki";
-import { campaignNavItems } from "@/src/lib/world-nav";
+import { campaignNavItems } from "@/src/lib/campaign-nav";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { QuickCreateSessionDialog } from "@/src/components/world/QuickCreateSessionDialog";
 import { Badge, buttonVariants, Card, CardContent, EmptyState } from "@/src/components/ui";

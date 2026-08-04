@@ -1,21 +1,11 @@
-import fs from "node:fs";
-import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
-import {
-  ensureUploadDirectory,
-  inferAssetTypeFromMime,
-  inferMimeTypeFromFilename,
-  resolveAssetFilePath,
-  validateUploadInput,
-  UploadValidationError,
-} from "@uwe/assets";
+import { inferMimeTypeFromFilename, UploadValidationError } from "@uwe/assets";
 import {
   getAppRepository,
-  getSystemSettings,
-  logAuditEvent,
   prisma,
-  resolveEffectiveUploadsPath,
+  storeUploadedAsset,
   type AssetType,
 } from "@uwe/database/server";
 import { getUweEnvOrNull } from "@uwe/env";
@@ -26,7 +16,7 @@ interface RouteContext {
 }
 
 export async function POST(request: Request, context: RouteContext) {
-  const authError = await guardStudioApiMutation(request, { rateLimit: "upload" });
+  const authError = await guardStudioApiRequest(request, { rateLimit: "upload" });
   if (authError) return authError;
 
   const parsedParams = await parseParams(context.params, worldSlugParamSchema);
@@ -60,20 +50,27 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const metadata = parsedMetadata.data;
-  const title = metadata.title || file.name || "Unbenannt";
-  const description = metadata.description || null;
-  const pageId = metadata.pageId ?? null;
-
-  const mimeType = file.type || inferMimeTypeFromFilename(file.name);
   const buffer = Buffer.from(await file.arrayBuffer());
 
-  let validated;
+  // Die Upload-Sequenz (validate → write → createAsset → audit) liegt in
+  // storeUploadedAsset; hier bleiben Guard, Formular und Antwortformat.
+  let asset;
   try {
-    validated = validateUploadInput({
-      buffer,
-      originalFilename: file.name,
-      declaredMimeType: mimeType,
+    asset = await storeUploadedAsset(prisma, {
       worldId: world.id,
+      buffer,
+      title: metadata.title || file.name || "Unbenannt",
+      description: metadata.description || null,
+      type: (metadata.type as AssetType | undefined) || undefined,
+      validate: {
+        originalFilename: file.name,
+        declaredMimeType: file.type || inferMimeTypeFromFilename(file.name),
+      },
+      audit: {
+        type: metadata.type ?? null,
+        mimeType: file.type || null,
+        size: buffer.length,
+      },
     });
   } catch (error) {
     if (error instanceof UploadValidationError) {
@@ -82,42 +79,9 @@ export async function POST(request: Request, context: RouteContext) {
     throw error;
   }
 
-  const type =
-    (metadata.type as AssetType | undefined) || inferAssetTypeFromMime(validated.mimeType);
-
-  const storageKey = validated.storageKey;
-  const settings = await getSystemSettings();
-  const uploadsRoot = resolveEffectiveUploadsPath(settings);
-  ensureUploadDirectory(world.id, undefined, uploadsRoot);
-  const filePath = resolveAssetFilePath(storageKey, undefined, uploadsRoot);
-  await fs.promises.writeFile(filePath, buffer);
-
-  const asset = await repo.createAsset({
-    worldId: world.id,
-    title,
-    description,
-    type,
-    storageKey,
-    mimeType: validated.mimeType,
-    size: buffer.length,
-  });
-
-  if (pageId) {
-    await repo.linkAssetToPage(asset.id, pageId);
+  if (metadata.pageId) {
+    await repo.linkAssetToPage(asset.id, metadata.pageId);
   }
-
-  await logAuditEvent(prisma, {
-    action: "upload_created",
-    targetType: "asset",
-    targetId: asset.id,
-    worldId: world.id,
-    metadata: {
-      title: asset.title,
-      type: asset.type,
-      mimeType: asset.mimeType,
-      size: asset.size,
-    },
-  });
 
   const redirectUrl = new URL(`/worlds/${worldSlug}/assets?uploaded=1`, request.url);
   const accept = request.headers.get("accept") ?? "";

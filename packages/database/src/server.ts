@@ -270,6 +270,8 @@ export {
 } from "./world-templates";
 export { NON_SANDBOX_WORLD_WHERE, assertWorldExportAllowed } from "./world-sandbox";
 
+export { storeUploadedAsset, type StoreUploadedAssetInput } from "./asset-repository";
+
 export type {
   Campaign as DbCampaign,
   Asset as DbAsset,
@@ -336,6 +338,7 @@ export {
   buildPageView,
   buildWorldWikiIndex,
   combineBlockContent,
+  getPageGeneratorContext,
   pageToWikiNode,
   parseWikiLinks,
   renderPageContentHtml,
@@ -362,6 +365,15 @@ export {
 export { AuthService, createAuthService } from "./auth";
 export { TwoFactorService, createTwoFactorService } from "./two-factor-service";
 export type { CreateUserInput, CreateWorldMembershipInput } from "./auth";
+export {
+  DEFAULT_PAGE_LIST_LIMIT,
+  listPagesForViewerPaged,
+} from "./portal-page-list";
+export type {
+  ListPagesForViewerPagedOptions,
+  ViewerPageListItem,
+  ViewerPageListResult,
+} from "./portal-page-list";
 
 export {
   UserService,
@@ -1968,6 +1980,7 @@ export {
   ImageStudioService,
   createDndApiService,
   DndApiService,
+  DndApiError,
   resolveImageStudioConfig,
   resolveImageStudioConfigStatus,
   resolveDndApiConfig,

@@ -12,6 +12,7 @@ import {
   prisma,
   slugifyPageTitle,
 } from "@uwe/database/server";
+import { errorMessage } from "@/src/lib/api-response";
 import { enqueueAndDispatch } from "@/src/lib/job-executor";
 import {
   CAMPAIGN_PDF_ANALYSIS_KIND,
@@ -238,7 +239,7 @@ export async function executeImportCampaignPdfJobAction(
     revalidatePath("/import");
     return { resultSummary, undoToken };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "PDF-Kampagnenimport fehlgeschlagen.";
+    const message = errorMessage(error, "PDF-Kampagnenimport fehlgeschlagen.");
     await importJobs().markFailed(jobId, message);
     revalidatePath("/import");
     throw new Error(message);

@@ -1,21 +1,17 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
 import { completePasswordReset, createPrismaClient } from "@uwe/database/server";
+import { parseBody, resetPasswordBodySchema } from "@uwe/security";
 import { checkRateLimitAsync, clientIpFromHeaders, RATE_LIMIT_PRESETS } from "@/src/lib/rate-limit";
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as {
-    email?: string;
-    resetToken?: string;
-    newPassword?: string;
-  };
+  const parsed = await parseBody(request, resetPasswordBodySchema);
+  if (!parsed.success) return parsed.response;
 
-  const email = body.email?.trim();
-  const resetToken = body.resetToken?.trim();
-  const newPassword = body.newPassword;
+  const { email, resetToken, newPassword } = parsed.data;
 
   const ip = clientIpFromHeaders(request.headers);
-  const rateKey = `studio-reset-password:${ip}:${email?.toLowerCase() ?? "unknown"}`;
+  const rateKey = `studio-reset-password:${ip}:${email.toLowerCase()}`;
   const rate = await checkRateLimitAsync(rateKey, RATE_LIMIT_PRESETS.passwordReset);
   if (!rate.allowed) {
     return NextResponse.json(
@@ -29,9 +25,9 @@ export async function POST(request: Request) {
   try {
     const result = await completePasswordReset({
       db,
-      email: email ?? "",
-      resetToken: resetToken ?? "",
-      newPassword: newPassword ?? "",
+      email,
+      resetToken,
+      newPassword,
       request,
       surface: "studio",
     });

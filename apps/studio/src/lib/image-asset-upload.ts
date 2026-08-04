@@ -1,26 +1,20 @@
-import fs from "node:fs";
 import {
-  ensureUploadDirectory,
-  inferAssetTypeFromMime,
-  inferMimeTypeFromFilename,
-  resolveAssetFilePath,
   resolveUploadPolicyConfig,
-  validateUploadInput,
+  inferMimeTypeFromFilename,
   UploadValidationError,
   type DetectedFileKind,
   type UploadPolicyConfig,
 } from "@uwe/assets";
 import {
-  getAppRepository,
-  getSystemSettings,
-  logAuditEvent,
   NON_SANDBOX_WORLD_WHERE,
   prisma,
-  resolveEffectiveUploadsPath,
+  storeUploadedAsset,
 } from "@uwe/database/server";
 import { getUweEnvOrNull } from "@uwe/env";
 
 const IMAGE_KINDS: ReadonlySet<DetectedFileKind> = new Set(["png", "jpeg", "gif", "webp"]);
+
+const IMAGE_ONLY_ERROR = "Nur Bilder (PNG, JPEG, GIF, WebP) erlaubt.";
 
 function imageOnlyUploadPolicy(): UploadPolicyConfig {
   return {
@@ -44,7 +38,8 @@ export type UploadImageAssetResult =
  * Validate and store an image `File` as a `dm_only` asset, returning the new
  * asset reference. Shared by the Bug Center and Ideen-Management upload routes:
  * only PNG/JPEG/GIF/WebP are accepted and the binary is written under the
- * primary (non-sandbox) world's upload directory.
+ * primary (non-sandbox) world's upload directory. Die eigentliche Sequenz
+ * (validate → write → createAsset → audit) lebt in `storeUploadedAsset`.
  */
 export async function storeImageAsset(
   file: unknown,
@@ -71,57 +66,33 @@ export async function storeImageAsset(
     return { ok: false, status: 503, error: "Keine Welt für Bild-Speicherung vorhanden." };
   }
 
-  const mimeType = file.type || inferMimeTypeFromFilename(file.name);
   const buffer = Buffer.from(await file.arrayBuffer());
   const title = file.name || options.defaultTitle;
 
-  let validated;
   try {
-    validated = validateUploadInput({
-      buffer,
-      originalFilename: file.name,
-      declaredMimeType: mimeType,
+    const asset = await storeUploadedAsset(prisma, {
       worldId: world.id,
-      config: imageOnlyUploadPolicy(),
+      buffer,
+      title,
+      validate: {
+        originalFilename: file.name,
+        declaredMimeType: file.type || inferMimeTypeFromFilename(file.name),
+        policy: imageOnlyUploadPolicy(),
+        allowedKinds: IMAGE_KINDS,
+        allowedKindsError: IMAGE_ONLY_ERROR,
+      },
+      metadata: { source: options.source },
+      audit: { source: options.source },
     });
+
+    return {
+      ok: true,
+      asset: { assetId: asset.id, title: asset.title, mimeType: asset.mimeType ?? "" },
+    };
   } catch (error) {
     if (error instanceof UploadValidationError) {
       return { ok: false, status: 400, error: error.message };
     }
     throw error;
   }
-
-  if (!IMAGE_KINDS.has(validated.kind)) {
-    return { ok: false, status: 400, error: "Nur Bilder (PNG, JPEG, GIF, WebP) erlaubt." };
-  }
-
-  const repo = getAppRepository();
-  const settings = await getSystemSettings();
-  const uploadsRoot = resolveEffectiveUploadsPath(settings);
-  ensureUploadDirectory(world.id, undefined, uploadsRoot);
-  const filePath = resolveAssetFilePath(validated.storageKey, undefined, uploadsRoot);
-  fs.writeFileSync(filePath, buffer);
-
-  const asset = await repo.createAsset({
-    worldId: world.id,
-    title,
-    type: inferAssetTypeFromMime(validated.mimeType),
-    storageKey: validated.storageKey,
-    mimeType: validated.mimeType,
-    size: buffer.length,
-    metadata: { source: options.source },
-  });
-
-  await logAuditEvent(prisma, {
-    action: "upload_created",
-    targetType: "asset",
-    targetId: asset.id,
-    worldId: world.id,
-    metadata: { title: asset.title, source: options.source },
-  });
-
-  return {
-    ok: true,
-    asset: { assetId: asset.id, title: asset.title, mimeType: asset.mimeType ?? validated.mimeType },
-  };
 }

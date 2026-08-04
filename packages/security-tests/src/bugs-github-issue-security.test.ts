@@ -28,7 +28,7 @@ describe("bugs GitHub issue sync security", () => {
 
   it("route uses studio mutation guard and owner check", () => {
     const source = read(routePath);
-    assert.match(source, /guardStudioApiMutation/);
+    assert.match(source, /guardStudioApiRequest/);
     assert.match(source, /resolveOwnerApiUser/);
     assert.match(source, /resolveGitHubIssueConfig/);
     assert.doesNotMatch(source, /process\.env\.(GITHUB_TOKEN|GITHUB_ISSUE_TOKEN)/);

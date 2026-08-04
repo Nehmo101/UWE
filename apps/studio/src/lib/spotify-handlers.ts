@@ -21,7 +21,7 @@ import {
   verifySpotifyOAuthState,
 } from "./spotify-oauth-state";
 import { getOAuthStateCookieOptions } from "@uwe/auth";
-import { jsonError } from "./api-response";
+import { jsonError, worldNotFound } from "./api-response";
 import {
   isSpotifyConnectAvailable,
   tryDispatchSpotifyConnector,
@@ -180,7 +180,7 @@ export async function disconnectSpotify(worldSlug: string) {
   try {
     const removed = await runtime.service.disconnectByWorldSlug(worldSlug);
     if (!removed) {
-      return jsonError("Welt nicht gefunden.", 404);
+      return worldNotFound();
     }
 
     return NextResponse.json({ ok: true });

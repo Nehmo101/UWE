@@ -1,4 +1,4 @@
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { getJobDetail, postCancelJob, postRetryJob } from "../../../../src/lib/job-api-handlers";
 import { idSchema, parseBody, parseParams } from "@uwe/security";
 import { z } from "zod";
@@ -24,7 +24,7 @@ export async function GET(request: Request, context: RouteContext) {
 }
 
 export async function POST(request: Request, context: RouteContext) {
-  const authError = await guardStudioApiMutation(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const parsedParams = await parseParams(context.params, jobIdParamSchema);

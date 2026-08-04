@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@uwe/database/server";
 import { createTerraService } from "@uwe/database/terra";
+import { actionError } from "@/src/lib/api-response";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import { requireStudioWorldEdit } from "@/src/lib/authz";
 import { getCurrentAuthUser } from "@/src/lib/auth";
@@ -125,7 +126,7 @@ export async function speichereTerraKarteAction(formData: FormData): Promise<Ter
     }
     return { ok: false, error: "Karte gehört nicht zu dieser Welt" };
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "Speichern fehlgeschlagen" };
+    return actionError(error, "Speichern fehlgeschlagen");
   }
 }
 
@@ -141,7 +142,7 @@ export async function erstelleTerraKarteAction(formData: FormData): Promise<Terr
     revalidatePath(`/worlds/${worldSlug}/karten`);
     return { ok: true, karteId: karte.id };
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "Anlegen fehlgeschlagen" };
+    return actionError(error, "Anlegen fehlgeschlagen");
   }
 }
 
@@ -159,7 +160,7 @@ export async function benenneTerraKarteAction(formData: FormData): Promise<Terra
     revalidatePath(`/worlds/${worldSlug}/karten`);
     return { ok: true };
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "Umbenennen fehlgeschlagen" };
+    return actionError(error, "Umbenennen fehlgeschlagen");
   }
 }
 
@@ -177,7 +178,7 @@ export async function loescheTerraKarteAction(formData: FormData): Promise<Terra
     revalidatePath(`/worlds/${worldSlug}/karten`);
     return { ok: true };
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "Löschen fehlgeschlagen" };
+    return actionError(error, "Löschen fehlgeschlagen");
   }
 }
 
@@ -204,7 +205,7 @@ export async function gibTerraKarteFreiAction(formData: FormData): Promise<Terra
     revalidatePath(`/worlds/${worldSlug}/karten`);
     return { ok: true };
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "Freigeben fehlgeschlagen" };
+    return actionError(error, "Freigeben fehlgeschlagen");
   }
 }
 
@@ -232,6 +233,6 @@ export async function weiseTerraKarteZurueckAction(formData: FormData): Promise<
     revalidatePath(`/worlds/${worldSlug}/karten`);
     return { ok: true };
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "Zurückgeben fehlgeschlagen" };
+    return actionError(error, "Zurückgeben fehlgeschlagen");
   }
 }

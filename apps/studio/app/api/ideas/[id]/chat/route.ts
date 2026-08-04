@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { z } from "zod";
 import {
   createDevIdeaService,
@@ -22,7 +22,7 @@ const ideaChatBodySchema = z.object({
 });
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
-  const authError = await guardStudioApiMutation(request, { rateLimit: "ai" });
+  const authError = await guardStudioApiRequest(request, { rateLimit: "ai" });
   if (authError) return authError;
 
   const owner = await resolveOwnerApiUser();

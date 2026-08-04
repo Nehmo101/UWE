@@ -4,12 +4,9 @@ import type { AuthUser } from "@uwe/auth";
 const AI_CHAT_BLOCKED_MESSAGE =
   "KI-Chat ist für deinen Account nicht freigeschaltet. Bitte den Master-Admin, dir AI-Freigaben unter KI & Maschinenraum Fallback zu vergeben.";
 
-const AI_KNOWLEDGE_BLOCKED_MESSAGE =
-  "Wissens-KI ist für deinen Account nicht freigeschaltet. Bitte den Master-Admin, dir AI-Freigaben unter KI & Maschinenraum Fallback zu vergeben.";
-
 async function resolveGatewayFeatureAccess(
   user: AuthUser | null,
-  permission: "AI_CHAT_USE" | "AI_KNOWLEDGE_USE",
+  permission: "AI_CHAT_USE",
   blockedMessage: string,
 ): Promise<{ allowed: boolean; message: string }> {
   if (!user) {
@@ -35,11 +32,4 @@ export async function resolveAiChatAccess(user: AuthUser | null): Promise<{
   message: string;
 }> {
   return resolveGatewayFeatureAccess(user, "AI_CHAT_USE", AI_CHAT_BLOCKED_MESSAGE);
-}
-
-export async function resolveAiKnowledgeAccess(user: AuthUser | null): Promise<{
-  allowed: boolean;
-  message: string;
-}> {
-  return resolveGatewayFeatureAccess(user, "AI_KNOWLEDGE_USE", AI_KNOWLEDGE_BLOCKED_MESSAGE);
 }

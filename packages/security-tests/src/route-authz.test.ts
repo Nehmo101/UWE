@@ -319,7 +319,10 @@ describe("route authorization — player management (/players/* → auth + mail)
   it("manages players via world membership and mail recipients API", () => {
     const mailRoute = read("apps/studio/app/api/mail/recipients/route.ts");
     assert.match(mailRoute, AUTH_GUARD);
-    assert.match(mailRoute, /sync_players/);
+    // Der Spieler-Sync ist der Default-Zweig des Handlers: `sync_players`
+    // (Schema-Default) landet in `ensurePlayersGroup` — das Literal steht
+    // seit dem Service-Umbau nicht mehr in der Routendatei selbst.
+    assert.match(mailRoute, /ensurePlayersGroup|sync_players/);
   });
 });
 

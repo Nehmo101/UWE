@@ -27,7 +27,7 @@ import {
   WikiPageTable,
   type WikiPageRow,
 } from "@/src/components/wiki";
-import { campaignNavItems } from "@/src/lib/world-nav";
+import { campaignNavItems } from "@/src/lib/campaign-nav";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { worldWikiPath } from "@/src/lib/world-last-route";
 

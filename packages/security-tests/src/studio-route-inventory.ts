@@ -61,8 +61,11 @@ export const STUDIO_PUBLIC_READ_API_ROUTES = new Set([
   "import/formats/route.ts",
 ]);
 
+// `withWorldRoute`/`withWorldBodyRoute` (apps/studio/src/lib/world-route.ts)
+// kapseln guardStudioApiRequest + Slug-Parsing — Routen, die darüber laufen,
+// gelten als geschützt.
 export const STUDIO_AUTH_GUARD_PATTERN =
-  /requireStudioApiAuth|requireAdminApiAuth|guardStudioMutation|guardStudioApiRequest|guardStudioApiMutation|guardStudioAdminApiRequest|requireRestoreOwnerAuth|requireOwnerApiAuth|requirePrivateHealthAuth|requireAdminMailApi|requireAdminMailMutation|authenticateConnector/;
+  /requireStudioApiAuth|requireAdminApiAuth|guardStudioMutation|guardStudioApiRequest|guardStudioAdminApiRequest|requireRestoreOwnerAuth|requireOwnerApiAuth|requirePrivateHealthAuth|requireAdminMailApi|requireAdminMailMutation|authenticateConnector|withWorldRoute|withWorldBodyRoute/;
 
 export function listStudioApiRouteFiles(repoRoot: string): string[] {
   return listApiRouteFiles(path.join(repoRoot, STUDIO_API_ROOT));

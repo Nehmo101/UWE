@@ -1,4 +1,4 @@
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
 import {
@@ -6,7 +6,13 @@ import {
   createPrismaClient,
   getAppRepository,
 } from "@uwe/database/server";
-import { parseBody, parseParams, passthroughBodySchema, safeHandlerError, worldSlugParamSchema } from "@uwe/security";
+import {
+  brainEntryCreateBodySchema,
+  parseBody,
+  parseParams,
+  safeHandlerError,
+  worldSlugParamSchema,
+} from "@uwe/security";
 
 interface RouteParams {
   params: Promise<{ worldSlug: string }>;
@@ -56,31 +62,16 @@ export async function GET(request: Request, { params }: RouteParams) {
 }
 
 export async function POST(request: Request, { params }: RouteParams) {
-  const authError = await guardStudioApiMutation(request, { rateLimit: "ai" });
+  const authError = await guardStudioApiRequest(request, { rateLimit: "ai" });
   if (authError) return authError;
 
   const parsedParams = await parseParams(params, worldSlugParamSchema);
   if (!parsedParams.success) return parsedParams.response;
 
-  const parsed = await parseBody(request, passthroughBodySchema);
+  const parsed = await parseBody(request, brainEntryCreateBodySchema);
   if (!parsed.success) return parsed.response;
 
-  const body = parsed.data as {
-    kind?: string;
-    title?: string;
-    content?: string;
-    documentType?: string;
-    factType?: string;
-    source?: string;
-    status?: string;
-    campaignId?: string | null;
-    pageId?: string | null;
-    gameSessionId?: string | null;
-  };
-
-  if (!body.kind || !body.title?.trim()) {
-    return jsonError("kind und title sind erforderlich.", 400);
-  }
+  const body = parsed.data;
 
   const { worldSlug } = parsedParams.data;
   const { db, brain, repo } = brainService();
@@ -93,11 +84,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     if (body.kind === "document") {
       const document = await brain.createDocument({
         worldId: world.id,
-        title: body.title.trim(),
-        content: body.content ?? "",
-        documentType: (body.documentType as never) ?? "general",
-        source: (body.source as never) ?? "manual",
-        status: (body.status as never) ?? "draft",
+        title: body.title,
+        content: body.content,
+        documentType: body.documentType,
+        source: body.source,
+        status: body.status,
         campaignId: body.campaignId ?? null,
         pageId: body.pageId ?? null,
         gameSessionId: body.gameSessionId ?? null,
@@ -107,11 +98,11 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     const fact = await brain.createFact({
       worldId: world.id,
-      title: body.title.trim(),
-      content: body.content ?? "",
-      factType: (body.factType as never) ?? "custom",
-      source: (body.source as never) ?? "manual",
-      status: (body.status as never) ?? "draft",
+      title: body.title,
+      content: body.content,
+      factType: body.factType,
+      source: body.source,
+      status: body.status,
       campaignId: body.campaignId ?? null,
       pageId: body.pageId ?? null,
       gameSessionId: body.gameSessionId ?? null,

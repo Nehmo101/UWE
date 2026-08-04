@@ -13,3 +13,11 @@ export {
   splitGitHubRepo,
   type GitHubIssueConfig,
 } from "./config";
+export {
+  buildIssueBody,
+  githubIssueFromMetadata,
+  linkBugReportToGitHubIssue,
+  mergeGithubIssueMetadata,
+  type BugReportForIssue,
+  type LinkBugReportResult,
+} from "./link-bug-report";

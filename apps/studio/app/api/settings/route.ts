@@ -1,7 +1,7 @@
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { getAppRepository, validateSettingsUpdate } from "@uwe/database/server";
-import { parseBody, passthroughBodySchema } from "@uwe/security";
+import { parseBody, systemSettingsUpdateBodySchema } from "@uwe/security";
 
 export async function GET(request: Request) {
   const authError = await guardStudioApiRequest(request);
@@ -12,12 +12,14 @@ export async function GET(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  const authError = await guardStudioApiMutation(request, { rateLimit: "setup" });
+  const authError = await guardStudioApiRequest(request, { rateLimit: "setup" });
   if (authError) return authError;
 
-  const parsed = await parseBody(request, passthroughBodySchema);
+  const parsed = await parseBody(request, systemSettingsUpdateBodySchema);
   if (!parsed.success) return parsed.response;
 
+  // Sektions-Inhalte prüft weiterhin der Domain-Validator — das Zod-Schema
+  // sichert nur die äußere Form (bekannte Sektionen, Objekte als Werte).
   const validation = validateSettingsUpdate(parsed.data);
   if (!validation.ok) {
     return NextResponse.json(

@@ -9,18 +9,17 @@ import {
 } from "@uwe/auth";
 import { getAccessContextForWorld } from "@/src/lib/auth";
 import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { parseBody, previewBodySchema } from "@uwe/security";
 
 export async function POST(request: Request) {
   const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
-  const body = (await request.json()) as { worldSlug?: string; previewAsUserId?: string | null };
-  const worldSlug = body.worldSlug?.trim();
-  const previewAsUserId = body.previewAsUserId ?? null;
+  const parsed = await parseBody(request, previewBodySchema);
+  if (!parsed.success) return parsed.response;
 
-  if (!worldSlug) {
-    return jsonError("worldSlug ist erforderlich.", 400);
-  }
+  const { worldSlug } = parsed.data;
+  const previewAsUserId = parsed.data.previewAsUserId ?? null;
 
   const ctx = await getAccessContextForWorld(worldSlug);
   if (!ctx || !canPreviewAsPlayer(ctx)) {

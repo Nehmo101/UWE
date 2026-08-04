@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { jsonError } from "@/src/lib/api-response";
+import { worldNotFound } from "@/src/lib/api-response";
 import {
   capabilityOfflineMessage,
   type ConnectorCapability,
@@ -75,7 +75,7 @@ export async function dispatchSoundboardEngine(
   deps: SoundboardEngineDeps = defaultDeps(),
 ): Promise<NextResponse> {
   const world = await deps.resolveWorld(worldSlug);
-  if (!world) return jsonError("Welt nicht gefunden.", 404);
+  if (!world) return worldNotFound();
 
   const type = ACTION_JOB_TYPES[input.action];
   const payload = {

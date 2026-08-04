@@ -1,7 +1,6 @@
-import { guardStudioApiRequest, guardStudioApiRequestWithContext } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
-import { resolveClientIp } from "@uwe/auth";
 import {
   createImageStudioService,
   createJobService,
@@ -9,9 +8,9 @@ import {
   prisma,
   resolveImageStudioConfig,
 } from "@uwe/database/server";
-import { enforceAiAccessPolicy, nonEmptyString, optionalString, parseBody, slugSchema } from "@uwe/security";
+import { nonEmptyString, optionalString, parseBody, slugSchema } from "@uwe/security";
 import { dispatchJob } from "@/src/lib/job-executor";
-import { aiPolicyErrorResponse } from "@/src/lib/ai-security";
+import { enforceStudioAiRoute } from "@/src/lib/ai-security";
 import { z } from "zod";
 import type { ImageStudioPromptContextMode } from "@uwe/image-studio";
 
@@ -42,18 +41,10 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const { error: authError, context } = await guardStudioApiRequestWithContext(request);
+  // Ein Guard statt seiner Einzelteile — enforceStudioAiRoute bündelt
+  // Rollen-Gate, Rate-Limit („ai") und KI-Policy.
+  const { error: authError, context } = await enforceStudioAiRoute(request);
   if (authError) return authError;
-
-  try {
-    enforceAiAccessPolicy({
-      studioAccess: true,
-      studioTrusted: true,
-      userKey: resolveClientIp(request.headers),
-    });
-  } catch (error) {
-    return aiPolicyErrorResponse(error);
-  }
 
   const config = resolveImageStudioConfig();
   if (!config.enabled) {

@@ -4,26 +4,22 @@ import {
   requireStudioActionAuth,
   requireStudioAiActionAuth,
 } from "@/src/lib/studio-action-auth";
-import fs from "node:fs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   buildStorageKey,
-  ensureUploadDirectory,
-  resolveAssetFilePath,
 } from "@uwe/assets";
 import {
   adoptAssetToTarget,
   createDndApiService,
   createImageStudioService,
   createJobService,
-  createUweRepositoryFromClient,
   getAppRepository,
   getSystemSettings,
   prisma,
-  resolveEffectiveUploadsPath,
   syncImageStudioProjectLinksToAsset,
 } from "@uwe/database/server";
+import { storeUploadedAsset } from "@uwe/database/server";
 import { brainPrisma } from "@uwe/database/brain-client";
 import type { ImageStudioLinkTargetType } from "@uwe/database/server";
 import type { ImageStudioPromptContextMode } from "@uwe/image-studio";
@@ -268,22 +264,18 @@ export async function saveImageStudioCanvasAction(formData: FormData) {
   }
   await requireStudioWorldEdit(world.slug);
 
-  const settings = await getSystemSettings();
-  const uploadsRoot = resolveEffectiveUploadsPath(settings);
-  ensureUploadDirectory(project.worldId, undefined, uploadsRoot);
-  const storageKey = buildStorageKey(project.worldId, "image-studio-canvas.png");
-  const filePath = resolveAssetFilePath(storageKey, undefined, uploadsRoot);
-  fs.writeFileSync(filePath, Buffer.from(imageBase64, "base64"));
-
-  const repo = createUweRepositoryFromClient(prisma);
-  const asset = await repo.createAsset({
+  // Ablage-Sequenz zentral in storeUploadedAsset (schreibt + Audit).
+  const asset = await storeUploadedAsset(prisma, {
     worldId: project.worldId,
+    buffer: Buffer.from(imageBase64, "base64"),
     title,
     type: "image",
-    storageKey,
-    mimeType: "image/png",
-    size: Buffer.byteLength(imageBase64, "base64"),
+    storage: {
+      storageKey: buildStorageKey(project.worldId, "image-studio-canvas.png"),
+      mimeType: "image/png",
+    },
     metadata: { source: "image_studio_canvas", projectId },
+    audit: { source: "image_studio_canvas", projectId },
   });
 
   await imageStudio.addVersion({

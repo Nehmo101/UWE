@@ -6,10 +6,10 @@ import {
   readSessionTokensFromCookieHeader,
   SESSION_COOKIE_NAME,
 } from "@uwe/auth";
-import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 
 export async function POST(request: Request) {
-  const authError = await guardStudioApiMutation(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const cookieStore = await cookies();

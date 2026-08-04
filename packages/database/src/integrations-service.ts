@@ -1,3 +1,15 @@
+import {
+  createEncounterPage,
+  gatherEncounterCandidates,
+  getOpen5eMonster,
+  importOpen5eStatblockPage,
+  listOpen5eMonstersByChallengeRating,
+  searchAllDndApis,
+  serializeEncounterComposition,
+  suggestCandidateChallengeRatings,
+  suggestEncounterComposition,
+  type EncounterCandidate,
+} from "@uwe/dnd-api";
 import type {
   DndApiProvider,
   ImageStudioLinkTargetType,
@@ -6,6 +18,9 @@ import type {
 } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
 import { toPrismaJsonValue } from "./json-utils";
+import { buildPageUrl } from "./page-types";
+import { slugifyPageTitle } from "./page-templates";
+import type { UweRepository } from "./repository";
 
 export type {
   ImageStudioProject,
@@ -262,6 +277,12 @@ export class DndApiService {
     entityType?: string | null;
     notes?: string | null;
   }) {
+    // Kein Scraping, nur manuelle Referenz — die Regel gehört zur Domäne,
+    // nicht in den Route-Handler.
+    if (!input.url.includes("dndbeyond.com")) {
+      throw new DndApiError("Nur D&D Beyond Links erlaubt — kein Scraping, nur manuelle Referenz.");
+    }
+
     return this.db.dndBeyondReference.create({
       data: {
         worldId: input.worldId,
@@ -276,6 +297,146 @@ export class DndApiService {
 
   async deleteBeyondReference(id: string) {
     await this.db.dndBeyondReference.delete({ where: { id } });
+  }
+
+  // --- Orchestrierung (früher inline in api/dnd-api/route.ts) ---------------
+  //
+  // Die Cache-Schlüssel-Politik lebt HIER, beim Cache: wer den Schlüssel
+  // ändern will, ändert ihn an genau einer Stelle. Der Route-Handler ist nur
+  // noch Guard + Zod + Dispatch.
+
+  async getMonsterWithCache(slug: string, config: DndApiConfig) {
+    const cacheKey = `monster:${slug}`;
+    const cached = await this.getCached("open5e", cacheKey);
+    if (cached) {
+      return { data: cached, cached: true };
+    }
+
+    const data = await getOpen5eMonster(slug, {
+      open5eEnabled: config.open5eEnabled,
+      dnd5eSrdEnabled: config.dnd5eSrdEnabled,
+    });
+    await this.setCached("open5e", cacheKey, data, config.cacheTtlSeconds);
+    return { data, cached: false };
+  }
+
+  async searchWithCache(query: string, config: DndApiConfig) {
+    const cacheKey = `search:${query.toLowerCase()}`;
+    const cached = await this.getCached("open5e", cacheKey);
+    if (cached && Array.isArray(cached)) {
+      return { results: cached, cached: true };
+    }
+
+    const results = await searchAllDndApis(query, {
+      open5eEnabled: config.open5eEnabled,
+      dnd5eSrdEnabled: config.dnd5eSrdEnabled,
+    });
+    await this.setCached("open5e", cacheKey, results, config.cacheTtlSeconds);
+    return { results, cached: false };
+  }
+
+  /** Holt den Statblock (gecacht) und legt die Monster-Seite an. */
+  async importStatblock(
+    repo: UweRepository,
+    input: { worldId: string; worldSlug: string; slug: string; title?: string | null },
+    config: DndApiConfig,
+  ) {
+    const monster = await getOpen5eMonster(input.slug, {
+      open5eEnabled: config.open5eEnabled,
+      dnd5eSrdEnabled: config.dnd5eSrdEnabled,
+    });
+
+    const page = await importOpen5eStatblockPage(repo, {
+      worldId: input.worldId,
+      worldSlug: input.worldSlug,
+      open5eSlug: input.slug,
+      title: input.title ?? undefined,
+      monster,
+      slugify: slugifyPageTitle,
+    });
+
+    return { page, editHref: `${buildPageUrl(input.worldSlug, page.type, page.slug)}/edit` };
+  }
+
+  /** Schlägt eine Begegnung vor — Kandidaten je Herausforderungsgrad gecacht. */
+  async generateEncounter(
+    input: {
+      partyLevel: number;
+      partySize: number;
+      difficulty: "easy" | "medium" | "hard" | "deadly";
+      style?: "boss" | "horde" | "mixed";
+    },
+    config: DndApiConfig,
+  ) {
+    if (!config.open5eEnabled) {
+      throw new DndApiError("Open5e ist deaktiviert — Generator nicht verfügbar.");
+    }
+
+    const crBuckets = suggestCandidateChallengeRatings(
+      input.partyLevel,
+      input.partySize,
+      input.difficulty,
+    );
+
+    const candidates = await gatherEncounterCandidates(crBuckets, async (cr) => {
+      const cacheKey = `monsters-cr:${cr}`;
+      const cached = await this.getCached("open5e", cacheKey);
+      if (Array.isArray(cached)) {
+        return cached as unknown as EncounterCandidate[];
+      }
+      const monsters = await listOpen5eMonstersByChallengeRating(cr, {
+        open5eEnabled: config.open5eEnabled,
+      });
+      await this.setCached("open5e", cacheKey, monsters, config.cacheTtlSeconds);
+      return monsters;
+    });
+
+    const composition = suggestEncounterComposition({
+      partyLevel: input.partyLevel,
+      partySize: input.partySize,
+      difficulty: input.difficulty,
+      style: input.style,
+      candidates,
+    });
+
+    return serializeEncounterComposition(composition);
+  }
+
+  /** Legt eine Begegnungs-Seite aus einer manuellen Monsterliste an. */
+  async createEncounter(
+    repo: UweRepository,
+    input: {
+      worldId: string;
+      worldSlug: string;
+      title?: string | null;
+      partyLevel?: number;
+      partySize?: number;
+      monsters: Array<{ name: string; cr?: string | null; slug: string; count?: number }>;
+    },
+  ) {
+    const page = await createEncounterPage(repo, {
+      worldId: input.worldId,
+      worldSlug: input.worldSlug,
+      title: input.title ?? undefined,
+      partyLevel: input.partyLevel,
+      partySize: input.partySize,
+      // createEncounterPage kennt kein `null` für cr — hier normalisieren.
+      monsters: input.monsters.map(({ cr, ...monster }) => ({
+        ...monster,
+        cr: cr ?? undefined,
+      })),
+      slugify: slugifyPageTitle,
+    });
+
+    return { page, editHref: `${buildPageUrl(input.worldSlug, page.type, page.slug)}/edit` };
+  }
+}
+
+/** Domänenfehler des DnD-API-Service — die Nachricht ist nutzerzeigbar (400). */
+export class DndApiError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DndApiError";
   }
 }
 

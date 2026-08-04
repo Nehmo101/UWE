@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { jsonError } from "@/src/lib/api-response";
+import { worldNotFound } from "@/src/lib/api-response";
 import {
   capabilityOfflineMessage,
   type ConnectorCapability,
@@ -98,7 +98,7 @@ export async function tryDispatchSpotifyConnector(
 
   if (deps.registry.hasCapability("spotify_connect")) {
     const directWorld = await resolveWorld();
-    if (!directWorld) return jsonError("Welt nicht gefunden.", 404);
+    if (!directWorld) return worldNotFound();
 
     try {
       const direct = await deps.registry.dispatch({
@@ -134,7 +134,7 @@ export async function tryDispatchSpotifyConnector(
   if (!hasQueueCapability(summary, "spotify_connect")) return null;
 
   const queueWorld = await resolveWorld();
-  if (!queueWorld) return jsonError("Welt nicht gefunden.", 404);
+  if (!queueWorld) return worldNotFound();
 
   const job = await deps.service.enqueueJob({
     type,

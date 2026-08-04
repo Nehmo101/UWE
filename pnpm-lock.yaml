@@ -946,6 +946,9 @@ importers:
       '@uwe/connector':
         specifier: workspace:*
         version: link:../connector
+      '@uwe/dnd-api':
+        specifier: workspace:*
+        version: link:../dnd-api
       '@uwe/env':
         specifier: workspace:*
         version: link:../env

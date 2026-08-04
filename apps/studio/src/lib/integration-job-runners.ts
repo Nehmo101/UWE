@@ -1,20 +1,15 @@
-import fs from "node:fs";
 import {
   buildStorageKey,
-  ensureUploadDirectory,
-  resolveAssetFilePath,
 } from "@uwe/assets";
 import {
   createCalendarService,
   createImageStudioService,
   createPrismaClient,
   createResearchService,
-  createUweRepositoryFromClient,
-  getSystemSettings,
-  resolveEffectiveUploadsPath,
   syncImageStudioProjectLinksToAsset,
   type JobService,
 } from "@uwe/database/server";
+import { storeUploadedAsset } from "@uwe/database/server";
 import { brainPrisma } from "@uwe/database/brain-client";
 import { familyPrisma } from "@uwe/database/family-client";
 import { fetchIcalFeed, parseIcalEvents, putCalDavEvent, syncCalDavCollection } from "@uwe/calendar";
@@ -91,7 +86,6 @@ export async function runImageStudioJob(ctx: JobRunnerContext): Promise<Record<s
     await ctx.jobs.updateProgress(ctx.jobId, 60, "Bild speichern");
     await assertNotCancelled(ctx.jobs, ctx.jobId);
 
-    const repo = createUweRepositoryFromClient(db);
 
     if (!activeProjectId && payload.worldId) {
       const project = await imageStudio.createProject({
@@ -106,21 +100,18 @@ export async function runImageStudioJob(ctx: JobRunnerContext): Promise<Record<s
       return { imageBase64Length: result.imageBase64.length, provider: result.providerUsed };
     }
 
-    const settings = await getSystemSettings();
-    const uploadsRoot = resolveEffectiveUploadsPath(settings);
-    ensureUploadDirectory(payload.worldId, undefined, uploadsRoot);
-    const storageKey = buildStorageKey(payload.worldId, "image-studio.png");
-    const filePath = resolveAssetFilePath(storageKey, undefined, uploadsRoot);
-    fs.writeFileSync(filePath, Buffer.from(result.imageBase64, "base64"));
-
-    const asset = await repo.createAsset({
+    // Ablage-Sequenz zentral in storeUploadedAsset (schreibt + Audit).
+    const asset = await storeUploadedAsset(db, {
       worldId: payload.worldId,
+      buffer: Buffer.from(result.imageBase64, "base64"),
       title: payload.title ?? `Image Studio — ${payload.task}`,
       type: "image",
-      storageKey,
-      mimeType: result.mimeType ?? "image/png",
-      size: Buffer.byteLength(result.imageBase64, "base64"),
+      storage: {
+        storageKey: buildStorageKey(payload.worldId, "image-studio.png"),
+        mimeType: result.mimeType ?? "image/png",
+      },
       metadata: { source: "image_studio", task: payload.task, provider: result.providerUsed },
+      audit: { source: "image_studio", task: payload.task },
     });
 
     const version = await imageStudio.addVersion({

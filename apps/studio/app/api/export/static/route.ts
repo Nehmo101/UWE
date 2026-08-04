@@ -1,4 +1,4 @@
-import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { jsonError } from "@/src/lib/api-response";
 import path from "node:path";
 import { NextResponse } from "next/server";
@@ -42,7 +42,9 @@ async function resolveExportDir(worldSlug: string, requestedDirName?: string): P
 }
 
 export async function POST(request: Request) {
-  const authError = await guardStudioApiMutation(request);
+  // Ein statischer Export rendert die ganze Welt — teuer genug, um ihn wie
+  // die Import-Routen zu takten.
+  const authError = await guardStudioApiRequest(request, { rateLimit: "import" });
   if (authError) {
     return authError;
   }

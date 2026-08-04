@@ -13,6 +13,7 @@ import {
   createAuthService,
   createPrismaClient,
   createUweRepository,
+  getPageGeneratorContext,
   prisma,
 } from "@uwe/database/server";
 import { jsonError } from "@/src/lib/api-response";
@@ -122,22 +123,17 @@ export async function GET(request: Request) {
       };
     }
   } else if (context.pageSlug) {
-    const page = await repo.getPageBySlug(context.worldSlug, context.pageSlug);
-    if (page) {
-      canonicalStatus = page.canonicalStatus;
-      pageContent = page.contentBlocks.map((b) => b.content).join("\n");
-      content = {
-        summary: page.summary,
-        description: pageContent,
-        readAloud: page.contentBlocks
-          .filter((b) => b.type === "player_text")
-          .map((b) => b.content)
-          .join("\n"),
-        dmNotes: page.contentBlocks
-          .filter((b) => b.type === "rich_text")
-          .map((b) => b.content)
-          .join("\n"),
-      };
+    // Zonen-Mapping (player_text → readAloud, rich_text → dmNotes) liegt im
+    // Page-Service — hier wird nur noch abgeholt.
+    const generatorContext = await getPageGeneratorContext(
+      repo,
+      context.worldSlug,
+      context.pageSlug,
+    );
+    if (generatorContext) {
+      canonicalStatus = generatorContext.canonicalStatus;
+      pageContent = generatorContext.pageContent;
+      content = generatorContext.content;
     }
   }
 

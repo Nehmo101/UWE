@@ -15,7 +15,7 @@ import { checkRateLimit, clientIpFromHeaders, RATE_LIMIT_PRESETS } from "./rate-
 /**
  * Shared preamble for every KI-Chat API route.
  *
- * Brain has no `guardStudioApiMutation` equivalent, so the same-origin check
+ * Brain has no `guardStudioApiRequest` equivalent, so the same-origin check
  * that Studio gets for free has to be spelled out here — without it these
  * routes would be CSRF-open to any site the owner visits while logged in.
  */

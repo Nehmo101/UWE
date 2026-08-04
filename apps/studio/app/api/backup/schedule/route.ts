@@ -1,11 +1,19 @@
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import {
   readBackupScheduleConfig,
   writeBackupScheduleConfig,
   type BackupScheduleConfig,
 } from "@uwe/backup";
+import { parseBody } from "@uwe/security";
+import { z } from "zod";
 import { getUserFromRequestCookieHeader } from "../../../../src/lib/auth-session";
+
+/** Spiegelt BackupScheduleConfig aus @uwe/backup — beide Felder sind Teil-Updates. */
+const backupScheduleBodySchema = z.object({
+  enabled: z.boolean().optional(),
+  frequency: z.enum(["daily", "weekly", "monthly"]).optional(),
+});
 
 export async function GET(request: Request) {
   const authError = await guardStudioApiRequest(request);
@@ -16,7 +24,8 @@ export async function GET(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  const authError = await guardStudioApiMutation(request);
+  // Konfigurations-Schreibpfad wie die übrigen Backup-/Admin-Routen takten.
+  const authError = await guardStudioApiRequest(request, { rateLimit: "setup" });
   if (authError) return authError;
 
   const user = await getUserFromRequestCookieHeader(request.headers.get("cookie"));
@@ -27,14 +36,13 @@ export async function PUT(request: Request) {
     );
   }
 
-  const body = (await request.json()) as Partial<BackupScheduleConfig>;
+  const parsed = await parseBody(request, backupScheduleBodySchema);
+  if (!parsed.success) return parsed.response;
+
   const current = readBackupScheduleConfig();
   const updated: BackupScheduleConfig = {
-    enabled: body.enabled !== undefined ? body.enabled !== false : current.enabled,
-    frequency:
-      body.frequency && (["daily", "weekly", "monthly"] as const).includes(body.frequency)
-        ? body.frequency
-        : current.frequency,
+    enabled: parsed.data.enabled ?? current.enabled,
+    frequency: parsed.data.frequency ?? current.frequency,
   };
 
   writeBackupScheduleConfig(updated);

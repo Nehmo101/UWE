@@ -1,21 +1,37 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
 import { resolveClientIp } from "@uwe/auth";
+import type { ApiAuthContext, StudioGuardOptions } from "@uwe/security";
 import {
   AiAccessDeniedError,
   AiPolicyViolationError,
   enforceAiAccessPolicy,
-  enforceAiRequestLimits,
   EngineBoundaryError,
   SsrfBlockedError,
 } from "@uwe/security";
 
-import { requireStudioApiAuth } from "./studio-api-auth";
+import { guardStudioApiRequestWithContext } from "./studio-admin-auth";
 
-export function enforceStudioAiRoute(request: Request): Response | null {
-  const authError = requireStudioApiAuth(request);
-  if (authError) {
-    return authError;
+/**
+ * Der eine Guard für KI-Routen: CSRF/Rollen-Gate (mit Kontext), Rate-Limit
+ * („ai" als Default) und die KI-Zugriffs-Policy in einem Aufruf.
+ *
+ * Ihn zu umgehen heißt, seinen Rumpf zu kopieren — genau das stand einmal
+ * inline in der Image-Studio-Route und lief der Policy davon. Neue KI-Routen
+ * nehmen diesen Helfer, nicht seine Einzelteile.
+ */
+export async function enforceStudioAiRoute(
+  request: Request,
+  options: StudioGuardOptions = {},
+): Promise<
+  { error: Response; context: null } | { error: null; context: ApiAuthContext }
+> {
+  const { error, context } = await guardStudioApiRequestWithContext(request, {
+    rateLimit: "ai",
+    ...options,
+  });
+  if (error) {
+    return { error, context: null };
   }
 
   try {
@@ -24,29 +40,18 @@ export function enforceStudioAiRoute(request: Request): Response | null {
       studioTrusted: true,
       userKey: resolveClientIp(request.headers),
     });
-  } catch (error) {
-    return aiPolicyErrorResponse(error);
+  } catch (policyError) {
+    return { error: aiPolicyErrorResponse(policyError), context: null };
   }
 
-  return null;
+  return { error: null, context };
 }
 
-export function enforceStudioAiRequestLimits(input: {
-  prompt?: string;
-  contextChars?: number;
-  maxTokens?: number;
-  model?: string;
-  workerUrl?: string | null;
-  fetchUrl?: string | null;
-}): NextResponse | null {
-  try {
-    enforceAiRequestLimits(input);
-  } catch (error) {
-    return aiPolicyErrorResponse(error);
-  }
-
-  return null;
-}
+// `enforceStudioAiRequestLimits` (Response-wrappender Zwilling von
+// `enforceAiRequestLimits`) ist gelöscht: generator-handlers und
+// ai-prompt-handlers rufen die werfende Variante aus @uwe/security direkt auf,
+// und ihre Aufrufer übersetzen Fehler zentral. Zwei offene Wege für dieselbe
+// Prüfung waren der Bug, nicht das Feature.
 
 export function aiPolicyErrorResponse(error: unknown): NextResponse {
   if (error instanceof AiAccessDeniedError) {

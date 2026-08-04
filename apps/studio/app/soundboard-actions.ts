@@ -1,4 +1,5 @@
 "use server";
+import { errorMessage } from "@/src/lib/api-response";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 
 import {
@@ -29,7 +30,7 @@ function parseLinkedPageIds(formData: FormData): string[] {
 }
 
 function redirectWithError(path: string, error: unknown): never {
-  const message = error instanceof Error ? error.message : "Unbekannter Fehler.";
+  const message = errorMessage(error, "Unbekannter Fehler.");
   redirect(`${path}?error=${encodeURIComponent(message)}`);
 }
 

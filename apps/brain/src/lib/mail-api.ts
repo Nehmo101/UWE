@@ -15,7 +15,7 @@ import { checkRateLimit, clientIpFromHeaders, RATE_LIMIT_PRESETS } from "@/src/l
  * das Postfach ist Alltag, und Alltag ist owner-privat.
  *
  * Die Same-Origin-Prüfung steht hier ausgeschrieben, weil Brain kein
- * `guardStudioApiMutation` hat: ohne sie wäre jede Mail-Mutation für jede Seite
+ * `guardStudioApiRequest` hat: ohne sie wäre jede Mail-Mutation für jede Seite
  * erreichbar, die der angemeldete Owner nebenbei offen hat.
  */
 

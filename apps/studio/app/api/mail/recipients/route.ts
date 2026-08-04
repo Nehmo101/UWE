@@ -1,13 +1,12 @@
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { brainPrisma } from "@uwe/database/brain-client";
 import { NextResponse } from "next/server";
-import { jsonError } from "@/src/lib/api-response";
 import {
   assertMailApiResponseHasNoSecrets,
   createMailRecipientService,
   prisma,
 } from "@uwe/database/server";
-import { parseBody, parseQuery, passthroughBodySchema, slugSchema } from "@uwe/security";
+import { mailRecipientsBodySchema, parseBody, parseQuery, slugSchema } from "@uwe/security";
 import { z } from "zod";
 
 const mailRecipientsQuerySchema = z.object({
@@ -33,44 +32,33 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = await guardStudioApiMutation(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
-  const parsed = await parseBody(request, passthroughBodySchema);
+  const parsed = await parseBody(request, mailRecipientsBodySchema);
   if (!parsed.success) return parsed.response;
 
-  const payload = parsed.data as Record<string, unknown>;
-  const action = String(payload.action ?? "sync_players");
-  const worldSlug = String(payload.worldSlug ?? "").trim();
-
-  if (!worldSlug) {
-    return jsonError("worldSlug erforderlich.", 400);
-  }
-
+  const body = parsed.data;
   const recipients = createMailRecipientService(brainPrisma, prisma);
 
-  if (action === "sync_players") {
-    const group = await recipients.ensurePlayersGroup(worldSlug);
-    return NextResponse.json({ group });
-  }
-
-  if (action === "create_group") {
-    const group = await recipients.createGroup(worldSlug, {
-      name: String(payload.name ?? "").trim(),
-      description: String(payload.description ?? ""),
-      slug: payload.slug ? String(payload.slug) : undefined,
+  if (body.action === "create_group") {
+    const group = await recipients.createGroup(body.worldSlug, {
+      name: body.name,
+      description: body.description,
+      slug: body.slug,
     });
     return NextResponse.json({ group }, { status: 201 });
   }
 
-  if (action === "add_recipient") {
-    const group = await recipients.addRecipient(worldSlug, String(payload.groupSlug ?? ""), {
-      email: String(payload.email ?? ""),
-      name: String(payload.name ?? ""),
-      userId: payload.userId ? String(payload.userId) : undefined,
+  if (body.action === "add_recipient") {
+    const group = await recipients.addRecipient(body.worldSlug, body.groupSlug, {
+      email: body.email,
+      name: body.name,
+      userId: body.userId,
     });
     return NextResponse.json({ group });
   }
 
-  return jsonError("Unbekannte Aktion.", 400);
+  const group = await recipients.ensurePlayersGroup(body.worldSlug);
+  return NextResponse.json({ group });
 }

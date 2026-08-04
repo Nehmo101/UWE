@@ -1,17 +1,13 @@
 import "server-only";
 
-import fs from "node:fs";
 
 import {
   buildSecureStorageKey,
-  ensureUploadDirectory,
-  resolveAssetFilePath,
 } from "@uwe/assets";
 import {
-  getSystemSettings,
-  resolveEffectiveUploadsPath,
   type UweRepository,
 } from "@uwe/database/server";
+import { prisma, storeUploadedAsset } from "@uwe/database/server";
 
 import { readCampaignImportFigure } from "./campaign-pdf-storage";
 
@@ -98,10 +94,6 @@ export async function attachCampaignFigures(
     return result;
   }
 
-  const settings = await getSystemSettings();
-  const uploadsRoot = resolveEffectiveUploadsPath(settings);
-  ensureUploadDirectory(input.worldId, undefined, uploadsRoot);
-
   for (const figure of input.figures) {
     const targets = input.pages.filter((page) => page.sourcePages.includes(figure.pageNumber));
     if (targets.length === 0) {
@@ -114,21 +106,18 @@ export async function attachCampaignFigures(
       continue;
     }
 
-    const storageKey = buildSecureStorageKey(input.worldId, ".jpg");
-    await fs.promises.writeFile(
-      resolveAssetFilePath(storageKey, undefined, uploadsRoot),
-      buffer,
-    );
-
-    const asset = await repo.createAsset({
+    // Ablage-Sequenz zentral in storeUploadedAsset (schreibt + Audit).
+    const asset = await storeUploadedAsset(prisma, {
       worldId: input.worldId,
       campaignId: input.campaignId,
+      buffer,
       title: `${input.sourceFile} — Seite ${figure.pageNumber}`,
       description: `Aus dem PDF-Import ausgeschnitten (${figure.type}).`,
       type: "image",
-      storageKey,
-      mimeType: "image/jpeg",
-      size: buffer.length,
+      storage: {
+        storageKey: buildSecureStorageKey(input.worldId, ".jpg"),
+        mimeType: "image/jpeg",
+      },
       metadata: {
         source: "pdf-campaign-import",
         importJobId: input.jobId,
@@ -137,6 +126,7 @@ export async function attachCampaignFigures(
         regionType: figure.type,
         aiRoute: "local_engine",
       },
+      audit: { source: "pdf-campaign-import", importJobId: input.jobId },
     });
     result.createdAssetIds.push(asset.id);
 

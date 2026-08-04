@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
-import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import {
   assertMailApiResponseHasNoSecrets,
   createMailService,
@@ -28,7 +28,9 @@ const mailSendBodySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const authError = await guardStudioApiMutation(request);
+  // Eigener mail-Eimer: Versand verlässt den Host (SMTP) und darf nicht
+  // unbegrenzt getaktet werden.
+  const authError = await guardStudioApiRequest(request, { rateLimit: "mail" });
   if (authError) return authError;
 
   const parsed = await parseBody(request, mailSendBodySchema);

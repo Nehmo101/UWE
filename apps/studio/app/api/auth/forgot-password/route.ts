@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
-import { jsonError } from "@/src/lib/api-response";
 import { createPrismaClient, requestPasswordReset } from "@uwe/database/server";
+import { forgotPasswordBodySchema, parseBody } from "@uwe/security";
 import { checkRateLimitAsync, clientIpFromHeaders, RATE_LIMIT_PRESETS } from "@/src/lib/rate-limit";
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as { email?: string };
-  const email = body.email?.trim();
+  const parsed = await parseBody(request, forgotPasswordBodySchema);
+  if (!parsed.success) return parsed.response;
 
-  if (!email) {
-    return jsonError("E-Mail ist erforderlich.", 400);
-  }
+  const { email } = parsed.data;
 
   const ip = clientIpFromHeaders(request.headers);
   const rateKey = `studio-forgot-password:${ip}:${email.toLowerCase()}`;

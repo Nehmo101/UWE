@@ -8,12 +8,12 @@ import {
   logAuditEvent,
 } from "@uwe/database/server";
 import { SESSION_COOKIE_NAME } from "@uwe/auth";
-import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { getUserFromRequestCookieHeader } from "@/src/lib/auth-session";
 import { checkRateLimitAsync, clientIpFromHeaders } from "@/src/lib/rate-limit";
 
 export async function POST(request: Request) {
-  const authError = await guardStudioApiMutation(request, { rateLimit: "login" });
+  const authError = await guardStudioApiRequest(request, { rateLimit: "login" });
   if (authError) return authError;
 
   const user = await getUserFromRequestCookieHeader(request.headers.get("cookie"));

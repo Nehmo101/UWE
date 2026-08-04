@@ -19,7 +19,7 @@ import {
   type AiProviderId,
 } from "@uwe/ai-brain";
 import { enqueueAndDispatch, runJob } from "./job-executor";
-import { jsonError } from "./api-response";
+import { jsonError, worldNotFound } from "./api-response";
 
 function handleBrainError(error: unknown) {
   if (error instanceof AiPrivacyError) {
@@ -119,7 +119,7 @@ export async function getBrainRuns(query: {
   if (query.worldSlug) {
     const world = await deps.repo.getWorldBySlug(query.worldSlug);
     if (!world) {
-      return jsonError("Welt nicht gefunden.", 404);
+      return worldNotFound();
     }
     worldId = world.id;
 

@@ -8,12 +8,12 @@ import {
 } from "@uwe/database/server";
 
 import { createWorldBodySchema, parseBody } from "@uwe/security";
-import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { getUserFromRequestCookieHeader } from "@/src/lib/auth-session";
 import { revalidateStudioWorldList } from "@/src/lib/world-list-cache";
 
 export async function POST(request: Request) {
-  const authError = await guardStudioApiMutation(request, { rateLimit: "login" });
+  const authError = await guardStudioApiRequest(request, { rateLimit: "login" });
   if (authError) {
     return authError;
   }

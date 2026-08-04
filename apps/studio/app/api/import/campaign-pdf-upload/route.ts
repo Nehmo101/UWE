@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { MAX_CAMPAIGN_PDF_BYTES } from "@uwe/pdf-campaign-import";
 import { createImportJobService, prisma } from "@uwe/database/server";
 import { jsonError } from "@/src/lib/api-response";
-import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { writeCampaignImportPdf } from "@/src/lib/campaign-pdf-storage";
 
 /**
@@ -12,7 +12,7 @@ import { writeCampaignImportPdf } from "@/src/lib/campaign-pdf-storage";
  * liest anschließend nur noch von der Festplatte.
  */
 export async function POST(request: Request) {
-  const authError = await guardStudioApiMutation(request, { rateLimit: "upload" });
+  const authError = await guardStudioApiRequest(request, { rateLimit: "upload" });
   if (authError) return authError;
 
   let form: FormData;

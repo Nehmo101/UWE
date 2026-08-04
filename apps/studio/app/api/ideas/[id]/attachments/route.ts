@@ -8,7 +8,7 @@ import {
   type DevIdeaAttachment,
 } from "@uwe/database/server";
 import { idSchema, parseBody, parseParams } from "@uwe/security";
-import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { ownerForbiddenResponse, resolveOwnerApiUser } from "@/src/lib/owner-api-auth";
 
 const ideaIdParamSchema = z.object({ id: idSchema });
@@ -25,7 +25,7 @@ const attachmentsBodySchema = z.object({
 
 /** Replace an idea's image attachments with the provided list. */
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
-  const authError = await guardStudioApiMutation(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const owner = await resolveOwnerApiUser();

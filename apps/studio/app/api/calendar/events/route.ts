@@ -1,4 +1,4 @@
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { familyPrisma } from "@uwe/database/family-client";
 import {
@@ -62,7 +62,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = await guardStudioApiMutation(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const parsed = await parseBody(request, calendarEventCreateSchema);

@@ -134,13 +134,14 @@ export async function guardStudioApiRequest(
   return error;
 }
 
-/** Mutating Studio API routes — same as guardStudioApiRequest with optional rate limit. */
-export async function guardStudioApiMutation(
-  request: Request,
-  options: StudioGuardOptions = {},
-): Promise<Response | null> {
-  return guardStudioApiRequest(request, options);
-}
+// Ein `guardStudioApiMutation` gab es hier einmal — als reinen Alias auf
+// `guardStudioApiRequest`, an 87 Aufrufstellen. Er ist bewusst ERSATZLOS
+// entfernt statt mit „echter" Mutations-Semantik gefüllt: Der CSRF-Schnitt
+// passiert in `requireStudioApiAuth` bereits methodenbasiert (mutierende
+// Methoden werden cross-site abgelehnt, GET/HEAD nicht), und ein pauschales
+// Default-Rate-Limit über alle mutierenden Routen träfe legitime Bursts
+// (Autosaves, Bulk-Aktionen), ohne ein konkretes Risiko zu adressieren. Zwei
+// Namen für denselben Guard suggerierten einen Unterschied, den es nicht gab.
 
 /** Admin Studio API routes — CSRF + owner session or scoped API token. */
 export async function guardStudioAdminApiRequest(

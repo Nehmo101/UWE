@@ -1,10 +1,10 @@
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import {
   getBrainRunById,
   postApplyProposal,
   postDiscardRun,
 } from "../../../../../src/lib/brain-handlers";
-import { idSchema, parseBody, parseParams, passthroughBodySchema } from "@uwe/security";
+import { brainRunActionBodySchema, idSchema, parseBody, parseParams } from "@uwe/security";
 import { z } from "zod";
 
 const runIdParamSchema = z.object({ runId: idSchema });
@@ -26,37 +26,25 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ runId: string }> },
 ) {
-  const authError = await guardStudioApiMutation(request, { rateLimit: "ai" });
+  const authError = await guardStudioApiRequest(request, { rateLimit: "ai" });
   if (authError) return authError;
 
   const parsedParams = await parseParams(context.params, runIdParamSchema);
   if (!parsedParams.success) return parsedParams.response;
 
-  const parsed = await parseBody(request, passthroughBodySchema);
+  const parsed = await parseBody(request, brainRunActionBodySchema);
   if (!parsed.success) return parsed.response;
 
-  const body = parsed.data as {
-    action?: string;
-    proposalId?: string;
-    editedContent?: string;
-    ideaTitle?: string;
-  };
+  const body = parsed.data;
 
   if (body.action === "discard") {
     return postDiscardRun(parsedParams.data.runId);
   }
 
-  if (body.action === "apply") {
-    if (!body.proposalId) {
-      return Response.json({ error: "proposalId ist für apply erforderlich." }, { status: 400 });
-    }
-    return postApplyProposal({
-      runId: parsedParams.data.runId,
-      proposalId: body.proposalId,
-      editedContent: body.editedContent,
-      ideaTitle: body.ideaTitle,
-    });
-  }
-
-  return Response.json({ error: "Unbekannte Aktion." }, { status: 400 });
+  return postApplyProposal({
+    runId: parsedParams.data.runId,
+    proposalId: body.proposalId,
+    editedContent: body.editedContent,
+    ideaTitle: body.ideaTitle,
+  });
 }

@@ -150,6 +150,9 @@ export const RATE_LIMIT_PRESETS = {
   ai: { maxAttempts: 30, windowMs: 60_000 },
   import: { maxAttempts: 10, windowMs: 60_000 },
   upload: { maxAttempts: 20, windowMs: 60_000 },
+  // Mail verlässt den Host (SMTP) — eigener Eimer, damit sich Versand und
+  // Uploads/Importe nicht gegenseitig das Budget wegfressen.
+  mail: { maxAttempts: 20, windowMs: 60_000 },
   search: { maxAttempts: 60, windowMs: 60_000 },
   shareVerify: { maxAttempts: 10, windowMs: 60_000 },
   hostUpdate: { maxAttempts: 2, windowMs: 60 * 60_000 },

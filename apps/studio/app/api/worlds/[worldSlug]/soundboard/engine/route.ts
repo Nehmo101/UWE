@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { parseBody, parseParams, worldSlugParamSchema } from "@uwe/security";
-import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 
 import { dispatchSoundboardEngine } from "@/src/lib/soundboard-engine";
 
@@ -18,7 +18,7 @@ interface RouteParams {
 }
 
 export async function POST(request: Request, { params }: RouteParams) {
-  const authError = await guardStudioApiMutation(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const parsedParams = await parseParams(params, worldSlugParamSchema);

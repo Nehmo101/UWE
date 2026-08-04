@@ -191,19 +191,22 @@ describe("security boundary", () => {
       const needsAlternateGuard =
         normalizedFile.endsWith("/health/private/route.ts") ||
         normalizedFile.endsWith("/internal/briefing/route.ts") ||
+        normalizedFile.endsWith("/internal/log-retention/route.ts") ||
         normalizedFile.endsWith("/internal/mail-sync/route.ts");
       if (needsAlternateGuard) {
         assert.match(
           content,
-          /requirePrivateHealthAuth|requireStudioApiAuth|requireAdminApiAuth|guardStudioMutation|guardStudioApiRequest|guardStudioApiMutation|guardStudioAdminApiRequest|requireAdminMailApi|requireAdminMailMutation/,
+          /requirePrivateHealthAuth|requireStudioApiAuth|requireAdminApiAuth|guardStudioMutation|guardStudioApiRequest|guardStudioAdminApiRequest|requireAdminMailApi|requireAdminMailMutation/,
           `${file} must call an auth guard`,
         );
         continue;
       }
       assert.match(
         content,
-        /requireStudioApiAuth|requireAdminApiAuth|guardStudioMutation|guardStudioApiRequest|guardStudioApiMutation|guardStudioAdminApiRequest|requireRestoreOwnerAuth|requireOwnerApiAuth|requireAdminMailApi|requireAdminMailMutation|authenticateConnector/,
-        `${file} must call requireStudioApiAuth, requireAdminApiAuth, guardStudioMutation, requireRestoreOwnerAuth, requireOwnerApiAuth, requireAdminMailApi, or authenticateConnector`,
+        // withWorldRoute/withWorldBodyRoute kapseln guardStudioApiRequest
+        // (apps/studio/src/lib/world-route.ts) — Routen darüber sind geschützt.
+        /requireStudioApiAuth|requireAdminApiAuth|guardStudioMutation|guardStudioApiRequest|guardStudioAdminApiRequest|requireRestoreOwnerAuth|requireOwnerApiAuth|requireAdminMailApi|requireAdminMailMutation|authenticateConnector|withWorldRoute|withWorldBodyRoute/,
+        `${file} must call requireStudioApiAuth, requireAdminApiAuth, guardStudioMutation, requireRestoreOwnerAuth, requireOwnerApiAuth, requireAdminMailApi, authenticateConnector, or a withWorldRoute wrapper`,
       );
     }
 

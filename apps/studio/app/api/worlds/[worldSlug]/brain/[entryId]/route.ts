@@ -1,8 +1,15 @@
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
 import { createBrainStoreService, createPrismaClient } from "@uwe/database/server";
-import { idSchema, parseBody, parseParams, passthroughBodySchema, safeHandlerError, worldSlugParamSchema } from "@uwe/security";
+import {
+  brainEntryUpdateBodySchema,
+  idSchema,
+  parseBody,
+  parseParams,
+  safeHandlerError,
+  worldSlugParamSchema,
+} from "@uwe/security";
 
 const brainEntryParamsSchema = worldSlugParamSchema.extend({
   entryId: idSchema,
@@ -53,17 +60,17 @@ export async function GET(request: Request, { params }: RouteParams) {
 }
 
 export async function PATCH(request: Request, { params }: RouteParams) {
-  const authError = await guardStudioApiMutation(request, { rateLimit: "ai" });
+  const authError = await guardStudioApiRequest(request, { rateLimit: "ai" });
   if (authError) return authError;
 
   const parsedParams = await parseParams(params, brainEntryParamsSchema);
   if (!parsedParams.success) return parsedParams.response;
 
-  const parsed = await parseBody(request, passthroughBodySchema);
+  const parsed = await parseBody(request, brainEntryUpdateBodySchema);
   if (!parsed.success) return parsed.response;
 
   const { worldSlug, entryId } = parsedParams.data;
-  const body = parsed.data as Record<string, unknown> & { kind?: string };
+  const body = parsed.data;
 
   const db = createPrismaClient();
   const brain = createBrainStoreService();
@@ -71,14 +78,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     const existingDoc = await brain.getDocumentByIdForWorld(worldSlug, entryId);
     if (existingDoc) {
       const document = await brain.updateDocument(entryId, {
-        title: body.title as string | undefined,
-        content: body.content as string | undefined,
-        documentType: body.documentType as never,
-        source: body.source as never,
-        status: body.status as never,
-        campaignId: body.campaignId as string | null | undefined,
-        pageId: body.pageId as string | null | undefined,
-        gameSessionId: body.gameSessionId as string | null | undefined,
+        title: body.title,
+        content: body.content,
+        documentType: body.documentType,
+        source: body.source,
+        status: body.status,
+        campaignId: body.campaignId,
+        pageId: body.pageId,
+        gameSessionId: body.gameSessionId,
       });
       return NextResponse.json({ document });
     }
@@ -89,14 +96,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
 
     const fact = await brain.updateFact(entryId, {
-      title: body.title as string | undefined,
-      content: body.content as string | undefined,
-      factType: body.factType as never,
-      source: body.source as never,
-      status: body.status as never,
-      campaignId: body.campaignId as string | null | undefined,
-      pageId: body.pageId as string | null | undefined,
-      gameSessionId: body.gameSessionId as string | null | undefined,
+      title: body.title,
+      content: body.content,
+      factType: body.factType,
+      source: body.source,
+      status: body.status,
+      campaignId: body.campaignId,
+      pageId: body.pageId,
+      gameSessionId: body.gameSessionId,
     });
     return NextResponse.json({ fact });
   } catch (error) {

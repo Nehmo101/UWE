@@ -21,6 +21,7 @@ import {
 } from "@uwe/doc-import";
 import { collectRoleHints } from "@uwe/doc-import/ai";
 import { writeDocImport } from "@uwe/doc-import/writer";
+import { errorMessage } from "@/src/lib/api-response";
 import { requireStudioActionAuth, requireStudioAiActionAuth } from "@/src/lib/studio-action-auth";
 import {
   docImportSettingsFromMetadata,
@@ -332,7 +333,7 @@ export async function executeImportDocJobAction(
 
     return { resultSummary, undoToken };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Import fehlgeschlagen.";
+    const message = errorMessage(error, "Import fehlgeschlagen.");
     await importJobs().markFailed(jobId, message);
     revalidateImportCentral();
     throw new Error(message);

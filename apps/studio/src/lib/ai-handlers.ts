@@ -26,7 +26,7 @@ import {
 import {
 } from "@uwe/security";
 import { enqueueAndDispatch, runJob } from "./job-executor";
-import { jsonError } from "./api-response";
+import { jsonError, worldNotFound } from "./api-response";
 import { createApiKeyStore } from "./ai-key-store";
 
 async function getAiSettingsOverrides() {
@@ -101,7 +101,7 @@ export async function getSessions(worldSlug: string, pageSlug?: string) {
   const repo = createUweRepository();
   const world = await repo.getWorldBySlug(worldSlug);
   if (!world) {
-    return jsonError("Welt nicht gefunden.", 404);
+    return worldNotFound();
   }
 
   let pageId: string | undefined;
@@ -290,7 +290,7 @@ export async function getRuns(query: {
   if (query.worldSlug) {
     const world = await repo.getWorldBySlug(query.worldSlug);
     if (!world) {
-      return jsonError("Welt nicht gefunden.", 404);
+      return worldNotFound();
     }
     worldId = world.id;
   }

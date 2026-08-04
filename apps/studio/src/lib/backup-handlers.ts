@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { jsonError } from "@/src/lib/api-response";
+import { errorMessage, jsonError } from "@/src/lib/api-response";
 import fs from "node:fs";
 import {
   createActivityLogService,
@@ -118,8 +118,7 @@ export async function postBackupCreate(body: BackupCreateBody) {
 
     return NextResponse.json({ job }, { status: 202 });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Backup-Erstellung fehlgeschlagen.";
+    const message = errorMessage(error, "Backup-Erstellung fehlgeschlagen.");
     await createActivityLogService(prisma).log({
       action: "error",
       targetType: "system",
@@ -199,12 +198,7 @@ export async function postRestorePreview(body: RestoreRequestBody) {
     await db.$disconnect();
     return NextResponse.json({ preview });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Restore-Vorschau fehlgeschlagen.",
-      },
-      { status: 500 },
-    );
+    return jsonError(errorMessage(error, "Restore-Vorschau fehlgeschlagen."), 500);
   }
 }
 
@@ -270,7 +264,7 @@ export async function postRestoreExecute(body: RestoreRequestBody) {
 
     return NextResponse.json({ job }, { status: 202 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Restore fehlgeschlagen.";
+    const message = errorMessage(error, "Restore fehlgeschlagen.");
     await createActivityLogService(prisma).log({
       action: "error",
       targetType: "system",

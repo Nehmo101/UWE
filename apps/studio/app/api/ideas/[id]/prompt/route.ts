@@ -7,7 +7,7 @@ import {
   prisma,
 } from "@uwe/database/server";
 import { idSchema, parseBody, parseParams } from "@uwe/security";
-import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { executeAiPrompt } from "@/src/lib/ai-prompt-handlers";
 import { composeIdeaPromptGeneration } from "@/src/lib/idea-prompt";
 import { ownerForbiddenResponse, resolveOwnerApiUser } from "@/src/lib/owner-api-auth";
@@ -24,7 +24,7 @@ const ideaPromptPatchSchema = z.object({
 });
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
-  const authError = await guardStudioApiMutation(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const owner = await resolveOwnerApiUser();
@@ -47,7 +47,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 }
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
-  const authError = await guardStudioApiMutation(request, { rateLimit: "ai" });
+  const authError = await guardStudioApiRequest(request, { rateLimit: "ai" });
   if (authError) return authError;
 
   const owner = await resolveOwnerApiUser();

@@ -21,7 +21,7 @@ import {
   resolveEffectiveUploadsPath,
 } from "@uwe/database/server";
 import { getUweEnvOrNull } from "@uwe/env";
-import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 
 const IMAGE_KINDS: ReadonlySet<DetectedFileKind> = new Set(["png", "jpeg", "gif", "webp"]);
 
@@ -34,7 +34,7 @@ function imageOnlyUploadPolicy(): UploadPolicyConfig {
 }
 
 export async function POST(request: Request) {
-  const authError = await guardStudioApiMutation(request, { rateLimit: "upload" });
+  const authError = await guardStudioApiRequest(request, { rateLimit: "upload" });
   if (authError) return authError;
 
   const formData = await request.formData();

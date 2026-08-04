@@ -9,7 +9,7 @@ import {
   suggestTagMerges,
 } from "@uwe/database/server";
 import { brainPrisma } from "@uwe/database/brain-client";
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 
 /**
  * Tag-Inventar und Tag-Merge einer Welt.
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const authError = await guardStudioApiMutation(request, { rateLimit: "setup" });
+  const authError = await guardStudioApiRequest(request, { rateLimit: "setup" });
   if (authError) return authError;
 
   const body = (await request.json()) as {

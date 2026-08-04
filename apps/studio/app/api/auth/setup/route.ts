@@ -10,11 +10,25 @@ import {
   SESSION_COOKIE_NAME,
   sessionExpiresAt,
 } from "@uwe/auth";
+import { parseBody } from "@uwe/security";
+import { z } from "zod";
 import {
   checkRateLimitAsync,
   clientIpFromHeaders,
   RATE_LIMIT_PRESETS,
 } from "@/src/lib/rate-limit";
+
+/**
+ * Bewusst alles optional: die Reihenfolge der Prüfungen (erst Setup-Token,
+ * dann Pflichtfelder) soll unverändert bleiben — das Schema fängt nur
+ * kaputtes JSON und überlange Werte als 400 ab.
+ */
+const setupBodySchema = z.object({
+  setupToken: z.string().max(512).optional(),
+  displayName: z.string().max(200).optional(),
+  email: z.string().max(320).optional(),
+  password: z.string().max(512).optional(),
+});
 
 function tokensMatch(provided: string, expected: string): boolean {
   const left = Buffer.from(provided);
@@ -60,12 +74,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const body = (await request.json()) as {
-    setupToken?: string;
-    displayName?: string;
-    email?: string;
-    password?: string;
-  };
+  const parsed = await parseBody(request, setupBodySchema);
+  if (!parsed.success) return parsed.response;
+
+  const body = parsed.data;
 
   const setupToken = body.setupToken?.trim() ?? "";
   if (!tokensMatch(setupToken, config.setupToken)) {

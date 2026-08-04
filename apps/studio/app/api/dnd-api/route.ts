@@ -1,26 +1,13 @@
-import { guardStudioApiMutation, guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import { jsonError } from "@/src/lib/api-response";
 import {
   createDndApiService,
+  DndApiError,
   getAppRepository,
   prisma,
   resolveDndApiConfig,
-  slugifyPageTitle,
-  buildPageUrl,
 } from "@uwe/database/server";
-import {
-  createEncounterPage,
-  gatherEncounterCandidates,
-  getOpen5eMonster,
-  importOpen5eStatblockPage,
-  listOpen5eMonstersByChallengeRating,
-  searchAllDndApis,
-  serializeEncounterComposition,
-  suggestCandidateChallengeRatings,
-  suggestEncounterComposition,
-  type EncounterCandidate,
-} from "@uwe/dnd-api";
 import { idSchema, nonEmptyString, optionalString, parseBody, parseQuery, slugSchema } from "@uwe/security";
 import { z } from "zod";
 
@@ -84,6 +71,9 @@ const dndApiPostSchema = z.discriminatedUnion("action", [
   generateEncounterSchema,
 ]);
 
+// Handler = Guard + Zod + Dispatch. Cache-Schlüssel, dndbeyond-Regel und
+// Encounter-Logik leben im DndApiService (packages/database).
+
 export async function GET(request: Request) {
   const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
@@ -98,16 +88,8 @@ export async function GET(request: Request) {
   const dndApi = createDndApiService(prisma);
 
   if (slug && provider === "open5e") {
-    const cacheKey = `monster:${slug}`;
-    const cached = await dndApi.getCached("open5e", cacheKey);
-    if (cached) return NextResponse.json({ data: cached, cached: true });
-
-    const data = await getOpen5eMonster(slug, {
-      open5eEnabled: config.open5eEnabled,
-      dnd5eSrdEnabled: config.dnd5eSrdEnabled,
-    });
-    await dndApi.setCached("open5e", cacheKey, data, config.cacheTtlSeconds);
-    return NextResponse.json({ data, cached: false });
+    const { data, cached } = await dndApi.getMonsterWithCache(slug, config);
+    return NextResponse.json({ data, cached });
   }
 
   let beyondReferences: unknown[] = [];
@@ -120,31 +102,16 @@ export async function GET(request: Request) {
   }
 
   if (!query.trim()) {
-    return NextResponse.json({
-      results: [],
-      beyondReferences,
-      config,
-    });
+    return NextResponse.json({ results: [], beyondReferences, config });
   }
 
-  const cacheKey = `search:${query.toLowerCase()}`;
-  const cached = await dndApi.getCached("open5e", cacheKey);
-  if (cached && Array.isArray(cached)) {
-    return NextResponse.json({ results: cached, beyondReferences, cached: true, config });
-  }
-
-  const results = await searchAllDndApis(query, {
-    open5eEnabled: config.open5eEnabled,
-    dnd5eSrdEnabled: config.dnd5eSrdEnabled,
-  });
-
-  await dndApi.setCached("open5e", cacheKey, results, config.cacheTtlSeconds);
-
-  return NextResponse.json({ results, beyondReferences, cached: false, config });
+  const { results, cached } = await dndApi.searchWithCache(query, config);
+  return NextResponse.json({ results, beyondReferences, cached, config });
 }
 
 export async function POST(request: Request) {
-  const authError = await guardStudioApiMutation(request);
+  // Rate-Limit „search": jeder POST-Zweig kann externe Open5e-Calls auslösen.
+  const authError = await guardStudioApiRequest(request, { rateLimit: "search" });
   if (authError) return authError;
 
   const parsed = await parseBody(request, dndApiPostSchema);
@@ -156,98 +123,58 @@ export async function POST(request: Request) {
     return jsonError("Welt nicht gefunden.", 404);
   }
 
-  if (parsed.data.action === "add_beyond_reference") {
-    if (!parsed.data.url.includes("dndbeyond.com")) {
-      return NextResponse.json(
-        { error: "Nur D&D Beyond Links erlaubt — kein Scraping, nur manuelle Referenz." },
-        { status: 400 },
-      );
-    }
+  const config = resolveDndApiConfig();
+  const dndApi = createDndApiService(prisma);
 
-    const dndApi = createDndApiService(prisma);
-    const reference = await dndApi.createBeyondReference({
-      worldId: world.id,
-      pageId: parsed.data.pageId ?? null,
-      title: parsed.data.title,
-      url: parsed.data.url,
-      entityType: parsed.data.entityType ?? null,
-      notes: parsed.data.notes ?? null,
-    });
-
-    return NextResponse.json({ reference }, { status: 201 });
-  }
-
-  if (parsed.data.action === "import_statblock") {
-    const config = resolveDndApiConfig();
-    const monster = await getOpen5eMonster(parsed.data.slug, {
-      open5eEnabled: config.open5eEnabled,
-      dnd5eSrdEnabled: config.dnd5eSrdEnabled,
-    });
-
-    const page = await importOpen5eStatblockPage(repo, {
-      worldId: world.id,
-      worldSlug: world.slug,
-      open5eSlug: parsed.data.slug,
-      title: parsed.data.title,
-      monster,
-      slugify: slugifyPageTitle,
-    });
-
-    return NextResponse.json(
-      { page, editHref: `${buildPageUrl(world.slug, page.type, page.slug)}/edit` },
-      { status: 201 },
-    );
-  }
-
-  if (parsed.data.action === "generate_encounter") {
-    const config = resolveDndApiConfig();
-    if (!config.open5eEnabled) {
-      return NextResponse.json(
-        { error: "Open5e ist deaktiviert — Generator nicht verfügbar." },
-        { status: 400 },
-      );
-    }
-
-    const { partyLevel, partySize, difficulty, style } = parsed.data;
-    const crBuckets = suggestCandidateChallengeRatings(partyLevel, partySize, difficulty);
-    const dndApi = createDndApiService(prisma);
-
-    const candidates = await gatherEncounterCandidates(crBuckets, async (cr) => {
-      const cacheKey = `monsters-cr:${cr}`;
-      const cached = await dndApi.getCached("open5e", cacheKey);
-      if (Array.isArray(cached)) {
-        return cached as unknown as EncounterCandidate[];
+  try {
+    switch (parsed.data.action) {
+      case "add_beyond_reference": {
+        const reference = await dndApi.createBeyondReference({
+          worldId: world.id,
+          pageId: parsed.data.pageId ?? null,
+          title: parsed.data.title,
+          url: parsed.data.url,
+          entityType: parsed.data.entityType ?? null,
+          notes: parsed.data.notes ?? null,
+        });
+        return NextResponse.json({ reference }, { status: 201 });
       }
-      const monsters = await listOpen5eMonstersByChallengeRating(cr, {
-        open5eEnabled: config.open5eEnabled,
-      });
-      await dndApi.setCached("open5e", cacheKey, monsters, config.cacheTtlSeconds);
-      return monsters;
-    });
-
-    const composition = suggestEncounterComposition({
-      partyLevel,
-      partySize,
-      difficulty,
-      style,
-      candidates,
-    });
-
-    return NextResponse.json({ composition: serializeEncounterComposition(composition) });
+      case "import_statblock": {
+        const result = await dndApi.importStatblock(
+          repo,
+          {
+            worldId: world.id,
+            worldSlug: world.slug,
+            slug: parsed.data.slug,
+            title: parsed.data.title,
+          },
+          config,
+        );
+        return NextResponse.json(result, { status: 201 });
+      }
+      case "generate_encounter": {
+        const composition = await dndApi.generateEncounter(parsed.data, config);
+        return NextResponse.json({ composition });
+      }
+      case "create_encounter": {
+        const result = await dndApi.createEncounter(repo, {
+          worldId: world.id,
+          worldSlug: world.slug,
+          title: parsed.data.title,
+          partyLevel: parsed.data.partyLevel,
+          partySize: parsed.data.partySize,
+          monsters: parsed.data.monsters,
+        });
+        return NextResponse.json(result, { status: 201 });
+      }
+    }
+  } catch (error) {
+    if (error instanceof DndApiError) {
+      return jsonError(error.message, 400);
+    }
+    throw error;
   }
 
-  const page = await createEncounterPage(repo, {
-    worldId: world.id,
-    worldSlug: world.slug,
-    title: parsed.data.title,
-    partyLevel: parsed.data.partyLevel,
-    partySize: parsed.data.partySize,
-    monsters: parsed.data.monsters,
-    slugify: slugifyPageTitle,
-  });
-
-  return NextResponse.json(
-    { page, editHref: `${buildPageUrl(world.slug, page.type, page.slug)}/edit` },
-    { status: 201 },
-  );
+  // Unerreichbar — das discriminatedUnion-Schema kennt genau die vier Aktionen.
+  return jsonError("Unbekannte Aktion.", 400);
 }

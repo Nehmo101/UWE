@@ -1,5 +1,6 @@
 "use server";
 
+import { errorMessage } from "@/src/lib/api-response";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
   createImportJobService,
@@ -250,9 +251,7 @@ export async function previewImportCentralJobAction(
   try {
     parseImportContent(format, content);
   } catch (error) {
-    throw new Error(
-      error instanceof Error ? error.message : "Import-Datei konnte nicht gelesen werden.",
-    );
+    throw new Error(errorMessage(error, "Import-Datei konnte nicht gelesen werden."));
   }
 
   const repo = createUweRepositoryFromClient(prisma);
@@ -299,7 +298,7 @@ export async function executeImportCentralJobAction(
     });
     return await finalizeImportCentralMarkdownExecute(jobId, job, result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Import fehlgeschlagen.";
+    const message = errorMessage(error, "Import fehlgeschlagen.");
     await importJobs().markFailed(jobId, message);
     revalidateImportCentral();
     throw new Error(message);
@@ -358,7 +357,7 @@ export async function executeImportCentralPdfJobAction(
     });
     return await finalizeImportCentralMarkdownExecute(jobId, job, result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "PDF-Import fehlgeschlagen.";
+    const message = errorMessage(error, "PDF-Import fehlgeschlagen.");
     await importJobs().markFailed(jobId, message);
     revalidateImportCentral();
     throw new Error(message);
@@ -422,7 +421,7 @@ export async function executeImportCentralObsidianVaultAction(
     });
     return await finalizeImportCentralMarkdownExecute(jobId, job, result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Vault-Import fehlgeschlagen.";
+    const message = errorMessage(error, "Vault-Import fehlgeschlagen.");
     await importJobs().markFailed(jobId, message);
     revalidateImportCentral();
     throw new Error(message);

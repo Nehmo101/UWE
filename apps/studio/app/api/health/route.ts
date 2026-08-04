@@ -15,8 +15,10 @@ import {
  * Identität (`app.name` — daran erkennt der Host seinen eigenen Prozess auf
  * einem belegten Port), Version, Zeitstempel.
  *
- * Alles Weitere gibt es hinter Token-Auth unter `/api/health/private`
- * (`requirePrivateHealthAuth`).
+ * Alles Weitere gibt es hinter Token-Auth unter `/api/health/private` —
+ * der Guard-Name steht bewusst nicht hier: Diese Route ist in der Public-
+ * Allowlist des Routen-Inventars, und die prüft per Regex, dass KEIN
+ * Guard-Bezeichner in der Datei auftaucht (auch nicht im Kommentar).
  */
 export async function GET() {
   const db = await databaseHealthCheck();

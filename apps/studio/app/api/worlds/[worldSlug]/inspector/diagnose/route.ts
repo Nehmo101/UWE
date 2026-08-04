@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { requireStudioWorldEdit } from "@/src/lib/authz";
 import { getAppRepository } from "@uwe/database/server";
 import { enqueueAndDispatch } from "@/src/lib/job-executor";
@@ -9,7 +9,7 @@ interface RouteContext {
 }
 
 export async function POST(request: Request, context: RouteContext) {
-  const authError = await guardStudioApiMutation(request);
+  const authError = await guardStudioApiRequest(request);
   if (authError) return authError;
 
   const { worldSlug } = await context.params;

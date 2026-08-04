@@ -1,12 +1,12 @@
 import { runInferenceTestPrompt } from "@uwe/ai-brain";
-import { guardStudioApiMutation } from "@/src/lib/studio-admin-auth";
+import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { inferenceTestPromptBodySchema, parseBody } from "@uwe/security";
 
 /**
  * Maschinenraum inference smoke test — no secrets in response.
  */
 export async function POST(request: Request) {
-  const authError = await guardStudioApiMutation(request, { rateLimit: "ai" });
+  const authError = await guardStudioApiRequest(request, { rateLimit: "ai" });
   if (authError) return authError;
 
   const parsed = await parseBody(request, inferenceTestPromptBodySchema);

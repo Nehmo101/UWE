@@ -564,3 +564,45 @@ export function filterGraphPages(
       (!types || types.length === 0 || types.includes(page.type)),
   );
 }
+
+/**
+ * Seiteninhalt für den DnD-Generator, nach Zonen getrennt: `player_text` ist
+ * der Vorlesetext (readAloud), `rich_text` sind die DM-Notizen. Die Zuordnung
+ * lebt hier bei den Blöcken — nicht im Route-Handler, der sie nur anzeigt.
+ */
+export async function getPageGeneratorContext(
+  repo: UweRepository,
+  worldSlug: string,
+  pageSlug: string,
+): Promise<{
+  canonicalStatus: Page["canonicalStatus"];
+  pageContent: string;
+  content: {
+    summary: string | null;
+    description: string;
+    readAloud: string;
+    dmNotes: string;
+  };
+} | null> {
+  const page = await repo.getPageBySlug(worldSlug, pageSlug);
+  if (!page) return null;
+
+  const pageContent = page.contentBlocks.map((block) => block.content).join("\n");
+
+  return {
+    canonicalStatus: page.canonicalStatus,
+    pageContent,
+    content: {
+      summary: page.summary,
+      description: pageContent,
+      readAloud: page.contentBlocks
+        .filter((block) => block.type === "player_text")
+        .map((block) => block.content)
+        .join("\n"),
+      dmNotes: page.contentBlocks
+        .filter((block) => block.type === "rich_text")
+        .map((block) => block.content)
+        .join("\n"),
+    },
+  };
+}

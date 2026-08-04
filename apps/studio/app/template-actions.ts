@@ -1,5 +1,6 @@
 "use server";
 
+import { errorMessage } from "@/src/lib/api-response";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
   createPageTemplateService,
@@ -40,7 +41,7 @@ function blocksFromFormData(formData: FormData) {
 }
 
 function redirectWithError(path: string, error: unknown): never {
-  const message = error instanceof Error ? error.message : "Unbekannter Fehler.";
+  const message = errorMessage(error, "Unbekannter Fehler.");
   redirect(`${path}?error=${encodeURIComponent(message)}`);
 }
 
