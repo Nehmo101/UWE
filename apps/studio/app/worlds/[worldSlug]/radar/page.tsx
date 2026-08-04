@@ -5,7 +5,7 @@ import { createCampaignRadarService } from "@uwe/database/campaign-radar";
 import { notFound } from "next/navigation";
 import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { CampaignSidebar } from "@/src/components/wiki";
-import { campaignNavItems } from "@/src/lib/world-nav";
+import { campaignNavItems } from "@/src/lib/campaign-nav";
 import { updateQuestStatusAction } from "../quest-status-actions";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
