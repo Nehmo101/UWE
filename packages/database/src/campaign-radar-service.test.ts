@@ -51,6 +51,7 @@ describe("campaign radar (integration)", () => {
     assert.equal(radar.factions.length, 0);
     assert.equal(radar.openQuests.length, 0);
     assert.equal(radar.lastSession, null);
+    assert.equal(radar.dungeons.length, 0);
     assert.equal(radar.npcSummary.total, 0);
     assert.equal(radar.canonConflicts, 0);
     assert.equal(radar.clockLabel, null);
@@ -82,5 +83,53 @@ describe("campaign radar (integration)", () => {
     assert.equal(radar.canonConflicts, 1);
     assert.ok(radar.factions[0].href.includes("rote-hand"));
     assert.ok(questPage.id);
+  });
+
+  it("lists dungeons and filters by campaign like the dungeon cockpit", async () => {
+    const campaign = await db.campaign.create({
+      data: { worldId, name: "Turm", slug: "turm" },
+    });
+    await db.page.create({
+      data: {
+        worldId,
+        campaignId: campaign.id,
+        title: "Magisterturm",
+        slug: "magisterturm",
+        type: "dungeon",
+        prepStatus: "ready",
+      },
+    });
+    await db.page.create({
+      data: { worldId, title: "Alte Mine", slug: "alte-mine", type: "dungeon" },
+    });
+    await db.page.create({
+      data: {
+        worldId,
+        campaignId: campaign.id,
+        title: "Kampagnen-Quest",
+        slug: "kampagnen-quest",
+        type: "quest",
+        questStatus: "open",
+      },
+    });
+
+    const service = createCampaignRadarService(db);
+
+    const all = await service.getRadar("radar-test");
+    assert.ok(all);
+    assert.equal(all.dungeons.length, 2);
+    assert.equal(all.openQuests.length, 2);
+
+    const filtered = await service.getRadar("radar-test", { campaignId: campaign.id });
+    assert.ok(filtered);
+    assert.equal(filtered.dungeons.length, 1);
+    assert.equal(filtered.dungeons[0].title, "Magisterturm");
+    assert.equal(filtered.dungeons[0].prepStatus, "ready");
+    assert.ok(filtered.dungeons[0].href.endsWith("/dungeons/magisterturm"));
+    assert.equal(filtered.openQuests.length, 1);
+    assert.equal(filtered.openQuests[0].title, "Kampagnen-Quest");
+    // Ohne Kampagnen-Zuordnung fallen die Bestandsseiten aus dem Filter heraus.
+    assert.equal(filtered.factions.length, 0);
+    assert.equal(filtered.npcSummary.total, 0);
   });
 });

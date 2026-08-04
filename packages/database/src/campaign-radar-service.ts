@@ -1,12 +1,18 @@
+import type { DungeonPrepStatus } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
 import { buildPageUrl } from "./page-types";
 
 /**
  * Kampagnen-Radar: „Was passiert gerade in der Welt?" — eine read-only
  * Aggregation über Fraktionen, offene Quests, World Clock, letzte Session,
- * jüngste Ereignisse, NPC-Zustände und Kanon-Konflikte. Keine Schreibvorgänge,
- * alles aus vorhandenen Daten abgeleitet (Muster: WorldInspectorService, aber
- * eigene Datei — der Inspektor ist eingefroren).
+ * jüngste Ereignisse, NPC-Zustände, Dungeons und Kanon-Konflikte. Keine
+ * Schreibvorgänge, alles aus vorhandenen Daten abgeleitet (Muster:
+ * WorldInspectorService, aber eigene Datei — der Inspektor ist eingefroren).
+ *
+ * Wie im Dungeon-Cockpit ist die Kampagne ein optionaler Filter: ohne
+ * `campaignId` zeigt der Radar die ganze Welt, mit ihr nur die Seiten dieser
+ * Kampagne. Welt-Ereignisse und die Weltuhr bleiben ungefiltert — sie tragen
+ * keine Kampagnen-Zuordnung, die Zeit der Welt ist für alle dieselbe.
  */
 
 export interface RadarFaction {
@@ -38,6 +44,20 @@ export interface RadarLastSession {
   href: string;
 }
 
+export interface RadarDungeon {
+  id: string;
+  title: string;
+  slug: string;
+  href: string;
+  summary: string | null;
+  prepStatus: DungeonPrepStatus | null;
+}
+
+export interface CampaignRadarOptions {
+  /** Nur Inhalte dieser Kampagne — dieselbe Semantik wie im Dungeon-Cockpit. */
+  campaignId?: string | null;
+}
+
 export interface CampaignRadarData {
   worldSlug: string;
   clockLabel: string | null;
@@ -45,6 +65,7 @@ export interface CampaignRadarData {
   openQuests: RadarQuest[];
   recentEvents: RadarEvent[];
   lastSession: RadarLastSession | null;
+  dungeons: RadarDungeon[];
   npcSummary: { total: number; flagged: number };
   canonConflicts: number;
 }
@@ -75,23 +96,31 @@ export function formatClockLabel(
 export class CampaignRadarService {
   constructor(private readonly db: PrismaClient) {}
 
-  async getRadar(worldSlug: string): Promise<CampaignRadarData | null> {
+  async getRadar(
+    worldSlug: string,
+    options?: CampaignRadarOptions,
+  ): Promise<CampaignRadarData | null> {
     const world = await this.db.world.findUnique({ where: { slug: worldSlug } });
     if (!world) return null;
     const worldId = world.id;
+    const campaignFilter = options?.campaignId ? { campaignId: options.campaignId } : {};
 
     const [
       factions,
       openQuests,
       recentEvents,
       lastSession,
+      dungeons,
       calendar,
       npcTotal,
       npcFlagged,
       canonConflicts,
     ] = await Promise.all([
       this.db.factionState.findMany({
-        where: { worldId },
+        where: {
+          worldId,
+          ...(options?.campaignId ? { page: { campaignId: options.campaignId } } : {}),
+        },
         orderBy: [{ powerLevel: "desc" }],
         include: { page: { select: { title: true, slug: true, type: true } } },
       }),
@@ -99,6 +128,7 @@ export class CampaignRadarService {
         where: {
           worldId,
           type: "quest",
+          ...campaignFilter,
           OR: [{ questStatus: null }, { questStatus: "open" }],
         },
         select: { id: true, title: true, slug: true, type: true, questStatus: true },
@@ -111,19 +141,31 @@ export class CampaignRadarService {
         select: { id: true, title: true, summaryDm: true, summaryPlayer: true, createdAt: true },
       }),
       this.db.gameSession.findFirst({
-        where: { worldId, status: { in: ["played", "summarized"] } },
+        where: { worldId, status: { in: ["played", "summarized"] }, ...campaignFilter },
         orderBy: [{ sessionNumber: "desc" }],
         select: { title: true, sessionNumber: true, date: true },
+      }),
+      this.db.page.findMany({
+        where: { worldId, type: "dungeon", ...campaignFilter },
+        select: { id: true, title: true, slug: true, summary: true, prepStatus: true },
+        orderBy: { title: "asc" },
       }),
       this.db.worldCalendar.findUnique({
         where: { worldId },
         select: { name: true, currentDate: true, epochLabel: true },
       }),
-      this.db.page.count({ where: { worldId, type: "npc" } }),
+      this.db.page.count({ where: { worldId, type: "npc", ...campaignFilter } }),
       this.db.page.count({
-        where: { worldId, type: "npc", canonicalStatus: { in: ["contradictory", "deprecated"] } },
+        where: {
+          worldId,
+          type: "npc",
+          ...campaignFilter,
+          canonicalStatus: { in: ["contradictory", "deprecated"] },
+        },
       }),
-      this.db.page.count({ where: { worldId, canonicalStatus: "contradictory" } }),
+      this.db.page.count({
+        where: { worldId, canonicalStatus: "contradictory", ...campaignFilter },
+      }),
     ]);
 
     return {
@@ -158,6 +200,14 @@ export class CampaignRadarService {
             href: `/worlds/${worldSlug}/sessions`,
           }
         : null,
+      dungeons: dungeons.map((dungeon) => ({
+        id: dungeon.id,
+        title: dungeon.title,
+        slug: dungeon.slug,
+        href: `/worlds/${worldSlug}/dungeons/${dungeon.slug}`,
+        summary: dungeon.summary,
+        prepStatus: dungeon.prepStatus,
+      })),
       npcSummary: { total: npcTotal, flagged: npcFlagged },
       canonConflicts,
     };
