@@ -55,6 +55,7 @@ describe("authz integration — IDOR/BOLA", () => {
       title: "Public A",
       slug: "public-a",
       type: "lore",
+      portalReleased: true,
     });
 
     const privatePageB = await repo.createPage({
@@ -72,6 +73,7 @@ describe("authz integration — IDOR/BOLA", () => {
       title: "Public B",
       slug: "public-b",
       type: "lore",
+      portalReleased: true,
     });
   });
 
@@ -135,12 +137,13 @@ describe("authz integration — IDOR/BOLA", () => {
     assert.equal(leakedViaViewer, null);
   });
 
-  it("lets a world member read every page of their own world", async () => {
+  it("lets a world member read every released page of their own world", async () => {
     await repo.createPage({
       worldId: worldAId,
       title: "DM Plan",
       slug: "dm-plan",
       type: "lore",
+      portalReleased: true,
     });
 
     const userA = await auth.findUserByEmail("player-a@authz.test");

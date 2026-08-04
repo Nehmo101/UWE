@@ -61,16 +61,16 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
     amanUserId = users.players.find((p) => p.displayName === "Aman")!.id;
     lazulUserId = users.players.find((p) => p.displayName === "Lazul")!.id;
 
-    // A matrix that exercises every branch of canViewPage: one page per
-    // visibility value.
+    // A matrix that exercises both branches of the portal-release gate (#85):
+    // released pages reach players, unreleased ones stay staff-only.
     const pages = [
-      { slug: "pub-page" },
-      { slug: "pv-page" },
-      { slug: "dmonly-page" },
-      { slug: "private-page" },
-      { slug: "archived-page" },
-      { slug: "specific-page" },
-      { slug: "unlock-page" },
+      { slug: "pub-page", portalReleased: true },
+      { slug: "pv-page", portalReleased: true },
+      { slug: "dmonly-page", portalReleased: false },
+      { slug: "private-page", portalReleased: false },
+      { slug: "archived-page", portalReleased: false },
+      { slug: "specific-page", portalReleased: true },
+      { slug: "unlock-page", portalReleased: true },
     ] as const;
 
     for (const page of pages) {
@@ -79,6 +79,7 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
         title: page.slug,
         slug: page.slug,
         type: "note",
+        portalReleased: page.portalReleased,
       });
     }
 
@@ -108,13 +109,16 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
     );
   });
 
-  it("an assigned player sees the whole world, same as the baseline", async () => {
+  it("an assigned player sees exactly the released pages, same as the baseline", async () => {
     for (const userId of [amanUserId, lazulUserId]) {
       const ctx = await auth.buildAccessContextForWorld(worldSlug, { userId });
       assert.ok(ctx);
       assert.equal(ctx.user?.access.studio, false);
       assert.deepEqual(await narrowedSlugs(ctx), await baselineSlugs(ctx));
-      assert.equal((await narrowedSlugs(ctx)).length, 7);
+      assert.deepEqual(
+        new Set(await narrowedSlugs(ctx)),
+        new Set(["pub-page", "pv-page", "specific-page", "unlock-page"]),
+      );
     }
   });
 

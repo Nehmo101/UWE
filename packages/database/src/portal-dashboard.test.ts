@@ -55,6 +55,7 @@ describe("portal dashboard", () => {
       title: "Den Turm erkunden",
       slug: "den-turm-erkunden",
       type: "quest",
+      portalReleased: true,
     });
     questPageId = quest.id;
 
@@ -64,6 +65,8 @@ describe("portal dashboard", () => {
       title: "DM Geheimnis",
       slug: "dm-geheimnis",
       type: "lore",
+      // Bleibt ohne Portal-Haken — der Test prüft, dass sie im Dashboard fehlt.
+      portalReleased: false,
     });
     dmOnlyPageId = secret.id;
 

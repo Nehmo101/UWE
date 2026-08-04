@@ -30,6 +30,7 @@ describe("graph-service", () => {
       title: "Hafenstadt Validori",
       slug: "validori",
       type: "location",
+      portalReleased: true,
       tags: ["hafen", "stadt"],
       contentBlocks: [
         {
@@ -46,6 +47,9 @@ describe("graph-service", () => {
       title: "Shagottar",
       slug: "shagottar",
       type: "location",
+      // Alle Seiten dieser Welt sind freigegeben: Die Viewer-Tests hier prüfen
+      // die Graph-Äquivalenz, nicht die Portal-Freigabe (#85).
+      portalReleased: true,
       contentBlocks: [
         {
           type: "rich_text",
@@ -61,6 +65,7 @@ describe("graph-service", () => {
       title: "Kapitän Mara",
       slug: "kapitän-mara",
       type: "npc",
+      portalReleased: true,
       tags: ["crew"],
       contentBlocks: [
         {
