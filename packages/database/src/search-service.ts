@@ -3,6 +3,7 @@ import {
   canReadDmSections,
   canViewWorldContent,
   filterBlocksForViewer,
+  filterPagesForViewer,
   redactDmSectionsForViewer,
 } from "@uwe/auth";
 import type { PrismaClient } from "./client";
@@ -123,6 +124,8 @@ type IndexedPage = {
   canonicalStatus: CanonicalStatus;
   questStatus?: QuestLifecycleStatus | null;
   campaignId: string | null;
+  /** Muss mitgeladen sein — `filterPagesForViewer` ist fail-closed. */
+  portalReleased: boolean;
   contentBlocks: SearchIndexContentBlock[];
   world: { slug: string; name: string };
   campaign: { name: string } | null;
@@ -438,6 +441,9 @@ async function loadPagesForSearchUncached(
       canonicalStatus: true,
       questStatus: true,
       campaignId: true,
+      // Muss mit: `filterPagesForViewer` ist fail-closed und wirft ohne dieses
+      // Feld jede Seite heraus (siehe `searchForAuthContext`).
+      portalReleased: true,
       world: { select: { slug: true, name: true } },
       campaign: { select: { name: true } },
     },
@@ -616,7 +622,11 @@ export async function searchForAuthContext(
     return [];
   }
 
-  const pages = await loadPagesForSearch(db, options);
+  // Nach dem Memo-Cache, damit der kontextfreie Index unberührt bleibt: erst
+  // fällt jede nicht freigegebene Seite als Ganzes weg (fail-closed, siehe
+  // `filterPagesForViewer`), dann werden die DM-Bereiche geschnitten. Sonst
+  // verriete ein Treffer Titel und Wortlaut einer gesperrten Seite.
+  const pages = filterPagesForViewer(context, await loadPagesForSearch(db, options));
   return searchIndex(buildIndex(redactDmSectionsInPages(context, pages)), options);
 }
 

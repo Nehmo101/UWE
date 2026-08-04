@@ -1,4 +1,6 @@
 import { splitDmSegments } from "@uwe/auth/dm-section";
+import type { AccessContext } from "@uwe/auth";
+import { filterPagesForViewer, redactDmSectionsForViewer } from "@uwe/auth";
 import type { ContentBlock, Page, PageType } from "./generated/prisma/client";
 import { buildPageUrl } from "./page-types";
 import { parseStringArray } from "./json-utils";
@@ -53,9 +55,13 @@ export function pageToWikiNode(
 export async function buildWorldWikiIndex(
   repo: UweRepository,
   worldSlug: string,
+  viewer?: AccessContext,
 ): Promise<WikiPageNode[]> {
   const pages = await repo.getWorldPageIndex(worldSlug);
-  return pages.map((page) => pageToWikiNode(worldSlug, page));
+  // Mit Viewer bleiben nur freigegebene Seiten im Index: Links auf gesperrte
+  // Seiten rendern dann als `broken` — wie bei gelöschten Seiten.
+  const visible = viewer ? filterPagesForViewer(viewer, pages) : pages;
+  return visible.map((page) => pageToWikiNode(worldSlug, page));
 }
 
 export function buildLookupIndex(nodes: WikiPageNode[]): Map<string, WikiPageNode> {
@@ -319,12 +325,23 @@ export async function buildPageView(
   repo: UweRepository,
   worldSlug: string,
   pageSlug: string,
+  viewer?: AccessContext,
 ): Promise<PageViewData | null> {
   const page = await repo.getPageBySlug(worldSlug, pageSlug);
   if (!page) return null;
 
+  // Ohne Viewer ist das die DM-Sicht (Studio). Mit Viewer gilt dieselbe
+  // Freigabe wie im Portal: gesperrte Seiten gibt es nicht, `:::dm`-Bereiche
+  // fallen aus dem Inhalt, und der Link-Index kennt nur freigegebene Seiten.
+  if (viewer && filterPagesForViewer(viewer, [page]).length === 0) {
+    return null;
+  }
+
   const node = pageToWikiNode(worldSlug, page);
-  const visibleNodes = await buildWorldWikiIndex(repo, worldSlug);
+  if (viewer) {
+    node.content = redactDmSectionsForViewer(viewer, node.content);
+  }
+  const visibleNodes = await buildWorldWikiIndex(repo, worldSlug, viewer);
   const index = buildLookupIndex(visibleNodes);
 
   const links = resolveLinksInContent(node.content, index);

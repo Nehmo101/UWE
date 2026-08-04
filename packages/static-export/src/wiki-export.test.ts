@@ -33,6 +33,7 @@ describe("wiki export", () => {
       title: "Public Town",
       slug: "public-town",
       type: "location",
+      portalReleased: true,
       contentBlocks: [
         {
           type: "rich_text",
@@ -47,6 +48,7 @@ describe("wiki export", () => {
       title: "Second Town",
       slug: "second-town",
       type: "location",
+      portalReleased: true,
       contentBlocks: [
         {
           type: "rich_text",

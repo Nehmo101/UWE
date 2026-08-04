@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { filterPagesForViewer } from "@uwe/auth";
 import {
   buildPageUrl,
   buildPageView,
@@ -10,6 +11,7 @@ import {
   StaticExportSecurityError,
   type StaticExportAuditIssue,
 } from "./export-world";
+import { staticExportViewerContext } from "./viewer-context";
 
 export type WikiExportFormat = "markdown" | "html";
 
@@ -99,11 +101,18 @@ export async function exportWorldWiki(
   const outputDir = path.resolve(options.outputDir);
   fs.mkdirSync(outputDir, { recursive: true });
 
-  const pages = await repo.listPagesForWorldIndex(options.worldSlug);
+  // Der Export verlässt den Server — er zeigt die Spielersicht: nur
+  // freigegebene Seiten, ohne DM-Bereiche (siehe `staticExportViewerContext`).
+  const viewer = staticExportViewerContext(world.id);
+  const allPages = await repo.listPagesForWorldIndex(options.worldSlug);
+  const pages = filterPagesForViewer(viewer, allPages);
+  const unreleasedSlugs = allPages
+    .filter((page) => !pages.includes(page))
+    .map((page) => page.slug);
   const writtenFiles: string[] = [];
 
   for (const page of pages) {
-    const view = await buildPageView(repo, options.worldSlug, page.slug);
+    const view = await buildPageView(repo, options.worldSlug, page.slug, viewer);
     if (!view) continue;
 
     const body = view.page.content;
@@ -151,7 +160,7 @@ export async function exportWorldWiki(
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), "utf8");
   writtenFiles.push("manifest.json");
 
-  const issues = auditStaticExport(outputDir);
+  const issues = auditStaticExport(outputDir, { unreleasedSlugs });
   if (issues.length > 0) {
     throw new StaticExportSecurityError(issues);
   }

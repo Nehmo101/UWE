@@ -15,6 +15,9 @@ function page(overrides: Partial<CanonConflictPageInput> & Pick<CanonConflictPag
     slug: overrides.slug ?? overrides.id,
     type: overrides.type ?? "lore",
     canonicalStatus: overrides.canonicalStatus ?? "draft",
+    // Die Sichtbarkeits-Checks greifen nur bei freigegebenen Seiten — die
+    // Fixtures sind deshalb standardmäßig freigegeben.
+    portalReleased: overrides.portalReleased ?? true,
     content: overrides.content ?? "",
   };
 }
@@ -57,6 +60,27 @@ describe("canon conflict service", () => {
 
     assert.equal(checkWorldSpecificCanonRules("other", [input]).length, 0);
     assert.equal(checkWorldSpecificCanonRules("terra", [input]).length, 1);
+  });
+
+  it("skips visibility findings for unreleased pages", () => {
+    const unreleased = [
+      page({
+        id: "p9",
+        title: "Verstecktes Kampagnenbuch",
+        canonicalStatus: "deprecated",
+        portalReleased: false,
+      }),
+      page({
+        id: "npc9",
+        title: "Toter NPC im Studio",
+        type: "npc",
+        content: "Er ist tot.",
+        portalReleased: false,
+      }),
+    ];
+
+    assert.equal(checkDeprecatedOrNonCanonPublished("demo", unreleased).length, 0);
+    assert.equal(checkNpcDeathStatusConflicts("demo", unreleased).length, 0);
   });
 
   it("merges generic findings", () => {

@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@uwe/assets": "workspace:*",
+    "@uwe/auth": "workspace:*",
     "@uwe/database": "workspace:*",
     "dotenv": "^17.4.2"
   },

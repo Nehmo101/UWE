@@ -132,7 +132,10 @@ export async function buildPageViewForViewer(
   const { pages: indexedPages, pageIndex: allPages, blockTargets } =
     await getWorldWikiGraph(repo, worldSlug);
   const combinedContent = combineBlockContent(page.contentBlocks);
-  const links = resolveViewerLinks(combinedContent, worldSlug, allPages);
+  // Der Link-Lookup kennt nur Seiten, die dieser Betrachter sehen darf: Ein
+  // Wikilink auf eine gesperrte Seite rendert als `broken` — wie bei einer
+  // gelöschten Seite. Sonst verriete der href Existenz und Slug.
+  const links = resolveViewerLinks(combinedContent, worldSlug, filterPagesForViewer(ctx, allPages));
 
   const viewerPages: PageWithBlocks[] = filterPagesForViewer(ctx, indexedPages).map((candidate) => ({
     ...candidate,

@@ -38,6 +38,10 @@ export interface SecurityFixtureContent {
     publicMedia: string;
     privateMedia: string;
   };
+  pageIds: {
+    publicPage: string;
+    dmOnlyPage: string;
+  };
 }
 
 export interface SecurityFixture {
@@ -156,7 +160,7 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     revealedSecretPage: "enthuelltes-geheimnis",
   };
 
-  await repo.createPage({
+  const publicPage = await repo.createPage({
     worldId: publicWorld.id,
     title: "Öffentliche Notiz",
     slug: slugs.publicPage,
@@ -193,7 +197,7 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     ],
   });
 
-  await repo.createPage({
+  const dmOnlyPage = await repo.createPage({
     worldId: publicWorld.id,
     title: "Nur DM",
     slug: slugs.dmOnlyPage,
@@ -254,6 +258,26 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     ],
   });
 
+  // Ein Chronik-Eintrag, der eine freigegebene UND eine gesperrte Seite
+  // verlinkt: Die Rollenmatrix prüft daran beide Richtungen — die gesperrte
+  // Seite darf nicht durchsickern, die freigegebene darf nicht verschwinden
+  // (Über-Filterung durch den fail-closed Guard, wenn ein Select
+  // `portalReleased` vergisst).
+  await db.worldEvent.create({
+    data: {
+      worldId: publicWorld.id,
+      inGameDate: { year: 1000, month: 1, day: 1 },
+      title: "Chronik: Der Tag der Asche",
+      summaryPlayer: "Was die Spieler wissen.",
+      entityLinks: {
+        create: [
+          { pageId: publicPage.id, role: "involved" },
+          { pageId: dmOnlyPage.id, role: "involved" },
+        ],
+      },
+    },
+  });
+
   ensureUploadDirectory(publicWorld.id, uploadsRoot);
 
   const publicStorageKey = buildStorageKey(publicWorld.id, "public-banner.png");
@@ -295,6 +319,10 @@ export async function createSecurityFixture(): Promise<SecurityFixture> {
     assetIds: {
       publicMedia: publicMedia.id,
       privateMedia: privateMedia.id,
+    },
+    pageIds: {
+      publicPage: publicPage.id,
+      dmOnlyPage: dmOnlyPage.id,
     },
   };
 

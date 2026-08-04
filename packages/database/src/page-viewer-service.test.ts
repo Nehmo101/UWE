@@ -65,6 +65,7 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       title: "Zielort",
       slug: "zielort",
       type: "location",
+      portalReleased: true,
       aliases: ["Zieldorf"],
       contentBlocks: [
         { type: "rich_text", sortOrder: 0, content: "Der Zielort." },
@@ -78,6 +79,7 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       title: "Quelle A",
       slug: "quelle-a",
       type: "lore",
+      portalReleased: true,
       contentBlocks: [
         { type: "rich_text", sortOrder: 0, content: "Weg nach [[Zielort]]." },
       ],
@@ -90,6 +92,7 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       title: "Quelle B",
       slug: "quelle-b",
       type: "lore",
+      portalReleased: true,
       contentBlocks: [
         { type: "rich_text", sortOrder: 0, content: "Nichts zu sehen." },
         { type: "rich_text", sortOrder: 1, content: "Geheim: [[Zielort]]." },
@@ -103,6 +106,7 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       title: "Geheime Quelle",
       slug: "geheime-quelle",
       type: "lore",
+      portalReleased: true,
       contentBlocks: [
         { type: "rich_text", sortOrder: 0, content: "Führt zu [[Zielort]]." },
       ],
@@ -115,6 +119,7 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       title: "Quelle D",
       slug: "quelle-d",
       type: "lore",
+      portalReleased: true,
       contentBlocks: [
         { type: "rich_text", sortOrder: 0, content: "Reise nach [[Zieldorf]]." },
       ],
@@ -126,6 +131,7 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       title: "Abseits",
       slug: "abseits",
       type: "lore",
+      portalReleased: true,
       contentBlocks: [
         { type: "rich_text", sortOrder: 0, content: "Kein Bezug." },
       ],
@@ -202,6 +208,7 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       title: "Quelle E",
       slug: "quelle-e",
       type: "lore",
+      portalReleased: true,
       contentBlocks: [
         { type: "rich_text", sortOrder: 0, content: "Neuer Pfad nach [[Zielort]]." },
       ],

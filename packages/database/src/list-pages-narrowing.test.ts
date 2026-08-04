@@ -79,6 +79,7 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
         title: page.slug,
         slug: page.slug,
         type: "note",
+        portalReleased: true,
       });
     }
 

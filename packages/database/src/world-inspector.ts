@@ -14,10 +14,11 @@ import { getExtendedCanonFindings, mergeCanonFindings } from "./canon-conflict-s
  * ambiguous names, contradictory pages, orphans, pages without a campaign,
  * and canon conflicts.
  *
- * It used to have a second half that audited *exposure*: which pages and
- * assets reached the portal and whether anything leaked. With per-item
- * visibility gone there is nothing to audit — every world member sees
- * everything in their world by design.
+ * Exposure ist seit der Portal-Freigabe (#85) wieder Teil der Antwort: Ob eine
+ * Seite im Spieler-Wiki auftaucht, entscheidet `portalReleased` je Seite (plus
+ * der globale Portal-Schalter). Der Report zählt deshalb freigegebene und
+ * gesperrte Seiten, und die Sichtbarkeits-Checks im Canon-Conflict-Service
+ * melden nur, was Spieler wirklich sehen.
  *
  * Everything is read-only and built from existing data — no AI, no
  * external services.
@@ -73,6 +74,8 @@ export interface InspectorPageInput {
   slug: string;
   type: PageType;
   canonicalStatus: CanonicalStatus;
+  /** Fürs Portal freigegeben? Steuert die Sichtbarkeits-Checks. */
+  portalReleased: boolean;
   aliases: string[];
   campaignId?: string | null;
   blocks: InspectorBlockInput[];
@@ -94,6 +97,9 @@ export interface WorldInspectorReport {
   worldSlug: string;
   portal: {
     portalEnabled: boolean;
+    /** Seiten mit Portal-Haken — nur diese erscheinen im Spieler-Wiki. */
+    releasedPageCount: number;
+    unreleasedPageCount: number;
   };
   pageCount: number;
   assetCount: number;
@@ -325,6 +331,7 @@ export class WorldInspectorService {
       slug: page.slug,
       type: page.type,
       canonicalStatus: page.canonicalStatus,
+      portalReleased: page.portalReleased,
       aliases: Array.isArray(page.aliases) ? (page.aliases as string[]) : [],
       campaignId: page.campaignId,
       blocks: page.contentBlocks.map((block) => ({
@@ -334,10 +341,14 @@ export class WorldInspectorService {
       })),
     }));
 
+    const releasedPageCount = pages.filter((page) => page.portalReleased).length;
+
     return {
       worldSlug,
       portal: {
         portalEnabled: settings.portal.portalEnabled,
+        releasedPageCount,
+        unreleasedPageCount: pages.length - releasedPageCount,
       },
       pageCount: pages.length,
       assetCount,

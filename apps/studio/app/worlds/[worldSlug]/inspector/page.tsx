@@ -131,6 +131,10 @@ export default async function WorldInspectorPage({ params, searchParams }: Props
               Portal: <strong>{report.portal.portalEnabled ? "aktiv" : "deaktiviert"}</strong>
             </li>
             <li>
+              Freigegeben: <strong>{report.portal.releasedPageCount}</strong> von{" "}
+              {report.pageCount} Seiten
+            </li>
+            <li>
               <Link href="/settings">Einstellungen öffnen →</Link>
             </li>
           </ul>

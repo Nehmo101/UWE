@@ -17,6 +17,7 @@ function makePage(overrides: Partial<InspectorPageInput>): InspectorPageInput {
     slug: "seite",
     type: "lore",
     canonicalStatus: "draft",
+    portalReleased: true,
     aliases: [],
     blocks: [],
     ...overrides,

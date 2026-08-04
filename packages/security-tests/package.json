@@ -12,7 +12,8 @@
     "@uwe/assets": "workspace:*",
     "@uwe/auth": "workspace:*",
     "@uwe/database": "workspace:*",
-    "@uwe/security": "workspace:*"
+    "@uwe/security": "workspace:*",
+    "@uwe/static-export": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.19.21",

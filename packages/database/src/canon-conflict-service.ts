@@ -9,6 +9,8 @@ export interface CanonConflictPageInput {
   slug: string;
   type: PageType;
   canonicalStatus: CanonicalStatus;
+  /** Fürs Portal freigegeben? Ohne Haken sehen Spieler die Seite nicht. */
+  portalReleased: boolean;
   content: string;
 }
 
@@ -31,7 +33,13 @@ function findingId(code: string, parts: string[]): string {
   return `${code}:${parts.join(":")}`;
 }
 
-/** Deprecated or non-canon content that every world member now sees. */
+/**
+ * Deprecated or non-canon content that portal viewers actually see.
+ *
+ * Ohne Portal-Freigabe gibt es keinen Konflikt: Die Seite existiert nur im
+ * Studio, kein Spieler sieht sie. Ungefiltert meldete der Check falsch-positiv
+ * genau die Seiten, die der Haken bereits schützt.
+ */
 export function checkDeprecatedOrNonCanonPublished(
   worldSlug: string,
   pages: CanonConflictPageInput[],
@@ -39,6 +47,8 @@ export function checkDeprecatedOrNonCanonPublished(
   const findings: InspectorFinding[] = [];
 
   for (const page of pages) {
+    if (!page.portalReleased) continue;
+
     if (page.canonicalStatus === "deprecated" || page.canonicalStatus === "non_canon") {
       findings.push({
         id: findingId("deprecated_player_visible", [page.id]),
@@ -69,7 +79,7 @@ export function checkDeprecatedOrNonCanonPublished(
   return findings;
 }
 
-/** NPC pages whose content marks them dead — every world member sees them. */
+/** NPC pages whose content marks them dead — and portal viewers see them. */
 export function checkNpcDeathStatusConflicts(
   worldSlug: string,
   pages: CanonConflictPageInput[],
@@ -78,6 +88,7 @@ export function checkNpcDeathStatusConflicts(
 
   for (const page of pages) {
     if (page.type !== "npc") continue;
+    if (!page.portalReleased) continue;
     if (!DEAD_KEYWORDS.test(page.content)) continue;
 
     findings.push({
@@ -108,6 +119,8 @@ export function checkBrainFactDeathConflicts(
     if (!fact.pageId || !DEAD_KEYWORDS.test(`${fact.title} ${fact.content}`)) continue;
     const page = pageById.get(fact.pageId);
     if (!page || page.type !== "npc") continue;
+    // Nur freigegebene Seiten sehen Spieler — sonst gibt es keinen Konflikt.
+    if (!page.portalReleased) continue;
 
     findings.push({
       id: findingId("brain_fact_death_conflict", [fact.id, page.id]),
@@ -179,6 +192,7 @@ function toCanonPageInput(page: InspectorPageInput): CanonConflictPageInput {
     slug: page.slug,
     type: page.type,
     canonicalStatus: page.canonicalStatus,
+    portalReleased: page.portalReleased,
     content: page.blocks.map((block) => block.content).join("\n"),
   };
 }

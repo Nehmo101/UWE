@@ -1,11 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
+import { filterPagesForViewer } from "@uwe/auth";
 import {
   buildPageUrl,
   buildPageView,
   navCategoryForPageType,
   type UweRepository,
 } from "@uwe/database/server";
+import { staticExportViewerContext } from "./viewer-context";
 import {
   collectUploadReferences,
   copyReferencedAssets,
@@ -58,7 +60,14 @@ export async function exportWorldStatic(
   const outputDir = path.resolve(options.outputDir);
   fs.mkdirSync(outputDir, { recursive: true });
 
-  const pages = await repo.listPagesForWorldIndex(options.worldSlug);
+  // Der Export verlässt den Server — er zeigt die Spielersicht: nur
+  // freigegebene Seiten, ohne DM-Bereiche (siehe `staticExportViewerContext`).
+  const viewer = staticExportViewerContext(world.id);
+  const allPages = await repo.listPagesForWorldIndex(options.worldSlug);
+  const pages = filterPagesForViewer(viewer, allPages);
+  const unreleasedSlugs = allPages
+    .filter((page) => !pages.includes(page))
+    .map((page) => page.slug);
 
   const navItems: StaticNavItem[] = pages.map((page) => ({
     title: page.title,
@@ -73,7 +82,7 @@ export async function exportWorldStatic(
   const uploadRefs = new Set<string>();
 
   for (const page of pages) {
-    const view = await buildPageView(repo, options.worldSlug, page.slug);
+    const view = await buildPageView(repo, options.worldSlug, page.slug, viewer);
     if (!view) continue;
 
     const category = staticExportCategoryForPageType(page.type);
@@ -145,7 +154,7 @@ export async function exportWorldStatic(
     writtenFiles.push(...copied);
   }
 
-  const issues = auditStaticExport(outputDir);
+  const issues = auditStaticExport(outputDir, { unreleasedSlugs });
   if (issues.length > 0) {
     throw new StaticExportSecurityError(issues);
   }
@@ -169,17 +178,25 @@ export class StaticExportSecurityError extends Error {
 /**
  * Audits an export directory for anything that should never leave the server.
  *
- * The hidden-page half of this audit is gone: there are no hidden pages any
- * more, so nothing can be "leaked into the export" by visibility. What remains
- * is the check for secret-looking metadata in generated JSON.
+ * Zwei Prüfungen: secret-artige Metadaten in generiertem JSON, und — seit der
+ * Portal-Freigabe je Seite (`portalReleased`, #85) — nicht freigegebene Seiten,
+ * die es trotzdem in den Export geschafft haben. Der Aufrufer übergibt dafür
+ * die Slugs der gesperrten Seiten; der Audit schlägt an, wenn eine davon als
+ * Datei existiert oder in einem generierten JSON (Manifest, Suchindex)
+ * auftaucht.
  */
-export function auditStaticExport(outputDir: string): StaticExportAuditIssue[] {
+export function auditStaticExport(
+  outputDir: string,
+  options?: { unreleasedSlugs?: string[] },
+): StaticExportAuditIssue[] {
   const issues: StaticExportAuditIssue[] = [];
   const files = listExportFiles(outputDir);
+  const unreleasedSlugs = options?.unreleasedSlugs ?? [];
 
   for (const file of files) {
     const content = fs.readFileSync(file, "utf8");
     const relative = path.relative(outputDir, file);
+    const normalized = relative.replace(/\\/g, "/");
 
     if (relative.endsWith(".json") && containsSecretLikeFields(content)) {
       issues.push({
@@ -187,9 +204,33 @@ export function auditStaticExport(outputDir: string): StaticExportAuditIssue[] {
         reason: "JSON file may contain secret metadata",
       });
     }
+
+    for (const slug of unreleasedSlugs) {
+      if (fileBelongsToPage(normalized, slug)) {
+        issues.push({
+          file: relative,
+          reason: `Export contains a page that is not released for the portal: ${slug}`,
+        });
+      } else if (relative.endsWith(".json") && content.includes(`"${slug}"`)) {
+        issues.push({
+          file: relative,
+          reason: `Generated JSON references an unreleased page: ${slug}`,
+        });
+      }
+    }
   }
 
   return issues;
+}
+
+/** Ist diese Exportdatei die Seite mit dem gegebenen Slug? */
+function fileBelongsToPage(normalizedRelativePath: string, slug: string): boolean {
+  return (
+    normalizedRelativePath === `${slug}.md` ||
+    normalizedRelativePath === `${slug}.html` ||
+    normalizedRelativePath === `${slug}/index.html` ||
+    normalizedRelativePath.endsWith(`/${slug}/index.html`)
+  );
 }
 
 function listExportFiles(outputDir: string): string[] {

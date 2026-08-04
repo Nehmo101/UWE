@@ -839,11 +839,19 @@ export class AuthService {
         title: true,
         slug: true,
         aliases: true,
+        // Muss mit: `filterPagesForViewer` ist fail-closed und wirft ohne
+        // dieses Feld jede Seite heraus.
+        portalReleased: true,
       },
     });
 
+    // Nur freigegebene Seiten kommen in den Lookup: Ein Wikilink auf eine
+    // gesperrte Seite rendert damit als `broken` — genau wie ein Link auf eine
+    // gelöschte Seite. Sonst verriete der klickbare href Existenz und Slug.
+    const visiblePages = filterPagesForViewer(ctx, allPages);
+
     const lookup = new Map<string, (typeof allPages)[number]>();
-    for (const page of allPages) {
+    for (const page of visiblePages) {
       const keys = [
         normalizeLookupKey(page.title),
         normalizeLookupKey(page.slug),
@@ -929,6 +937,11 @@ export class AuthService {
     const view = toPortalGameSessionView(session);
     return {
       ...view,
+      // Recap-Felder sind DM-verfasster Wikitext im selben Editor wie
+      // `page.summary` — eine `:::dm`-Marke darin muss genauso greifen.
+      summaryPlayer: redactDmSectionsForViewer(ctx, view.summaryPlayer),
+      playerDecisions: redactDmSectionsForViewer(ctx, view.playerDecisions),
+      openPlots: redactDmSectionsForViewer(ctx, view.openPlots),
       linkedPages: filterPagesForViewer(ctx, view.linkedPages),
     };
   }
@@ -945,6 +958,9 @@ export class AuthService {
     const visibleIds = new Set(visiblePages.map((page) => page.id));
     return {
       ...view,
+      // Auch die Spieler-Zusammenfassung ist Wikitext aus dem DM-Editor —
+      // `:::dm`-Bereiche fallen hier heraus wie bei `page.summary`.
+      summaryPlayer: redactDmSectionsForViewer(ctx, view.summaryPlayer),
       linkedPages: view.linkedPages.filter((page) => visibleIds.has(page.id)),
     };
   }

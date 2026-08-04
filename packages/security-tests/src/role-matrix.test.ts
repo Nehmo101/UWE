@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { after, before, describe, it } from "node:test";
+import { buildWorldGraphForViewer } from "@uwe/database/graph-service";
+import { exportWorldWiki } from "@uwe/static-export";
 import type { SecurityTestRole } from "./markers";
 import { SECURITY_MARKERS } from "./markers";
 import { createSecurityFixture, type SecurityFixture } from "./fixtures/security-fixture";
@@ -204,6 +209,142 @@ describe("security role matrix", () => {
         assertAsset(fixture.content.assetIds.privateMedia, expectations.privateMedia);
       });
 
+      it("search never returns unreleased pages — and keeps released ones", async () => {
+        const userId = userIdForRole(fixture, role);
+        const ctx = await fixture.auth.buildAccessContextForWorld(fixture.content.publicWorldSlug, {
+          userId,
+        });
+        assert.ok(ctx);
+
+        // Über den Titel UND über den Inhalt suchen: Beide Wege verrieten
+        // sonst Existenz bzw. Wortlaut einer gesperrten Seite im Snippet.
+        for (const query of ["Nur DM", SECURITY_MARKERS.DM_ONLY]) {
+          const results = await fixture.auth.searchForViewer(
+            fixture.content.publicWorldSlug,
+            ctx!,
+            { query },
+          );
+          const hit = results.find((item) => item.slug === fixture.content.slugs.dmOnlyPage);
+          if (expectations.dmOnlyPage === "visible") {
+            assert.ok(hit, `${role} should find the unreleased page via "${query}"`);
+          } else {
+            assert.equal(
+              hit,
+              undefined,
+              `${role} must not find the unreleased page via "${query}"`,
+            );
+          }
+        }
+
+        // Gegenprobe gegen Über-Filterung: Die freigegebene Seite bleibt
+        // auffindbar (fällt weg, wenn ein Select `portalReleased` vergisst).
+        const released = await fixture.auth.searchForViewer(
+          fixture.content.publicWorldSlug,
+          ctx!,
+          { query: "Spieler sichtbar" },
+        );
+        const releasedHit = released.find(
+          (item) => item.slug === fixture.content.slugs.playerVisiblePage,
+        );
+        if (expectations.playerVisiblePage === "visible") {
+          assert.ok(releasedHit, `${role} should still find the released page`);
+        } else {
+          assert.equal(releasedHit, undefined);
+        }
+      });
+
+      it("world graph contains only released pages", async () => {
+        const userId = userIdForRole(fixture, role);
+        const ctx = await fixture.auth.buildAccessContextForWorld(fixture.content.publicWorldSlug, {
+          userId,
+        });
+        assert.ok(ctx);
+
+        const graph = await buildWorldGraphForViewer(
+          fixture.repo,
+          fixture.content.publicWorldSlug,
+          ctx!,
+        );
+        const ids = new Set(graph.nodes.map((node) => node.id));
+
+        if (expectations.dmOnlyPage === "visible") {
+          assert.ok(ids.has(fixture.content.pageIds.dmOnlyPage));
+        } else {
+          assert.ok(
+            !ids.has(fixture.content.pageIds.dmOnlyPage),
+            `${role} must not see the unreleased page in the graph`,
+          );
+        }
+        if (expectations.publicPage === "visible") {
+          assert.ok(
+            ids.has(fixture.content.pageIds.publicPage),
+            `${role} should keep the released page in the graph`,
+          );
+        }
+      });
+
+      it("timeline events keep released linked pages and drop unreleased ones", async () => {
+        const userId = userIdForRole(fixture, role);
+        const ctx = await fixture.auth.buildAccessContextForWorld(fixture.content.publicWorldSlug, {
+          userId,
+        });
+        assert.ok(ctx);
+
+        const events = await fixture.auth.listWorldEventsForViewer(
+          fixture.content.publicWorldSlug,
+          ctx!,
+        );
+
+        if (expectations.publicPage === "hidden") {
+          assert.equal(events.length, 0, `${role} must not see world events`);
+          return;
+        }
+
+        const event = events.find((item) => item.title.startsWith("Chronik:"));
+        assert.ok(event, `${role} should see the world event`);
+        const linkedIds = new Set(event!.linkedPages.map((page) => page.id));
+
+        // Fängt die Über-Filterung (A4): Vergisst ein Select `portalReleased`,
+        // wirft der fail-closed Guard auch die FREIGEGEBENE Seite hinaus.
+        assert.ok(
+          linkedIds.has(fixture.content.pageIds.publicPage),
+          `${role} should see the released linked page`,
+        );
+        if (expectations.dmOnlyPage === "visible") {
+          assert.ok(linkedIds.has(fixture.content.pageIds.dmOnlyPage));
+        } else {
+          assert.ok(
+            !linkedIds.has(fixture.content.pageIds.dmOnlyPage),
+            `${role} must not see the unreleased linked page`,
+          );
+        }
+      });
+
+      it("portal dashboard never mentions unreleased pages", async () => {
+        const userId = userIdForRole(fixture, role);
+        const ctx = await fixture.auth.buildAccessContextForWorld(fixture.content.publicWorldSlug, {
+          userId,
+        });
+        assert.ok(ctx);
+
+        const dashboard = await fixture.auth.getPortalDashboard(
+          fixture.content.publicWorldSlug,
+          ctx!,
+        );
+        const serialized = JSON.stringify(dashboard ?? {});
+
+        if (expectations.dmOnlyPage === "hidden") {
+          assert.ok(
+            !serialized.includes(fixture.content.slugs.dmOnlyPage),
+            `${role} dashboard must not mention the unreleased slug`,
+          );
+          assert.ok(
+            !serialized.includes(SECURITY_MARKERS.DM_ONLY),
+            `${role} dashboard must not leak unreleased content`,
+          );
+        }
+      });
+
       it("scopes private world content by role", async () => {
         const userId = userIdForRole(fixture, role);
         const ctx = await fixture.auth.buildAccessContextForWorld(fixture.content.privateWorldSlug, {
@@ -226,4 +367,48 @@ describe("security role matrix", () => {
     });
   }
 
+  // Der statische Wiki-Export hat keine Rolle: Er ist immer die Spielersicht
+  // in Dateiform (siehe `staticExportViewerContext`). Deshalb ein einzelner
+  // Durchlauf statt einer Matrix-Zeile.
+  describe("static wiki export", () => {
+    it("exports only released pages, without DM sections", async () => {
+      const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), "uwe-sec-export-"));
+      try {
+        const result = await exportWorldWiki(fixture.repo, {
+          worldSlug: fixture.content.publicWorldSlug,
+          outputDir,
+          format: "markdown",
+        });
+
+        assert.ok(
+          result.files.includes(`${fixture.content.slugs.playerVisiblePage}.md`),
+          "released page should be exported",
+        );
+        assert.ok(
+          !result.files.includes(`${fixture.content.slugs.dmOnlyPage}.md`),
+          "unreleased page must not be exported",
+        );
+
+        for (const file of result.files) {
+          const content = fs.readFileSync(path.join(outputDir, file), "utf8");
+          assert.ok(
+            !content.includes(SECURITY_MARKERS.DM_ONLY),
+            `${file} must not contain unreleased content`,
+          );
+          assert.ok(
+            !content.includes(SECURITY_MARKERS.DM_SECTION),
+            `${file} must not contain DM section text`,
+          );
+          if (file.endsWith(".json")) {
+            assert.ok(
+              !content.includes(fixture.content.slugs.dmOnlyPage),
+              `${file} must not reference the unreleased slug`,
+            );
+          }
+        }
+      } finally {
+        fs.rmSync(outputDir, { recursive: true, force: true });
+      }
+    });
+  });
 });

@@ -30,6 +30,7 @@ describe("static export", () => {
       title: "Validori",
       slug: "validori",
       type: "location",
+      portalReleased: true,
       summary: "Hafenstadt",
       contentBlocks: [
         {
@@ -50,6 +51,7 @@ describe("static export", () => {
       title: "Arbor",
       slug: "arbor",
       type: "region",
+      portalReleased: true,
       contentBlocks: [
         {
           type: "rich_text",
@@ -64,6 +66,7 @@ describe("static export", () => {
       title: "Shagottar",
       slug: "shagottar",
       type: "location",
+      portalReleased: true,
       contentBlocks: [
         {
           type: "rich_text",
