@@ -115,6 +115,21 @@ Die Muster in `profiles.ts` und `semantic/roles.ts` belegen vor:
 | `dungeon` | Wurzel → `dungeon`, „EBENE 1 …" → `dungeon_level`, Aufzählungen unter „Die Räume" → `room`, „DIE WURZELPLATTFORM" → `dungeon_level` (Außenbereich) |
 | `canon` | alles `lore`, Vorgabe-Status `canon` |
 
+### Das Konvertierungstemplate zum Dungeon-Profil
+
+Die Regeln erkennen nur, was das Dokument auch trägt: Eine Falle mitten im
+Fließtext kommt ohne eigene Überschrift nicht als `trap`-Seite an.
+`@uwe/doc-import` exportiert deshalb `DUNGEON_CONVERSION_TEMPLATE`
+(`dungeon-template.ts`) — ein vollständiges Beispiel-Dokument in genau der Form,
+die das Dungeon-Cockpit liest: Ebenen und Räume als Überschriften, darunter
+`Begegnung:`, `Falle:`, `Rätsel:`, `Beute:` und `Geheimnis:` als eigene
+Unterüberschriften, dazu nummerierte Werteblöcke und Handouts. Die
+Import-Zentrale bietet die Vorlage beim Profil „Dungeon" zum Kopieren und
+Herunterladen an (`DungeonTemplateCard`) — als Gerüst zum Selberfüllen oder als
+Konvertierungsauftrag an eine KI. `dungeon-template.test.ts` importiert die
+Vorlage bei jedem Testlauf und stellt sicher, dass jede Gegenstandssorte
+ankommt; ändert eine Regel das Verhalten, bricht der Test statt der Vorlage.
+
 > **Deutsche Komposita:** `\bgilde\b` findet „Handelsgilde" nicht. Die führende Wortgrenze
 > steht deshalb nur dort, wo sie einen Fehltreffer verhindert (`\borden\b`, sonst würde
 > „Norden" zur Fraktion). Aus demselben Grund steht vor `plattform` keine — sonst wäre
