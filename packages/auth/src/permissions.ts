@@ -201,6 +201,27 @@ export function canPreviewAsPlayer(ctx: AccessContext): boolean {
   return !ctx.previewAsUserId && ctx.user?.access.studio === true;
 }
 
+/**
+ * Ein synthetischer Spieler-Kontext für eine Welt: zugeordnet, aber ohne
+ * Studio-Häkchen und ohne Owner-Rechte. `filterPagesForViewer` lässt damit nur
+ * freigegebene Seiten durch, `redactDmSectionsForViewer` schneidet `:::dm`.
+ *
+ * Für die Wege, auf denen es keine echte Session gibt, deren Sicht aber die
+ * eines Spielers sein MUSS: der statische Export und die
+ * Spielervorschau-Parameter der Studio-API (MCP `portal_player_view_*`). Es
+ * zählt nicht, WER fragt — sondern was die Antwort zeigen darf.
+ */
+export function buildPlayerViewContext(worldId: string): AccessContext {
+  return buildAccessContext({
+    user: null,
+    worldMembership: {
+      userId: "player-view",
+      worldId,
+      characterName: null,
+    },
+  });
+}
+
 /** The security audit log is a Studio concern. */
 export function canViewAuditLog(ctx: AccessContext): boolean {
   return isDm(ctx);

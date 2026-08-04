@@ -10,13 +10,24 @@ import { useEffect } from "react";
  * Modus), bleibt das Portal genau so nutzbar wie vorher — der Tischmodus
  * funktioniert dann nur online.
  */
-export function ServiceWorkerRegistrar({ basePath }: { basePath: string }) {
+export function ServiceWorkerRegistrar({
+  basePath,
+  buildId,
+}: {
+  basePath: string;
+  buildId: string;
+}) {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
 
     const register = () => {
+      // Die Build-Kennung in der URL macht jeden Build zu einem neuen Worker:
+      // der Browser installiert ihn neu, und `activate` löscht die
+      // Cache-Generation des vorigen Builds (siehe sw.js).
       void navigator.serviceWorker
-        .register(`${basePath}/sw.js`, { scope: `${basePath}/` })
+        .register(`${basePath}/sw.js?v=${encodeURIComponent(buildId)}`, {
+          scope: `${basePath}/`,
+        })
         .catch(() => {
           /* Ohne Worker bleibt das Portal online-only — kein Grund für einen Fehler. */
         });
@@ -29,7 +40,7 @@ export function ServiceWorkerRegistrar({ basePath }: { basePath: string }) {
 
     window.addEventListener("load", register);
     return () => window.removeEventListener("load", register);
-  }, [basePath]);
+  }, [basePath, buildId]);
 
   return null;
 }

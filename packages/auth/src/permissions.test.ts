@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   buildAccessContext,
+  buildPlayerViewContext,
   canEditContent,
   canPreviewAsPlayer,
   canReadDmSections,
@@ -152,6 +153,17 @@ describe("Portal-Freigabe je Seite", () => {
   it("lässt die Welt-Zuordnung vorgehen: ohne sie gibt es gar nichts", () => {
     assert.deepEqual(filterPagesForViewer(outsiderCtx, pages), []);
     assert.deepEqual(filterPagesForViewer(anonymousCtx, pages), []);
+  });
+
+  it("buildPlayerViewContext ist exakt die Spielersicht", () => {
+    // Der Kontext hinter `preview=player` (Studio-Graph-Route, MCP) und dem
+    // statischen Export: Welt-Inhalt ja, unfreigegebene Seiten und
+    // DM-Bereiche nein.
+    const ctx = buildPlayerViewContext("w1");
+    assert.ok(canViewWorldContent(ctx));
+    assert.equal(canSeeUnreleasedPages(ctx), false);
+    assert.equal(canReadDmSections(ctx), false);
+    assert.deepEqual(filterPagesForViewer(ctx, pages), [frei]);
   });
 });
 

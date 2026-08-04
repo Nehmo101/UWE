@@ -30,7 +30,7 @@ function configTool(context: ToolContext): ToolDefinition {
         [
           `Portal:      ${context.primary.baseUrl} (Token: ${context.primary.hasToken ? "ja" : "nein"})`,
           `Studio-API:  ${context.dataApi.baseUrl} (Token: ${context.dataApi.hasToken ? "ja" : "nein"})`,
-          "Spielersicht-Tools lesen über Studio mit accessContext=portal bzw. preview=player.",
+          "Spielersicht-Tools lesen über Studio mit preview=player.",
         ].join("\n"),
       ),
   };
@@ -58,24 +58,12 @@ export function createPortalTools(context: ToolContext): ToolDefinition[] {
       path: () => "/api/maintenance/status",
     }),
 
-    httpTool(context, {
-      name: "portal_player_view_brain",
-      title: "Spielersicht: Welt-Brain",
-      description:
-        "Welt-Brain in der Spielersicht (accessContext=portal). Zeigt genau das, was ein zugeordneter Spieler im Portal sieht.",
-      inputSchema: objectSchema(
-        {
-          worldSlug: stringArg("Slug der Welt."),
-          campaign: stringArg("Optionaler Kampagnen-Slug."),
-        },
-        ["worldSlug"],
-      ),
-      path: (args) => `/api/worlds/${encodeURIComponent(requireString(args, "worldSlug"))}/brain`,
-      query: (args) => ({
-        campaign: optionalString(args, "campaign"),
-        accessContext: "portal",
-      }),
-    }),
+    // Ein `portal_player_view_brain` gab es hier einmal. Es war eine falsche
+    // Zusage: Die Studio-Brain-Route kennt keine Spielersicht (das Welt-Brain
+    // ist DM-Material und taucht im Portal nirgends auf), der
+    // `accessContext=portal`-Parameter wurde still ignoriert und die DM-Sicht
+    // samt Entwürfen ausgeliefert. Was ein Spieler vom Brain sieht, ist:
+    // nichts — dafür braucht es kein Tool.
 
     httpTool(context, {
       name: "portal_player_view_graph",

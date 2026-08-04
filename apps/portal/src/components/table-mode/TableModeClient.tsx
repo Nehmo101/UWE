@@ -66,7 +66,7 @@ function useOfflineStoreAvailable(): boolean {
   return useSyncExternalStore(subscribeNever, isOfflineStoreAvailable, () => true);
 }
 
-export function TableModeClient() {
+export function TableModeClient({ viewerUserId }: { viewerUserId: string | null }) {
   const params = useSearchParams();
   const requestedWorld = params?.get("welt") ?? null;
   const online = useOnlineState();
@@ -80,7 +80,8 @@ export function TableModeClient() {
   const [busy, setBusy] = useState(false);
 
   const reloadLocal = useCallback(async (slug: string | null) => {
-    const cached = await listSnapshots();
+    // Nur die Abzüge des angemeldeten Kontos — fremde löscht der Store dabei.
+    const cached = await listSnapshots(viewerUserId);
     setWorlds(cached.map((entry) => ({ slug: entry.world.slug, name: entry.world.name })));
 
     const target = slug ?? cached[0]?.world.slug ?? null;
@@ -92,9 +93,9 @@ export function TableModeClient() {
       return;
     }
 
-    setSnapshot(await readSnapshot(target));
+    setSnapshot(await readSnapshot(target, viewerUserId));
     setQueue(await readQueue(target));
-  }, []);
+  }, [viewerUserId]);
 
   // Erst den lokalen Bestand zeigen, dann — wenn Netz da ist — auffrischen.
   // Umgekehrt sähe der Tisch beim Start eine leere Seite.

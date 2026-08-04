@@ -1,12 +1,7 @@
 import { NextResponse } from "next/server";
 import { requirePortalApiAuth } from "@/src/lib/portal-api-auth";
 import { buildWorldGraphForViewer } from "@uwe/database/graph-service";
-import {
-  getAppRepository,
-  getSystemSettings,
-  isPortalGloballyEnabled,
-  type GraphViewMode,
-} from "@uwe/database/server";
+import { getAppRepository, type GraphViewMode } from "@uwe/database/server";
 import { assertCanReadWorldWithContext } from "@uwe/auth";
 import { getAccessContextForWorld } from "@/src/lib/auth";
 
@@ -17,11 +12,6 @@ interface RouteParams {
 export async function GET(request: Request, { params }: RouteParams) {
   const authError = await requirePortalApiAuth(request);
   if (authError) return authError;
-
-  const settings = await getSystemSettings();
-  if (!isPortalGloballyEnabled(settings)) {
-    return NextResponse.json({ error: "Portal disabled" }, { status: 403 });
-  }
 
   const { worldSlug } = await params;
   const repo = getAppRepository();

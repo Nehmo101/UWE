@@ -17,7 +17,14 @@
  * Nutzerdaten. Beim Abmelden räumt die Seite per `uwe-offline-clear` alles weg.
  */
 
-const CACHE_NAME = "uwe-portal-tisch-v1";
+/*
+ * Der Cache-Name trägt die Build-Kennung, die die Registrierung als `?v=…`
+ * an die Worker-URL hängt (siehe ServiceWorkerRegistrar). Jeder neue Build
+ * ist damit ein neuer Worker mit neuem Cache — `activate` löscht die alten
+ * Generationen, sonst sammelten sich die Chunks jedes je deployten Builds an.
+ */
+const BUILD_VERSION = new URLSearchParams(self.location.search).get("v") || "v1";
+const CACHE_NAME = `uwe-portal-tisch-${BUILD_VERSION}`;
 
 const SCOPE_PATH = new URL(self.registration.scope).pathname.replace(/\/$/, "");
 const TABLE_MODE_PATH = `${SCOPE_PATH}/auth/tisch`;
@@ -25,6 +32,16 @@ const STATIC_PREFIX = `${SCOPE_PATH}/_next/static/`;
 
 function isTableModePath(pathname) {
   return pathname === TABLE_MODE_PATH || pathname === `${TABLE_MODE_PATH}/`;
+}
+
+/*
+ * Der Offline-Rückfall gilt nur für den angemeldeten Bereich (`/auth/…`) —
+ * dort ist der Tischmodus ein sinnvoller Ersatz. Eine gescheiterte Navigation
+ * zur Login-Seite oder zu einem Share-Link auf die Tischmodus-Hülle umzulenken
+ * gaukelte etwas Falsches vor.
+ */
+function isAuthAreaPath(pathname) {
+  return pathname === `${SCOPE_PATH}/auth` || pathname.startsWith(`${SCOPE_PATH}/auth/`);
 }
 
 function isCacheableAsset(pathname) {
@@ -111,7 +128,11 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   if (request.mode === "navigate") {
-    event.respondWith(isTableModePath(url.pathname) ? networkFirst(request) : navigationFallback(request));
+    if (isTableModePath(url.pathname)) {
+      event.respondWith(networkFirst(request));
+    } else if (isAuthAreaPath(url.pathname)) {
+      event.respondWith(navigationFallback(request));
+    }
     return;
   }
 

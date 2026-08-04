@@ -45,6 +45,7 @@ export {
   canEditContent as canEditContentRole,
   canPreviewAsPlayer,
   canReadDmSections,
+  buildPlayerViewContext,
   canSeeUnreleasedPages,
   canViewAuditLog,
   canViewWorldContent,

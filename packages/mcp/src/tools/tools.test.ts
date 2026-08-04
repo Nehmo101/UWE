@@ -176,25 +176,50 @@ test("brain_privacy_status states the lock and never prints the token", async ()
   assert.match(unlocked.content[0]!.text, /FREIGEGEBEN/);
 });
 
-test("player-view tools force the portal access context", async () => {
-  const requested: string[] = [];
+test("portal_player_view_graph answers with the player view, never the DM view", async () => {
+  // Der Probe-Server verhält sich wie die Studio-Route seit dem Fix: Ohne
+  // `preview=player` käme die DM-Sicht (inklusive gesperrter Seiten und
+  // DM-Knoten). Der Test prüft die ANTWORT des Tools — sie darf nichts davon
+  // enthalten. Schickte das Tool den Parameter nicht mehr mit, stünde der
+  // DM-Marker im Ergebnis und dieser Test schlüge fehl.
+  const dmGraph = JSON.stringify({
+    nodes: [
+      { id: "p1", title: "Marktplatz" },
+      { id: "p2", title: "dm_only: Der Tag der Asche (die volle Wahrheit)" },
+    ],
+    edges: [],
+  });
+  const playerGraph = JSON.stringify({
+    nodes: [{ id: "p1", title: "Marktplatz" }],
+    edges: [],
+  });
+
   const probe = createHttpServer((request, response) => {
-    requested.push(request.url ?? "");
+    const url = new URL(request.url ?? "/", "http://127.0.0.1");
+    const body = url.searchParams.get("preview") === "player" ? playerGraph : dmGraph;
     response.writeHead(200, { "Content-Type": "application/json" });
-    response.end("{}");
+    response.end(body);
   });
   await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
   const address = probe.address();
   const probeOrigin = typeof address === "object" && address ? `http://127.0.0.1:${address.port}` : "";
 
   const portal = createServer("portal", { UWE_STUDIO_URL: probeOrigin, UWE_PORTAL_URL: probeOrigin });
-  await call(portal, "portal_player_view_brain", { worldSlug: "aventurien" });
-  await call(portal, "portal_player_view_graph", { worldSlug: "aventurien" });
+  const result = await call(portal, "portal_player_view_graph", { worldSlug: "aventurien" });
 
   await new Promise<void>((resolve) => probe.close(() => resolve()));
 
-  assert.match(requested[0]!, /accessContext=portal/);
-  assert.match(requested[1]!, /preview=player/);
+  const text = result.content[0]!.text;
+  assert.equal(text.includes("dm_only"), false, "player view must not contain DM nodes");
+  assert.equal(text.includes("volle Wahrheit"), false);
+  assert.match(text, /Marktplatz/);
+});
+
+test("the portal catalog makes no player-view promise it cannot keep", () => {
+  // `portal_player_view_brain` versprach die Spielersicht auf das Welt-Brain —
+  // die Studio-Route kannte den Parameter nicht und lieferte die DM-Sicht.
+  // Das Tool ist entfernt; dieser Test hält es draußen.
+  assert.equal(toolNames(build("portal")).includes("portal_player_view_brain"), false);
 });
 
 test("missing required arguments produce an actionable error", async () => {

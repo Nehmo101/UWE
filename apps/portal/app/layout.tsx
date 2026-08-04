@@ -21,6 +21,7 @@ import { PortalThemeSyncProvider } from "../components/PortalThemeSyncProvider";
 import { PortalSessionChrome } from "../components/PortalSessionChrome";
 import { ServiceWorkerRegistrar } from "@/src/components/ServiceWorkerRegistrar";
 import { portalBasePath } from "@/src/lib/base-path";
+import { getBuildId } from "@/src/lib/build-id";
 import { enforcePortalMaintenance } from "@/src/lib/maintenance";
 
 const spaceMono = Space_Mono({
@@ -109,7 +110,7 @@ export default async function RootLayout({
               {children}
               <PortalSessionChrome />
               {/* Hält die Hülle des Tischmodus offline verfügbar. */}
-              <ServiceWorkerRegistrar basePath={portalBasePath()} />
+              <ServiceWorkerRegistrar basePath={portalBasePath()} buildId={getBuildId()} />
             </AppUrlsProvider>
           ) : (
             <main className="page">

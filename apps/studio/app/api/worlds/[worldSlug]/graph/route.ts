@@ -8,6 +8,8 @@ import {
   type GraphNodeCategory,
   type GraphViewMode,
 } from "@uwe/database/server";
+import { buildWorldGraphForViewer } from "@uwe/database/graph-service";
+import { buildPlayerViewContext } from "@uwe/auth";
 import { parseParams, worldSlugParamSchema } from "@uwe/security";
 
 interface RouteParams {
@@ -42,13 +44,22 @@ export async function GET(request: Request, { params }: RouteParams) {
   const tag = url.searchParams.get("tag") ?? undefined;
   const focusPageId = url.searchParams.get("focusPageId") ?? undefined;
   const mode = (url.searchParams.get("mode") as GraphViewMode | null) ?? "full";
-  const graph = await buildWorldGraph(repo, worldSlug, {
+  const filters = {
     campaignId: campaign?.id,
     categories: categories.length ? categories : undefined,
     tags: tag ? [tag] : undefined,
     focusPageId: focusPageId ?? undefined,
-    mode: focusPageId ? mode : "full",
-  });
+    mode: focusPageId ? mode : ("full" as const),
+  };
+
+  // `preview=player` liefert die Spielersicht: derselbe Filterpfad wie im
+  // Portal (nur freigegebene Seiten, ohne DM-Bereiche). Darauf verlassen sich
+  // die MCP-Tools `portal_player_view_*` — vorher wurde der Parameter still
+  // ignoriert und die DM-Sicht ausgeliefert.
+  const graph =
+    url.searchParams.get("preview") === "player"
+      ? await buildWorldGraphForViewer(repo, worldSlug, buildPlayerViewContext(world.id), filters)
+      : await buildWorldGraph(repo, worldSlug, filters);
 
   return NextResponse.json(graph);
 }

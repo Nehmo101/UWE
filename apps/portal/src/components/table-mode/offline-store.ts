@@ -89,24 +89,54 @@ export async function saveSnapshot(snapshot: PortalOfflineSnapshot): Promise<voi
   });
 }
 
-export async function readSnapshot(worldSlug: string): Promise<PortalOfflineSnapshot | null> {
-  const row = await withStore(SNAPSHOT_STORE, "readonly", (store) =>
-    requestResult<SnapshotRow | undefined>(store.get(worldSlug)),
+/**
+ * Gehört dieser Abzug der Person, die gerade angemeldet ist?
+ *
+ * Ein Portal-Gerät wird herumgereicht. Der Abzug trägt deshalb die
+ * `viewerUserId`, für die er gebaut wurde — stimmt sie nicht mit dem aktuellen
+ * Konto überein, wird der Eintrag nicht nur ignoriert, sondern GELÖSCHT: Was
+ * die vorige Person mitgenommen hat, darf für die nächste nicht auffindbar
+ * bleiben. Ein Abzug aus einer älteren Formatfassung fällt mit weg.
+ */
+function belongsToViewer(
+  snapshot: unknown,
+  viewerUserId: string | null,
+): snapshot is PortalOfflineSnapshot {
+  return (
+    isUsablePortalOfflineSnapshot(snapshot) && snapshot.viewerUserId === viewerUserId
   );
-
-  // Ein Abzug aus einer älteren Fassung wird verworfen statt halb gelesen.
-  return row && isUsablePortalOfflineSnapshot(row.snapshot) ? row.snapshot : null;
 }
 
-export async function listSnapshots(): Promise<PortalOfflineSnapshot[]> {
-  const rows = await withStore(SNAPSHOT_STORE, "readonly", (store) =>
-    requestResult<SnapshotRow[]>(store.getAll()),
-  );
+export async function readSnapshot(
+  worldSlug: string,
+  viewerUserId: string | null,
+): Promise<PortalOfflineSnapshot | null> {
+  return withStore(SNAPSHOT_STORE, "readwrite", async (store) => {
+    const row = await requestResult<SnapshotRow | undefined>(store.get(worldSlug));
+    if (!row) return null;
+    if (!belongsToViewer(row.snapshot, viewerUserId)) {
+      store.delete(worldSlug);
+      return null;
+    }
+    return row.snapshot;
+  });
+}
 
-  return rows
-    .map((row) => row.snapshot)
-    .filter(isUsablePortalOfflineSnapshot)
-    .sort((a, b) => a.world.name.localeCompare(b.world.name, "de"));
+export async function listSnapshots(
+  viewerUserId: string | null,
+): Promise<PortalOfflineSnapshot[]> {
+  return withStore(SNAPSHOT_STORE, "readwrite", async (store) => {
+    const rows = await requestResult<SnapshotRow[]>(store.getAll());
+    const usable: PortalOfflineSnapshot[] = [];
+    for (const row of rows) {
+      if (belongsToViewer(row.snapshot, viewerUserId)) {
+        usable.push(row.snapshot);
+      } else {
+        store.delete(row.worldSlug);
+      }
+    }
+    return usable.sort((a, b) => a.world.name.localeCompare(b.world.name, "de"));
+  });
 }
 
 export async function enqueueOperation(

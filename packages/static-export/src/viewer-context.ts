@@ -1,4 +1,4 @@
-import { buildAccessContext, type AccessContext } from "@uwe/auth";
+import { buildPlayerViewContext, type AccessContext } from "@uwe/auth";
 
 /**
  * Der statische Export ist die Spielersicht in Dateiform. Er wird deshalb wie
@@ -10,12 +10,5 @@ import { buildAccessContext, type AccessContext } from "@uwe/auth";
  * verlassen haben.
  */
 export function staticExportViewerContext(worldId: string): AccessContext {
-  return buildAccessContext({
-    user: null,
-    worldMembership: {
-      userId: "static-export",
-      worldId,
-      characterName: null,
-    },
-  });
+  return buildPlayerViewContext(worldId);
 }

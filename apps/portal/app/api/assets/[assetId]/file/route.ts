@@ -2,12 +2,7 @@ import fs from "node:fs";
 import { requirePortalApiAuth } from "@/src/lib/portal-api-auth";
 import { NextResponse } from "next/server";
 import { resolveAssetFilePath, buildAssetDownloadHeaders } from "@uwe/assets";
-import {
-  createAuthService,
-  createPrismaClient,
-  getSystemSettings,
-  isPortalGloballyEnabled,
-} from "@uwe/database/server";
+import { createAuthService, createPrismaClient } from "@uwe/database/server";
 import { assertCanReadWorldWithContext } from "@uwe/auth";
 import { getAccessContextForWorld, getSessionToken } from "@/src/lib/auth";
 
@@ -16,13 +11,9 @@ interface RouteContext {
 }
 
 export async function GET(request: Request, context: RouteContext) {
+  // Der globale Portal-Schalter steckt im Guard (requirePortalApiAuth).
   const authError = await requirePortalApiAuth(request);
   if (authError) return authError;
-
-  const settings = await getSystemSettings();
-  if (!isPortalGloballyEnabled(settings)) {
-    return NextResponse.json({ error: "Portal disabled" }, { status: 403 });
-  }
 
   const { assetId } = await context.params;
   const worldSlug = new URL(request.url).searchParams.get("world");
