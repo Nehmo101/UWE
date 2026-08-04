@@ -8,12 +8,12 @@ import {
   readLogs,
   restoreBackup,
   setInstallSelection,
-  setupHost,
   startHost,
   startHostService,
   stopHost,
   stopHostService,
 } from "./desktop-host.ts";
+import { runSetupAction } from "./setup-action.ts";
 import { applyDesktopHostUpdate, checkDesktopHostUpdate } from "./desktop-host-update.ts";
 import { setHostProgressSink } from "./desktop-host-progress.ts";
 import { getHostEnv, setHostEnv } from "./desktop-host-env.ts";
@@ -24,7 +24,7 @@ import {
   detectHostMode,
   resolveDesktopHostRoot,
 } from "./desktop-host.ts";
-import { isHostServiceId, type HostServiceId } from "./desktop-host-types.ts";
+import { HOST_SERVICE_LABELS, isHostServiceId, type HostServiceId } from "./desktop-host-types.ts";
 import path from "node:path";
 
 function readStdin(): Promise<string> {
@@ -78,8 +78,10 @@ async function main(): Promise<void> {
       // `setup` liest immer die gespeicherte Auswahl. Der Assistent schreibt sie
       // vorher über `set-install-selection` — bewusst zwei Aufrufe statt stdin,
       // damit der minutenlange Einrichtungslauf keine offene Eingabe braucht.
+      // Die Weiche Checkout/Bundle liegt in `runSetupAction` — dieselbe Logik
+      // wie beim `update` weiter unten.
       case "setup":
-        result = await setupHost(root);
+        result = await runSetupAction(root);
         break;
       case "get-install-selection":
         result = { ok: true, ...getInstallSelection(root) };
@@ -126,7 +128,9 @@ async function main(): Promise<void> {
         openTarget(root, target);
         result = {
           ok: true,
-          message: `${target === "portal" ? "Portal" : target === "brain" ? "Brain" : "Studio"} wurde geöffnet.`,
+          // Label aus der Dienst-Registry; unbekannte Ziele öffnen Studio
+          // (siehe desktopHostTargetUrl), also meldet die Rückmeldung dasselbe.
+          message: `${HOST_SERVICE_LABELS[isHostServiceId(target) ? target : "studio"]} wurde geöffnet.`,
         };
         break;
       case "check-update":
