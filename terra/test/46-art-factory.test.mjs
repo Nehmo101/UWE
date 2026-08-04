@@ -48,12 +48,29 @@ test('Terra Art Factory - Skills existieren fuer Codex, Claude und Cursor', () =
   ];
   for (const file of files) {
     const content = lesen(file);
-    assert.match(content, /^---\nname: (?:uweterra|uwe-terra)\n/);
+    // \r? weil ein frischer Windows-Checkout mit core.autocrlf=true CRLF liefert.
+    assert.match(content, /^---\r?\nname: (?:uweterra|uwe-terra)\r?\n/);
     assert.match(content, /pnpm terra:art:doctor/);
     assert.match(content, /Zwischenabnahme stoppen/);
+    assert.match(content, /tools\/terra-art\/windows\/setup\.ps1/,
+      'der Windows-Weg gehoert in jeden Skill, sonst wird er nachgebaut');
   }
   const cursor = JSON.parse(lesen('.cursor/skills/manifest.json'));
   assert.ok(cursor.skills.some((skill) => skill.id === 'uwe-terra'));
+});
+
+test('Terra Art Factory - Windows-Starter ist versioniert und passt zur CLI', () => {
+  const shim = lesen('tools/terra-art/windows/gltf-transform-shim.cs');
+  const setup = lesen('tools/terra-art/windows/setup.ps1');
+  const cli = lesen('tools/terra-art/cli.mjs');
+  assert.ok(shim.includes('node_modules\\@gltf-transform\\cli\\bin\\cli.js'),
+    'der Starter muss die CLI von glTF Transform finden');
+  assert.ok(setup.includes('gltf-transform-shim.cs'),
+    'das Setup baut genau den versionierten Starter');
+  for (const variable of ['GLTF_TRANSFORM_BIN', 'BLENDER_BIN']) {
+    assert.ok(cli.includes(`process.env.${variable}`), `${variable} wird von der CLI gelesen`);
+    assert.ok(setup.includes(variable), `${variable} wird vom Setup gesetzt`);
+  }
 });
 
 test('Terra Art Factory - Approval ist ohne explizite Identitaet gesperrt', () => {

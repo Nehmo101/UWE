@@ -11,6 +11,7 @@
 import type { GraphEdge, GraphNode, GraphNodeCategory } from "@uwe/database/graph-types";
 import { GRAPH_NODE_CATEGORIES } from "@uwe/database/graph-types";
 import { resolveNodeCollisions } from "./graph-collision";
+import { detectCommunities } from "./graph-communities";
 import {
   CANVAS_FONT,
   CHROME_FALLBACK,
@@ -31,13 +32,23 @@ export { GRAPH_CATEGORY_COLORS, isGraphPositionCacheValid };
 const REP = 2900; // Abstoßungsstärke (Basis, skaliert mit √n)
 const SPRING = 0.018; // Federkonstante
 const GRAV = 0.0065; // Zentrierungskraft
+const CLUSTER = 0.016; // Anziehung zum Community-Schwerpunkt → Grüppchen stark verbundener Knoten
 const DAMP = 0.86; // Dämpfung → System kommt zur Ruhe
 const REST = 0.045; // Schwelle "in Ruhe"
 const HL_LERP = 0.16; // Fokus-/Sichtbarkeits-Interpolation pro Frame
 const EDGE_BEND = 0.12; // Kantenbiegung
 const MIN_DIST = 2.4; // Mindestabstand in der Abstoßung (verhindert Kraft-Spitzen)
-const COLLIDE_PAD = 4; // "Nicht berühren": harter Mindestabstand zwischen Bubble-Rändern (Weltkoordinaten)
+const COLLIDE_PAD = 10; // "Nicht berühren": harter Mindestabstand zwischen Bubble-Rändern (Weltkoordinaten)
 const COLLIDE_MAX_ITERS = 32; // Obergrenze der Kollisions-Iterationen pro Schritt (adaptiv, bricht früh ab)
+const MIN_ZOOM = 0.35; // untere Zoom-Grenze (zoomBy/fit)
+const MAX_ZOOM = 3.2; // obere Zoom-Grenze
+// Zeichenradius-Skala: ab hier wächst der Radius langsamer als der Zoom (Lesbarkeit
+// beim Reinzoomen). Die UNTERGRENZE ist bewusst MIN_ZOOM: unterhalb von 1.6 gilt
+// damit Skala == Zoom, d. h. die Bildschirm-Geometrie ist eine reine Skalierung der
+// (kollisionsfreien) Welt-Geometrie — Bubbles können sich beim Rauszoomen nie
+// überdecken. Eine höhere Untergrenze (früher 0.6) ließ die Kreise beim Rauszoomen
+// langsamer schrumpfen als ihre Abstände → sichtbare Überlappung.
+const NODE_SCALE_MAX = 1.6;
 const MAX_FORCE = 42; // Obergrenze pro Knoten und Schritt
 const MAX_VEL = 24; // Obergrenze für Geschwindigkeit pro Schritt
 const PREWARM_BASE = 40; // Vorab-Schritte vor dem ersten Frame
@@ -94,6 +105,8 @@ export class GraphEngine {
 
   private catColors: Record<GraphNodeCategory, string> = { ...GRAPH_CATEGORY_COLORS };
   private chrome: ChromeColors = { ...CHROME_FALLBACK };
+  /** Community-Zuordnung (Label Propagation) für Grüppchen-Layout und Cluster-Kraft. */
+  private community: Map<string, number>;
 
   constructor(canvas: HTMLCanvasElement, opts: GraphEngineOptions) {
     this.canvas = canvas;
@@ -115,6 +128,7 @@ export class GraphEngine {
 
     this.selectedId = opts.selectId ?? null;
     this.L = this.compact ? 78 : 96;
+    this.community = detectCommunities(this.nodes.map((n) => n.id), this.adj);
 
     this.refreshColors();
     this.initLayout();
@@ -149,7 +163,18 @@ export class GraphEngine {
   private initLayout(): void {
     const n = this.nodes.length;
     const spread = 26 + Math.random() * 30 + Math.sqrt(n) * 7;
-    this.nodes.forEach((nd, i) => {
+    // Communities belegen zusammenhängende Winkel-Sektoren: Grüppchen starten
+    // nebeneinander und werden von der Cluster-Kraft dort zusammengehalten.
+    const rank = new Map<string, number>();
+    [...this.nodes]
+      .sort(
+        (a, b) =>
+          (this.community.get(a.id) ?? 0) - (this.community.get(b.id) ?? 0) ||
+          a.id.localeCompare(b.id),
+      )
+      .forEach((nd, i) => rank.set(nd.id, i));
+    this.nodes.forEach((nd) => {
+      const i = rank.get(nd.id) ?? 0;
       const a = (i / Math.max(n, 1)) * Math.PI * 2;
       const r = spread + (Math.random() - 0.5) * 12;
       nd.x = Math.cos(a) * r + (Math.random() - 0.5) * 8;
@@ -258,7 +283,7 @@ export class GraphEngine {
     const rect = this.canvas.getBoundingClientRect();
     const px = cx == null ? rect.width / 2 : cx;
     const py = cy == null ? rect.height / 2 : cy;
-    const nz = clamp(this.zoom * f, 0.35, 3.2);
+    const nz = clamp(this.zoom * f, MIN_ZOOM, MAX_ZOOM);
     this.tx = px - (px - this.tx) * (nz / this.zoom);
     this.ty = py - (py - this.ty) * (nz / this.zoom);
     this.zoom = nz;
@@ -296,7 +321,7 @@ export class GraphEngine {
       h = Math.max(maxY - minY, 1);
     const z = clamp(
       Math.min((rect.width - pad * 2) / w, (rect.height - pad * 2) / h),
-      0.35,
+      MIN_ZOOM,
       2.2,
     );
     const cx = (minX + maxX) / 2,
@@ -312,6 +337,20 @@ export class GraphEngine {
     const ns = this.nodes;
     const minDist2 = MIN_DIST * MIN_DIST;
     const repScale = REP / Math.sqrt(Math.max(ns.length, 1));
+    // Community-Schwerpunkte für die Cluster-Anziehung (Grüppchen-Bildung).
+    const centroids = new Map<number, { x: number; y: number; n: number }>();
+    ns.forEach((nd) => {
+      const c = this.community.get(nd.id);
+      if (c == null) return;
+      const e = centroids.get(c);
+      if (e) {
+        e.x += nd.x;
+        e.y += nd.y;
+        e.n += 1;
+      } else {
+        centroids.set(c, { x: nd.x, y: nd.y, n: 1 });
+      }
+    });
     for (let i = 0; i < ns.length; i++) {
       const a = ns[i];
       let fx = 0,
@@ -337,6 +376,13 @@ export class GraphEngine {
       }
       fx -= a.x * GRAV;
       fy -= a.y * GRAV;
+      // Zug zum eigenen Community-Schwerpunkt: hält stark verbundene Grüppchen
+      // zusammen, ohne die Abstoßung/Kollision auszuhebeln.
+      const cen = centroids.get(this.community.get(a.id) ?? -1);
+      if (cen && cen.n > 1) {
+        fx += (cen.x / cen.n - a.x) * CLUSTER;
+        fy += (cen.y / cen.n - a.y) * CLUSTER;
+      }
       [a._fx, a._fy] = capVector(fx, fy, MAX_FORCE);
     }
     this.edges.forEach((e) => {
@@ -385,6 +431,12 @@ export class GraphEngine {
 
   private byId(id: string): SimNode | undefined {
     return this.map.get(id);
+  }
+
+  /** Zeichenradius-Skala: unterhalb von NODE_SCALE_MAX identisch mit dem Zoom
+   *  (→ garantiert überlappungsfrei), darüber gedeckelt für Lesbarkeit. */
+  private nodeScale(): number {
+    return clamp(this.zoom, MIN_ZOOM, NODE_SCALE_MAX);
   }
 
   // --- Frame ------------------------------------------------------------------
@@ -558,7 +610,7 @@ export class GraphEngine {
     this.nodes.forEach((n) => {
       const [x, y] = s2(n);
       const col = this.catColor(n.category);
-      const r = n.r * clamp(this.zoom, 0.6, 1.6);
+      const r = n.r * this.nodeScale();
       const sel = n.id === this.selectedId;
       const hov = n.id === this.hoverId;
       const a = clamp(n.hl, 0.06, 1);
@@ -680,7 +732,7 @@ export class GraphEngine {
       if (this.hidden.has(n.category)) continue;
       const sx = n.x * this.zoom + this.tx,
         sy = n.y * this.zoom + this.ty;
-      const r = n.r * clamp(this.zoom, 0.6, 1.6) + 4;
+      const r = n.r * this.nodeScale() + 4;
       const d = Math.hypot(cx - sx, cy - sy);
       if (d < r && d < bestD) {
         best = n;

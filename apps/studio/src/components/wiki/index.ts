@@ -3,3 +3,4 @@ export { WikiContextPanel } from './WikiContextPanel';
 export { WikiTiptapViewer } from './WikiTiptapViewer';
 export { ConnectionMatrix } from './ConnectionMatrix';
 export { CampaignSidebar, type CampaignSidebarItem } from './CampaignSidebar';
+export { PortalReleaseToggle } from './PortalReleaseToggle';

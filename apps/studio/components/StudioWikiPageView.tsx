@@ -30,7 +30,7 @@ import { buildPageViewForViewer } from "@uwe/database/page-viewer-service";
 import { pagePreviewHref } from "@/src/lib/page-preview";
 import { ShellBreadcrumb, ShellContextPanel, PageHeader } from "@/src/components/shell";
 import { PreviewAsPlayerControls } from "@/src/components/PreviewAsPlayerControls";
-import { WikiContextPanel } from "@/src/components/wiki";
+import { PortalReleaseToggle, WikiContextPanel } from "@/src/components/wiki";
 import { wikiPageBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { canUsePreview, getAccessContextForWorld, getPreviewUserId, getWorldPlayers } from "@/src/lib/auth";
 
@@ -56,6 +56,8 @@ export interface StudioWikiPageViewProps {
   category: string;
   slug: string;
   preview?: string;
+  /** `"1"` nach einem Speichern im Bearbeitungsmodus — zeigt die Erfolgsmeldung. */
+  saved?: string;
 }
 
 function withPlayerPreviewHref(href: string, active: boolean): string {
@@ -90,6 +92,7 @@ export async function StudioWikiPageView({
   category,
   slug,
   preview,
+  saved,
 }: StudioWikiPageViewProps) {
   const isPlayerPreview = preview === "player";
   const repo = getAppRepository();
@@ -217,6 +220,11 @@ export async function StudioWikiPageView({
                   tags={parseStringArray(dmPage.tags)}
                   aliases={parseStringArray(dmPage.aliases)}
                 />
+                <PortalReleaseToggle
+                  worldSlug={worldSlug}
+                  pageId={dmPage.id}
+                  released={dmPage.portalReleased}
+                />
               </SidebarSection>
               <Collapsible variant="sidebar" title="KI & Assistenz" defaultOpen={false}>
                 <MobileAiPromptPanel
@@ -284,6 +292,11 @@ export async function StudioWikiPageView({
         />
 
         <div className="max-w-[52rem] uwe-v2-wiki">
+          {!isPlayerPreview && saved && (
+            <Alert tone="success" role="status">
+              Änderungen gespeichert.
+            </Alert>
+          )}
           {thirdPartySource ? (
             <Alert tone="info" role="note">
               Übernommen aus <strong>{thirdPartySource}</strong>. Fremdes Material — nach der

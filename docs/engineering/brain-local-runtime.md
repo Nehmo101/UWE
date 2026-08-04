@@ -18,15 +18,18 @@ Portal.
 
 - **Owner-only.** Jede Route, API und Server Action prüft serverseitig die
   globale Rolle `owner` (`requireBrainOwnerAuth`). Nicht-Owner erhalten 401/403.
-- **Lokal per Default.** `dev`/`start` binden an `127.0.0.1:3002` (Loopback).
-  Jede weitergehende Erreichbarkeit ist eine **explizite** Owner-Entscheidung:
-  LAN über `BRAIN_EXPOSURE=lan` plus konkrete Interface-Adresse, ein
-  öffentliches Origin über `BRAIN_EXPOSURE=public`.
+- **Lokal per Default.** Die Skripte `dev`/`start` binden an `127.0.0.1:3002`
+  (Loopback). Eine vom Command Center betriebene Installation startet Brain
+  stattdessen auf dem `BRAIN_PORT` ihrer `.env` — Fallback dort ist `3102`
+  (`SERVICE_PORT_ENV` in `tools/uwe-host-command-center/src/desktop-host-types.ts`),
+  ebenfalls Loopback. Jede weitergehende Erreichbarkeit ist eine **explizite**
+  Owner-Entscheidung: LAN über `BRAIN_EXPOSURE=lan` plus konkrete
+  Interface-Adresse, ein öffentliches Origin über `BRAIN_EXPOSURE=public`.
 - **Nie automatisch öffentlich.** Brain landet **niemals als Nebeneffekt** im
   Cloudflare-Tunnel, in Firewall-Freigaben, in `deploy/systemd/uwe.service`
   oder in `start-uwe.sh`. Ein grüner CI-Build erzeugt keine Erreichbarkeit.
-  `deploy/scripts/check-cloudflare-tunnel.sh` schlägt fehl, wenn Port `3002`
-  oder ein Brain-Hostname im Tunnel-Config auftaucht — **außer** bei gesetztem
+  `deploy/scripts/check-cloudflare-tunnel.sh` schlägt fehl, wenn der Brain-Port
+  (`BRAIN_PORT`, Fallback `3102`) oder ein Brain-Hostname im Tunnel-Config auftaucht — **außer** bei gesetztem
   `BRAIN_PUBLIC_TUNNEL=1`, dem bewussten Opt-in für den owner-gated Betrieb
   (dann nur noch eine Warnung). 2FA auf dem Owner-Konto wird dringend erwartet.
 - **Keine Cloud-KI für private Inhalte.** `personal_brain`- und `admin_life`-

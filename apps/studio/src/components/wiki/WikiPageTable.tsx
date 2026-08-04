@@ -14,13 +14,18 @@ import type {
 } from "@uwe/database/enums";
 import { DataTable } from "../ui/data-table";
 import { PageBatchToolbar } from "./PageBatchToolbar";
+import { PortalReleaseToggle } from "./PortalReleaseToggle";
 
 export interface WikiPageRow {
   id: string;
   title: string;
   href: string;
+  /** Welt der Seite — nötig für den Portal-Freigabe-Toggle in der Zeile. */
+  worldSlug: string;
   type: PageType;
   canonicalStatus: CanonicalStatus;
+  /** Freigegeben fürs Spieler-Wiki — direkt in der Tabelle umschaltbar. */
+  portalReleased: boolean;
   /** Quest lifecycle status for quest pages; `null` counts as open. */
   questStatus?: QuestLifecycleStatus | null;
   tags: string[];
@@ -78,6 +83,19 @@ const columns: ColumnDef<WikiPageRow>[] = [
         <CanonicalBadge status={row.original.canonicalStatus} />
         {row.original.aiReviewedAt && <AiReviewedBadge />}
       </span>
+    ),
+  },
+  {
+    accessorKey: "portalReleased",
+    header: "Spieler-Wiki",
+    meta: { label: "Spieler-Wiki" },
+    cell: ({ row }) => (
+      <PortalReleaseToggle
+        worldSlug={row.original.worldSlug}
+        pageId={row.original.id}
+        released={row.original.portalReleased}
+        variant="compact"
+      />
     ),
   },
   {
