@@ -62,6 +62,18 @@ describe("UWE dungeon cockpit", () => {
       title: "Ebene 1",
       type: "dungeon_level",
       prepStatus: "ready",
+      contentBlocks: [
+        {
+          type: "player_text",
+          sortOrder: 0,
+          content: "Ein zeremonielles Foyer, kalt und still.",
+        },
+        {
+          type: "rich_text",
+          sortOrder: 1,
+          content: "Leitmotiv: Bürokratie, die den Untergang überlebt hat.",
+        },
+      ],
     });
     levelId = level.id;
 
@@ -164,10 +176,15 @@ describe("UWE dungeon cockpit", () => {
       worldSlug,
       "verlassener-tempel",
       "ebene-1",
+      wikiIndex,
     );
     assert.ok(level);
     assert.equal(level.rooms.length, 1);
     assert.equal(level.rooms[0]?.parentPageId, levelId);
+    // Der komplette Ebenentext gehört zur Übersicht — ohne ihn zeigt das
+    // Cockpit auf der Ebenen-Seite nur die Raumliste.
+    assert.ok(level.html.includes("Ein zeremonielles Foyer"));
+    assert.ok(level.html.includes("Leitmotiv"));
 
     const room = await dungeons.getRoomCockpit(
       worldSlug,

@@ -85,6 +85,7 @@ export async function seedAuthDemoContent(
     title: "Amans Geheimnis",
     slug: "amans-geheimnis",
     type: "note",
+    portalReleased: true,
     summary: "Nur für Aman freigegeben.",
     contentBlocks: [
       {
@@ -100,6 +101,7 @@ export async function seedAuthDemoContent(
     title: "Nach der ersten Session",
     slug: "nach-der-ersten-session",
     type: "note",
+    portalReleased: true,
     summary: "Wird nach Session 1 freigeschaltet.",
     contentBlocks: [
       {
@@ -115,6 +117,7 @@ export async function seedAuthDemoContent(
     title: "Archivierte Notiz",
     slug: "archivierte-notiz",
     type: "note",
+    portalReleased: true,
     summary: "Sollte im Portal nicht erscheinen.",
     contentBlocks: [
       {

@@ -61,6 +61,7 @@ describe("DM-Bereich im Wikitext — Lesepfade", () => {
       title: "Hauptmann Roderick",
       slug: "hauptmann-roderick",
       type: "npc",
+      portalReleased: true,
       summary: `Ein Offizier der Wache.\n:::dm\n${SECRET} ist geplant.\n:::`,
       contentBlocks: [
         {
@@ -76,6 +77,7 @@ describe("DM-Bereich im Wikitext — Lesepfade", () => {
       title: "Aman",
       slug: "aman",
       type: "player_character",
+      portalReleased: true,
       contentBlocks: [
         {
           type: "rich_text",

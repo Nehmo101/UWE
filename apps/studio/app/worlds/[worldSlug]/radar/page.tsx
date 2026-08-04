@@ -1,26 +1,40 @@
 import Link from "next/link";
-import { SidebarSection, StatGrid } from "@uwe/shared-ui";
+import { DungeonPrepStatusBadge, SidebarSection, StatGrid } from "@uwe/shared-ui";
 import { getAppRepository, prisma } from "@uwe/database/server";
 import { createCampaignRadarService } from "@uwe/database/campaign-radar";
 import { notFound } from "next/navigation";
 import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
+import { CampaignSidebar } from "@/src/components/wiki";
+import { campaignNavItems } from "@/src/lib/world-nav";
 import { updateQuestStatusAction } from "../quest-status-actions";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
+  searchParams: Promise<{ campaign?: string }>;
 }
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
 
-export default async function CampaignRadarPage({ params }: Props) {
+export default async function CampaignRadarPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
+  const { campaign: campaignSlug } = await searchParams;
   const repo = getAppRepository();
   const world = await repo.getWorldBySlug(worldSlug);
   if (!world) notFound();
 
-  const radar = await createCampaignRadarService(prisma).getRadar(worldSlug);
+  // Dasselbe Muster wie im Dungeon-Cockpit: die Kampagne ist ein Filter in der
+  // Kontextspalte, kein eigener Rahmen. Ein unbekannter Slug fällt auf „alle" zurück.
+  const campaigns = await repo.listCampaignsByWorld(worldSlug);
+  const selectedCampaign = campaignSlug
+    ? campaigns.find((campaign) => campaign.slug === campaignSlug)
+    : null;
+
+  const radar = await createCampaignRadarService(prisma).getRadar(
+    worldSlug,
+    selectedCampaign?.id ? { campaignId: selectedCampaign.id } : undefined,
+  );
   if (!radar) notFound();
 
   return (
@@ -34,6 +48,10 @@ export default async function CampaignRadarPage({ params }: Props) {
         )}
       />
       <ShellContextPanel>
+        <CampaignSidebar
+          items={campaignNavItems(`/worlds/${worldSlug}/radar`, campaigns, campaignSlug)}
+          manageHref={`/worlds/${worldSlug}/campaigns`}
+        />
         <SidebarSection title="Welt">
           <ul className="flex flex-col gap-2 text-sm">
             {radar.clockLabel ? (
@@ -46,6 +64,9 @@ export default async function CampaignRadarPage({ params }: Props) {
               </li>
             )}
             <li>
+              <Link href={`/worlds/${worldSlug}/dungeons`}>Dungeon Cockpit →</Link>
+            </li>
+            <li>
               <Link href={`/worlds/${worldSlug}/inspector`}>Inspektor →</Link>
             </li>
             <li>
@@ -56,13 +77,18 @@ export default async function CampaignRadarPage({ params }: Props) {
       </ShellContextPanel>
       <PageHeader
         title="Kampagnen-Radar"
-        summary="Was passiert gerade in der Welt? Fraktionen, offene Quests, Zeit, letzte Session und Kanon-Konflikte auf einen Blick."
+        summary={
+          selectedCampaign
+            ? `Was passiert gerade in „${selectedCampaign.name}“? Fraktionen, offene Quests, Dungeons, letzte Session und Kanon-Konflikte auf einen Blick.`
+            : "Was passiert gerade in der Welt? Fraktionen, offene Quests, Dungeons, letzte Session und Kanon-Konflikte auf einen Blick."
+        }
       />
 
       <StatGrid
         stats={[
           { label: "Fraktionen", value: radar.factions.length },
           { label: "Offene Quests", value: radar.openQuests.length },
+          { label: "Dungeons", value: radar.dungeons.length },
           { label: "NPCs", value: radar.npcSummary.total },
           { label: "Kanon-Konflikte", value: radar.canonConflicts },
         ]}
@@ -136,6 +162,34 @@ export default async function CampaignRadarPage({ params }: Props) {
                         Abschließen
                       </Button>
                     </form>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Dungeons</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {radar.dungeons.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {selectedCampaign
+                  ? "Keine Dungeons in dieser Kampagne."
+                  : "Keine Dungeons in dieser Welt."}{" "}
+                <Link href={`/worlds/${worldSlug}/dungeons/new`}>Neuen Dungeon anlegen →</Link>
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-2 text-sm">
+                {radar.dungeons.map((dungeon) => (
+                  <li key={dungeon.id} className="flex flex-wrap items-center gap-2">
+                    <Link href={dungeon.href}>{dungeon.title}</Link>
+                    <DungeonPrepStatusBadge status={dungeon.prepStatus} />
+                    {dungeon.summary ? (
+                      <span className="text-muted-foreground"> — {dungeon.summary}</span>
+                    ) : null}
                   </li>
                 ))}
               </ul>

@@ -65,6 +65,11 @@ export {
 export { collectWikiLinkTargets, auditWikiLinks, type LinkAudit } from "./relations";
 
 export {
+  DUNGEON_CONVERSION_TEMPLATE,
+  DUNGEON_TEMPLATE_FILE_NAME,
+} from "./dungeon-template";
+
+export {
   buildDocImportPlan,
   DOC_IMPORT_SOURCE_TAG,
   type BuildDocImportPlanOptions,

@@ -79,8 +79,19 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
         title: page.slug,
         slug: page.slug,
         type: "note",
+        portalReleased: true,
       });
     }
+
+    // Der neue Zweig seit der Portal-Freigabe je Seite: nicht freigegeben —
+    // Staff sieht sie, ein Spieler nicht, und die SQL-Vorverengung muss das
+    // genauso beantworten wie der JS-Baseline-Filter.
+    await repo.createPage({
+      worldId: world.id,
+      title: "unreleased-page",
+      slug: "unreleased-page",
+      type: "note",
+    });
 
     // Aman is granted the specific-players page and has unlocked the unlock page.
   });
@@ -104,17 +115,20 @@ describe("listPagesForViewer SQL pre-narrowing equivalence", () => {
         "archived-page",
         "specific-page",
         "unlock-page",
+        "unreleased-page",
       ]),
     );
   });
 
-  it("an assigned player sees the whole world, same as the baseline", async () => {
+  it("an assigned player sees every released page, same as the baseline", async () => {
     for (const userId of [amanUserId, lazulUserId]) {
       const ctx = await auth.buildAccessContextForWorld(worldSlug, { userId });
       assert.ok(ctx);
       assert.equal(ctx.user?.access.studio, false);
-      assert.deepEqual(await narrowedSlugs(ctx), await baselineSlugs(ctx));
-      assert.equal((await narrowedSlugs(ctx)).length, 7);
+      const narrowed = await narrowedSlugs(ctx);
+      assert.deepEqual(narrowed, await baselineSlugs(ctx));
+      assert.equal(narrowed.length, 7);
+      assert.ok(!narrowed.includes("unreleased-page"));
     }
   });
 
