@@ -48,7 +48,7 @@ test('Terra Art Factory - Skills existieren fuer Codex, Claude und Cursor', () =
   ];
   for (const file of files) {
     const content = lesen(file);
-    assert.match(content, /^---\nname: (?:uweterra|uwe-terra)\n/);
+    assert.match(content, /^---\r?\nname: (?:uweterra|uwe-terra)\r?\n/);
     assert.match(content, /pnpm terra:art:doctor/);
     assert.match(content, /Zwischenabnahme stoppen/);
   }

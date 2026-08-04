@@ -21,6 +21,7 @@ import { defaultsFor } from './editor/tools.js';
 import { initPointer, verarbeiteZeiger, onKey } from './editor/pointer.js';
 import { initPanels, buildRail, buildPanel, updateHint, updateStats, tickToast, markerOverlayAktualisieren } from './ui/panels.js';
 import { initIO, palettePassend, setzeKartenGroesseFuerSchau } from './editor/io.js';
+import { initKartenmodus, istKartenmodus } from './editor/kartenmodus.js';
 // I3: Erosion laeuft ueber mehrere Bilder und braucht deshalb einen Takt.
 import { tickErosion } from './editor/erosion-lauf.js';
 // I4: die Beschriftungsschicht. In die Szene gehaengt wird sie in
@@ -291,6 +292,7 @@ setRauchSammler(setRauchQuellen);
 initPointer(renderer.domElement);
 initKeys(onKey);
 initIO();
+initKartenmodus();
 if (SCHAU_MODUS === "luft") {
   S.biom = "luftarchipel";
   var biomSelect = document.getElementById("biomSel");
@@ -352,6 +354,13 @@ function animate() {
   var raw = (now - lastT) / 1000;          // echte Bildzeit fuer Anzeige und Blenden
   var dt = Math.min(0.05, raw);            // geklammert fuer stabile Bewegung
   lastT = now;
+
+  // Der Atlas zeichnet eine eigene, deterministische 2D-Chronikkarte. Die
+  // aufwendige 3D-Szene pausiert solange vollstaendig im Hintergrund.
+  if (istKartenmodus()) {
+    tickToast(now);
+    return;
+  }
 
   verarbeiteZeiger(now);
   moveFocus(dt);
