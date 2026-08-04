@@ -107,6 +107,38 @@ describe("meal plan + shopping (integration)", () => {
     assert.equal(toggled.checked, true);
   });
 
+  it("splits perishables needed late in the week into the fresh trip", async () => {
+    const meals = createMealPlanService(familyDb);
+    const shopping = createShoppingService(familyDb);
+    const kitchen = createKitchenService(familyDb, db);
+    const lateRecipe = await kitchen.createRecipe({
+      title: "Freitags-Salat",
+      servingsBase: 2,
+      ingredients: [
+        { name: "Feldsalat", amount: 200, unit: "gram", category: "produce" },
+        { name: "TK-Erbsen", amount: 300, unit: "gram", category: "frozen" },
+      ],
+    });
+
+    const week = await meals.getOrCreateWeek(2026, 30, 3);
+    const days = datesOfIsoWeek(2026, 30);
+    // Tomatensauce am Montag, Salat am Freitag.
+    await meals.setEntry({ weekId: week.id, date: days[0], slot: "dinner", recipeId });
+    await meals.setEntry({ weekId: week.id, date: days[4], slot: "dinner", recipeId: lateRecipe.id });
+
+    const list = await shopping.generateFromWeek(week.id, {
+      recurringBasics: [{ name: "Hafermilch", category: "chilled" }],
+    });
+
+    // Montags-Gemüse → Großeinkauf; Freitags-Salat (verderblich) → Frische-Einkauf.
+    assert.equal(list.items.find((i) => i.name === "Tomaten")?.trip, "main");
+    assert.equal(list.items.find((i) => i.name === "Feldsalat")?.trip, "fresh");
+    // Tiefkühl hält — bleibt trotz spätem Verwendungstag im Großeinkauf.
+    assert.equal(list.items.find((i) => i.name === "TK-Erbsen")?.trip, "main");
+    // Grundausstattung ohne Verwendungstag → Großeinkauf.
+    assert.equal(list.items.find((i) => i.recurring)?.trip, "main");
+  });
+
   it("persists and clears the AI week draft", async () => {
     const meals = createMealPlanService(familyDb);
     const week = await meals.getOrCreateWeek(2026, 29, 3);

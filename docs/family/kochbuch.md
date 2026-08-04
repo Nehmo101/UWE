@@ -1,7 +1,8 @@
 # Kochbuch und Rezeptdruck
 
 Rezepte liegen in `packages/kitchen` und werden in der Küche gepflegt. Neu ist der Weg auf
-Papier: **6×4 Zoll**, derselbe Drucker wie für die Etiketten.
+Papier: **6×4 Zoll**, derselbe Drucker wie für die Etiketten. Wochenplanung,
+KI-Wochenvorschlag und Einkauf: [essensplan.md](essensplan.md).
 
 ```mermaid
 flowchart LR

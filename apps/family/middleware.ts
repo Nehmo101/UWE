@@ -74,6 +74,9 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",
+    // `manifest.webmanifest` ist ausgenommen: der Browser lädt das Manifest
+    // ohne Credentials — hinter dem Login-Redirect wäre Family nicht
+    // installierbar. Es enthält nur statische App-Metadaten.
+    "/((?!_next/static|_next/image|favicon.ico|manifest\\.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)",
   ],
 };

@@ -52,6 +52,7 @@ const FIELD_LABELS: Record<keyof ExtractedFields, string> = {
   product: "Produkt",
   deadlines: "Fristen",
   summary: "Zusammenfassung",
+  receiptItems: "Bon-Positionen",
 };
 
 const FILING_TARGETS: ScanFilingTarget[] = [
@@ -61,6 +62,7 @@ const FILING_TARGETS: ScanFilingTarget[] = [
   "life_brain",
   "calendar_event",
   "recipe",
+  "pantry",
   "dnd_session_note",
   "dnd_handout",
 ];
@@ -68,6 +70,12 @@ const FILING_TARGETS: ScanFilingTarget[] = [
 function formatFieldValue(key: string, value: unknown): string {
   if (key === "amountCents" && typeof value === "number") {
     return (value / 100).toLocaleString("de-DE", { style: "currency", currency: "EUR" });
+  }
+  if (key === "receiptItems" && Array.isArray(value)) {
+    return value
+      .map((item) => (item && typeof item === "object" ? String((item as { name?: string }).name ?? "") : ""))
+      .filter(Boolean)
+      .join(", ");
   }
   if (Array.isArray(value)) return value.join(", ");
   return String(value);
@@ -103,6 +111,7 @@ export default async function FamilyScanDetailPage({ params }: Props) {
   const fileUrl = `/api/scan/${scan.id}/file`;
   const entries = fieldEntries(scan.extractedFields ?? {});
   const defaultTarget = scan.proposal?.target ?? "capture";
+  const receiptItems = scan.extractedFields?.receiptItems ?? [];
 
   return (
     <FamilyShell
@@ -232,6 +241,28 @@ export default async function FamilyScanDetailPage({ params }: Props) {
               ))}
             </select>
           </label>
+          {receiptItems.length > 0 ? (
+            <fieldset className="family-form">
+              <legend>Bon-Positionen für den Vorrat</legend>
+              <p className="family-muted">
+                Gilt beim Ziel &bdquo;In den Vorrat&ldquo;: abwählen, was nicht in den Vorrat
+                soll, Namen bei Bedarf korrigieren.
+              </p>
+              {receiptItems.map((item, index) => (
+                <div className="family-form-row" key={index}>
+                  <label style={{ flexDirection: "row", alignItems: "center", gap: "0.5rem" }}>
+                    <input type="checkbox" name={`item-${index}`} defaultChecked />
+                    <input
+                      type="text"
+                      name={`item-${index}-name`}
+                      defaultValue={item.name}
+                      aria-label={`Position ${index + 1}`}
+                    />
+                  </label>
+                </div>
+              ))}
+            </fieldset>
+          ) : null}
           <div>
             <button type="submit" className="family-btn">
               Bestätigen und ablegen

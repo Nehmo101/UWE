@@ -58,6 +58,12 @@ const AI_IMPORT_PATTERNS: readonly RegExp[] = [
   /@\/src\/lib\/ai-gateway-handlers/,
   /@\/src\/lib\/label-ai-shorten/,
   /@\/src\/lib\/research-synthesis/,
+  // `@uwe/kitchen` exportiert überwiegend KI-freie Domänenlogik (Bring, Merge,
+  // Druck) — als Paket-Pattern würde jedes Küchen-Action-Modul anschlagen.
+  // Deshalb Symbol-Patterns für die zwei Inferenz-Auslöser des Pakets. Wer
+  // einen weiteren baut (oder diese wrappt), trägt ihn hier nach.
+  /\bsuggestWeek\b/,
+  /\bformatRecipeForCard\b/,
 ];
 
 /**
