@@ -43,7 +43,10 @@ describe("executeJob sound_play", () => {
   it("accepts sourceUrl as the official audio source field", async () => {
     const result = await executeJob(
       soundJob({ sourceUrl: "--version" }),
-      ctx({ audioCommand: process.execPath }),
+  // "node" statt process.execPath: splitCommand() kennt keine Anführungszeichen,
+  // und unter Windows liegt node in "C:\Program Files\…" — der Pfad zerfiele
+  // am Leerzeichen (spawn "C:\Program" → ENOENT). "node" löst über PATH auf.
+      ctx({ audioCommand: "node" }),
     );
 
     assert.equal(result.dispatched, true);
@@ -54,7 +57,7 @@ describe("executeJob sound_play", () => {
     for (const field of ["url", "path", "source"] as const) {
       const result = await executeJob(
         soundJob({ [field]: "--version" }),
-        ctx({ audioCommand: process.execPath }),
+        ctx({ audioCommand: "node" }),
       );
       assert.equal(result.source, "--version");
     }
@@ -62,7 +65,7 @@ describe("executeJob sound_play", () => {
 
   it("fails clearly when no audio source is provided", async () => {
     await assert.rejects(
-      () => executeJob(soundJob({}), ctx({ audioCommand: process.execPath })),
+      () => executeJob(soundJob({}), ctx({ audioCommand: "node" })),
       /keine Audioquelle/,
     );
   });
@@ -81,17 +84,17 @@ describe("executeJob sound_stop", () => {
       ...soundJob({ sourceUrl: "--version" }),
       id: "job_play_track",
     };
-    await executeJob(playJob, ctx({ audioCommand: process.execPath }));
+    await executeJob(playJob, ctx({ audioCommand: "node" }));
 
     const stopResult = await executeJob(
       genericJob("sound_stop", { jobId: "job_play_track" }),
-      ctx({ audioCommand: process.execPath }),
+      ctx({ audioCommand: "node" }),
     );
     assert.equal((stopResult as { stoppedCount?: number }).stoppedCount, 1);
   });
 
   it("stop_all clears tracked playback", async () => {
-    await executeJob(soundJob({ sourceUrl: "--version" }), ctx({ audioCommand: process.execPath }));
+    await executeJob(soundJob({ sourceUrl: "--version" }), ctx({ audioCommand: "node" }));
     const stopAll = await executeJob(genericJob("sound_stop_all", {}), ctx());
     assert.ok(((stopAll as { stoppedCount?: number }).stoppedCount ?? 0) >= 0);
   });
@@ -117,7 +120,7 @@ describe("executeJob image_generate", () => {
 
     const result = await executeJob(
       genericJob("image_generate", { prompt: "a test image" }),
-      ctx({ imageCommand: `${process.execPath} ${script}` }),
+      ctx({ imageCommand: `node ${script}` }),
     );
 
     assert.equal(result.dispatched, true);

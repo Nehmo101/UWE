@@ -12,7 +12,10 @@ import {
 describe("audio-player process tracking", () => {
   it("tracks a spawned process by job id", () => {
     resetTrackedAudioForTests();
-    const result = playTrackedSound(process.execPath, "--version", "job-a");
+    // "node" statt process.execPath: splitCommand() kennt keine
+    // Anführungszeichen, und unter Windows liegt node in "C:\Program Files\…"
+    // — der Pfad zerfiele am Leerzeichen (spawn "C:\Program" → ENOENT).
+    const result = playTrackedSound("node", "--version", "job-a");
     assert.equal(result.dispatched, true);
     assert.ok(result.pid != null);
 
@@ -23,8 +26,8 @@ describe("audio-player process tracking", () => {
 
   it("stop_all terminates every tracked process", () => {
     resetTrackedAudioForTests();
-    playTrackedSound(process.execPath, "--version", "job-1");
-    playTrackedSound(process.execPath, "--version", "job-2");
+    playTrackedSound("node", "--version", "job-1");
+    playTrackedSound("node", "--version", "job-2");
 
     const stopped = stopAllTrackedSounds();
     assert.ok(stopped.stoppedCount >= 1);
