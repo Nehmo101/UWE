@@ -15,4 +15,5 @@ export {
   type UweEnv,
 } from "./config/env";
 
+export { warnAboutLegacyRtxEnvVars } from "./legacy-env";
 export { redactError, redactSecrets } from "./redact";

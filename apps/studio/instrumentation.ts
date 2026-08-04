@@ -1,7 +1,10 @@
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
-    const { assertProductionEnvReady } = await import("@uwe/env");
+    const { assertProductionEnvReady, warnAboutLegacyRtxEnvVars } = await import("@uwe/env");
     assertProductionEnvReady();
+    // RTX_* → ENGINE_*: alte Variablen werden ohne Fallback ignoriert — das
+    // darf nicht still passieren (docs/engineering/engine-rename-migration.md).
+    warnAboutLegacyRtxEnvVars();
     const { enforceEnvSafetyAtBoot } = await import("@uwe/auth");
     // Hard abort in production when blocking env issues exist (weak AUTH_SECRET,
     // dev media signing secret, RUN_DB_SEED, …); warning only in dev/test.

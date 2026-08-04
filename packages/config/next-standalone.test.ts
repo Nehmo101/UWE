@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
   getUweStandaloneNextConfig,
   uweMonorepoRoot,
-  uwePrismaRuntimePackages,
+  uweServerExternalModules,
 } from "./next-standalone";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -49,13 +49,15 @@ describe("getUweStandaloneNextConfig", () => {
     );
   });
 
-  it("externalizes every Prisma runtime package", () => {
+  it("externalizes every Prisma runtime package plus the jsdom family (#84)", () => {
     const config = getUweStandaloneNextConfig(path.join(repoRoot, "apps", "portal"));
 
-    assert.deepEqual(config.serverExternalPackages, [...uwePrismaRuntimePackages]);
+    assert.deepEqual(config.serverExternalPackages, [...uweServerExternalModules]);
+    assert.ok(config.serverExternalPackages.includes("jsdom"));
+    assert.ok(config.serverExternalPackages.includes("isomorphic-dompurify"));
     assert.notEqual(
       config.serverExternalPackages,
-      uwePrismaRuntimePackages,
+      uweServerExternalModules,
       "returns a fresh mutable copy, not the shared constant",
     );
     assert.ok(config.serverExternalPackages.includes("@prisma/client"));

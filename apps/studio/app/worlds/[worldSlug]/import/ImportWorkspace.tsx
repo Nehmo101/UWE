@@ -19,6 +19,11 @@ import {
 import { waitForJob } from "@/src/lib/poll-job";
 import { JobProgressBar } from "@/components/JobProgressBar";
 import {
+  combineImportFiles,
+  extractImportUndoToken,
+  formatFromFileName,
+} from "@/src/lib/import-central-utils";
+import {
   completeImportCentralJobAction,
   failImportCentralJobAction,
   markImportCentralExecutingAction,
@@ -50,53 +55,6 @@ interface Props {
   onJobExecuting?: () => Promise<void>;
   onJobComplete?: (resultSummary: Record<string, unknown>, undoToken?: string | null) => Promise<void>;
   onJobFail?: (errorMessage: string) => Promise<void>;
-}
-
-function formatFromFileName(fileName: string): ImportFormat | null {
-  const lower = fileName.toLocaleLowerCase("de");
-  if (lower.endsWith(".json")) return "json";
-  if (lower.endsWith(".md") || lower.endsWith(".markdown") || lower.endsWith(".txt")) {
-    return "markdown";
-  }
-  return null;
-}
-
-function buildMarkdownDocumentFromFile(fileName: string, text: string): string {
-  const title = fileName.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim();
-  const trimmed = text.trim();
-  if (!trimmed) return "";
-
-  if (trimmed.startsWith("---")) {
-    return trimmed;
-  }
-
-  return `---
-title: ${title}
-source: ${fileName}
----
-
-${trimmed}`;
-}
-
-function combineImportFiles(files: Array<{ name: string; text: string }>): string {
-  return files
-    .map((file) => buildMarkdownDocumentFromFile(file.name, file.text))
-    .filter(Boolean)
-    .join("\n\n---\n\n");
-}
-
-function extractImportUndoToken(
-  payload: unknown,
-  responseUndoEntryId?: string | null,
-): string | null {
-  if (typeof responseUndoEntryId === "string" && responseUndoEntryId) {
-    return responseUndoEntryId;
-  }
-  if (!payload || typeof payload !== "object") {
-    return null;
-  }
-  const record = payload as { undoEntryId?: string | null };
-  return typeof record.undoEntryId === "string" && record.undoEntryId ? record.undoEntryId : null;
 }
 
 export function ImportWorkspace({

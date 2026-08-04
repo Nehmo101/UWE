@@ -18,6 +18,7 @@
     "@uwe/connector": "workspace:*",
     "@uwe/connector-model-profile": "workspace:*",
     "@uwe/cookbook": "workspace:*",
+    "@uwe/env": "workspace:*",
     "@uwe/soundboard": "workspace:*"
   },
   "devDependencies": {

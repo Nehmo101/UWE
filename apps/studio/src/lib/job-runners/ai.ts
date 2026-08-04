@@ -1,7 +1,4 @@
-import fs from "node:fs";
-import path from "node:path";
 import {
-  createActivityLogService,
   createAiReviewService,
   createAiRunServiceFromClient,
   createBrainStoreService,
@@ -9,26 +6,14 @@ import {
   createCaptureTriageService,
   combineBlockContent,
   createLifeAdminService,
-  createMailService,
   createPersonalBrainService,
-  createPrismaClient,
-  createUndoService,
   createUweRepository,
   createWorldInspectorService,
   getSystemSettings,
-  logAuditEvent,
   prisma,
-  resolveEffectiveBackupsPath,
   resolveLocalOnlyMode,
-  type JobService,
-  type JobView,
 } from "@uwe/database/server";
-import {
-  isCampaignPdfAnalysisPayload,
-  runCampaignPdfAnalysisJob,
-} from "./campaign-import-job";
-import { brainPrisma, createBrainPrismaClient } from "@uwe/database/brain-client";
-import { createFamilyPrismaClient } from "@uwe/database/family-client";
+import { brainPrisma } from "@uwe/database/brain-client";
 import {
   AI_TASK_LABELS,
   generateAiTaskBySlug,
@@ -44,197 +29,9 @@ import {
   type AiProviderId,
   type AiTaskType,
 } from "@uwe/ai-brain";
-import { createApiKeyStore } from "./ai-key-store";
-import {
-  executeImport,
-  parseImportContent,
-  type ImportExecuteOptions,
-  type ImportFormat,
-} from "@uwe/knoteforge-import";
-import { resolveGatewayUserById } from "./ai-gateway-user";
-import {
-  runBriefingJob,
-  runCalendarSyncJob,
-  runImageStudioJob,
-  runMailSyncJob,
-  runResearchJob,
-} from "./integration-job-runners";
-import {
-  executeRestore,
-  exportBackupJson,
-  exportBackupZip,
-  createPreRestoreSafetyCopy,
-  loadBackupFromBuffer,
-  loadBackupFromFile,
-  type BackupType,
-  type CreateBackupOptions,
-} from "@uwe/backup";
-import { listStudioBackups } from "./backup-paths";
-
-export interface JobRunnerContext {
-  jobs: JobService;
-  jobId: string;
-  job: JobView;
-}
-
-async function assertNotCancelled(jobs: JobService, jobId: string): Promise<void> {
-  if (await jobs.isCancelled(jobId)) {
-    throw new Error("Job wurde abgebrochen.");
-  }
-}
-
-export async function runBackupJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
-  const payload = (ctx.job.payload ?? {}) as BackupCreateBody;
-  if (!payload.type) {
-    throw new Error("Backup-Typ fehlt im Job-Payload.");
-  }
-
-  await ctx.jobs.updateProgress(ctx.jobId, 10, "Backup vorbereiten");
-  await assertNotCancelled(ctx.jobs, ctx.jobId);
-
-  const systemSettings = await getSystemSettings();
-  const scheduled = Boolean((ctx.job.payload as { scheduled?: boolean } | null)?.scheduled);
-  const backupsDir = resolveEffectiveBackupsPath(systemSettings);
-
-  const options: CreateBackupOptions = {
-    type: payload.type,
-    worldSlug: payload.worldSlug,
-    campaignSlug: payload.campaignSlug,
-    format: payload.format ?? "zip",
-    retentionCount: systemSettings.backup.retentionCount,
-    backupsDir,
-  };
-
-  if (options.format === "json") {
-    const bundle = await exportBackupJson(undefined, options);
-    fs.mkdirSync(backupsDir, { recursive: true });
-    const filename = `uwe-backup-${payload.type}-${Date.now()}.json`;
-    const outputPath = path.join(backupsDir, filename);
-    fs.writeFileSync(outputPath, JSON.stringify(bundle, null, 2), "utf8");
-
-    await createActivityLogService(prisma).log({
-      worldSlug: payload.worldSlug ?? null,
-      action: "backup_created",
-      targetType: "system",
-      targetLabel: filename,
-      targetHref: "/backup",
-      summary: scheduled
-        ? `Geplantes Backup erstellt (${payload.type}): ${filename}.`
-        : `Backup erstellt (${payload.type}): ${filename}.`,
-    });
-
-    await logAuditEvent(prisma, {
-      action: "backup_created",
-      targetType: "backup",
-      targetId: filename,
-      metadata: { type: payload.type, format: "json", filename, scheduled },
-    });
-
-    return { filename, path: outputPath, manifest: bundle.manifest };
-  }
-
-  await ctx.jobs.updateProgress(ctx.jobId, 40, "Daten exportieren");
-  const { bundle, outputPath } = await exportBackupZip(undefined, options);
-  const filename = path.basename(outputPath);
-
-  await createActivityLogService(prisma).log({
-    worldSlug: payload.worldSlug ?? null,
-    action: "backup_created",
-    targetType: "system",
-    targetLabel: filename,
-    targetHref: "/backup",
-    summary: scheduled
-      ? `Geplantes Backup erstellt (${payload.type}): ${filename}.`
-      : `Backup erstellt (${payload.type}): ${filename}.`,
-  });
-
-  await logAuditEvent(prisma, {
-    action: "backup_created",
-    targetType: "backup",
-    targetId: filename,
-    metadata: { type: payload.type, format: "zip", filename, scheduled },
-  });
-
-  return { filename, path: outputPath, manifest: bundle.manifest };
-}
-
-export interface BackupCreateBody {
-  type: BackupType;
-  worldSlug?: string;
-  campaignSlug?: string;
-  format?: "zip" | "json";
-}
-
-export async function runImportJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
-  // PDF→Kampagne teilt sich den Job-Typ, bringt aber eine eigene Payload mit
-  // und eine eigene Ausführung (OCR + Chunk-Analyse) — siehe campaign-import-job.ts.
-  if (isCampaignPdfAnalysisPayload(ctx.job.payload)) {
-    return runCampaignPdfAnalysisJob(ctx);
-  }
-
-  const payload = (ctx.job.payload ?? {}) as ImportJobPayload;
-  if (!payload.format || !payload.content || !payload.worldSlug) {
-    throw new Error("Import-Payload unvollständig.");
-  }
-
-  await ctx.jobs.updateProgress(ctx.jobId, 15, "Import-Datei lesen");
-  const repo = createUweRepository();
-  const { bundle } = parseImportContent(payload.format, payload.content);
-
-  const options: ImportExecuteOptions = {
-    confirmed: true,
-    itemIds: payload.itemIds,
-    autoResolveSlugConflicts: payload.autoResolveSlugConflicts ?? true,
-    allowUpdates: payload.allowUpdates ?? true,
-  };
-
-  await ctx.jobs.updateProgress(ctx.jobId, 50, "Daten importieren");
-  await assertNotCancelled(ctx.jobs, ctx.jobId);
-
-  const result = await executeImport(repo, bundle, payload.worldSlug, payload.format, options);
-  const world = await repo.getWorldBySlug(payload.worldSlug);
-
-  let undoEntryId: string | undefined;
-  if (result.undo && world && (result.undo.createdPageIds.length > 0 || result.undo.updatedPages.length > 0)) {
-    const undoService = createUndoService(brainPrisma, prisma);
-    const undoEntry = await undoService.captureImportExecute({
-      worldId: world.id,
-      jobId: ctx.jobId,
-      createdPageIds: result.undo.createdPageIds,
-      updatedPages: result.undo.updatedPages as import("@uwe/database/server").ImportPageUpdateSnapshot[],
-    });
-    undoEntryId = undoEntry.id;
-  }
-
-  await createActivityLogService(prisma).log({
-    worldSlug: payload.worldSlug,
-    action: "import_executed",
-    targetType: "world",
-    targetLabel: payload.worldSlug,
-    targetHref: `/worlds/${payload.worldSlug}`,
-    summary: `Import (${payload.format}) in Welt „${payload.worldSlug}" ausgeführt.`,
-    undoEntryId,
-  });
-
-  await logAuditEvent(prisma, {
-    action: "import_completed",
-    targetType: "import",
-    targetId: ctx.jobId,
-    worldId: world?.id,
-    metadata: { format: payload.format, jobId: ctx.jobId },
-  });
-
-  return { result, undoEntryId: undoEntryId ?? null };
-}
-
-export interface ImportJobPayload {
-  format: ImportFormat;
-  content: string;
-  worldSlug: string;
-  itemIds?: string[];
-  autoResolveSlugConflicts?: boolean;
-  allowUpdates?: boolean;
-}
+import { createApiKeyStore } from "../ai-key-store";
+import { resolveGatewayUserById } from "../ai-gateway-user";
+import { assertNotCancelled, type JobRunnerContext } from "./context";
 
 export async function runBrainActionJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
   const payload = (ctx.job.payload ?? {}) as BrainActionJobPayload;
@@ -307,7 +104,7 @@ async function getAiSettingsOverrides() {
   };
 }
 
-export interface BrainActionJobPayload {
+interface BrainActionJobPayload {
   actionId: string;
   worldSlug: string;
   pageSlug?: string;
@@ -318,7 +115,7 @@ export interface BrainActionJobPayload {
   useMock?: boolean;
 }
 
-export interface DeferredAiPromptJobPayload {
+interface DeferredAiPromptJobPayload {
   deferredAiPrompt: true;
   prompt: string;
   providerMode: "auto" | "local_engine" | "cloud";
@@ -347,7 +144,7 @@ async function runDeferredAiPromptJob(ctx: JobRunnerContext): Promise<Record<str
     throw new Error("Deferred KI-Prompt: job.userId fehlt — Gateway-Kontext nicht verfügbar.");
   }
 
-  const { executeAiPrompt } = await import("./ai-prompt-handlers");
+  const { executeAiPrompt } = await import("../ai-prompt-handlers");
   const result = await executeAiPrompt(
     {
       prompt: payload.prompt,
@@ -403,7 +200,7 @@ async function runCaptureTriageProposalJob(ctx: JobRunnerContext): Promise<Recor
     throw new Error("Capture-Triage: job.userId fehlt — Gateway-Kontext nicht verfügbar.");
   }
 
-  const { executeAiPrompt } = await import("./ai-prompt-handlers");
+  const { executeAiPrompt } = await import("../ai-prompt-handlers");
   const result = await executeAiPrompt(
     {
       prompt,
@@ -572,7 +369,7 @@ export async function runAiRunJob(ctx: JobRunnerContext): Promise<Record<string,
   }
 }
 
-export interface AiRunJobPayload {
+interface AiRunJobPayload {
   taskType: AiTaskType;
   worldSlug: string;
   pageSlug: string;
@@ -582,55 +379,6 @@ export interface AiRunJobPayload {
   sessionId?: string;
   useMock?: boolean;
   discardProposalId?: string;
-}
-
-export interface MailSendJobPayload {
-  to: Array<{ email: string; name?: string }>;
-  subject: string;
-  bodyText?: string;
-  bodyHtml?: string;
-  text?: string;
-  html?: string;
-  worldId?: string | null;
-  templateId?: string | null;
-  sourceType?: string | null;
-  sourceId?: string | null;
-  confirmDmOnly?: boolean;
-  containsDmOnlyHint?: boolean;
-}
-
-export async function runMailSendJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
-  const payload = (ctx.job.payload ?? {}) as MailSendJobPayload;
-  if (!payload.to?.length || !payload.subject) {
-    throw new Error("Mail-Payload unvollständig (Empfänger/Betreff fehlen).");
-  }
-
-  const mailService = createMailService(prisma);
-
-  await ctx.jobs.updateProgress(ctx.jobId, 30, "Mail versenden");
-  await assertNotCancelled(ctx.jobs, ctx.jobId);
-
-  const outcome = await mailService.sendMail({
-    to: payload.to,
-    subject: payload.subject,
-    bodyText: payload.bodyText ?? payload.text ?? "",
-    bodyHtml: payload.bodyHtml ?? payload.html,
-    worldId: payload.worldId ?? null,
-    templateId: payload.templateId ?? null,
-    sourceType: payload.sourceType ?? null,
-    sourceId: payload.sourceId ?? null,
-    confirmDmOnly: payload.confirmDmOnly,
-    containsDmOnlyHint: payload.containsDmOnlyHint,
-  });
-
-  if (!outcome.ok) {
-    throw new Error(outcome.error ?? "Mail-Versand fehlgeschlagen.");
-  }
-
-  return {
-    logId: outcome.log.id,
-    status: outcome.log.status,
-  };
 }
 
 export async function runEmbeddingJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
@@ -723,146 +471,4 @@ export async function runCanonCheckJob(ctx: JobRunnerContext): Promise<Record<st
     criticalCount: findings.filter((f) => f.severity === "critical").length,
     findings: findings.slice(0, 50),
   };
-}
-
-export async function runBackupRestoreJob(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
-  const payload = (ctx.job.payload ?? {}) as RestoreJobPayload;
-  if (!payload.confirmed) {
-    throw new Error("Restore erfordert confirmed: true.");
-  }
-
-  const { bundle, zipBuffer } = await loadBackupForRestore(payload);
-  const db = createPrismaClient();
-  const brainDb = createBrainPrismaClient();
-  const familyDb = createFamilyPrismaClient();
-
-  await ctx.jobs.updateProgress(ctx.jobId, 20, "Safety-Backup vor Restore erstellen");
-  await assertNotCancelled(ctx.jobs, ctx.jobId);
-  const safetyCopy = await createPreRestoreSafetyCopy();
-
-  await ctx.jobs.appendLog(
-    ctx.jobId,
-    "info",
-    `Pre-Restore-Safety-Copy erstellt: ${safetyCopy.filename}`,
-  );
-  await ctx.jobs.updateProgress(ctx.jobId, 35, "Backup wiederherstellen");
-
-  let result: Awaited<ReturnType<typeof executeRestore>>;
-  try {
-    result = await executeRestore(
-      db,
-      brainDb,
-      familyDb,
-      bundle,
-      {
-        confirmed: true,
-        targetWorldSlug: payload.targetWorldSlug,
-        autoResolveSlugConflicts: payload.autoResolveSlugConflicts ?? true,
-        allowUpdates: payload.allowUpdates ?? false,
-        skipExisting: payload.skipExisting ?? false,
-        sendPasswordSetupEmails: payload.sendPasswordSetupEmails ?? false,
-        passwordResetRequestUrl:
-          process.env.NEXT_PUBLIC_STUDIO_URL?.replace(/\/$/, "") + "/forgot-password",
-      },
-      zipBuffer,
-      process.env.UWE_UPLOADS_ROOT ?? process.env.UPLOADS_DIR,
-    );
-  } finally {
-    await db.$disconnect();
-    await brainDb.$disconnect();
-    await familyDb.$disconnect();
-  }
-
-  await createActivityLogService(prisma).log({
-    worldSlug: payload.targetWorldSlug ?? null,
-    action: "backup_restored",
-    targetType: "system",
-    targetLabel: payload.backupId ?? payload.filename ?? null,
-    targetHref: "/backup",
-    summary: `Backup wiederhergestellt${payload.targetWorldSlug ? ` (Welt ${payload.targetWorldSlug})` : ""}.`,
-  });
-
-  await logAuditEvent(prisma, {
-    action: "restore_completed",
-    targetType: "backup",
-    targetId: payload.backupId ?? payload.filename ?? ctx.jobId,
-    metadata: {
-      targetWorldSlug: payload.targetWorldSlug,
-      jobId: ctx.jobId,
-      safetyCopyFilename: safetyCopy.filename,
-    },
-  });
-
-  return { result, safetyCopy };
-}
-
-export interface RestoreJobPayload {
-  backupId?: string;
-  contentBase64?: string;
-  filename?: string;
-  confirmed?: boolean;
-  targetWorldSlug?: string;
-  autoResolveSlugConflicts?: boolean;
-  allowUpdates?: boolean;
-  skipExisting?: boolean;
-  sendPasswordSetupEmails?: boolean;
-}
-
-async function loadBackupForRestore(payload: RestoreJobPayload) {
-  if (payload.backupId) {
-    const backups = await listStudioBackups();
-    const backup = backups.find(
-      (entry) => entry.id === payload.backupId || entry.filename === payload.backupId,
-    );
-    if (!backup) {
-      throw new Error("Backup wurde nicht gefunden.");
-    }
-    return {
-      bundle: loadBackupFromFile(backup.path),
-      zipBuffer: backup.filename.endsWith(".zip") ? fs.readFileSync(backup.path) : undefined,
-    };
-  }
-
-  if (payload.contentBase64) {
-    const buffer = Buffer.from(payload.contentBase64, "base64");
-    return {
-      bundle: loadBackupFromBuffer(buffer, payload.filename),
-      zipBuffer: payload.filename?.endsWith(".zip") ? buffer : undefined,
-    };
-  }
-
-  throw new Error("backupId oder contentBase64 ist erforderlich.");
-}
-
-export async function executeJobRunners(ctx: JobRunnerContext): Promise<Record<string, unknown>> {
-  switch (ctx.job.type) {
-    case "backup":
-      return runBackupJob(ctx);
-    case "import":
-      return runImportJob(ctx);
-    case "ai_run":
-      return runAiRunJob(ctx);
-    case "mail_send":
-      return runMailSendJob(ctx);
-    case "mail_sync":
-      return runMailSyncJob(ctx);
-    case "embedding":
-      return runEmbeddingJob(ctx);
-    case "reindex":
-      return runReindexJob(ctx);
-    case "canon_check":
-      return runCanonCheckJob(ctx);
-    case "backup_restore":
-      return runBackupRestoreJob(ctx);
-    case "image_studio":
-      return runImageStudioJob(ctx);
-    case "calendar_sync":
-      return runCalendarSyncJob(ctx);
-    case "research":
-      return runResearchJob(ctx);
-    case "briefing":
-      return runBriefingJob(ctx);
-    default:
-      throw new Error(`Unbekannter Job-Typ: ${ctx.job.type}`);
-  }
 }

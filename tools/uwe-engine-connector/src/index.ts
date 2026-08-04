@@ -13,6 +13,7 @@
  * command, error reporting, and starting the loop.
  */
 
+import { warnAboutLegacyRtxEnvVars } from "@uwe/env";
 import { createConnectorRunner } from "./bootstrap";
 import { log } from "./logging";
 
@@ -23,6 +24,10 @@ async function main(): Promise<void> {
     process.exitCode = 1;
     return;
   }
+
+  // Alte RTX_*-Variablen werden seit dem Umzug ignoriert — laut sagen, statt
+  // wie „kein Worker konfiguriert" auszusehen.
+  warnAboutLegacyRtxEnvVars(process.env, (message) => log.warn(message));
 
   const result = createConnectorRunner();
   if (!result.ok) {

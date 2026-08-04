@@ -1670,6 +1670,9 @@ importers:
       '@uwe/cookbook':
         specifier: workspace:*
         version: link:../../packages/cookbook
+      '@uwe/env':
+        specifier: workspace:*
+        version: link:../../packages/env
       '@uwe/soundboard':
         specifier: workspace:*
         version: link:../../packages/soundboard

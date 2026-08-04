@@ -2,7 +2,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
 import { getUweSecurityHeaderEntries } from "@uwe/auth/security-headers";
-import { getUweStandaloneNextConfig } from "@uwe/config/next-standalone";
+import {
+  applyUweWebpackDefaults,
+  getUweStandaloneNextConfig,
+} from "@uwe/config/next-standalone";
 
 const appDir = path.dirname(fileURLToPath(import.meta.url));
 const standalone = getUweStandaloneNextConfig(appDir);
@@ -10,12 +13,9 @@ const standalone = getUweStandaloneNextConfig(appDir);
 const nextConfig: NextConfig = {
   output: "standalone",
   ...standalone,
-  serverExternalPackages: [
-    ...standalone.serverExternalPackages,
-    "jsdom",
-    "isomorphic-dompurify",
-    "pdf-parse",
-  ],
+  // jsdom/isomorphic-dompurify kommen zentral aus `standalone` (siehe
+  // uweServerOnlyHtmlPackages in @uwe/config); pdf-parse ist Studio-eigen.
+  serverExternalPackages: [...standalone.serverExternalPackages, "pdf-parse"],
   experimental: {
     // Import-Zentrale: PDF- und Obsidian-Vault-ZIP-Uploads laufen als Base64
     // durch Server Actions (max. 10 MB Datei ≈ 13,4 MB Base64-Payload).
@@ -70,30 +70,7 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  webpack: (config, { isServer, webpack }) => {
-    config.plugins.push(
-      new webpack.IgnorePlugin({
-        resourceRegExp: /\.(md|txt)$/,
-        contextRegExp: /[\\/]@libsql[\\/]/,
-      }),
-    );
-
-    if (isServer) {
-      config.externals = [
-        ...(Array.isArray(config.externals)
-          ? config.externals
-          : [config.externals].filter(Boolean)),
-        "@libsql/client",
-        "@prisma/adapter-libsql",
-        "@prisma/adapter-pg",
-        "@prisma/client",
-        "libsql",
-        "pg",
-      ];
-    }
-
-    return config;
-  },
+  webpack: (config, context) => applyUweWebpackDefaults(config, context),
 };
 
 export default nextConfig;

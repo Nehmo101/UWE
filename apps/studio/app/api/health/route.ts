@@ -1,23 +1,26 @@
 import { NextResponse } from "next/server";
 import {
   databaseHealthCheck,
-  getSystemStatus,
-  prisma,
   UWE_PRODUCT_NAME,
   UWE_VERSION,
 } from "@uwe/database/server";
 
 /**
- * Healthcheck: app runtime, database, migrations, storage, seeds, version and trust mode.
- * Leaks no sensitive data — only booleans, counts, resolved paths and non-secret facts.
+ * Öffentlicher Healthcheck — bewusst wortkarg.
+ *
+ * Diese Route ist unauthentifiziert; früher gab sie `trust`
+ * (u. a. `authSecretLooksWeak`), Migrations- und Proxy-Details heraus — eine
+ * Einladung, gezielt schwach konfigurierte Installationen zu finden. Übrig
+ * bleibt, was ein Uptime-Check und das Command Center brauchen: Status,
+ * Identität (`app.name` — daran erkennt der Host seinen eigenen Prozess auf
+ * einem belegten Port), Version, Zeitstempel.
+ *
+ * Alles Weitere gibt es hinter Token-Auth unter `/api/health/private`
+ * (`requirePrivateHealthAuth`).
  */
 export async function GET() {
   const db = await databaseHealthCheck();
-  const system = await getSystemStatus(prisma, {
-    rateLimiterMode: "none (Studio: Session-Login via AUTH_REQUIRED, vertrauenswürdiges Netz)",
-  });
-
-  const status = db.status === "ok" && system.ok ? "ok" : "degraded";
+  const status = db.status === "ok" ? "ok" : "degraded";
 
   return NextResponse.json(
     {
@@ -26,26 +29,8 @@ export async function GET() {
         name: "UWE Studio",
         product: UWE_PRODUCT_NAME,
         version: UWE_VERSION,
-        runtime: system.app,
       },
-      commit: system.commit,
       timestamp: new Date().toISOString(),
-      checks: {
-        database: db,
-        migrations: {
-          ok: system.migrations.ok,
-          appliedCount: system.migrations.appliedCount,
-          pendingCount: system.migrations.pendingMigrations.length,
-          failedCount: system.migrations.failedMigrations.length,
-          message: system.migrations.message,
-        },
-        storage: system.storage,
-        seeds: system.seeds,
-      },
-      trust: system.trust,
-      proxy: system.proxy,
-      mail: system.mail,
-      rateLimiter: system.rateLimiter,
     },
     { status: status === "ok" ? 200 : 503 },
   );
