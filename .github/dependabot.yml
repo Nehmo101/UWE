@@ -22,6 +22,18 @@ updates:
     commit-message:
       prefix: "deps"
       prefix-development: "deps-dev"
+    ignore:
+      # TypeScript-Major-Bumps: typescript-eslint stützt offiziell nur bis zu
+      # einer bestimmten TS-Version (siehe typescript-eslint#10940) — ein
+      # TS-6-PR kam schon einmal (#61) und musste revertiert werden, weil das
+      # Lint-Gate rot wurde. Erst freigeben, wenn typescript-eslint nachzieht.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      # ESLint-Major-Bumps: mehrere Plugins (u. a. eslint-config-next) tragen
+      # Peer-Deps auf eslint<=9. Ein ESLint-10-PR liefe in dieselbe Wand wie
+      # der revertierte #61 — jeden Montag aufs Neue, ohne diesen Block.
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
     groups:
       # Sicherheitsrelevante Updates einzeln und sofort sichtbar halten.
       next:

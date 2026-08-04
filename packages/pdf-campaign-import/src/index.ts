@@ -9,3 +9,4 @@ export * from "./page-mapper";
 export * from "./parser";
 export * from "./preview";
 export * from "./prompt";
+export { balanceEntityDmSections, type DmBalanceableEntity } from "./dm-balance";

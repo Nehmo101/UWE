@@ -10,6 +10,14 @@ import {
 const appDir = path.dirname(fileURLToPath(import.meta.url));
 const standalone = getUweStandaloneNextConfig(appDir);
 
+// Turbopack-Entscheidung (Next 16): Alle fünf Apps bauen mit `--webpack`.
+// Der Grund ist der webpack-Block unten — `applyUweWebpackDefaults` braucht
+// IgnorePlugin (libsql-Doku-Dateien) und die Server-`externals` (Prisma-
+// Runtime + jsdom-Familie, #84). Turbopack kennt weder IgnorePlugin noch
+// diese externals-Form; `serverExternalPackages` allein reicht nicht, weil
+// Workspace-Pakete isomorphic-dompurify per require() ziehen. Wer auf
+// Turbopack umstellen will, muss zuerst nachweisen, dass kein Server-Chunk
+// jsdom-Interna enthält (scripts/server-externals-check.mjs bleibt das Gate).
 const nextConfig: NextConfig = {
   output: "standalone",
   ...standalone,

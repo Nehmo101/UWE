@@ -9,21 +9,21 @@ Die Leseseite. Spieler sehen hier gefilterte, freigegebene Inhalte derselben
 Datenbank, die Studio schreibt. **Das Portal pflegt nichts** — für Änderungen an
 Inhalten `/uwestudio`.
 
-Eine Regel bestimmt die Sichtbarkeit: **wer einer Welt zugeordnet ist, sieht alles
-darin.** Sichtbarkeit pro Eintrag gibt es nicht mehr. Deshalb ist auch der frühere
-`portal_leak_check` entfallen — er verglich DM- und Spielersicht auf einzelne
-`dm_only`-Einträge, was heute ins Leere liefe.
+Zwei Regeln bestimmen die Sichtbarkeit: **wer einer Welt zugeordnet ist, sieht
+die Welt** — und **im Spieler-Wiki erscheinen nur Seiten mit Portal-Haken**
+(`Page.portalReleased`, seit #85; Standard: nicht freigegeben). Dazu schneidet
+der `:::dm`-Bereich Zeilen aus freigegebenen Seiten. Details:
+`.claude/skills/uwe-security-invariants/SKILL.md`.
 
 ## MCP-Tools
 
 <!-- uwe:generated:mcp start -->
-5 Tools am MCP-Server `uwe-portal` — alle immer verfügbar.
+4 Tools am MCP-Server `uwe-portal` — alle immer verfügbar.
 
 | Tool | Verfügbar | Zweck |
 |------|-----------|-------|
 | `portal_health` | immer | Liveness des Spieler-Portals. |
 | `portal_maintenance_status` | immer | Wartungsmodus des Portals. |
-| `portal_player_view_brain` | immer | Welt-Brain in der Spielersicht (accessContext=portal). |
 | `portal_player_view_graph` | immer | Welt-Graph in der Spielervorschau (preview=player). |
 | `portal_config` | immer | Zeigt, gegen welche Endpunkte dieser MCP-Server arbeitet und ob ein API-Token vorliegt. |
 <!-- uwe:generated:mcp end -->
@@ -95,7 +95,7 @@ Portal-Seiten liegen unter `apps/portal/app/auth/**`, Server Actions als
 | Aufgabe | Weg |
 |---|---|
 | „Läuft das Portal?" | `portal_health`, dann `portal_maintenance_status` (sehen Spieler die Wartungsseite?) |
-| „Was sieht ein Spieler?" | `portal_player_view_brain` + `portal_player_view_graph` mit dem Welt-Slug |
+| „Was sieht ein Spieler?" | `portal_player_view_graph` mit dem Welt-Slug (das Welt-Brain hat keine Spielersicht — Spieler sehen davon nichts) |
 | Verbindungs-/Token-Problem | `portal_config` zeigt die genutzten Endpunkte |
 | Inhalt fehlt im Portal | Nicht im Portal suchen — in Studio prüfen, ob veröffentlicht und die Welt zugeordnet ist |
 | Tischmodus-Änderung | Snapshot-Route **und** Sync-Route anfassen, danach `pnpm test:security` |

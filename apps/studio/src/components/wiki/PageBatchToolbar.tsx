@@ -20,6 +20,7 @@ type OpKind =
 
 const OP_OPTIONS: { value: OpKind; label: string }[] = [
   { value: "type", label: "Seitentyp setzen" },
+  { value: "portalRelease", label: "Portal-Freigabe setzen" },
   { value: "addTags", label: "Tags hinzufügen" },
   { value: "removeTags", label: "Tags entfernen" },
   { value: "campaign", label: "Kampagne zuweisen" },
@@ -51,6 +52,7 @@ export function PageBatchToolbar({ worldSlug, campaigns, selectedIds, clearSelec
   const router = useRouter();
   const [kind, setKind] = useState<OpKind>("type");
   const [pageType, setPageType] = useState<PageType>("npc");
+  const [released, setReleased] = useState<"release" | "lock">("release");
   const [tags, setTags] = useState("");
   const [campaignId, setCampaignId] = useState("");
   const [loading, setLoading] = useState(false);
@@ -61,6 +63,8 @@ export function PageBatchToolbar({ worldSlug, campaigns, selectedIds, clearSelec
     switch (kind) {
       case "type":
         return { kind, type: pageType };
+      case "portalRelease":
+        return { kind, released: released === "release" };
       case "addTags":
       case "removeTags": {
         const list = tags.split(",").map((tag) => tag.trim()).filter(Boolean);
@@ -73,7 +77,7 @@ export function PageBatchToolbar({ worldSlug, campaigns, selectedIds, clearSelec
       default:
         return null;
     }
-  }, [kind, pageType, tags, campaignId]);
+  }, [kind, pageType, tags, campaignId, released]);
 
   const handleApply = useCallback(async () => {
     setError(null);
@@ -152,6 +156,18 @@ export function PageBatchToolbar({ worldSlug, campaigns, selectedIds, clearSelec
                 {option.label}
               </option>
             ))}
+          </select>
+        )}
+
+        {kind === "portalRelease" && (
+          <select
+            className={SELECT_CLASS}
+            value={released}
+            onChange={(event) => setReleased(event.target.value as "release" | "lock")}
+            aria-label="Portal-Freigabe"
+          >
+            <option value="release">Fürs Portal freigeben</option>
+            <option value="lock">Portal-Freigabe entziehen</option>
           </select>
         )}
 

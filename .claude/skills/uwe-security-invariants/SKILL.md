@@ -9,15 +9,33 @@ Non-negotiable rules. When a change touches any of these, verify the invariant a
 
 ## Content visibility
 
-| Value | Studio | Portal (published) | Static export |
-|-------|--------|--------------------|---------------|
-| `dm_only` | Yes | **Never** | **Never** |
-| `player_visible` | Yes | Yes (if published) | If published |
-| `public` | Yes | Yes | Yes |
+Das Modell seit der Portal-Freigabe (#85): Die **Welt-Zuordnung** entscheidet,
+ob jemand überhaupt Inhalte sieht; der **Portal-Haken je Seite**
+(`Page.portalReleased`) entscheidet, WELCHE Seiten im Spieler-Wiki auftauchen;
+der **`:::dm`-Bereich** im Wikitext schneidet Zeilen aus Seiten, die es gibt.
 
-- Filtering is centralized in **`packages/database/src/permissions.ts`** — filter there, not ad-hoc in routes/components.
-- Respect `PublishStatus` / `CanonicalStatus`: unpublished pages never reach the Portal.
-- Guarding tests: `scripts/studio-route-auth.test.ts`, `scripts/security-leaks.test.ts`, `packages/security-tests/`.
+| Sicht | Studio (DM) | Portal (Spieler) | Static export |
+|-------|-------------|------------------|---------------|
+| Seite mit `portalReleased: false` | Ja | **Nie** | **Nie** |
+| Seite mit `portalReleased: true` | Ja | Ja (wenn Weltmitglied) | Ja |
+| `:::dm … :::`-Bereich | Ja | **Nie** | **Nie** |
+
+- Filtering ist zentral: `filterPagesForViewer` / `filterBlocksForViewer` /
+  `redactDmSectionsForViewer` in **`packages/auth/src/permissions.ts`** —
+  dort filtern, nie ad-hoc in Routen/Komponenten.
+- **Fail-closed:** `filterPagesForViewer` wirft jede Seite heraus, deren
+  Select `portalReleased` nicht mitgeladen hat. Selects für Viewer-Pfade
+  nutzen `PORTAL_PAGE_SELECT` (`packages/database/src/portal-page-select.ts`)
+  oder laden das Feld explizit — sonst verschwinden auch freigegebene Seiten.
+- Jeder Lesepfad zählt: Listen, Direktlink, **Suche** (`searchForAuthContext`),
+  **Graph**, **Timeline-Links**, **Wikilink-Auflösung** (gesperrtes Ziel =
+  `broken`), **statischer Export** (`staticExportViewerContext`) und die
+  MCP-Spielersicht (`preview=player` → `buildPlayerViewContext`).
+- Recap-/Ereignis-Textfelder (`summaryPlayer`, `playerDecisions`, `openPlots`)
+  sind Wikitext und laufen durch den DM-Schnitt.
+- Guarding tests: `packages/security-tests/src/role-matrix.test.ts` (Suche,
+  Graph, Timeline, Dashboard, Wiki-Export), `scripts/studio-route-auth.test.ts`,
+  `scripts/security-leaks.test.ts`, `packages/security-tests/`.
 
 ## Auth imports
 

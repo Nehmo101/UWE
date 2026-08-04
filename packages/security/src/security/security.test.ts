@@ -34,7 +34,7 @@ describe("validate helpers", () => {
 
     const result = await parseBody(
       request,
-      z.object({ email: z.string().email() }),
+      z.object({ email: z.email() }),
     );
     assert.equal(result.success, false);
     assert.equal(result.response.status, 400);

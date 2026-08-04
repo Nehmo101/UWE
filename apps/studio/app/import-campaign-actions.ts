@@ -20,6 +20,7 @@ import {
 } from "@/src/lib/campaign-import-job";
 import { brainPrisma } from "@uwe/database/brain-client";
 import {
+  balanceEntityDmSections,
   entityToCreatePageInput,
   MAX_CAMPAIGN_CONTEXT_CHARACTERS,
   MAX_CAMPAIGN_PDF_BYTES,
@@ -164,7 +165,11 @@ export async function executeImportCampaignPdfJobAction(
   }
   const context = readCampaignMetadata(job.metadata, job.targetWorldId);
   const selectedIds = new Set(itemIds);
-  const selected = entities.filter((_entity, index) => selectedIds.has("ent-" + index));
+  // In Chunk-Reihenfolge gefiltert; danach die `:::dm`-Marken über
+  // Entity-Grenzen ausgleichen (#82-Gegenstück für den PDF-Pfad) — sonst
+  // stünde als DM-Bereich markierter Quelltext nach dem Import offen im Wiki.
+  const filtered = entities.filter((_entity, index) => selectedIds.has("ent-" + index));
+  const { entities: selected } = balanceEntityDmSections(filtered);
   if (selected.length === 0) {
     throw new Error("Bitte mindestens eine Entität auswählen.");
   }

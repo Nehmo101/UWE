@@ -46,6 +46,32 @@ describe("page bulk service", () => {
   });
 
 
+  it("setzt und entzieht die Portal-Freigabe als Massenaktion", async () => {
+    // Der Weg nach dem #85-Deploy: alle Bestandsseiten stehen auf „nicht
+    // freigegeben" — die Massenaktion gibt sie frei, ohne Einzel-Checkboxen.
+    const released = await service.apply(worldSlug, [pageA, pageB], {
+      kind: "portalRelease",
+      released: true,
+    });
+    assert.equal(released.ok, true);
+    assert.equal(released.changedCount, 2);
+
+    // Idempotent: schon freigegebene Seiten zählen nicht noch einmal.
+    const again = await service.apply(worldSlug, [pageA], {
+      kind: "portalRelease",
+      released: true,
+    });
+    assert.equal(again.changedCount, 0);
+
+    const locked = await service.apply(worldSlug, [pageA], {
+      kind: "portalRelease",
+      released: false,
+    });
+    assert.equal(locked.changedCount, 1);
+    const page = await db.page.findUnique({ where: { id: pageA } });
+    assert.equal(page?.portalReleased, false);
+  });
+
   it("adds tags without duplicates and removes them again", async () => {
     const added = await service.apply(worldSlug, [pageA], {
       kind: "addTags",

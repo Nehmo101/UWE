@@ -12,7 +12,7 @@ const updateDraftBodySchema = z.object({
   bodyText: z.string().max(200_000).nullable().optional(),
   bodyHtml: z.string().max(500_000).nullable().optional(),
   accountId: z.string().nullable().optional(),
-  toAddresses: z.array(z.string().email()).nullable().optional(),
+  toAddresses: z.array(z.email()).nullable().optional(),
   status: z.enum(["draft", "pending_review", "sent"]).optional(),
 });
 

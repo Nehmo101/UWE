@@ -20,6 +20,11 @@ import {
   CardTitle,
   Input,
   Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Textarea,
 } from "@/src/components/ui";
 
@@ -92,12 +97,6 @@ function clearLiveTimer(sessionId: string): void {
     /* ignore */
   }
 }
-
-/** Native select styling — beide Selects sind Client-State-gesteuert (kind,
- * refPageId) bzw. brauchen einen echten Leerwert; Kit-Select (Radix) passt
- * hier nicht ohne Zusatz-Wiring. Siehe TODO(design-kit) unten. */
-const SELECT_CLASS =
-  "h-9 rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export function SessionLivePanel({
   worldSlug,
@@ -228,39 +227,35 @@ export function SessionLivePanel({
         <div className="flex flex-wrap items-end gap-2">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="session-live-kind">Typ</Label>
-            {/* TODO(design-kit): natives Select statt Kit-Select — Client-State (kind)
-                ohne FormData-Bindung, siehe SELECT_CLASS oben. */}
-            <select
-              id="session-live-kind"
-              value={kind}
-              onChange={(event) => setKind(event.target.value as LiveEntryKind)}
-              className={SELECT_CLASS}
-            >
-              {ENTRY_KINDS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            <Select value={kind} onValueChange={(value) => setKind(value as LiveEntryKind)}>
+              <SelectTrigger id="session-live-kind" className="w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ENTRY_KINDS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           {activeKind?.needsRef && linkedPages.length > 0 ? (
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="session-live-ref-page">Seite</Label>
-              {/* TODO(design-kit): Kit-Select (Radix) erlaubt keinen leeren value=""
-                  für "— keine —" ohne Zusatz-Wiring — natives Select beibehalten. */}
-              <select
-                id="session-live-ref-page"
-                value={refPageId}
-                onChange={(event) => setRefPageId(event.target.value)}
-                className={SELECT_CLASS}
-              >
-                <option value="">— keine —</option>
-                {linkedPages.map((page) => (
-                  <option key={page.id} value={page.id}>
-                    {page.title}
-                  </option>
-                ))}
-              </select>
+              <Select value={refPageId} onValueChange={setRefPageId}>
+                <SelectTrigger id="session-live-ref-page" className="w-44">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">— keine —</SelectItem>
+                  {linkedPages.map((page) => (
+                    <SelectItem key={page.id} value={page.id}>
+                      {page.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           ) : null}
           <div className="flex min-w-64 flex-1 flex-col gap-1.5">

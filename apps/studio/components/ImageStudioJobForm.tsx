@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { Button, Input, Label, Textarea } from "@/src/components/ui";
+import { Button, Checkbox, FileInput, Input, Label, Textarea } from "@/src/components/ui";
 import { ImageStudioMaskCanvas } from "./ImageStudioMaskCanvas";
 
 interface WorldOption {
@@ -244,38 +244,24 @@ export function ImageStudioJobForm({
 
       {showInpaintFields && (
         <>
-          {/* TODO(design-kit): kein Checkbox-Kit-Component vorhanden — natives input[type=checkbox] + Tailwind verwendet. */}
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={layerMode}
-              onChange={(event) => setLayerMode(event.target.checked)}
-              className="size-4 rounded border-input"
-            />
-            Layering-Modus (mehrere Bilder übereinander legen)
-          </label>
+          <Checkbox
+            checked={layerMode}
+            onChange={(event) => setLayerMode(event.target.checked)}
+            label="Layering-Modus (mehrere Bilder übereinander legen)"
+          />
           {layerMode ? (
             <label className={FIELD_CLASS}>
               Layer-Bilder (Reihenfolge = Stapel von unten nach oben)
-              {/* TODO(design-kit): natives File-Input — Kit hat noch keine File-Input-Komponente. */}
-              <input
-                type="file"
+              <FileInput
                 accept="image/*"
                 multiple
                 onChange={(event) => void handleLayerFilesChange(event)}
-                className="text-sm text-foreground"
               />
             </label>
           ) : (
             <label className={FIELD_CLASS}>
               Quellbild
-              {/* TODO(design-kit): natives File-Input — Kit hat noch keine File-Input-Komponente. */}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleSourceFileChange}
-                className="text-sm text-foreground"
-              />
+              <FileInput accept="image/*" onChange={handleSourceFileChange} />
             </label>
           )}
           {layerStatus && <p className="text-sm text-muted-foreground">{layerStatus}</p>}

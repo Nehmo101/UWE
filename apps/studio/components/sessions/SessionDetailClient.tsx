@@ -23,9 +23,14 @@ import {
   Button,
   buttonVariants,
   Card,
-  cn,
+  Checkbox,
   Input,
   Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Textarea,
 } from "@/src/components/ui";
 
@@ -53,15 +58,6 @@ interface Props {
     unlinked?: string;
   };
 }
-
-/** Native select styling — Kit-Select (Radix) needs onValueChange/hidden-input
- * wiring to work inside a FormData Server Action; these two selects stay
- * native (see TODO(design-kit) comments below), consistent with
- * app/worlds/[worldSlug]/sessions/new/page.tsx. */
-const SELECT_CLASS =
-  "h-9 rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
-const CHECKBOX_ROW_CLASS = "flex items-center gap-2 text-sm";
-const CHECKBOX_CLASS = "size-4 rounded border-input";
 
 export function SessionDetailClient({
   worldSlug,
@@ -165,22 +161,20 @@ export function SessionDetailClient({
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="session-detail-status">Status</Label>
-          {/* TODO(design-kit): natives Select statt Kit-Select — Server-Action-Formular
-              (FormData) braucht name/defaultValue ohne Client-State. */}
-          <select
-            id="session-detail-status"
-            name="status"
-            defaultValue={session.status}
-            className={cn(SELECT_CLASS, "w-full")}
-          >
-            {(Object.keys(GAME_SESSION_STATUS_LABELS) as Array<keyof typeof GAME_SESSION_STATUS_LABELS>).map(
-              (status) => (
-              <option key={status} value={status}>
-                {GAME_SESSION_STATUS_LABELS[status]}
-              </option>
-            ),
-            )}
-          </select>
+          <Select name="status" defaultValue={session.status}>
+            <SelectTrigger id="session-detail-status">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(GAME_SESSION_STATUS_LABELS) as Array<keyof typeof GAME_SESSION_STATUS_LABELS>).map(
+                (status) => (
+                  <SelectItem key={status} value={status}>
+                    {GAME_SESSION_STATUS_LABELS[status]}
+                  </SelectItem>
+                ),
+              )}
+            </SelectContent>
+          </Select>
         </div>
         <fieldset className="flex flex-col gap-3 rounded-[var(--radius)] border border-border p-4">
           <legend className="px-1 text-sm font-medium text-foreground">DM-Notizen (nur Studio)</legend>
@@ -198,16 +192,12 @@ export function SessionDetailClient({
             <Textarea id="session-detail-notes" name="notes" rows={4} defaultValue={session.notes ?? ""} />
           </div>
         </fieldset>
-        {/* TODO(design-kit): kein Checkbox-Kit-Component vorhanden — natives input[type=checkbox] + Tailwind verwendet. */}
-        <label className={cn(CHECKBOX_ROW_CLASS, "mt-4")}>
-          <input
-            type="checkbox"
-            name="playerVisibleSchedule"
-            defaultChecked={session.playerVisibleSchedule}
-            className={CHECKBOX_CLASS}
-          />
-          Termin für Spieler im Portal ankündigen
-        </label>
+        <Checkbox
+          name="playerVisibleSchedule"
+          defaultChecked={session.playerVisibleSchedule}
+          label="Termin für Spieler im Portal ankündigen"
+          labelClassName="mt-4"
+        />
         <fieldset className="flex flex-col gap-3 rounded-[var(--radius)] border border-border p-4">
           <legend className="px-1 text-sm font-medium text-foreground">Spieler-Recap</legend>
           <div className="flex flex-col gap-1.5">
@@ -274,16 +264,18 @@ export function SessionDetailClient({
           <form action={linkPageToSessionAction} className="flex flex-wrap items-center gap-2">
             <input type="hidden" name="worldSlug" value={worldSlug} />
             <input type="hidden" name="sessionId" value={sessionId} />
-            {/* TODO(design-kit): Kit-Select (Radix) erlaubt keinen leeren value="" für
-                "Seite verknüpfen…" — natives Select beibehalten. */}
-            <select name="pageId" required className={SELECT_CLASS}>
-              <option value="">Seite verknüpfen…</option>
-              {linkablePages.map((page) => (
-                <option key={page.id} value={page.id}>
-                  {page.title} ({page.type})
-                </option>
-              ))}
-            </select>
+            <Select name="pageId" required>
+              <SelectTrigger className="w-64">
+                <SelectValue placeholder="Seite verknüpfen…" />
+              </SelectTrigger>
+              <SelectContent>
+                {linkablePages.map((page) => (
+                  <SelectItem key={page.id} value={page.id}>
+                    {page.title} ({page.type})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button type="submit" variant="ghost">
               Verknüpfen
             </Button>
@@ -320,11 +312,7 @@ export function SessionDetailClient({
           <input type="hidden" name="worldSlug" value={worldSlug} />
           <input type="hidden" name="sessionId" value={sessionId} />
           <input type="hidden" name="name" value={`${session.title} — Handouts`} />
-          {/* TODO(design-kit): kein Checkbox-Kit-Component vorhanden — natives input[type=checkbox] + Tailwind verwendet. */}
-          <label className={CHECKBOX_ROW_CLASS}>
-            <input type="checkbox" name="forNextSession" defaultChecked className={CHECKBOX_CLASS} />
-            Für nächste Session markieren
-          </label>
+          <Checkbox name="forNextSession" defaultChecked label="Für nächste Session markieren" />
           <Button type="submit" variant="secondary" size="sm">
             Druckliste vorbereiten
           </Button>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/src/components/ui";
+import { Button, Checkbox } from "@/src/components/ui";
 
 interface Props {
   worldSlug: string;
@@ -37,18 +37,13 @@ export function OpenItemsBulkClose({ worldSlug, items, action }: Props) {
           .filter((item) => item.category === "open_quest")
           .map((item) => (
             <li key={item.id}>
-              {/* TODO(design-kit): kein Checkbox-Kit-Component vorhanden — natives input[type=checkbox] + Tailwind verwendet. */}
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  name="itemIds"
-                  value={item.id}
-                  checked={selected.has(item.id)}
-                  onChange={() => toggle(item.id)}
-                  className="size-4 rounded border-input"
-                />
-                {item.title}
-              </label>
+              <Checkbox
+                name="itemIds"
+                value={item.id}
+                checked={selected.has(item.id)}
+                onChange={() => toggle(item.id)}
+                label={item.title}
+              />
             </li>
           ))}
       </ul>

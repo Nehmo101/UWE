@@ -14,6 +14,14 @@ const standalone = getUweStandaloneNextConfig(appDir);
 // sub-path, so there is no basePath. Access needs the brain checkbox — every route verifies
 // the `owner` role server-side; how it is reached (loopback / lan / public via
 // the owner-gated tunnel) is a separate deployment choice (see ADR 004/007).
+// Turbopack-Entscheidung (Next 16): Alle fünf Apps bauen mit `--webpack`.
+// Der Grund ist der webpack-Block unten — `applyUweWebpackDefaults` braucht
+// IgnorePlugin (libsql-Doku-Dateien) und die Server-`externals` (Prisma-
+// Runtime + jsdom-Familie, #84). Turbopack kennt weder IgnorePlugin noch
+// diese externals-Form; `serverExternalPackages` allein reicht nicht, weil
+// Workspace-Pakete isomorphic-dompurify per require() ziehen. Wer auf
+// Turbopack umstellen will, muss zuerst nachweisen, dass kein Server-Chunk
+// jsdom-Interna enthält (scripts/server-externals-check.mjs bleibt das Gate).
 const nextConfig: NextConfig = {
   output: "standalone",
   ...standalone,

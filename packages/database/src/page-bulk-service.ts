@@ -18,6 +18,7 @@ import { parseStringArray, toPrismaJsonValue } from "./json-utils";
 
 export type PageBulkOperation =
   | { kind: "type"; type: PageType }
+  | { kind: "portalRelease"; released: boolean }
   | { kind: "addTags"; tags: string[] }
   | { kind: "removeTags"; tags: string[] }
   | { kind: "campaign"; campaignId: string | null }
@@ -35,6 +36,7 @@ export interface PageBulkResult {
 
 const OP_LABELS: Record<PageBulkOperationKind, string> = {
   type: "Seitentyp geändert",
+  portalRelease: "Portal-Freigabe geändert",
   addTags: "Tags hinzugefügt",
   removeTags: "Tags entfernt",
   campaign: "Kampagne zugewiesen",
@@ -71,6 +73,13 @@ function buildUpdateData(
   switch (operation.kind) {
     case "type":
       return page.type === operation.type ? null : { type: operation.type };
+    // Die Portal-Freigabe als Massenaktion existiert wegen #85: Die Migration
+    // setzt ALLE Bestandsseiten auf „nicht freigegeben" — ohne diesen Weg
+    // müsste ein Betreiber nach dem Deploy hunderte Checkboxen anklicken.
+    case "portalRelease":
+      return page.portalReleased === operation.released
+        ? null
+        : { portalReleased: operation.released };
     case "campaign":
       return (page.campaignId ?? null) === (operation.campaignId ?? null)
         ? null

@@ -79,6 +79,7 @@ export {
 
 export * from "./schemas/common";
 export * from "./schemas/actions";
+export * from "./schemas/studio-api";
 
 export {
   canUseAi,

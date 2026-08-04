@@ -17,6 +17,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Portal-Freigabe je Wiki-Seite (#85, Breaking im Verhalten)** — Seiten
+  erscheinen im Spieler-Wiki nur noch mit gesetztem Portal-Haken
+  (`Page.portalReleased`); Suche, Graph, Timeline-Links, Wikilink-Auflösung,
+  Portal-Dashboard und der statische Export filtern über denselben Haken.
+  **Betriebshinweis, wichtig:** Die Migration setzt ALLE Bestandsseiten auf
+  „nicht freigegeben" — nach dem Deploy sind die Spieler-Wikis leer, bis
+  Seiten freigegeben werden. Dafür gibt es in Studio auf der Wiki-Liste einer
+  Welt eine Massen-Aktion („alle Seiten freigeben/sperren"); einzeln geht es
+  über die Checkbox der Seite
+- **Next.js 16** — alle fünf Apps; Build weiterhin mit `--webpack`
+  (IgnorePlugin + Server-Externals, Begründung in den `next.config.ts`)
+- **React 19.2, zod 4 (inkl. #64), Tiptap 3, marked 18** — Major-Bumps der
+  Kern-Abhängigkeiten; zod-4-Deprecations (`z.string().email()`) bereinigt
+- **Wiki-Seiten rendern wieder im Standalone-Build (#84)** — jsdom/
+  isomorphic-dompurify bleiben in allen fünf Apps aus dem Server-Bundle
+  (zentral in `packages/config/next-standalone.ts`, Gate:
+  `scripts/server-externals-check.mjs`); vorher starb jede HTML-Wiki-Seite
+  im Portal mit ENOENT auf jsdoms Stylesheet
+- **DM-Bereiche überleben die Dokument-Zerlegung (#82)** — `:::dm`-Marken
+  werden beim Dokument-Import über Seitengrenzen ausgeglichen statt
+  auseinandergerissen (sonst stünde markierter DM-Inhalt offen im Wiki);
+  dasselbe Ausgleichen gilt jetzt auch für den PDF-Kampagnen-Import
 - **RTX-Namen vollständig entfernt (Breaking)** — „RTX“ ist eine NVIDIA-Produktlinie; UWE hat nie eine vorausgesetzt, und OCR, Audio, Spotify, Diktat und Etikettendruck brauchen überhaupt keine GPU. Der Name ist jetzt aus Oberfläche, Bezeichnern, Pfaden, Env-Vars und DB-Enums verschwunden. Vokabular: **Maschinenraum** (Produktname) und `engine…` / `ENGINE_…` (Code). Umbenannt: `tools/uwe-rtx-connector` → `tools/uwe-engine-connector`, `apps/rtx-connector-client` → `apps/engine-connector-client`, `uwe-rtx-connector.service` → `uwe-engine-connector.service`, alle `RTX_*`-Env-Vars → `ENGINE_*` (**ohne Fallback**), `/soundboard/rtx` → `/soundboard/engine`, `ConnectorType.rtx_connector` → `engine_connector`, `ScanDocumentStatus.waiting_for_rtx` → `waiting_for_engine`. Migrationen schreiben Bestandsdaten inkl. KI-Nutzungslogs um; das Command Center übernimmt sein Datenverzeichnis und räumt alte Autostart-Einträge selbst auf, das Host-Setup-Skript Unit, State-Ordner und Connector-`.env`. `UWE_CONNECTOR_*`, `UWE_HOST_URL` und das Token-Präfix `uwec_` bleiben unverändert — Tokens müssen nicht neu ausgestellt werden. Checkliste: `docs/engineering/engine-rename-migration.md`. Historische Einträge weiter unten in dieser Datei nennen die alten Namen bewusst nicht mehr, damit kein Leser auf NVIDIA-only schließt
 - **Drei Regexes gegen ReDoS gehärtet** — `stripCodeFence` (`@uwe/ai-brain`, Modell-Antworten), `REPLY_PREFIX` (`@uwe/mail-core`, Mail-Betreffzeilen) und der Zeilen-Parser der Feature-Matrix (`@uwe/database`) stellten je zwei Quantoren über derselben Zeichenmenge nebeneinander. Der Backtracker probierte dann jeden Aufteilungspunkt durch: gemessen quadratisch bei den ersten beiden, kubisch beim dritten (ab ~800 Zeichen über eine Sekunde). Die Betreffzeile ist der exponierteste Fall — sie kommt von jedem, der eine Mail an das Konto schicken kann, und die Regex läuft dort in einer Schleife. Fix ist in allen drei Fällen die Beseitigung der Mehrdeutigkeit, nicht eine Längenbegrenzung; die Feature-Matrix-Zeile wird jetzt an `|` aufgeteilt statt gematcht. Tests mit Laufzeitschranke liegen bei und schlagen ohne den Fix fehl
 

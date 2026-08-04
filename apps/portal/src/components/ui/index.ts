@@ -9,6 +9,8 @@ export {
   CardFooter,
 } from "./card";
 export { Input, Textarea } from "./input";
+export { Checkbox, type CheckboxProps } from "./checkbox";
+export { FileInput, type FileInputProps } from "./file-input";
 export { Label } from "./label";
 export { NavIcon, resolveLucideIcon, type NavIconProps } from "./icon";
 export {
@@ -39,6 +41,7 @@ export {
   SelectTrigger,
   SelectContent,
   SelectItem,
+  SELECT_EMPTY_VALUE,
 } from "./select";
 export { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "./tooltip";
 export { ScrollArea } from "./scroll-area";

@@ -5,7 +5,41 @@ import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown } from "lucide-react";
 import { cn } from "./cn";
 
-export const Select = SelectPrimitive.Root;
+/**
+ * Radix Select verbietet `value=""` auf Items ("A <Select.Item /> must have a
+ * value prop that is not an empty string"). SELECT_EMPTY_VALUE ist der
+ * Sentinel dafür: `Select` und `SelectItem` übersetzen "" ↔ Sentinel, sodass
+ * Aufrufer weiter mit "" als Leerwert arbeiten können (z. B. „— keine —“ /
+ * „Alle“). ACHTUNG: In FormData-Formularen (Select mit `name`) submittet das
+ * versteckte native Select den Sentinel-Rohwert — dort den Leerwert weiterhin
+ * nativ lösen oder serverseitig SELECT_EMPTY_VALUE normalisieren.
+ */
+export const SELECT_EMPTY_VALUE = "__empty__";
+
+function toRadixValue(value: string | undefined): string | undefined {
+  return value === "" ? SELECT_EMPTY_VALUE : value;
+}
+
+export function Select({
+  value,
+  defaultValue,
+  onValueChange,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof SelectPrimitive.Root>) {
+  return (
+    <SelectPrimitive.Root
+      value={toRadixValue(value)}
+      defaultValue={toRadixValue(defaultValue)}
+      onValueChange={
+        onValueChange
+          ? (next) => onValueChange(next === SELECT_EMPTY_VALUE ? "" : next)
+          : undefined
+      }
+      {...props}
+    />
+  );
+}
+
 export const SelectGroup = SelectPrimitive.Group;
 export const SelectValue = SelectPrimitive.Value;
 
@@ -52,9 +86,10 @@ SelectContent.displayName = "SelectContent";
 export const SelectItem = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
->(({ className, children, ...props }, ref) => (
+>(({ className, children, value, ...props }, ref) => (
   <SelectPrimitive.Item
     ref={ref}
+    value={value === "" ? SELECT_EMPTY_VALUE : value}
     className={cn(
       "relative flex cursor-pointer select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none data-[highlighted]:bg-muted",
       className,

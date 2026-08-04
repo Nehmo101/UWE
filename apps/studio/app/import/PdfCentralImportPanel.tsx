@@ -16,6 +16,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  FileInput,
   Label,
 } from "@/src/components/ui";
 
@@ -145,13 +146,10 @@ export function PdfCentralImportPanel({ jobId, targetType, onComplete }: Props) 
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="pdf-import-file">PDF-Datei</Label>
-            {/* TODO(design-kit): natives File-Input — Kit hat noch keine File-Input-Komponente. */}
-            <input
+            <FileInput
               id="pdf-import-file"
-              type="file"
               accept=".pdf,application/pdf"
               onChange={handleFileChange}
-              className="text-sm text-foreground"
             />
           </div>
 
