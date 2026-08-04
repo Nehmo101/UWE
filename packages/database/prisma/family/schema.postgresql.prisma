@@ -183,6 +183,11 @@ enum ShoppingCategory {
   other
 }
 
+enum ShoppingTrip {
+  main
+  fresh
+}
+
 model CalendarEvent {
   id          String            @id @default(cuid())
   feedId      String?           @map("feed_id")
@@ -471,6 +476,7 @@ model ShoppingListItem {
   unit            IngredientUnit   @default(freeform)
   unitLabel       String?          @map("unit_label")
   category        ShoppingCategory @default(other)
+  trip            ShoppingTrip     @default(main)
   checked         Boolean          @default(false)
   recurring       Boolean          @default(false)
   sourceRecipeIds Json?            @map("source_recipe_ids")

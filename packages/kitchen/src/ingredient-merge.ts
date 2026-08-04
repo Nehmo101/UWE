@@ -18,6 +18,8 @@ export interface MergeableIngredient {
   unitLabel?: string | null;
   category?: ShoppingCategory;
   sourceRecipeIds?: string[];
+  /** Tag, an dem die Zutat im Wochenplan zuerst gebraucht wird. */
+  firstUseDate?: Date | null;
 }
 
 export interface ConsolidatedIngredient {
@@ -28,6 +30,8 @@ export interface ConsolidatedIngredient {
   unitLabel: string | null;
   category: ShoppingCategory;
   sourceRecipeIds: string[];
+  /** Frühester Verwendungstag über alle gemergten Vorkommen. */
+  firstUseDate: Date | null;
 }
 
 /**
@@ -88,6 +92,7 @@ export function consolidateIngredients(
         unitLabel: item.unitLabel ?? null,
         category: item.category ?? "other",
         sourceRecipeIds: [...new Set(sources)],
+        firstUseDate: item.firstUseDate ?? null,
       });
       continue;
     }
@@ -104,6 +109,13 @@ export function consolidateIngredients(
       existing.category = item.category;
     }
     existing.sourceRecipeIds = [...new Set([...existing.sourceRecipeIds, ...sources])];
+    // Frühester Verwendungstag gewinnt — er entscheidet den Einkaufs-Abschnitt.
+    if (
+      item.firstUseDate &&
+      (!existing.firstUseDate || item.firstUseDate < existing.firstUseDate)
+    ) {
+      existing.firstUseDate = item.firstUseDate;
+    }
   }
 
   return order.map((key) => {

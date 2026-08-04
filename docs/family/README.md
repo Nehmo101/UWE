@@ -43,6 +43,7 @@ flowchart TB
 | [kalender.md](kalender.md) | Termine je Person, fremde Kalender, iPhone-Abo |
 | [api.md](api.md) | Externe API, Scopes, Token, MCP-Server |
 | [kochbuch.md](kochbuch.md) | Rezepte, KI-Aufbereitung, 6×4-Zoll-Druck |
+| [essensplan.md](essensplan.md) | KI-Wochenvorschlag, Großeinkauf/Frische-Einkauf, Kassenbon → Vorrat, PWA |
 | [konto.md](konto.md) | Passwort, Zwei-Faktor, FaceID |
 
 ## Wo der Code liegt

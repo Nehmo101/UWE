@@ -2,6 +2,13 @@
 
 **Entscheidungsdokument** · 2026-07-28 · Basis: `main` @ `c644e39` · Status: **Bewertung, keine Umsetzung**
 
+> **Update 2026-08: umgesetzt.** Beide Stufen aus §6 sind gebaut — `@uwe/pdf-ocr`
+> (Textlayer-Prüfung, Rendern, Seitenplanung, Marker, Figuren-Cropping), der
+> Kampagnen-Import läuft im Job-Runner über `vision_extract`, und der Family-
+> Scan-Eingang nutzt dasselbe Dokumenten-OCR. Modellwahl über den `vision`-Slot
+> (Command Center → Modelle), Default `frob/unlimited-ocr:q8_0`. Details:
+> [docs/engine-connector.md](../engine-connector.md) („Document OCR").
+
 Geprüfte Frage: Wäre eine Integration von [baidu/Unlimited-OCR](https://github.com/baidu/Unlimited-OCR)
 für PDF-Importe in UWE sinnvoll — speziell für PDF → Kampagne?
 

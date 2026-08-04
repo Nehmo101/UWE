@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="UWE Family">
+  <rect width="512" height="512" rx="96" fill="#100e16"/>
+  <path d="M256 104 L416 240 H368 V392 H144 V240 H96 Z" fill="none" stroke="#cabff0" stroke-width="28" stroke-linejoin="round"/>
+  <circle cx="256" cy="300" r="34" fill="#7fd0b4"/>
+</svg>

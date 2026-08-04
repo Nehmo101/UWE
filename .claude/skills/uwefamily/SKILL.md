@@ -54,6 +54,21 @@ gibt es keinen Endpunkt, nicht nur kein Tool.
   Impfungen und Vorsorge für Menschen und Katze gleichermaßen.
 - **`family_shopping_list` ist zweistufig:** ohne `listId` die Übersicht, mit
   `listId` die Positionen. So zieht ein Blick auf die Listen nicht die Historie.
+- **Der Wocheneinkauf hat zwei Abschnitte** (`ShoppingListItem.trip`):
+  Großeinkauf und Frische-Einkauf. Verderbliches (Obst & Gemüse, Kühlregal), das
+  erst ab dem Frische-Tag (Default Donnerstag) gebraucht wird, wandert in den
+  zweiten Abschnitt — deterministisch, `packages/kitchen/src/shopping-split.ts`.
+- **Der KI-Wochenvorschlag ist Maschinenraum-lokal und nie Auto-Apply.** Kontext:
+  Rezepte samt Zutaten, Koch-Historie (12 Wochen), Vorrat mit Ablauf. Erfundene
+  Gerichte (`invented`) lassen sich als Rezept-Entwurf übernehmen. Der Button
+  verlangt das KI-Flag (`requireFamilyAiActionAuth`), Modell aus dem
+  `chat`-Workflow-Slot.
+- **Kassenbons wandern in den Vorrat:** `parseReceiptText` extrahiert Positionen,
+  Ablageziel „In den Vorrat" legt nach Bestätigung `PantryItem`s an — nie
+  automatisch.
+- **Family ist als PWA installierbar** (`apps/family/app/manifest.ts`); das
+  Manifest ist von der Middleware ausgenommen (credential-loser Fetch). Kein
+  Service Worker — offline kann nur die Einkaufsliste (`FamilyShoppingOffline`).
 
 ## Aufbau
 
@@ -97,11 +112,11 @@ nicht in den Route Handlers.
 | „Was steht heute an?" | `family_day_brief` — ein Aufruf statt vier |
 | „Was steht diese Woche an?" | `family_members`, dann `family_calendar_upcoming` mit `includeAnniversaries`, dazu `family_health_due` |
 | Einkauf | `family_shopping_list` ohne `listId`, dann mit |
-| Essensplanung | `family_recipes` gegen `family_shopping_list` abgleichen |
+| Essensplanung | `family_recipes` gegen `family_shopping_list` abgleichen; Wochenplan/KI/Einkaufs-Split: `docs/family/essensplan.md` |
 | Ganze Akte einer Person | `family_health_due` mit `memberId` |
 | Termin anlegen | `family_calendar_add_event` — nur mit `UWE_MCP_ALLOW_WRITES=true` |
 | Family alleine starten | `pnpm dev:family` |
 
 Karte: `references/karte.md` · Depth: `docs/family/README.md`, `docs/family/api.md`,
 `docs/family/mitglieder.md`, `docs/family/kalender.md`, `docs/family/kochbuch.md`,
-`docs/engineering/mcp-servers.md`
+`docs/family/essensplan.md`, `docs/engineering/mcp-servers.md`

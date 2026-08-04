@@ -93,6 +93,20 @@ export const SHOPPING_CATEGORY_LABELS: Record<ShoppingCategory, string> = {
   other: "Sonstiges",
 };
 
+/**
+ * Einkaufs-Abschnitt einer Position — spiegelt exakt das Prisma-Enum
+ * `ShoppingTrip`: der große Wocheneinkauf und der kleine Frische-Einkauf
+ * später in der Woche (verderbliche Zutaten, die erst dann gebraucht werden).
+ */
+export type ShoppingTrip = "main" | "fresh";
+
+export const SHOPPING_TRIPS: ShoppingTrip[] = ["main", "fresh"];
+
+export const SHOPPING_TRIP_LABELS: Record<ShoppingTrip, string> = {
+  main: "Großeinkauf",
+  fresh: "Frische-Einkauf",
+};
+
 /** Bewertungsfelder eines Rezepts (1–5), mit deutschem Label. */
 export const RECIPE_RATING_FIELDS = [
   { key: "tasteRating", label: "Geschmack" },
@@ -167,6 +181,8 @@ export interface MealPlanGoals {
   cheap?: boolean;
   mealPrepCount?: number;
   dinnersOnly?: boolean;
+  /** Wochentag des Frische-Einkaufs (0 = Montag … 6 = Sonntag), Default Donnerstag. */
+  freshWeekday?: number;
 }
 
 /** Rezept-Eingabe aus dem Editor — client-safe. */

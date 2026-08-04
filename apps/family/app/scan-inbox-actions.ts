@@ -11,7 +11,7 @@ import {
   extractPdfText,
   prisma,
 } from "@uwe/database/server";
-import { buildOcrPrompt, resolveDocumentOcrModel } from "@uwe/pdf-ocr";
+import { buildOcrPrompt, renderPdfPages, resolveDocumentOcrModel } from "@uwe/pdf-ocr";
 import { brainPrisma } from "@uwe/database/brain-client";
 import { runConnectorVisionExtract } from "@uwe/ai-brain/router";
 import { downscaleImageForVision } from "@uwe/assets";
@@ -103,10 +103,27 @@ export async function autoAnalyzeAction(formData: FormData): Promise<void> {
     return;
   }
 
+  // PDFs ohne Textlayer erst rastern — der Connector versteht nur Bilder; ein
+  // roher PDF-Buffer als "Bild" käme beim Modell unlesbar an. Erste Seite
+  // reicht: Belege und Einzelblätter sind der Scan-Inbox-Fall, mehrseitige
+  // Dokumente gehören in den Kampagnen-Import.
+  let visionSource = { buffer, mimeType: scan.mimeType };
+  if (scan.mimeType === "application/pdf") {
+    try {
+      const [page] = await renderPdfPages(buffer, { pages: [1] });
+      if (!page) throw new Error("PDF ohne renderbare Seiten");
+      visionSource = { buffer: page.png, mimeType: "image/png" };
+    } catch {
+      await service().markWaitingForEngine(id, "PDF konnte nicht gerendert werden");
+      revalidate(id);
+      return;
+    }
+  }
+
   // Bild vor dem Enqueue serverseitig downscalen (<=1600px JPEG), damit die
   // Base64-Payload klein bleibt, die als JSON durch die Connector-Queue reist.
   // Das Ergebnis wird poll-on-demand via finalizeScanAction zurueckgeschrieben.
-  const vision = await downscaleImageForVision({ buffer, mimeType: scan.mimeType });
+  const vision = await downscaleImageForVision(visionSource);
   const base64 = vision.buffer.toString("base64");
   const model = await documentOcrModel();
   const job = await runConnectorVisionExtract(prisma, {
@@ -148,7 +165,24 @@ export async function fileScanAction(formData: FormData): Promise<void> {
   if (!isFilingTarget(targetRaw)) {
     throw new Error("Unbekanntes Ablage-Ziel.");
   }
-  await service().file(id, targetRaw);
+
+  // Vorrats-Ablage: die Checkbox-Auswahl aus dem Formular gegen die
+  // PERSISTIERTEN Bon-Positionen auflösen — dem Client wird nur Auswahl und
+  // korrigierter Name geglaubt, nicht die Positionsliste selbst.
+  let pantryItems: Array<{ name: string }> | undefined;
+  if (targetRaw === "pantry") {
+    const scan = await service().get(id);
+    const detected = scan?.extractedFields?.receiptItems ?? [];
+    pantryItems = detected
+      .map((item, index) => ({
+        selected: formData.get(`item-${index}`) != null,
+        name: String(formData.get(`item-${index}-name`) ?? item.name).trim(),
+      }))
+      .filter((item) => item.selected && item.name.length > 0)
+      .map((item) => ({ name: item.name }));
+  }
+
+  await service().file(id, targetRaw, { pantryItems });
   revalidate(id);
 }
 

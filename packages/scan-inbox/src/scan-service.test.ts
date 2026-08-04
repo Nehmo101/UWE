@@ -135,6 +135,39 @@ describe("scan inbox service (integration)", () => {
     assert.ok(recipe?.ingredients.some((i) => i.name === "Wasser"));
   });
 
+  it("files confirmed receipt items into the pantry", async () => {
+    const service = createScanInboxService(brainDb, db, familyDb);
+    const scan = await service.create({ storageKey: "_scan/r1.jpg", mimeType: "image/jpeg" });
+    const analyzed = await service.applyAnalysis(scan.id, {
+      ocrText: "REWE\nKassenbon\nWRAPS WEIZEN 1,99 A\nGURKE 0,49 A\nSUMME 2,48",
+      ocrEngine: "manual",
+    });
+    assert.equal(analyzed.proposal?.target, "pantry");
+    assert.equal(analyzed.extractedFields?.receiptItems?.length, 2);
+
+    // Bestätigte (und korrigierte) Auswahl gewinnt über die erkannten Positionen.
+    const filed = await service.file(scan.id, "pantry", {
+      pantryItems: [{ name: "Wraps" }, { name: "Gurke" }],
+    });
+    assert.equal(filed.targetType, "pantry_item");
+    assert.ok(filed.targetId);
+
+    const pantryRows = await familyDb.pantryItem.findMany({ orderBy: { name: "asc" } });
+    assert.deepEqual(pantryRows.map((row) => row.name), ["Gurke", "Wraps"]);
+    assert.ok(pantryRows.every((row) => row.location === "pantry"));
+    assert.ok(pantryRows.some((row) => row.normalizedName === "wrap"));
+
+    const reloaded = await service.get(scan.id);
+    assert.equal(reloaded?.status, "filed");
+  });
+
+  it("refuses pantry filing without any confirmed items", async () => {
+    const service = createScanInboxService(brainDb, db, familyDb);
+    const scan = await service.create({ storageKey: "_scan/r2.jpg", mimeType: "image/jpeg" });
+    await service.applyAnalysis(scan.id, { ocrText: "Kassenbon Summe", ocrEngine: "manual" });
+    await assert.rejects(() => service.file(scan.id, "pantry"), /Bon-Positionen/);
+  });
+
   it("files DnD scans as draft world pages (S2)", async () => {
     const service = createScanInboxService(brainDb, db, familyDb);
     const world = await createUweRepositoryFromClient(db).createWorld({ name: "Terra", slug: "scan-dnd" });
