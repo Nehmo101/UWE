@@ -117,3 +117,33 @@ describe("analyzeScanText (pure composition)", () => {
     assert.ok(analysis.uncertainties.some((u) => /Betrag/.test(u)));
   });
 });
+
+describe("analyzeScanText (Kassenbon → Vorrat)", () => {
+  const BON = [
+    "REWE Markt GmbH",
+    "Kassenbon",
+    "WRAPS WEIZEN 1,99 A",
+    "GURKE 0,49 A",
+    "SUMME 2,48",
+    "Vielen Dank für Ihren Einkauf",
+  ].join("\n");
+
+  it("routes a receipt with items to the pantry target", () => {
+    const analysis = analyzeScanText(BON);
+    assert.equal(analysis.detectedKind, "receipt");
+    assert.equal(analysis.proposal.target, "pantry");
+    assert.deepEqual(
+      analysis.fields.receiptItems?.map((item) => item.name),
+      ["WRAPS WEIZEN", "GURKE"],
+    );
+    // Bon-Summe schlägt den ersten Geldbetrag der Rechnungs-Heuristik.
+    assert.equal(analysis.fields.amountCents, 248);
+  });
+
+  it("marks review needed when a receipt has no parseable items", () => {
+    const analysis = analyzeScanText("Kassenbon Beleg Quittung Summe");
+    assert.equal(analysis.proposal.target, "pantry");
+    assert.ok(analysis.uncertainties.some((u) => /Bon-Positionen/.test(u)));
+    assert.equal(analysis.needsReview, true);
+  });
+});

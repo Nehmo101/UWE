@@ -16,7 +16,7 @@ import type { BrainPrismaClient } from "@uwe/database/brain-client";
 // owner-privat. Vorgabewert ist der Singleton, damit keine Aufrufstelle einen
 // dritten Client durchreichen muss — Tests reichen ihn explizit rein.
 import { familyPrisma, type FamilyPrismaClient } from "@uwe/database/family-client";
-import { createKitchenService } from "@uwe/kitchen";
+import { createKitchenService, createPantryService } from "@uwe/kitchen";
 import { analyzeScanText } from "./analyze";
 import { parseRecipeText } from "./parse-recipe";
 import type {
@@ -255,10 +255,15 @@ export class ScanInboxService {
   /**
    * Legt das Dokument beim bestätigten Ziel ab. Nur explizit aufgerufen — nie
    * automatisch. Rückgabe: Typ/Id des angelegten Ziels.
+   *
+   * `options.pantryItems` überschreibt bei der Vorrats-Ablage die erkannten
+   * Bon-Positionen — die Bestätigungs-UI lässt den Owner Positionen abwählen
+   * und Namen korrigieren, bevor irgendetwas geschrieben wird.
    */
   async file(
     id: string,
     target: ScanFilingTarget,
+    options: { pantryItems?: Array<{ name: string }> } = {},
   ): Promise<{ targetType: string; targetId: string | null }> {
     const scan = await this.get(id);
     if (!scan) throw new Error("Scan nicht gefunden.");
@@ -327,6 +332,24 @@ export class ScanInboxService {
       });
       targetType = "recipe";
       targetId = recipe.id;
+    } else if (target === "pantry") {
+      // Kassenbon → Vorrat: bestätigte Positionen als PantryItems. Standort ist
+      // pauschal die Vorratskammer — Feintuning (Kühlschrank, Ablauf) passiert
+      // danach in /kitchen/pantry. Vorrats-Writes gehören zu @uwe/kitchen.
+      const items = (options.pantryItems ?? fields.receiptItems ?? [])
+        .map((item) => ({ name: item.name.trim() }))
+        .filter((item) => item.name.length > 0);
+      if (items.length === 0) {
+        throw new Error("Keine Bon-Positionen für die Vorrats-Ablage ausgewählt.");
+      }
+      const pantryService = createPantryService(this.familyDb);
+      let firstId: string | null = null;
+      for (const item of items) {
+        const created = await pantryService.create({ name: item.name, location: "pantry" });
+        firstId = firstId ?? created.id;
+      }
+      targetType = "pantry_item";
+      targetId = firstId;
     } else if (
       target === "dnd_session_note" ||
       target === "dnd_handout"

@@ -16,13 +16,16 @@ import { getFamilyUser } from "@/src/lib/page-family";
 import { FamilyShell, FamilyDenied } from "@/src/components/FamilyShell";
 import {
   addMealEntryAction,
-  applyDraftEntryAction,
-  dismissWeekDraftAction,
   generateShoppingListAction,
   removeMealEntryAction,
-  suggestWeekAction,
   toggleMealCookedAction,
 } from "@/app/kitchen-actions";
+import {
+  adoptDraftRecipeAction,
+  applyDraftEntryAction,
+  dismissWeekDraftAction,
+  suggestWeekAction,
+} from "@/app/kitchen-plan-actions";
 
 /**
  * Wochenplan — pro Tag planen, abhaken, und daraus eine Einkaufsliste ziehen.
@@ -42,6 +45,7 @@ const AI_STATUS_MESSAGES: Record<string, string> = {
   engine_offline: "Kein lokaler KI-Connector (Maschinenraum) online — Wochenvorschlag nicht verfügbar.",
   parse_error: "Die KI-Antwort war unlesbar. Bitte erneut versuchen.",
   ok: "KI-Wochenvorschlag erstellt — Einträge unten einzeln übernehmen.",
+  adopted: "Gericht als Rezept-Entwurf übernommen und eingeplant — Details unter Rezepte.",
 };
 
 const DAY_FORMAT = new Intl.DateTimeFormat("de-DE", {
@@ -141,24 +145,40 @@ export default async function FamilyMealPlanPage({ searchParams }: Props) {
                   <div className="family-row-head">
                     <span className="family-tag">{DAY_FORMAT.format(resolved)}</span>
                     <span className="family-tag">{MEAL_SLOT_LABELS[day.slot]}</span>
+                    {day.invented ? <span className="family-tag">Neu (KI)</span> : null}
                     <span>
                       {day.title}
                       {day.note ? ` — ${day.note}` : ""}
                     </span>
-                    <form action={applyDraftEntryAction} style={{ marginLeft: "auto" }}>
-                      <input type="hidden" name="isoYear" value={isoYear} />
-                      <input type="hidden" name="isoWeek" value={isoWeek} />
-                      <input type="hidden" name="date" value={resolved.toISOString()} />
-                      <input type="hidden" name="slot" value={day.slot} />
-                      {day.recipeId ? (
-                        <input type="hidden" name="recipeId" value={day.recipeId} />
+                    <span style={{ marginLeft: "auto", display: "flex", gap: "0.4rem" }}>
+                      {day.invented ? (
+                        <form action={adoptDraftRecipeAction}>
+                          <input type="hidden" name="isoYear" value={isoYear} />
+                          <input type="hidden" name="isoWeek" value={isoWeek} />
+                          <input type="hidden" name="draftIndex" value={index} />
+                          <button type="submit" className="family-btn family-btn-sm">
+                            Als Rezept übernehmen
+                          </button>
+                        </form>
                       ) : null}
-                      <input type="hidden" name="title" value={day.title} />
-                      <button type="submit" className="family-btn family-btn-sm">
-                        + übernehmen
-                      </button>
-                    </form>
+                      <form action={applyDraftEntryAction}>
+                        <input type="hidden" name="isoYear" value={isoYear} />
+                        <input type="hidden" name="isoWeek" value={isoWeek} />
+                        <input type="hidden" name="date" value={resolved.toISOString()} />
+                        <input type="hidden" name="slot" value={day.slot} />
+                        {day.recipeId ? (
+                          <input type="hidden" name="recipeId" value={day.recipeId} />
+                        ) : null}
+                        <input type="hidden" name="title" value={day.title} />
+                        <button type="submit" className="family-btn family-btn-sm">
+                          + übernehmen
+                        </button>
+                      </form>
+                    </span>
                   </div>
+                  {day.invented && day.ingredients && day.ingredients.length > 0 ? (
+                    <p className="family-muted">Zutaten: {day.ingredients.join(", ")}</p>
+                  ) : null}
                 </li>
               );
             })}

@@ -5,8 +5,10 @@ import {
   createShoppingService,
   formatAmount,
   SHOPPING_CATEGORY_LABELS,
+  SHOPPING_TRIP_LABELS,
   type IngredientUnit,
   type ShoppingCategory,
+  type ShoppingTrip,
 } from "@uwe/kitchen";
 import { getFamilyUser } from "@/src/lib/page-family";
 import { FamilyShell, FamilyDenied } from "@/src/components/FamilyShell";
@@ -66,10 +68,17 @@ export default async function FamilyShoppingPage({ searchParams }: Props) {
     shopping.getItemSuggestions(),
   ]);
 
-  const grouped = new Map<ShoppingCategory, NonNullable<typeof active>["items"]>();
+  // Zweistufig gruppiert: Einkaufs-Abschnitt (Großeinkauf/Frische-Einkauf) →
+  // Kategorie. Ohne Frische-Positionen entfällt die Abschnitts-Ebene komplett.
+  const byTrip = new Map<ShoppingTrip, Map<ShoppingCategory, NonNullable<typeof active>["items"]>>();
   for (const item of active?.items ?? []) {
-    grouped.set(item.category, [...(grouped.get(item.category) ?? []), item]);
+    const trip = item.trip as ShoppingTrip;
+    const groups = byTrip.get(trip) ?? new Map<ShoppingCategory, NonNullable<typeof active>["items"]>();
+    groups.set(item.category, [...(groups.get(item.category) ?? []), item]);
+    byTrip.set(trip, groups);
   }
+  const hasFresh = (byTrip.get("fresh")?.size ?? 0) > 0;
+  const tripOrder: ShoppingTrip[] = hasFresh ? ["main", "fresh"] : ["main"];
 
   const canPush = bringStatus.connected && Boolean(bringStatus.defaultListUuid);
 
@@ -161,44 +170,62 @@ export default async function FamilyShoppingPage({ searchParams }: Props) {
             ) : null}
           </section>
 
-          {[...grouped.entries()].map(([category, items]) => (
-            <section className="family-section" key={category}>
-              <h2>
-                {SHOPPING_CATEGORY_LABELS[category]} · {items.length}
-              </h2>
-              <ul className="family-list">
-                {items.map((item) => (
-                  <li key={item.id} className="family-row">
-                    <div className="family-row-head">
-                      <form action={toggleShoppingItemAction}>
-                        <input type="hidden" name="itemId" value={item.id} />
-                        <input type="hidden" name="listId" value={active.id} />
-                        <button type="submit" className="family-btn family-btn-ghost family-btn-sm">
-                          {item.checked ? "☑" : "☐"}
-                        </button>
-                      </form>
-                      <span style={item.checked ? { textDecoration: "line-through" } : undefined}>
-                        {item.name}
-                        {item.amount != null
-                          ? ` — ${formatAmount(item.amount, item.unit as IngredientUnit, item.unitLabel)}`
-                          : item.unitLabel
-                            ? ` — ${item.unitLabel}`
-                            : ""}
-                      </span>
-                      {item.recurring ? <span className="family-tag">Grundausstattung</span> : null}
-                      <form action={removeShoppingItemAction} style={{ marginLeft: "auto" }}>
-                        <input type="hidden" name="itemId" value={item.id} />
-                        <input type="hidden" name="listId" value={active.id} />
-                        <button type="submit" className="family-btn family-btn-ghost family-btn-sm">
-                          ✕
-                        </button>
-                      </form>
-                    </div>
-                  </li>
+          {tripOrder.map((trip) => {
+            const groups = byTrip.get(trip);
+            if (!groups || groups.size === 0) return null;
+            return (
+              <div key={trip}>
+                {hasFresh ? (
+                  <section className="family-section">
+                    <h2>{SHOPPING_TRIP_LABELS[trip]}</h2>
+                    <p className="family-muted">
+                      {trip === "fresh"
+                        ? "Verderbliches, das erst später in der Woche gebraucht wird — reicht am Frische-Tag."
+                        : "Alles für den Wochenstart und was sich hält."}
+                    </p>
+                  </section>
+                ) : null}
+                {[...groups.entries()].map(([category, items]) => (
+                  <section className="family-section" key={`${trip}-${category}`}>
+                    <h2>
+                      {SHOPPING_CATEGORY_LABELS[category]} · {items.length}
+                    </h2>
+                    <ul className="family-list">
+                      {items.map((item) => (
+                        <li key={item.id} className="family-row">
+                          <div className="family-row-head">
+                            <form action={toggleShoppingItemAction}>
+                              <input type="hidden" name="itemId" value={item.id} />
+                              <input type="hidden" name="listId" value={active.id} />
+                              <button type="submit" className="family-btn family-btn-ghost family-btn-sm">
+                                {item.checked ? "☑" : "☐"}
+                              </button>
+                            </form>
+                            <span style={item.checked ? { textDecoration: "line-through" } : undefined}>
+                              {item.name}
+                              {item.amount != null
+                                ? ` — ${formatAmount(item.amount, item.unit as IngredientUnit, item.unitLabel)}`
+                                : item.unitLabel
+                                  ? ` — ${item.unitLabel}`
+                                  : ""}
+                            </span>
+                            {item.recurring ? <span className="family-tag">Grundausstattung</span> : null}
+                            <form action={removeShoppingItemAction} style={{ marginLeft: "auto" }}>
+                              <input type="hidden" name="itemId" value={item.id} />
+                              <input type="hidden" name="listId" value={active.id} />
+                              <button type="submit" className="family-btn family-btn-ghost family-btn-sm">
+                                ✕
+                              </button>
+                            </form>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
                 ))}
-              </ul>
-            </section>
-          ))}
+              </div>
+            );
+          })}
 
           <section className="family-section">
             <form action={addShoppingItemAction} className="family-form family-form-inline family-card">

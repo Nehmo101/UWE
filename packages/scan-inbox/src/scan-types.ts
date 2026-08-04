@@ -38,6 +38,7 @@ export type ScanFilingTarget =
   | "todo"
   | "calendar_event"
   | "recipe"
+  | "pantry"
   | "dnd_session_note"
   | "dnd_handout"
   | "ignore";
@@ -74,10 +75,18 @@ export const SCAN_FILING_TARGET_LABELS: Record<ScanFilingTarget, string> = {
   todo: "Als Todo",
   calendar_event: "Als Termin/Erinnerung",
   recipe: "Als Rezept",
+  pantry: "In den Vorrat",
   dnd_session_note: "Als Sessionnotiz (Review)",
   dnd_handout: "Als Handout",
   ignore: "Ignorieren",
 };
+
+/** Eine erkannte Kassenbon-Position (Kandidat für den Vorrat). */
+export interface ReceiptItem {
+  name: string;
+  quantity?: number | null;
+  priceCents?: number | null;
+}
 
 /** Extrahierte Felder — kind-spezifisch, alle optional. */
 export interface ExtractedFields {
@@ -96,6 +105,8 @@ export interface ExtractedFields {
   product?: string;
   deadlines?: string[];
   summary?: string;
+  /** Kassenbon-Positionen — Grundlage der Vorrats-Ablage. */
+  receiptItems?: ReceiptItem[];
 }
 
 /** Ein Reminder-Vorschlag aus einer erkannten Frist. */
