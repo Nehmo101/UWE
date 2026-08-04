@@ -55,6 +55,7 @@ describe("portal dashboard", () => {
       title: "Den Turm erkunden",
       slug: "den-turm-erkunden",
       type: "quest",
+      portalReleased: true,
     });
     questPageId = quest.id;
 

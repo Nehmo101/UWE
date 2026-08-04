@@ -30,6 +30,7 @@ describe("graph-service", () => {
       title: "Hafenstadt Validori",
       slug: "validori",
       type: "location",
+      portalReleased: true,
       tags: ["hafen", "stadt"],
       contentBlocks: [
         {
@@ -46,6 +47,7 @@ describe("graph-service", () => {
       title: "Shagottar",
       slug: "shagottar",
       type: "location",
+      portalReleased: true,
       contentBlocks: [
         {
           type: "rich_text",
@@ -61,6 +63,7 @@ describe("graph-service", () => {
       title: "Kapitän Mara",
       slug: "kapitän-mara",
       type: "npc",
+      portalReleased: true,
       tags: ["crew"],
       contentBlocks: [
         {

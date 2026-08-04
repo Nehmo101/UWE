@@ -46,6 +46,7 @@ describe("UWE auth and permissions", () => {
       title: "Public Notice",
       slug: "public-notice",
       type: "note",
+      portalReleased: true,
       contentBlocks: [
         {
           type: "rich_text",
@@ -60,6 +61,7 @@ describe("UWE auth and permissions", () => {
       title: "Player Lore",
       slug: "player-lore",
       type: "note",
+      portalReleased: true,
       contentBlocks: [
         {
           type: "player_text",
@@ -268,6 +270,7 @@ describe("UWE auth and permissions", () => {
       title: "Geheimer NPC",
       slug: "geheimer-npc",
       type: "npc",
+      portalReleased: true,
       contentBlocks: [
         {
           type: "rich_text",
@@ -282,6 +285,7 @@ describe("UWE auth and permissions", () => {
       title: "Geheimes Handout",
       slug: "geheimes-handout",
       type: "handout",
+      portalReleased: true,
       contentBlocks: [
         {
           type: "rich_text",

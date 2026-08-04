@@ -72,6 +72,7 @@ describe("user management and login hardening", () => {
       title: "Player Lore",
       slug: "player-lore",
       type: "note",
+      portalReleased: true,
       contentBlocks: [
         {
           type: "player_text",
@@ -86,6 +87,7 @@ describe("user management and login hardening", () => {
       title: "Specific Secret",
       slug: "specific-secret",
       type: "note",
+      portalReleased: true,
       contentBlocks: [
         {
           type: "player_text",
