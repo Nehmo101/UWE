@@ -257,6 +257,23 @@ describe("release packaging", () => {
       // Ohne --pr bleibt der CHANGELOG unberührt — das ist der Workflow-Pfad.
       assert.doesNotMatch(fs.readFileSync(path.join(dir, "CHANGELOG.md"), "utf8"), /\[2\.3\.4\]/);
 
+      // Idempotent: der Release-Workflow ruft das Skript auf einem Stand auf,
+      // der die Zielversion schon trägt (nach dem gemergten Versions-PR). Der
+      // zweite Lauf muss durchgehen und nichts verändern — genau daran ist
+      // Release-Lauf 30889884381 gescheitert.
+      const vorher = fs.readFileSync(
+        path.join(dir, "apps/engine-connector-client/src-tauri/Cargo.toml"),
+        "utf8",
+      );
+      execFileSync(process.execPath, [skript, "2.3.4"], { stdio: "pipe" });
+      assert.equal(
+        fs.readFileSync(
+          path.join(dir, "apps/engine-connector-client/src-tauri/Cargo.toml"),
+          "utf8",
+        ),
+        vorher,
+      );
+
       // Kein Semver, keine Änderung.
       assert.throws(() => execFileSync(process.execPath, [skript, "v2.3"], { stdio: "pipe" }));
 
