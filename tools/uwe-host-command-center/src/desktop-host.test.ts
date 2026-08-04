@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, it } from "node:test";
 
-import { buildLocalHostEnv, deriveOwnedServiceState, desktopHostTargetUrl, isOwnServiceApp, parseServicePort, resolveDatabasePath, resolveDesktopHostRoot, type HostPaths } from "./desktop-host";
+import { buildLocalHostEnv, deriveOwnedServiceState, desktopHostTargetUrl, isOwnServiceApp, parseServicePort, readLogs, resolveDatabasePath, resolveDesktopHostRoot, type HostPaths } from "./desktop-host";
 import { healthAppName, isOpenableUrl, openExternalUrl, parseNetstatListeners } from "./desktop-host-system";
 
 const temporaryDirectories: string[] = [];
@@ -139,6 +139,33 @@ describe("desktop host configuration", () => {
       } else {
         process.env.UWE_MONOREPO_ROOT = previousConfiguredRoot;
       }
+    }
+  });
+});
+
+describe("desktop host logs", () => {
+  it("liest das cloudflared-Log, statt still aufs Einrichtungslog auszuweichen", () => {
+    const dataRoot = temporaryDirectory();
+    const previous = process.env.UWE_COMMAND_CENTER_DATA_DIR;
+    process.env.UWE_COMMAND_CENTER_DATA_DIR = dataRoot;
+    try {
+      fs.mkdirSync(path.join(dataRoot, "logs"), { recursive: true });
+      fs.writeFileSync(
+        path.join(dataRoot, "logs", "cloudflared.log"),
+        "tunnel verbunden\n",
+        "utf8",
+      );
+
+      const result = readLogs(temporaryDirectory(), "cloudflared");
+      assert.equal(result.target, "cloudflared");
+      assert.deepEqual(result.lines, ["tunnel verbunden"]);
+
+      // Alles andere außerhalb der Dienst-Registry bleibt beim Einrichtungslog —
+      // die Whitelist schützt weiter vor frei wählbaren Dateinamen.
+      assert.equal(readLogs(temporaryDirectory(), "..\\geheim").target, "command-center");
+    } finally {
+      if (previous === undefined) delete process.env.UWE_COMMAND_CENTER_DATA_DIR;
+      else process.env.UWE_COMMAND_CENTER_DATA_DIR = previous;
     }
   });
 });
