@@ -258,7 +258,7 @@ const KanteBildShader = {
     uTexel: { value: new THREE.Vector2(1 / 640, 1 / 400) },
 
     uNahFern: { value: new THREE.Vector2(0.5, 3000) },
-    uKante: { value: 0.16 },
+    uKante: { value: 0.22 },
     uKanteFarbe: { value: new THREE.Color(0x2e2418) },
     // C3 Papierkante: unregelmaessig auslaufender Blattrand. Ergaenzt die
     // Vignette der Graduierung (die weiter aus den Presets kommt und weiter
@@ -326,7 +326,7 @@ const KanteBildShader = {
     '  float gx = ( tr + 2.0 * r + br ) - ( tl + 2.0 * l + bl );',
     '  float gy = ( tl + 2.0 * t + tr ) - ( bl + 2.0 * b + br );',
     '  float mitte = linDepth( vUv );',
-    '  float kante = smoothstep( 0.012, 0.06, sqrt( gx * gx + gy * gy ) / max( mitte, 0.02 ) );',
+    '  float kante = smoothstep( 0.009, 0.048, sqrt( gx * gx + gy * gy ) / max( mitte, 0.02 ) );',
     '  kante *= 1.0 - smoothstep( 0.35, 0.8, mitte );      // in der Ferne ausblenden',
     '  c = mix( c, uKanteFarbe * c, kante * uKante );',
     '  // Asymmetrische Tiefenlippe: verdichtet nur die Unterkante eines',

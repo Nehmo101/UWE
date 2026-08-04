@@ -1,7 +1,7 @@
 // Einstieg: verdrahtet Module, baut die Startkarte, treibt die Renderschleife.
 import { DEG, hashi } from './core/rng.js';
 import { S, HALF, VW, setScene, mkElement, nextSeed } from './core/store.js';
-import { scene, initPipeline, resizePipeline, renderFrame, tickLeistung, setPalette, setMultiplane, PALETTE_STANDARD } from './render/pipeline.js';
+import { scene, initPipeline, resizePipeline, renderFrame, getRenderInfo, tickLeistung, setPalette, setMultiplane, PALETTE_STANDARD } from './render/pipeline.js';
 import { camera, cam, initKeys, updateCamera, moveFocus } from './editor/camera.js';
 import { base, genBase, initTerrain, heightAt, slopeAt, refreshTerrainFull, basisGeaendert } from './world/terrain.js';
 import './generators/geometry.js';        // registriert alle Objekt-Pools
@@ -36,6 +36,7 @@ import { ARCHITEKTUR_STILE, architekturAssetId } from './assets/architektur-kata
 import { erstelleLuftschauPlan } from './generators/luftschau.js';
 import {
   ASSET_SCHAU_KARTENGROESSE,
+  baueAssetSchauLayout,
   erzeugeAssetSchau
 } from './generators/asset-schau.js';
 
@@ -137,6 +138,24 @@ function assetSchauMap() {
   legende.innerHTML = "<strong>Asset-Schau &middot; 505 / 505</strong>"
     + "<span>12 &times; 18 Architektur &middot; 289 Umwelt-, Kultur- und Weltassets</span>";
   document.body.appendChild(legende);
+  if (SCHAU_BLICK === "baum") {
+    // Der Fokusmodus erzeugt nur das Zielasset. Dadurch wird weder Geometrie
+    // der 504 Nachbarn gepackt noch ein riesiges Galerie-Terrain benoetigt.
+    var ganzesLayout = baueAssetSchauLayout();
+    var baumPlatz = ganzesLayout.placements.find(function (p) { return p.name === "baum"; });
+    var fokusPlatz = Object.assign({}, baumPlatz, { x: 0, y: 0, z: 0 });
+    erzeugeAssetSchau({ hoeheAn: heightAt, markiere: false, layout: {
+      version: ganzesLayout.version,
+      placements: [fokusPlatz],
+      blocks: [],
+      bounds: { minX: -8, maxX: 8, minZ: -8, maxZ: 8 },
+      counts: { physical: 1, architecture: 0, other: 1 }
+    } });
+    legende.innerHTML = "<strong>Asset-Fokus &middot; Windweide B</strong>"
+      + "<span>Silhouette &middot; Astbau &middot; Material &middot; Laufzeit</span>";
+    return { x: 0, z: 0, dist: 22, pitch: 18 * DEG,
+      yaw: 0.48, fov: 30, hebung: 3.75 };
+  }
   var schau = erzeugeAssetSchau({ hoeheAn: heightAt, markiere: false });
   var archBlock = schau.layout.blocks[0];
   var heroX = archBlock.minX - 40;
@@ -146,6 +165,14 @@ function assetSchauMap() {
     drehung: 112,
     kopfbewegung: 0.78
   });
+  if (SCHAU_BLICK === "natur") {
+    var naturBlock = schau.layout.blocks.find(function (b) { return b.id === "natur"; });
+    return { x: (naturBlock.minX + naturBlock.maxX) / 2,
+      z: (naturBlock.minZ + naturBlock.maxZ) / 2,
+      dist: Math.max(naturBlock.maxX - naturBlock.minX,
+        naturBlock.maxZ - naturBlock.minZ) * 1.32,
+      pitch: 48 * DEG, yaw: 0.08, fov: 31 };
+  }
   if (SCHAU_BLICK === "architektur") {
     return { x: 0, z: -82, dist: 255, pitch: 50 * DEG, yaw: 0, fov: 31 };
   }
@@ -277,7 +304,7 @@ const renderer = initPipeline(camera);
 setMultiplane(SCHAU_MODUS === "assets" ? 0.12 : 0.42);
 // Die Farbrampe kommt aus dem Biom (palettePassend in io.js) — die
 // Standardrampe hier waere biomblind und zoege dunkle Biome Richtung Creme.
-setPalette(PALETTE_STANDARD, 0.26);
+setPalette(PALETTE_STANDARD, 0.20);
 initTerrain(scene);
 initWater(scene);
 initSky(scene);
@@ -296,7 +323,8 @@ if (SCHAU_MODUS === "luft") {
   var biomSelect = document.getElementById("biomSel");
   if (biomSelect) biomSelect.value = S.biom;
 }
-if (SCHAU_MODUS === "assets") setzeKartenGroesseFuerSchau(ASSET_SCHAU_KARTENGROESSE);
+if (SCHAU_MODUS === "assets") setzeKartenGroesseFuerSchau(
+  SCHAU_BLICK === "baum" ? 128 : ASSET_SCHAU_KARTENGROESSE);
 // Farbrampe des Startbioms setzen (F1) — muss nach initIO stehen, weil die
 // Funktion dort lebt und BIOME liest.
 palettePassend();
@@ -406,7 +434,8 @@ function animate() {
   // Adaptive Aufloesung: die ECHTE Bildzeit melden (raw, nicht das geklammerte
   // dt) — der Regler senkt bei anhaltend zaehen Bildern die Renderskala und
   // hebt sie wieder, sobald die Rate traegt.
-  tickLeistung(raw);
+  // Art-Sichten bleiben pixelgenau; Headless-Last ist kein Asset-Signal.
+  if (!SCHAU_MODUS) tickLeistung(raw);
   renderFrame(camera, now * 0.001);
 
   frameCount++; fpsAcc += raw;
@@ -415,4 +444,4 @@ function animate() {
 
 animate();
 window.__terraOk = true;
-window.__terraDebug = { POOLS: POOLS, S: S };
+window.__terraDebug = { POOLS: POOLS, S: S, getRenderInfo: getRenderInfo };

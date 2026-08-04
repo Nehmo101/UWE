@@ -1,4 +1,12 @@
 {
   "version": 1,
-  "assets": []
+  "assets": [
+    {
+      "id": "baum",
+      "file": "baum/model.glb",
+      "sha256": "bacc78b8bf889430ae0a9f221de5128104a03bdfd23a5b00203699273996120a",
+      "fallback": "baum",
+      "approvedBy": "lasse"
+    }
+  ]
 }

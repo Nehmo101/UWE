@@ -24,6 +24,18 @@
       "query": "?schau=assets&blick=architektur",
       "viewport": { "width": 1440, "height": 1000 },
       "settleMs": 5000
+    },
+    {
+      "id": "tree-detail",
+      "query": "?schau=assets&blick=baum",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4500
+    },
+    {
+      "id": "tree-family",
+      "query": "?schau=assets&blick=natur",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4500
     }
   ]
 }
