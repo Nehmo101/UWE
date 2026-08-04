@@ -1,6 +1,6 @@
 [package]
 name = "uwe_engine_connector_client"
-version = "0.1.0"
+version = "0.2.0"
 description = "UWE Command Center"
 authors = ["UWE"]
 edition = "2021"
