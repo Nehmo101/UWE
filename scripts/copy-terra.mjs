@@ -65,7 +65,26 @@ function kopiereBaum(von, nach, zaehler) {
     return;
   }
   fs.mkdirSync(path.dirname(nach), { recursive: true });
-  fs.copyFileSync(von, nach);
+  // Auf Windows-CI-Runnern kopieren Studio- und Portal-Build dieselben Dateien
+  // parallel in dieselben Ziele, und der Virenscanner hält frisch ausgecheckte
+  // Dateien kurz offen — copyFileSync wirft dann EBUSY/EPERM (Release-Lauf
+  // 30892848889 an three.core.js). Kurz warten und erneut versuchen, dasselbe
+  // Vorgehen wie in copy-scenes.mjs.
+  let versuch = 0;
+  for (;;) {
+    try {
+      fs.copyFileSync(von, nach);
+      break;
+    } catch (error) {
+      const code = error && error.code;
+      versuch += 1;
+      if ((code !== "EBUSY" && code !== "EPERM") || versuch >= 5) throw error;
+      const bis = Date.now() + 200 * versuch;
+      while (Date.now() < bis) {
+        // synchrones Warten — das Skript ist ohnehin sequenziell
+      }
+    }
+  }
   zaehler.kopiert++;
 }
 
