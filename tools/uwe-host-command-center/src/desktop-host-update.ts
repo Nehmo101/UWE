@@ -321,11 +321,37 @@ export async function checkDesktopHostUpdate(
   };
 }
 
-function syncRepositoryToTarget(root: string, target: string): void {
+/** Die Stash-Kennung der Update-Sicherung — Grundlage für Anlegen und Zählen. */
+export const UPDATE_STASH_MARKER = "command-center update pre-sync";
+
+/**
+ * Wie viele Update-Stashes im Stapel liegen (`git stash list`). Der Sync poppt
+ * bewusst nie automatisch — dafür muss der Betreiber sehen, dass und wie viel
+ * dort liegt, statt dass der Stapel unbemerkt wächst.
+ */
+export function countCommandCenterStashes(root: string): number {
+  const output = git(root, ["stash", "list"], { allowFailure: true });
+  return output
+    .split(/\r?\n/)
+    .filter((line) => line.includes(UPDATE_STASH_MARKER)).length;
+}
+
+/** Der Hinweistext nach einem Update, das lokale Änderungen gestasht hat. */
+export function stashNoticeMessage(count: number): string {
+  const bestand =
+    count === 1
+      ? "es liegt jetzt 1 Command-Center-Stash im Stapel"
+      : `es liegen jetzt ${count} Command-Center-Stashes im Stapel`;
+  return `Hinweis: Lokale Änderungen wurden vor dem Update mit „git stash“ gesichert und nicht zurückgespielt — ${bestand} (siehe „git stash list“).`;
+}
+
+function syncRepositoryToTarget(root: string, target: string): { stashed: boolean } {
   appendUpdateLog(root, `Repository-Sync auf ${target} ...`);
+  let stashed = false;
   if (worktreeDirty(root)) {
     appendUpdateLog(root, "Lokale Änderungen werden per git stash gesichert.");
-    git(root, ["stash", "push", "-u", "-m", `command-center update pre-sync ${new Date().toISOString()}`]);
+    git(root, ["stash", "push", "-u", "-m", `${UPDATE_STASH_MARKER} ${new Date().toISOString()}`]);
+    stashed = true;
   }
 
   if (target === "origin/main") {
@@ -336,7 +362,7 @@ function syncRepositoryToTarget(root: string, target: string): void {
     );
     if (ancestor.status === 0) {
       git(root, ["merge", "--ff-only", "origin/main"]);
-      return;
+      return { stashed };
     }
     const backupRef = `refs/backup/command-center-before-update/${new Date()
       .toISOString()
@@ -344,10 +370,11 @@ function syncRepositoryToTarget(root: string, target: string): void {
     git(root, ["update-ref", backupRef, "HEAD"]);
     appendUpdateLog(root, `Backup-Ref ${backupRef} gesetzt.`);
     git(root, ["checkout", "-B", "main", "origin/main"]);
-    return;
+    return { stashed };
   }
 
   git(root, ["checkout", "--detach", target]);
+  return { stashed };
 }
 
 export async function applyDesktopHostUpdate(rootInput?: string): Promise<DesktopHostActionResult> {
@@ -381,7 +408,11 @@ export async function applyDesktopHostUpdate(rootInput?: string): Promise<Deskto
       await stopHost(root);
     }
     reportHostStep("sync", "Code synchronisieren");
-    syncRepositoryToTarget(root, check.latestTag);
+    const sync = syncRepositoryToTarget(root, check.latestTag);
+    // Der Hinweis auf den Stash-Stapel gehört in Log UND Ergebnis: kein
+    // Auto-Pop (zu riskant), aber der Betreiber muss sehen, was dort liegt.
+    const stashNotice = sync.stashed ? stashNoticeMessage(countCommandCenterStashes(root)) : null;
+    if (stashNotice) appendUpdateLog(root, stashNotice);
     const setup = await setupHost(root, { ownProgress: false });
     if (!setup.ok) {
       return setup;
@@ -395,7 +426,7 @@ export async function applyDesktopHostUpdate(rootInput?: string): Promise<Deskto
       if (!started.ok) {
         return {
           ok: false,
-          message: `Code und Build wurden aktualisiert, aber der Neustart scheiterte: ${started.message}`,
+          message: `Code und Build wurden aktualisiert, aber der Neustart scheiterte: ${started.message}${stashNotice ? ` ${stashNotice}` : ""}`,
           status,
         };
       }
@@ -409,11 +440,12 @@ export async function applyDesktopHostUpdate(rootInput?: string): Promise<Deskto
     }
 
     const versionLabel = check.latestVersion ?? check.latestTag;
+    const baseMessage = check.commandCenterUpdateAvailable
+      ? `UWE ${versionLabel} ist installiert und neu gebaut. Der Command-Center-Installer wurde geöffnet — bitte die App-Aktualisierung abschließen.`
+      : `UWE ${versionLabel} ist installiert und neu gebaut.`;
     return {
       ok: true,
-      message: check.commandCenterUpdateAvailable
-        ? `UWE ${versionLabel} ist installiert und neu gebaut. Der Command-Center-Installer wurde geöffnet — bitte die App-Aktualisierung abschließen.`
-        : `UWE ${versionLabel} ist installiert und neu gebaut.`,
+      message: stashNotice ? `${baseMessage} ${stashNotice}` : baseMessage,
       status,
     };
   } catch (error) {

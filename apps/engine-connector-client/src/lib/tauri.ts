@@ -232,7 +232,7 @@ export async function restartService(service: LocalHostServiceId, root?: string)
 
 export async function getHostLogs(
   root?: string,
-  target: LocalHostServiceId | "command-center" = "command-center",
+  target: import("./tauri-types").LocalHostLogsResult["target"] = "command-center",
 ) {
   return invokeCommand<import("./tauri-types").LocalHostLogsResult>("get_host_logs", {
     root,

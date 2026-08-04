@@ -10,7 +10,7 @@
   "scripts": {
     "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test src/server.test.ts src/modules.test.ts src/control.test.ts src/host-update-progress.test.ts src/desktop-host.test.ts src/desktop-host-update.test.ts src/bundle-update.test.ts src/install-selection.test.ts src/provision-local-connector.test.ts src/cli-env-preload.test.ts src/host-env-ports.test.ts src/uwe-health.test.ts src/ops/ops-imports.test.ts",
+    "test": "node ../../scripts/run-node-tests.mjs",
     "bundle-cli": "node scripts/bundle-cli.mjs"
   },
   "dependencies": {
