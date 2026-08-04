@@ -133,11 +133,20 @@ Am 2026-08-04 in vier PRs behoben (#88 Datadir-Migration, #89 Brain-Port,
 - ~~`~/.uwe-rtx-connector` ohne Migrations-Rückfall~~ → einmaliges Rename mit
   Lese-Fallback (#88)
 
+Nachtrag Release-Pipeline (2026-08-04): erstmals End-to-End grün — Lauf 5
+(30893069439) erzeugte das **Draft-Release „UWE 0.2.0"** mit allen Assets.
+Drei Fehlerschichten mussten vorher weg: Versions-Bump auf 0.2.0 nötig (#98,
+0.1.0 war im CHANGELOG vergeben), Idempotenz-Bug in `set-release-version.mjs`
+(#99), pnpm reichte `--` wörtlich an die Tauri-CLI durch → cargo brach an
+`--bundles` ab (#100); dazu EBUSY-Race in `copy-terra.mjs` (#101, Retry wie
+in copy-scenes). **Der Tag `uwe-v0.2.0` entsteht erst beim Veröffentlichen
+des Drafts** — bis dahin läuft der Update-Kontrakt auf dem
+`origin/main`-Fallback.
+
 Noch offen:
 
-1. Kein `uwe-v*`-Tag/Release existiert — Update-Kontrakt läuft auf dem
-   `origin/main`-Fallback; `uwe-windows-release.yml` war zuletzt am
-   2026-07-30 fünfmal rot (vor den #44-Fixes). Draft-Probelauf ausstehend.
+1. Draft-Release „UWE 0.2.0" veröffentlichen (Owner-Entscheidung) — erst
+   dann existiert der Tag und der Update-Knopf misst gegen das Release.
 2. `glib` <0.20 im Tauri-Cargo-Lock (Dependabot MEDIUM) ist durch die harte
    Pin-Kette `tauri =2.11.5 → gtk ^0.18` nicht fixbar — wartet auf den
    nächsten Tauri-Bump (dokumentiert in PR #94).
