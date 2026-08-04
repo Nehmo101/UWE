@@ -28,6 +28,11 @@ Paketen.
 | **Family** (`apps/family`) | 3004 | Häkchen `Family` | Gemeinsamer Haushalt — Kalender, Küche, Dokumente, Chat. |
 | **Landing** (`apps/landing`) | 3103 | öffentlich | Startseite auf dem Apex-Origin. Genau drei Routen, keine Inhalte. |
 
+Die Ports sind die Dev-Standards (`pnpm dev`). Auf einer Installation zählt der
+Wert in der `.env`; das Command Center schlägt bei der Ersteinrichtung eigene
+Ports vor — für Brain ist dessen Fallback 3102, nicht 3002 (`SERVICE_PORT_ENV`
+in `tools/uwe-host-command-center/src/desktop-host-types.ts`).
+
 Dazu kommt das **Command Center** (`apps/engine-connector-client`, Tauri) als
 optionale Desktop-Oberfläche für Host- und Connector-Verwaltung.
 
