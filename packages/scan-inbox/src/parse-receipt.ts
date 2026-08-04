@@ -60,14 +60,25 @@ const SKIP_LINE = new RegExp(
   "i",
 );
 
-/** Positionszeile: Name + Preis am Zeilenende, optionale Steuerklasse (A/B/*). */
-const ITEM_LINE = /^(.+?)\s+(-?\d{1,4},\d{2})\s*(?:[AB*])?\s*$/;
+/**
+ * Alle Muster hier sind bewusst backtracking-frei (CodeQL: polynomial regex on
+ * uncontrolled data — OCR-Text ist Fremdeingabe). Deshalb: Whitespace wird pro
+ * Zeile einmal auf einfache Leerzeichen normalisiert, die Muster verwenden nur
+ * literale/optionale Einzel-Leerzeichen statt `\s*`-Ketten, und der Preis wird
+ * als eindeutiger Zeilen-Schwanz gematcht statt über ein lazy `(.+?)`.
+ */
+
+/** Preis am Zeilenende, optionale Steuerklasse (A/B/*): „… 1,99 A". */
+const PRICE_TAIL = /(-?\d{1,4},\d{2})(?: ?[AB*])?$/;
 
 /** Mengenzeile unter der Position: „2 x 1,99" oder „0,486 kg x 2,99 …". */
-const QUANTITY_LINE = /^\s*(\d+(?:[.,]\d+)?)\s*(?:stk|stück|kg|g)?\s*[x×*]\s*\d{1,4},\d{2}/i;
+const QUANTITY_LINE = /^(\d+(?:[.,]\d+)?) ?(?:stk|stück|kg|g)? ?[x×*] ?\d{1,4},\d{2}/i;
 
-/** Summenzeile: „SUMME 23,45" / „Gesamt: 23,45 EUR". */
-const TOTAL_LINE = /(?:zwischensumme|summe|gesamt|total|zu zahlen)\D*?(\d{1,5},\d{2})/i;
+/** Summenzeile beginnt mit dem Schlüsselwort: „SUMME 23,45" / „Gesamt: 23,45". */
+const TOTAL_KEY = /^(?:zwischensumme|summe|gesamt|total|zu zahlen)\b/i;
+
+/** Erster Geldbetrag einer (Summen-)Zeile. */
+const AMOUNT = /(\d{1,5},\d{2})/;
 
 /** Enthält die Zeile genug Buchstaben, um ein Produktname zu sein? */
 function looksLikeName(raw: string): boolean {
@@ -86,17 +97,19 @@ export function parseReceiptText(ocrText: string): ParsedReceipt {
   const lines = ocrText
     .replace(/\r/g, "")
     .split("\n")
-    .map((line) => line.trim())
+    .map((line) => line.replace(/\s+/g, " ").trim())
     .filter(Boolean);
 
   const items: ReceiptItem[] = [];
   let totalCents: number | null = null;
 
   for (const line of lines) {
-    const totalMatch = TOTAL_LINE.exec(line);
-    if (totalMatch && /(?:zwischensumme|summe|gesamt|total|zu zahlen)/i.test(line)) {
+    if (TOTAL_KEY.test(line)) {
       // Die letzte Summenzeile gewinnt (Zwischensumme < Summe).
-      totalCents = parseGermanAmountToCents(totalMatch[1]) ?? totalCents;
+      const amount = AMOUNT.exec(line);
+      if (amount) {
+        totalCents = parseGermanAmountToCents(amount[1]) ?? totalCents;
+      }
       continue;
     }
     if (SKIP_LINE.test(line)) continue;
@@ -111,12 +124,13 @@ export function parseReceiptText(ocrText: string): ParsedReceipt {
       continue;
     }
 
-    const itemMatch = ITEM_LINE.exec(line);
-    if (!itemMatch) continue;
-    const priceCents = parseGermanAmountToCents(itemMatch[2]);
+    const priceMatch = PRICE_TAIL.exec(line);
+    // `index === 0` heißt: die Zeile IST nur der Preis — keine Position.
+    if (!priceMatch || priceMatch.index === 0) continue;
+    const priceCents = parseGermanAmountToCents(priceMatch[1]);
     // Negative Preise sind Rabatte/Storno — keine Ware.
-    if (priceCents == null || itemMatch[2].startsWith("-")) continue;
-    const name = cleanName(itemMatch[1]);
+    if (priceCents == null || priceMatch[1].startsWith("-")) continue;
+    const name = cleanName(line.slice(0, priceMatch.index));
     if (!looksLikeName(name)) continue;
     items.push({ name, quantity: null, priceCents });
   }

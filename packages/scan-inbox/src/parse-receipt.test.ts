@@ -52,4 +52,19 @@ describe("parseReceiptText (pure)", () => {
     const parsed = parseReceiptText("GUTSCHEIN -1,00\nÄPFEL 2,49\nirgendein Text");
     assert.deepEqual(parsed.items.map((item) => item.name), ["ÄPFEL"]);
   });
+
+  it("stays fast on adversarial whitespace runs (no regex backtracking)", () => {
+    // ReDoS-Regression: lange Leerzeichen-Läufe und Keyword-Wiederholungen
+    // dürfen nicht polynomiell backtracken (CodeQL-Alerts 92–94).
+    const adversarial = [
+      `0${" ".repeat(50_000)}x`,
+      `a${" ".repeat(50_000)}b`,
+      "summe".repeat(10_000),
+    ].join("\n");
+    const started = Date.now();
+    const parsed = parseReceiptText(adversarial);
+    assert.equal(parsed.items.length, 0);
+    // Großzügige Schranke — mit Backtracking läge das im Minutenbereich.
+    assert.ok(Date.now() - started < 2_000, "parseReceiptText zu langsam");
+  });
 });
