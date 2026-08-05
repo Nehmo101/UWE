@@ -8,7 +8,7 @@ flowchart TB
     E["Eigene Termine<br/>lokaler Feed"]
     F["Fremde Kalender<br/>iCal / CalDAV"]
     G["Geburtstage & Jahrestage<br/>aufgespannt, nicht gespeichert"]
-    H["Fällige Gesundheitseinträge"]
+    H["Gesundheitsakte<br/>aufgespannt, nicht gespeichert"]
   end
 
   E --> V["Monatsraster + Liste<br/>farbig je Person"]
@@ -59,6 +59,26 @@ die Stunde — ein Termin ohne Ende entsteht in Family nicht aus Versehen.
 ICS-Feed auf (`ics-feed.ts`, `DTEND` ist dort der Folgetag). Eine Stunde wäre hier falsch.
 
 Termine aus fremden Feeds fasst die Regel nicht an — deren Zeiten gehören der Quelle.
+
+## Die Gesundheitsakte im Kalender
+
+Wer unter **Gesundheit** etwas einträgt, muss daraus keinen Termin von Hand bauen: der
+Eintrag steht im Monat, sobald er ein Datum trägt. Beide Daten zählen —
+`nextDueOn` als „… fällig", `occurredOn` als Notiz, was an dem Tag war.
+
+Wie Geburtstage sind das **keine gespeicherten Termine**, sondern für den gezeigten
+Zeitraum aufgespannte Vorkommen (`expandHealthOccurrences`,
+`packages/family-core/src/health-calendar.ts`). Der Grund ist derselbe: ein Termin, den
+man im Kalender löschen kann, während der Eintrag in der Akte stehen bleibt, wären zwei
+Wahrheiten. Geändert und gelöscht wird darum nur in der Akte; die Liste im Kalender
+verlinkt dorthin und bietet selbst kein Bearbeiten an.
+
+Der Personenfilter greift auch hier — anders als bei Terminen gibt es keine Akte „ohne
+Zuordnung", jeder Eintrag gehört genau einem Mitglied.
+
+**Das ICS-Abo bleibt bei den Fälligkeiten** — es liest weiterhin `listDueUntil`. Ein
+frisch eingerichtetes Abo soll nicht rückwirkend Jahre an Arztbesuchen aufs Telefon
+schieben; für einen späteren Umbau nimmt der Aufspanner dafür `includeLogged: false`.
 
 ## Fremde Kalender abonnieren
 
