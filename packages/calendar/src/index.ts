@@ -31,7 +31,55 @@ function unfoldIcalLines(content: string): string[] {
   return lines;
 }
 
-function parseIcalDate(value: string): { date: Date; allDay: boolean } {
+/**
+ * Versatz einer Zeitzone zu einem Zeitpunkt, in Millisekunden.
+ * `Intl` kennt die Zonendatenbank; eine Bibliothek braucht es dafür nicht.
+ */
+function timeZoneOffsetMs(timestamp: number, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(new Date(timestamp));
+
+  const get = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? "0");
+  const asUtc = Date.UTC(
+    get("year"),
+    get("month") - 1,
+    get("day"),
+    get("hour"),
+    get("minute"),
+    get("second"),
+  );
+  return asUtc - timestamp;
+}
+
+/**
+ * Ortszeit in einer Zeitzone → echter Zeitpunkt.
+ *
+ * Zwei Runden, weil der Versatz selbst vom Zeitpunkt abhängt: die erste Runde
+ * schätzt mit dem Versatz der naiven Zeit, die zweite korrigiert ihn — das
+ * trägt auch über die Zeitumstellung.
+ */
+function zonedTimeToUtc(naiveUtcMs: number, timeZone: string): Date {
+  let timestamp = naiveUtcMs;
+  for (let round = 0; round < 2; round += 1) {
+    timestamp = naiveUtcMs - timeZoneOffsetMs(timestamp, timeZone);
+  }
+  return new Date(timestamp);
+}
+
+/**
+ * `timeZone` kommt aus dem `TZID`-Parameter der Zeile. Ohne `Z` und ohne
+ * `TZID` bleibt es bei der bisherigen Auslegung als UTC — eine schwebende
+ * Zeitangabe hat keine Zone, und das Raten wäre schlimmer als die Annahme.
+ */
+function parseIcalDate(value: string, timeZone?: string): { date: Date; allDay: boolean } {
   const trimmed = value.trim();
   if (/^\d{8}$/.test(trimmed)) {
     const y = Number(trimmed.slice(0, 4));
@@ -39,23 +87,35 @@ function parseIcalDate(value: string): { date: Date; allDay: boolean } {
     const d = Number(trimmed.slice(6, 8));
     return { date: new Date(Date.UTC(y, m, d)), allDay: true };
   }
-  const match = trimmed.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z?$/);
+  const match = trimmed.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(Z?)$/);
   if (match) {
-    const [, ys, ms, ds, hs, mins, ss] = match;
-    const date = new Date(
-      Date.UTC(
-        Number(ys),
-        Number(ms) - 1,
-        Number(ds),
-        Number(hs),
-        Number(mins),
-        Number(ss),
-      ),
+    const [, ys, ms, ds, hs, mins, ss, utcMarker] = match;
+    const naive = Date.UTC(
+      Number(ys),
+      Number(ms) - 1,
+      Number(ds),
+      Number(hs),
+      Number(mins),
+      Number(ss),
     );
-    return { date, allDay: false };
+    if (!utcMarker && timeZone) {
+      try {
+        return { date: zonedTimeToUtc(naive, timeZone), allDay: false };
+      } catch {
+        // Unbekannte Zone (Intl wirft) — lieber die Zeit als UTC lesen als den
+        // ganzen Termin verlieren.
+      }
+    }
+    return { date: new Date(naive), allDay: false };
   }
   const parsed = new Date(trimmed);
   return { date: parsed, allDay: false };
+}
+
+/** `DTSTART;TZID=Europe/Berlin:…` → „Europe/Berlin". */
+function timeZoneOf(keyPart: string): string | undefined {
+  const match = keyPart.match(/;TZID=([^;:]+)/i);
+  return match?.[1]?.replace(/^"|"$/g, "").trim() || undefined;
 }
 
 function unescapeIcalText(value: string): string {
@@ -70,7 +130,12 @@ export function parseIcalEvents(content: string): ParsedIcalEvent[] {
   const lines = unfoldIcalLines(content);
   const events: ParsedIcalEvent[] = [];
   let inEvent = false;
-  let current: Partial<ParsedIcalEvent> & { dtStart?: string; dtEnd?: string } = {};
+  let current: Partial<ParsedIcalEvent> & {
+    dtStart?: string;
+    dtStartTz?: string;
+    dtEnd?: string;
+    dtEndTz?: string;
+  } = {};
 
   for (const line of lines) {
     if (line === "BEGIN:VEVENT") {
@@ -81,8 +146,10 @@ export function parseIcalEvents(content: string): ParsedIcalEvent[] {
     if (line === "END:VEVENT") {
       inEvent = false;
       if (current.uid && current.title && current.dtStart) {
-        const start = parseIcalDate(current.dtStart);
-        const end = current.dtEnd ? parseIcalDate(current.dtEnd).date : undefined;
+        const start = parseIcalDate(current.dtStart, current.dtStartTz);
+        const end = current.dtEnd
+          ? parseIcalDate(current.dtEnd, current.dtEndTz).date
+          : undefined;
         events.push({
           uid: current.uid,
           title: current.title,
@@ -118,9 +185,11 @@ export function parseIcalEvents(content: string): ParsedIcalEvent[] {
         break;
       case "DTSTART":
         current.dtStart = keyPart.includes("VALUE=DATE") ? value.slice(0, 8) : value;
+        current.dtStartTz = timeZoneOf(keyPart);
         break;
       case "DTEND":
         current.dtEnd = keyPart.includes("VALUE=DATE") ? value.slice(0, 8) : value;
+        current.dtEndTz = timeZoneOf(keyPart);
         break;
       default:
         break;
