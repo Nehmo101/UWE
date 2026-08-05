@@ -30,6 +30,7 @@ export type UndoOperation =
   | "ai.block.create"
   | "ai.session.recap"
   | "ai.session.summary_dm"
+  | "ai.session.open_plots"
   | "ai.brain_document.create"
   | "import.execute"
   | "import_central.execute";
@@ -89,6 +90,12 @@ interface SessionSummaryDmSnapshot {
   summaryDm: string | null;
 }
 
+interface SessionOpenPlotsSnapshot {
+  kind: "session_open_plots";
+  sessionId: string;
+  openPlots: string | null;
+}
+
 interface BrainDocumentCreateSnapshot {
   kind: "brain_document_create";
   documentId: string;
@@ -126,6 +133,7 @@ type UndoSnapshot =
   | AiBlockCreateSnapshot
   | SessionRecapSnapshot
   | SessionSummaryDmSnapshot
+  | SessionOpenPlotsSnapshot
   | BrainDocumentCreateSnapshot
   | ImportExecuteSnapshot
   | ImportCentralExecuteSnapshot;
@@ -329,6 +337,28 @@ export class UndoService {
     });
   }
 
+  /** Snapshot before AI hooks are appended to a session's open plots. */
+  async captureSessionOpenPlots(sessionId: string) {
+    const session = await this.db.gameSession.findUnique({ where: { id: sessionId } });
+    if (!session) throw new Error(`Session ${sessionId} nicht gefunden.`);
+
+    const snapshot: SessionOpenPlotsSnapshot = {
+      kind: "session_open_plots",
+      sessionId: session.id,
+      openPlots: session.openPlots,
+    };
+
+    return this.db.undoEntry.create({
+      data: {
+        worldId: session.worldId,
+        operation: "ai.session.open_plots" satisfies UndoOperation,
+        targetType: "game_session",
+        targetId: session.id,
+        snapshot: toPrismaJsonValue(snapshot),
+      },
+    });
+  }
+
   /** Snapshot before AI apply creates a brain document (undo = delete document). */
   async captureBrainDocumentCreate(documentId: string, worldId: string) {
     return this.db.undoEntry.create({
@@ -453,6 +483,12 @@ export class UndoService {
 
     if (snapshot.kind === "session_summary_dm") {
       const result = await this.restoreSessionSummaryDm(snapshot);
+      if (result.ok) await this.markUndone(entryId);
+      return result;
+    }
+
+    if (snapshot.kind === "session_open_plots") {
+      const result = await this.restoreSessionOpenPlots(snapshot);
       if (result.ok) await this.markUndone(entryId);
       return result;
     }
@@ -671,6 +707,20 @@ export class UndoService {
     });
 
     return { ok: true, message: "DM-Session-Recap auf vorherigen Stand zurückgesetzt." };
+  }
+
+  private async restoreSessionOpenPlots(snapshot: SessionOpenPlotsSnapshot): Promise<UndoResult> {
+    const session = await this.db.gameSession.findUnique({ where: { id: snapshot.sessionId } });
+    if (!session) {
+      return { ok: false, message: "Session existiert nicht mehr — Undo nicht möglich." };
+    }
+
+    await this.db.gameSession.update({
+      where: { id: snapshot.sessionId },
+      data: { openPlots: snapshot.openPlots },
+    });
+
+    return { ok: true, message: "Offene Plots auf vorherigen Stand zurückgesetzt." };
   }
 
   private async undoBrainDocumentCreate(snapshot: BrainDocumentCreateSnapshot): Promise<UndoResult> {

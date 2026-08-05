@@ -20,6 +20,10 @@ import { buildPageUrl } from "./page-types";
 import { UweRepository } from "./repository";
 import { toPrismaJsonValue, parseStringArray } from "./json-utils";
 import { createUndoService } from "./undo-service";
+import {
+  applyCampaignChapterProposal,
+  applySessionOpenPlotsProposal,
+} from "./ai-review-campaign-apply";
 import { createWorldEventService } from "./world-event-service";
 import { parseInGameDate, type InGameDate } from "./world-calendar-service";
 import {
@@ -224,6 +228,11 @@ export class AiReviewService {
     if (targetType === "session_summary_dm") {
       return this.applySessionSummaryDm(proposal, input);
     }
+    // Kampagnen-Cockpit-Proposals VOR dem generischen Fallback: der würde
+    // sonst als content_block auf der (wandernden) Anker-Seite landen.
+    if (targetType === "campaign_chapter_page" || targetType === "session_open_plots") {
+      return this.applyCampaignProposal(proposal, input, targetType);
+    }
     if (targetType === "brain_document" || targetType === "mail_draft") {
       return this.applyBrainDocument(proposal, input, targetType === "mail_draft");
     }
@@ -275,6 +284,57 @@ export class AiReviewService {
     if (targetType === "idea_page") return "idea";
     if (targetType === "session_summary_player") return "player_recap";
     return "content_block";
+  }
+
+  private async applyCampaignProposal(
+    proposal: {
+      id: string;
+      aiRunId: string;
+      worldId: string;
+      resultText: string;
+      editedText: string | null;
+      patch: unknown;
+      aiRun: { taskType: string; world: { slug: string } | null };
+    },
+    input: ApplyBrainProposalInput,
+    targetType: "campaign_chapter_page" | "session_open_plots",
+  ): Promise<ApplyAiProposalResult> {
+    const patch = proposal.patch as GeneratedPatch & {
+      brainMetadata?: Record<string, unknown> | null;
+    };
+    const metadata = patch.brainMetadata ?? {};
+    const campaignId = typeof metadata.campaignId === "string" ? metadata.campaignId : null;
+    const content = (input.editedContent ?? proposal.editedText ?? proposal.resultText).trim();
+
+    const outcome =
+      targetType === "campaign_chapter_page"
+        ? await applyCampaignChapterProposal(this.db, this.undo, {
+            worldId: proposal.worldId,
+            worldSlug: proposal.aiRun.world?.slug ?? null,
+            campaignId,
+            content,
+            fallbackTitle: input.ideaTitle ?? patch.label,
+          })
+        : await applySessionOpenPlotsProposal(this.db, this.undo, {
+            worldId: proposal.worldId,
+            campaignId,
+            content,
+          });
+
+    if (!outcome.ok) {
+      return { ok: false, message: outcome.message };
+    }
+
+    return this.finalizeBrainApply(proposal, {
+      content: outcome.content,
+      applyAction: input.editedContent ? "edit_apply" : "apply",
+      undoEntryId: outcome.undoEntryId,
+      appliedTargetType: outcome.appliedTargetType,
+      appliedTargetId: outcome.appliedTargetId,
+      summary: outcome.summary,
+      mode: "content_block",
+      targetHref: outcome.targetHref,
+    });
   }
 
   private async applySessionSummaryDm(

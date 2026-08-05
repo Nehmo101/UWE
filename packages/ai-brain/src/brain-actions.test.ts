@@ -415,6 +415,123 @@ describe("Brain Actions — end-to-end with mock provider", () => {
     assert.equal(proposal.metadata?.campaignId, seeded.campaign.id);
   });
 
+  it("applies a chapter draft as a new unprepared story_arc page", async () => {
+    const repo = createUweRepository(databaseUrl);
+    const seeded = await seedTerraWorld(repo);
+    const aiRuns = createAiRunService(databaseUrl);
+    const brainStore = createBrainStoreService(databaseUrl);
+
+    const existing = await repo.createPage({
+      worldId: seeded.world.id,
+      campaignId: seeded.campaign.id,
+      title: "Akt I",
+      slug: "akt-i",
+      type: "story_arc",
+      sortIndex: 1,
+    });
+
+    const { runId, proposals } = await runBrainAction(
+      { repo, aiRuns, brainStore, databaseUrl },
+      {
+        actionId: "campaign_chapter_draft",
+        worldSlug: seeded.world.slug,
+        campaignSlug: seeded.campaign.slug,
+        campaignId: seeded.campaign.id,
+        extraPromptContext: "# Kampagnen-Cockpit (Digest)\nKapitel: Akt I",
+        providerId: "ollama",
+        model: "mock-model",
+        useMock: true,
+        options: { localOnly: true },
+      },
+    );
+
+    const proposal = proposals[0];
+    assert.ok(proposal);
+    const applied = await applyProposal(
+      { repo, aiRuns, brainStore, databaseUrl },
+      {
+        runId,
+        proposalId: proposal.id,
+        editedContent: "# Akt II — Der Sturm zieht auf\n\nDie Karawane erreicht den Pass.",
+      },
+    );
+
+    assert.equal(applied.appliedTarget, "page");
+    assert.ok(applied.undoEntryId);
+
+    const chapters = await repo.listPagesByWorld(seeded.world.slug, {
+      campaignId: seeded.campaign.id,
+      type: "story_arc",
+    });
+    const created = chapters.find((page) => page.title === "Akt II — Der Sturm zieht auf");
+    assert.ok(created, "chapter page must exist");
+    assert.equal(created.prepStatus, "unprepared");
+    // ans Ende der Lesereihenfolge, hinter das bestehende Kapitel
+    assert.ok((created.sortIndex ?? 0) > (existing.sortIndex ?? 0));
+
+    const withBlocks = await repo.getPageBySlug(seeded.world.slug, created.slug);
+    const blockContent = withBlocks?.contentBlocks?.[0]?.content ?? "";
+    assert.ok(blockContent.includes("Die Karawane erreicht den Pass."));
+    // Die Titel-Überschrift wird Seitentitel und verdoppelt sich nicht im Text.
+    assert.ok(!blockContent.includes("# Akt II"));
+  });
+
+  it("appends session hooks to the next planned session, refuses without one", async () => {
+    const repo = createUweRepository(databaseUrl);
+    const seeded = await seedTerraWorld(repo);
+    const sessions = createGameSessionService(databaseUrl);
+    const aiRuns = createAiRunService(databaseUrl);
+    const brainStore = createBrainStoreService(databaseUrl);
+
+    const { runId, proposals } = await runBrainAction(
+      { repo, aiRuns, brainStore, databaseUrl },
+      {
+        actionId: "campaign_session_hooks",
+        worldSlug: seeded.world.slug,
+        campaignSlug: seeded.campaign.slug,
+        campaignId: seeded.campaign.id,
+        providerId: "ollama",
+        model: "mock-model",
+        useMock: true,
+        options: { localOnly: true },
+      },
+    );
+    const proposal = proposals[0];
+    assert.ok(proposal);
+    assert.equal(proposal.targetType, "session_open_plots");
+    assert.equal(proposal.targetId, null);
+
+    // Ohne geplante Session: klare Fehlermeldung, Run bleibt offen.
+    await assert.rejects(
+      applyProposal(
+        { repo, aiRuns, brainStore, databaseUrl },
+        { runId, proposalId: proposal.id, editedContent: "1. Der Bote kommt nachts." },
+      ),
+      /Keine geplante Session/,
+    );
+    const stillOpen = await aiRuns.getById(runId);
+    assert.equal(stillOpen?.status, "completed");
+
+    // Mit geplanter Session: additiv an openPlots.
+    const planned = await sessions.create({
+      worldId: seeded.world.id,
+      campaignId: seeded.campaign.id,
+      title: "Session 9",
+      sessionNumber: 9,
+      status: "planned",
+      openPlots: "Alter Faden.",
+    });
+    const applied = await applyProposal(
+      { repo, aiRuns, brainStore, databaseUrl },
+      { runId, proposalId: proposal.id, editedContent: "1. Der Bote kommt nachts." },
+    );
+    assert.equal(applied.appliedTarget, "game_session");
+    assert.equal(applied.appliedId, planned.id);
+
+    const after = await sessions.getById(planned.id);
+    assert.equal(after?.openPlots, "Alter Faden.\n\n1. Der Bote kommt nachts.");
+  });
+
   it("refuses campaign actions without a campaign", async () => {
     const repo = createUweRepository(databaseUrl);
     const seeded = await seedTerraWorld(repo);
