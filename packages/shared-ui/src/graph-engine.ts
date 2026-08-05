@@ -1,7 +1,9 @@
 // UWE Nachbarschafts-Graph — kräftefreie, fließende Canvas-Engine im Parchment-OS-Stil.
 //
-// Physik-Simulation (Abstoßung + Feder + Zentrierung), die nach Interaktion sanft
-// ausklingt und dann ruht ("bewegt sich nur bei Interaktion"). Rendering: Canvas 2D
+// Physik-Simulation (Abstoßung + Feder + Zentrierung + Community-Packs), die per
+// Simulated Annealing auskühlt und dann ruht ("bewegt sich nur bei Interaktion").
+// Communities packen sich in runde Grüppchen mit sichtbarem Abstand (Moat), eine
+// weiche kreisförmige Weltgrenze hält lose Teile in Sichtweite. Rendering: Canvas 2D
 // mit Obsidian-artigem Fokus (Hover hebt Nachbarn hervor, dimmt den Rest).
 //
 // Framework-agnostisch: keine React-Abhängigkeit. `GraphView.tsx` instanziiert die
@@ -16,7 +18,6 @@ import {
   CANVAS_FONT,
   CHROME_FALLBACK,
   GRAPH_CATEGORY_COLORS,
-  capVector,
   clamp,
   isGraphPositionCacheValid,
   lerp,
@@ -24,21 +25,22 @@ import {
   type ChromeColors,
 } from "./graph-engine-visuals";
 import { buildDataset, type SimEdge, type SimNode } from "./graph-engine-dataset";
+import {
+  ALPHA_CACHED,
+  ALPHA_DRAG,
+  COLLIDE_PAD,
+  COLLIDE_PAD_INTER,
+  layoutCommunityPacks,
+  stepPhysics,
+} from "./graph-engine-physics";
 
 // Öffentliche API abwärtskompatibel halten (Importe über `./graph-engine`).
 export { GRAPH_CATEGORY_COLORS, isGraphPositionCacheValid };
 
-// --- Physik-Parameter (aus dem Design-Handoff, unverändert) -------------------
-const REP = 2900; // Abstoßungsstärke (Basis, skaliert mit √n)
-const SPRING = 0.018; // Federkonstante
-const GRAV = 0.0065; // Zentrierungskraft
-const CLUSTER = 0.016; // Anziehung zum Community-Schwerpunkt → Grüppchen stark verbundener Knoten
-const DAMP = 0.86; // Dämpfung → System kommt zur Ruhe
+// --- Render-/Interaktions-Parameter (Physik-Parameter: graph-engine-physics.ts) ---
 const REST = 0.045; // Schwelle "in Ruhe"
 const HL_LERP = 0.16; // Fokus-/Sichtbarkeits-Interpolation pro Frame
 const EDGE_BEND = 0.12; // Kantenbiegung
-const MIN_DIST = 2.4; // Mindestabstand in der Abstoßung (verhindert Kraft-Spitzen)
-const COLLIDE_PAD = 10; // "Nicht berühren": harter Mindestabstand zwischen Bubble-Rändern (Weltkoordinaten)
 const COLLIDE_MAX_ITERS = 32; // Obergrenze der Kollisions-Iterationen pro Schritt (adaptiv, bricht früh ab)
 const MIN_ZOOM = 0.35; // untere Zoom-Grenze (zoomBy/fit)
 const MAX_ZOOM = 3.2; // obere Zoom-Grenze
@@ -49,8 +51,6 @@ const MAX_ZOOM = 3.2; // obere Zoom-Grenze
 // überdecken. Eine höhere Untergrenze (früher 0.6) ließ die Kreise beim Rauszoomen
 // langsamer schrumpfen als ihre Abstände → sichtbare Überlappung.
 const NODE_SCALE_MAX = 1.6;
-const MAX_FORCE = 42; // Obergrenze pro Knoten und Schritt
-const MAX_VEL = 24; // Obergrenze für Geschwindigkeit pro Schritt
 const PREWARM_BASE = 40; // Vorab-Schritte vor dem ersten Frame
 const PREWARM_PER_NODE = 0.35; // Zusätzliche Vorab-Schritte pro Knoten
 export interface GraphEngineOptions {
@@ -107,6 +107,12 @@ export class GraphEngine {
   private chrome: ChromeColors = { ...CHROME_FALLBACK };
   /** Community-Zuordnung (Label Propagation) für Grüppchen-Layout und Cluster-Kraft. */
   private community: Map<string, number>;
+  /** Simulations-"Temperatur": Kräfte × alpha, kühlt pro Schritt aus (→ Ruhe statt Drift). */
+  private alpha = 1;
+  /** Ziel-Pack-Radius je Community (Kreis, in den das Grüppchen zurückgezogen wird). */
+  private packR = new Map<number, number>();
+  /** Radius der weichen Weltgrenze (aus der belegten Gesamtfläche geschätzt). */
+  private boundR = 200;
 
   constructor(canvas: HTMLCanvasElement, opts: GraphEngineOptions) {
     this.canvas = canvas;
@@ -127,7 +133,7 @@ export class GraphEngine {
     this.map = new Map(this.nodes.map((n) => [n.id, n]));
 
     this.selectedId = opts.selectId ?? null;
-    this.L = this.compact ? 78 : 96;
+    this.L = this.compact ? 64 : 80;
     this.community = detectCommunities(this.nodes.map((n) => n.id), this.adj);
 
     this.refreshColors();
@@ -159,26 +165,9 @@ export class GraphEngine {
     };
   }
 
-  // --- Layout-Init: Knoten dicht am Ursprung, fließen dann auseinander --------
+  // --- Layout-Init: jede Community als eigene Kreis-Packung (Phyllotaxis) ------
   private initLayout(): void {
-    const n = this.nodes.length;
-    const spread = 26 + Math.random() * 30 + Math.sqrt(n) * 7;
-    // Communities belegen zusammenhängende Winkel-Sektoren: Grüppchen starten
-    // nebeneinander und werden von der Cluster-Kraft dort zusammengehalten.
-    const rank = new Map<string, number>();
-    [...this.nodes]
-      .sort(
-        (a, b) =>
-          (this.community.get(a.id) ?? 0) - (this.community.get(b.id) ?? 0) ||
-          a.id.localeCompare(b.id),
-      )
-      .forEach((nd, i) => rank.set(nd.id, i));
     this.nodes.forEach((nd) => {
-      const i = rank.get(nd.id) ?? 0;
-      const a = (i / Math.max(n, 1)) * Math.PI * 2;
-      const r = spread + (Math.random() - 0.5) * 12;
-      nd.x = Math.cos(a) * r + (Math.random() - 0.5) * 8;
-      nd.y = Math.sin(a) * r + (Math.random() - 0.5) * 8;
       nd.vx = 0;
       nd.vy = 0;
       nd.fixed = false;
@@ -187,7 +176,12 @@ export class GraphEngine {
       // Radius skaliert klar mit dem Grad (Anzahl anliegender Kanten):
       // wenige Verbindungen → klein, viele → deutlich größer.
       nd.r = clamp(5 + Math.pow(nd.deg, 0.72) * 4.6, 6.5, this.compact ? 20 : 32);
+      nd.group = this.community.get(nd.id) ?? -1;
     });
+
+    // Grüppchen als eigene Kreis-Packungen platzieren (Details: graph-engine-physics.ts).
+    this.boundR = layoutCommunityPacks(this.nodes, this.packR);
+
     this.edges.forEach((e) => {
       e.hl = 1;
     });
@@ -195,13 +189,18 @@ export class GraphEngine {
 
   /** Positionen aus einem Cache übernehmen (Remount/Ansichtswechsel). */
   applyPositions(cache: Record<string, { x: number; y: number }>): void {
+    let applied = 0;
     this.nodes.forEach((n) => {
       const p = cache[n.id];
       if (p) {
         n.x = p.x;
         n.y = p.y;
+        applied += 1;
       }
     });
+    // Ein gecachtes Layout ist schon "fertig": nur sanft nachsetzen lassen,
+    // statt es mit voller Temperatur wieder aufzuschmelzen.
+    if (applied > 0) this.alpha = Math.min(this.alpha, ALPHA_CACHED);
   }
 
   /** Aktuelle Positionen in einen Cache schreiben. */
@@ -332,101 +331,29 @@ export class GraphEngine {
     this.wake();
   }
 
-  // --- Physik -----------------------------------------------------------------
+  // --- Physik (Kräfte + Annealing: graph-engine-physics.ts) --------------------
   private step(): number {
-    const ns = this.nodes;
-    const minDist2 = MIN_DIST * MIN_DIST;
-    const repScale = REP / Math.sqrt(Math.max(ns.length, 1));
-    // Community-Schwerpunkte für die Cluster-Anziehung (Grüppchen-Bildung).
-    const centroids = new Map<number, { x: number; y: number; n: number }>();
-    ns.forEach((nd) => {
-      const c = this.community.get(nd.id);
-      if (c == null) return;
-      const e = centroids.get(c);
-      if (e) {
-        e.x += nd.x;
-        e.y += nd.y;
-        e.n += 1;
-      } else {
-        centroids.set(c, { x: nd.x, y: nd.y, n: 1 });
-      }
+    const { ke, alpha } = stepPhysics({
+      nodes: this.nodes,
+      edges: this.edges,
+      byId: (id) => this.map.get(id),
+      L: this.L,
+      alpha: this.alpha,
+      packR: this.packR,
+      boundR: this.boundR,
     });
-    for (let i = 0; i < ns.length; i++) {
-      const a = ns[i];
-      let fx = 0,
-        fy = 0;
-      for (let j = 0; j < ns.length; j++) {
-        if (i === j) continue;
-        const b = ns[j];
-        let dx = a.x - b.x,
-          dy = a.y - b.y;
-        let d2 = dx * dx + dy * dy;
-        if (d2 < minDist2) {
-          if (d2 < 1e-6) {
-            dx = Math.random() - 0.5;
-            dy = Math.random() - 0.5;
-          }
-          d2 = minDist2;
-        }
-        const d = Math.sqrt(d2);
-        // größere Knoten stoßen stärker ab → mehr Platz für Hubs
-        const f = (repScale * (0.55 + (a.r + b.r) / 42)) / d2;
-        fx += (dx / d) * f;
-        fy += (dy / d) * f;
-      }
-      fx -= a.x * GRAV;
-      fy -= a.y * GRAV;
-      // Zug zum eigenen Community-Schwerpunkt: hält stark verbundene Grüppchen
-      // zusammen, ohne die Abstoßung/Kollision auszuhebeln.
-      const cen = centroids.get(this.community.get(a.id) ?? -1);
-      if (cen && cen.n > 1) {
-        fx += (cen.x / cen.n - a.x) * CLUSTER;
-        fy += (cen.y / cen.n - a.y) * CLUSTER;
-      }
-      [a._fx, a._fy] = capVector(fx, fy, MAX_FORCE);
-    }
-    this.edges.forEach((e) => {
-      const s = this.byId(e.sourceId),
-        t = this.byId(e.targetId);
-      if (!s || !t) return;
-      const dx = t.x - s.x,
-        dy = t.y - s.y;
-      const d = Math.sqrt(dx * dx + dy * dy) || 1;
-      // Ruhelänge inkl. Knotenradien, damit dicke Knoten nicht überlappen
-      const rest = this.L + s.r + t.r;
-      const f = SPRING * (d - rest);
-      const ux = dx / d,
-        uy = dy / d;
-      s._fx += ux * f;
-      s._fy += uy * f;
-      t._fx -= ux * f;
-      t._fy -= uy * f;
-    });
-    let ke = 0;
-    ns.forEach((a) => {
-      if (a.fixed) {
-        a.vx = 0;
-        a.vy = 0;
-        return;
-      }
-      a.vx = (a.vx + a._fx) * DAMP;
-      a.vy = (a.vy + a._fy) * DAMP;
-      [a.vx, a.vy] = capVector(a.vx, a.vy, MAX_VEL);
-      a.x += a.vx;
-      a.y += a.vy;
-      ke += a.vx * a.vx + a.vy * a.vy;
-    });
+    this.alpha = alpha;
     // "Nicht berühren": Überlappungen nach der Integration hart auflösen, damit
     // sich Bubbles nie überdecken (Abstoßung allein garantiert das nicht). Die
     // (bereits pro Knoten normierte) Kollisions-Energie hält den Graph wach,
     // solange noch etwas entzerrt werden muss.
-    return ke / Math.max(ns.length, 1) + this.resolveCollisions();
+    return ke + this.resolveCollisions();
   }
 
   // "Nicht berühren": Bubble-Überlappungen hart auflösen (Details + Algorithmus in
   // `graph-collision.ts`). Rückgabe fließt in die Ruhe-Erkennung ein.
   private resolveCollisions(): number {
-    return resolveNodeCollisions(this.nodes, COLLIDE_PAD, COLLIDE_MAX_ITERS);
+    return resolveNodeCollisions(this.nodes, COLLIDE_PAD, COLLIDE_MAX_ITERS, COLLIDE_PAD_INTER);
   }
 
   private byId(id: string): SimNode | undefined {
@@ -793,6 +720,9 @@ export class GraphEngine {
         // Gezogenen Knoten wieder freigeben — außer er ist die aktuelle Auswahl
         // (die bleibt fixiert) oder das Layout ist global gesperrt.
         if (!this.locked && this.drag.id !== this.selectedId) this.drag.fixed = false;
+        // Nach echtem Ziehen die Simulation kurz wieder aufwärmen, damit sich
+        // die Nachbarschaft neu ordnet (ein Klick ohne Bewegung heizt nicht).
+        if (moved >= 5) this.alpha = Math.max(this.alpha, ALPHA_DRAG);
       }
       if (down && moved < 5 && down.hit) {
         this.select(down.hit.id);
