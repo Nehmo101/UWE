@@ -241,12 +241,21 @@ export interface LocalHostInstallSelectionResult {
   file: string;
 }
 
+/** Ein laufender langer Host-Vorgang; spiegelt `LongRunLockInfo` des Hosts. */
+export interface LocalHostLongRun {
+  action: "setup" | "update" | "bundle-install" | "bundle-update";
+  pid: number;
+  startedAt: string;
+}
+
 export interface LocalHostStatus {
   collectedAt: string;
   overall: "ready" | "attention" | "error";
   root: string;
   revision: string | null;
   branch: string | null;
+  /** Nicht `null`, solange eine Einrichtung oder ein Update arbeitet. */
+  longRun: LocalHostLongRun | null;
   installation: {
     repoReady: boolean;
     dependenciesReady: boolean;

@@ -35,6 +35,7 @@ import {
   stopProcess,
   waitForHealth,
 } from "./desktop-host-system.ts";
+import { readLongRunLock } from "./long-run-lock.ts";
 
 export { deriveOwnedServiceState } from "./desktop-host-system.ts";
 export {
@@ -236,11 +237,16 @@ export async function collectDesktopHostStatus(rootInput?: string): Promise<Desk
   const disk = diskSnapshot(repoReady ? root : process.cwd());
   const cpus = os.cpus();
   const ramTotalBytes = os.totalmem();
+  // Läuft gerade eine Einrichtung oder ein Update, sind `buildReady` und die
+  // Dienstzustände Momentaufnahmen eines Baus — das Command Center darf daraus
+  // keine Handlungsempfehlung ableiten (siehe commandCenterGuidance).
+  const longRun = readLongRunLock(rootInput);
 
   return {
     collectedAt: new Date().toISOString(),
     overall: !repoReady || hasPortConflict ? "error" : installed && allOnline ? "ready" : "attention",
     root,
+    longRun,
     revision: gitFact(root, ["rev-parse", "--short", "HEAD"]),
     branch: gitFact(root, ["branch", "--show-current"]),
     installation: {

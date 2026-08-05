@@ -8,6 +8,16 @@
 
 export type ServiceState = "online" | "starting" | "stopped" | "error";
 
+/** Die minutenlangen Host-Aktionen, die sich gegenseitig ausschließen. */
+export type LongRunAction = "setup" | "update" | "bundle-install" | "bundle-update";
+
+/** Inhalt der Sperrdatei eines laufenden langen Vorgangs (`long-run-lock.ts`). */
+export interface LongRunLockInfo {
+  action: LongRunAction;
+  pid: number;
+  startedAt: string;
+}
+
 /**
  * Vom Host verwaltete Dienste. „landing" ist die öffentliche Startseite auf dem
  * Apex-Origin (uwe.example) — ein eigener Prozess, damit die Hauptdomain
@@ -88,6 +98,13 @@ export interface DesktopHostStatus {
   root: string;
   revision: string | null;
   branch: string | null;
+  /**
+   * Der gerade laufende lange Vorgang (Einrichtung/Update), sonst `null`.
+   * Während so ein Lauf arbeitet, sind `installation.buildReady` und die
+   * Dienstzustände Zwischenstände eines Baus und taugen nicht als Grundlage
+   * für eine Handlungsempfehlung.
+   */
+  longRun: LongRunLockInfo | null;
   installation: {
     repoReady: boolean;
     dependenciesReady: boolean;
