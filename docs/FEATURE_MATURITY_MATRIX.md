@@ -384,7 +384,7 @@ Kein dedizierter „Kanon-Konflikt“-Screen — verteilt über Inspector, Gener
 | Feature | Status | Pfade |
 |---------|--------|-------|
 | Welt-Archetypen | Beta | `world-templates.ts`, `world-creation-service.ts` |
-| Erstellungs-UI | Beta | Studio/Portal `CreateWorldForm`, `/api/worlds` |
+| Erstellungs-UI | Beta | Nur Studio: `CreateWorldForm`, `POST /api/worlds` |
 | Kalender-Seed | Beta | DnD + Wargame → `WorldCalendar` bei Erstellung |
 
 ---

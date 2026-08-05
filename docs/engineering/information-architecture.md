@@ -28,6 +28,7 @@ Portal und Studio haben **eigene Navigationen** und je einen eigenen Shell unter
 - `portalAuthBottomNav` war definiert, aber nicht eingebunden
 - Keine gruppierte Sidebar für Spieler-Hub
 - Admin-Link im Portal-Header verwirrte Spieler
+- Welt-Erstellung lag doppelt im Portal (`CreateWorldForm`, `POST /api/worlds`) — entfernt; Welten entstehen ausschließlich im Studio, der leere Hub verlinkt Studio-Träger dorthin
 
 ### Studio — bestehende Routen
 
