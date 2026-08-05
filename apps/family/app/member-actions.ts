@@ -16,6 +16,10 @@ import { requireFamilyActionAuth } from "@/src/lib/family-action-auth";
  * hier um Personen. Ein Mitglied braucht kein Konto — Kleinkind, Gast und
  * Haustier werden hier von Hand angelegt und haben nie eine Anmeldung.
  *
+ * Gepflegt wird jedes Mitglied gemeinsam — auch die mit Konto. Family kennt
+ * bewusst keine Rollen und keine Sichtbarkeitsstufen: wer das Häkchen trägt,
+ * darf den Haushalt pflegen.
+ *
  * Zugänge vergibt diese Seite weiterhin nicht: welche E-Mail-Adresse Family
  * betreten darf, entscheidet das Häkchen in der Kommandozentrale.
  */
@@ -98,7 +102,11 @@ export async function createMemberAction(formData: FormData) {
   revalidateMembers();
 }
 
-/** Ändert ein Mitglied ohne Konto. Konto-Profile pflegt ihre Person selbst. */
+/**
+ * Ändert ein Mitglied — gleich ob mit oder ohne Konto. Der Haushalt pflegt sich
+ * gemeinsam: Farbe, Geburtstag und Jahrestag einer Person gehören dem Kalender
+ * aller, nicht nur der Person selbst.
+ */
 export async function updateMemberAction(formData: FormData) {
   await requireFamilyActionAuth();
 
@@ -107,7 +115,7 @@ export async function updateMemberAction(formData: FormData) {
 
   const service = members();
   const member = await service.getMember(id);
-  if (!member || member.userId) return;
+  if (!member) return;
 
   await service.updateMember(id, {
     displayName: str(formData.get("displayName")) || member.displayName,
@@ -122,11 +130,37 @@ export async function updateMemberAction(formData: FormData) {
   revalidateMembers();
 }
 
+/**
+ * Entfernt ein Mitglied. Ohne Konto wird es gelöscht, mit Konto nur
+ * deaktiviert — der Dienst entscheidet das, nicht diese Action.
+ */
 export async function removeMemberAction(formData: FormData) {
   await requireFamilyActionAuth();
 
   const id = str(formData.get("id"));
   if (id) await members().removeMember(id);
+
+  revalidateMembers();
+}
+
+/**
+ * Schaltet ein Mitglied still oder wieder aktiv. Gegenstück zum Entfernen für
+ * alle, die man nicht löschen will: die Katze der Nachbarn, das Konto einer
+ * Person, die gerade nicht im Haushalt lebt. Der neue Zustand kommt aus der
+ * Datenbank, nicht aus dem Formular — dann bleibt der Knopf auch dann richtig,
+ * wenn jemand anderes die Seite gerade geändert hat.
+ */
+export async function toggleMemberActiveAction(formData: FormData) {
+  await requireFamilyActionAuth();
+
+  const id = str(formData.get("id"));
+  if (!id) return;
+
+  const service = members();
+  const member = await service.getMember(id);
+  if (!member) return;
+
+  await service.updateMember(id, { isActive: !member.isActive });
 
   revalidateMembers();
 }
