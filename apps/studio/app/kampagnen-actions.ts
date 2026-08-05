@@ -6,7 +6,6 @@ import {
   createAuthService,
   createGameSessionService,
   createPrintListService,
-  createPrismaClient,
   createQuestLifecycleService,
   createWorldEventService,
   getAppRepository,
@@ -96,19 +95,14 @@ export async function updateQuestStatusInPlaceAction(formData: FormData) {
 
   await requireStudioContentEdit(worldSlug, pageId);
 
-  const db = createPrismaClient();
-  try {
-    const page = await repo().getPageById(pageId);
-    if (!page || page.type !== "quest") {
-      throw new Error("Quest-Status ist nur für Quest-Seiten verfügbar.");
-    }
-    await createQuestLifecycleService(db).updateQuestStatus(
-      pageId,
-      rawStatus === "" ? null : (rawStatus as QuestLifecycleStatus),
-    );
-  } finally {
-    await db.$disconnect();
+  const page = await repo().getPageById(pageId);
+  if (!page || page.type !== "quest") {
+    throw new Error("Quest-Status ist nur für Quest-Seiten verfügbar.");
   }
+  await createQuestLifecycleService(prisma).updateQuestStatus(
+    pageId,
+    rawStatus === "" ? null : (rawStatus as QuestLifecycleStatus),
+  );
 
   const returnPath = resolveReturnPath(returnTo, worldSlug, campaignSlug, kapitelSlug, sessionId);
   revalidatePath(returnPath);
