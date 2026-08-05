@@ -19,19 +19,24 @@ export async function loginStudioForShellTests(page: Page): Promise<void> {
 /**
  * Anmeldung als Spieler im Portal.
  *
- * Nach dem Anmelden springt das Portal bei **genau einer** zugeordneten Welt
- * direkt in diese Welt (`/auth/worlds` → `/auth/worlds/<slug>`, siehe
- * `apps/portal/app/auth/worlds/(hub)/page.tsx`). Der Test muss deshalb warten,
- * bis diese Weiterleitung durch ist — sonst reißt sie die nächste Navigation
- * ab (`net::ERR_ABORTED`), und der Fehler sieht aus wie eine kaputte Seite.
+ * Der Spieler `aman` ist genau einer Welt zugeordnet. Seit dem Portal-Umbau
+ * schickt `/auth/worlds` solche Spieler direkt in ihre Welt weiter — die
+ * Anmeldung endet also nach ZWEI Sprüngen: `/login` → `/auth/worlds` →
+ * `/auth/worlds/<slug>` (siehe `apps/portal/app/auth/worlds/(hub)/page.tsx`).
+ *
+ * Auf das Zwischenziel zu warten reicht deshalb nicht: Der zweite Sprung ist
+ * dann noch unterwegs, während der Test schon sein eigenes `page.goto()`
+ * absetzt — Playwright bricht die eine oder andere Navigation mit
+ * `net::ERR_ABORTED` ab, und der Fehler sieht aus wie eine kaputte Seite.
+ * Gewartet wird deshalb auf die **Zieladresse**: Steht die, ist keine
+ * Navigation mehr offen.
  */
 export async function loginPortalPlayer(page: Page): Promise<void> {
   await page.goto("/login");
   await page.getByLabel("E-Mail").fill("aman@uwe.local");
   await page.getByLabel("Passwort").fill("uwe-dev");
   await page.getByRole("button", { name: "Anmelden" }).click();
-  await expect(page).toHaveURL(/\/auth\/worlds/);
-  await page.waitForLoadState("networkidle");
+  await page.waitForURL(/\/auth\/worlds\/[^/?#]+/);
 }
 
 /**
