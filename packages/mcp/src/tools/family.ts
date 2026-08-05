@@ -138,7 +138,9 @@ function writeTools(context: ToolContext): ToolDefinition[] {
         {
           title: stringArg("Titel des Termins."),
           startAt: stringArg("Beginn als ISO-Zeitstempel."),
-          endAt: stringArg("Ende als ISO-Zeitstempel (optional)."),
+          endAt: stringArg(
+            "Ende als ISO-Zeitstempel (optional). Ohne Angabe dauert der Termin eine Stunde; ganztägig bleibt ohne Ende.",
+          ),
           allDay: booleanArg("Ganztägig (Default false)."),
           location: stringArg("Ort (optional)."),
           description: stringArg("Notiz (optional)."),

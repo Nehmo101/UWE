@@ -6,7 +6,7 @@ import {
   type CalendarEventKind,
 } from "@uwe/database/server";
 import { familyPrisma } from "@uwe/database/family-client";
-import { setEventMembers } from "@uwe/family-core";
+import { resolveEventEnd, setEventMembers } from "@uwe/family-core";
 import { revalidatePath } from "next/cache";
 import { requireFamilyActionAuth } from "@/src/lib/family-action-auth";
 
@@ -70,6 +70,7 @@ export async function createEventAction(formData: FormData) {
   const startAt = dateOrNull(formData.get("startAt"));
   if (!title || !startAt) return;
 
+  const allDay = str(formData.get("allDay")) === "on";
   const service = calendar();
   // Ohne lokalen Feed hätte der Termin keine Heimat und würde aus jeder
   // Feed-gefilterten Ansicht fallen.
@@ -80,8 +81,9 @@ export async function createEventAction(formData: FormData) {
     description: str(formData.get("description")) || null,
     location: str(formData.get("location")) || null,
     startAt,
-    endAt: dateOrNull(formData.get("endAt")),
-    allDay: str(formData.get("allDay")) === "on",
+    // Ohne eigenes Ende dauert ein Termin eine Stunde — Nacharbeiten geht immer.
+    endAt: resolveEventEnd(startAt, dateOrNull(formData.get("endAt")), { allDay }),
+    allDay,
     kind: kindOf(formData.get("kind")),
   });
   await setEventMembers(familyPrisma, event.id, memberIdsOf(formData));
@@ -96,13 +98,15 @@ export async function updateEventAction(formData: FormData) {
   if (!id || !title || !startAt) return;
   if (!(await assertLocalEvent(id))) return;
 
+  const allDay = str(formData.get("allDay")) === "on";
   await calendar().updateEvent(id, {
     title,
     description: str(formData.get("description")) || null,
     location: str(formData.get("location")) || null,
     startAt,
-    endAt: dateOrNull(formData.get("endAt")),
-    allDay: str(formData.get("allDay")) === "on",
+    // Auch beim Nacharbeiten: ein geleertes Ende fällt auf die Stunde zurück.
+    endAt: resolveEventEnd(startAt, dateOrNull(formData.get("endAt")), { allDay }),
+    allDay,
     kind: kindOf(formData.get("kind")),
   });
   await setEventMembers(familyPrisma, id, memberIdsOf(formData));
