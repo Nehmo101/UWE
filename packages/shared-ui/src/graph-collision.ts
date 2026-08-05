@@ -9,13 +9,17 @@ export interface CollidableNode {
   r: number;
   /** Fixierte Knoten (Auswahl/aktiver Drag) bleiben stehen und drängen Nachbarn weg. */
   fixed: boolean;
+  /** Optionale Grüppchen-Zuordnung: Paare aus verschiedenen Gruppen halten `interPad`. */
+  group?: number;
 }
 
 /**
  * Löst Überlappungen auf (analog d3 `forceCollide`): Knotenpaare, die näher als die
  * Summe ihrer Radien (+ `pad`) liegen, werden entlang ihrer Verbindungsachse
  * auseinandergeschoben. Fixierte Knoten bewegen sich nicht; zwei bewegliche teilen
- * sich die Verschiebung je zur Hälfte.
+ * sich die Verschiebung je zur Hälfte. Tragen beide Knoten eine `group`-Zuordnung
+ * und unterscheiden sie sich, gilt `interPad` statt `pad` — so entsteht ein
+ * sichtbarer "Moat" zwischen Grüppchen.
  *
  * Adaptiv: Es werden bis zu `maxIters` Durchläufe (Gauss-Seidel-Relaxation)
  * ausgeführt, aber sobald ein Durchlauf kaum noch etwas verschiebt, ist die Packung
@@ -29,6 +33,7 @@ export function resolveNodeCollisions(
   nodes: CollidableNode[],
   pad: number,
   maxIters: number,
+  interPad: number = pad,
 ): number {
   const eps = 0.05; // Restüberlappung, ab der ein weiterer Durchlauf entfällt
   let firstEnergy = 0;
@@ -41,7 +46,9 @@ export function resolveNodeCollisions(
         let dx = b.x - a.x,
           dy = b.y - a.y;
         let d = Math.sqrt(dx * dx + dy * dy);
-        const min = a.r + b.r + pad;
+        const gap =
+          a.group != null && b.group != null && a.group !== b.group ? interPad : pad;
+        const min = a.r + b.r + gap;
         if (d >= min) continue;
         if (d < 1e-6) {
           // Exakt deckungsgleich: zufällige Richtung, um die Singularität zu lösen.
