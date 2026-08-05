@@ -87,6 +87,19 @@ Geteilte UI       → packages/shared-ui/src/
 Formulare laufen über Server Actions; API-Routen bleiben für Uploads, Health und
 externe Callbacks.
 
+**Kampagnen-Cockpit:** `/worlds/[w]/kampagnen` ist die Kampagnen-Wurzel (Liste,
+Verwaltung, Cockpit-Einstieg; `/campaigns` ist nur noch ein Redirect). Das Cockpit
+`/kampagnen/[slug]` folgt der Dungeon-Analogie — Kampagne → Story-Bögen/Kapitel
+(`PageType.story_arc`, Status über `prepStatus`, Reihenfolge über `sortIndex`) →
+Quests (`kapitel/[slug]`, mit Beziehungen aus den `[[Wiki-Links]]` und
+Chronik-Verknüpfungen `Auslöser`/`Folge`). `/kampagnen/[slug]/abschluss` ist der
+Session-Abschluss-Flow (Ereignisse, Quests, Weltuhr, geteilte Spielernotizen —
+private erreichen den Flow nie). Kapitel-Druck (DM-/Spieler-Variante, Markdown)
+über `/api/worlds/[w]/kampagnen/kapitel-druck`; Fachlogik in
+`packages/campaign-cockpit`, Actions in `apps/studio/app/kampagnen-actions.ts`.
+Das Kampagnen-Radar (`/radar`) bleibt die kampagnenübergreifende Übersicht und
+verlinkt in die Cockpits.
+
 ## Fallen
 
 - **Neue Einstellung? Nie am Host konfigurieren.** Das Muster ist
