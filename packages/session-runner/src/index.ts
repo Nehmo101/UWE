@@ -28,6 +28,24 @@ export {
 } from "./volume";
 
 export {
+  MIN_QUERY_LENGTH,
+  buildSnippet,
+  findMatchRanges,
+  highlightHtml,
+  matchesQuery,
+  normalizeQuery,
+  plainTextFromHtml,
+  searchSections,
+  searchVolume,
+  sectionToSearchable,
+  type SearchSnippet,
+  type SearchableSection,
+  type SectionHit,
+  type TextRange,
+  type VolumeSearchResult,
+} from "./volume-search";
+
+export {
   SESSION_BOOKMARK_KIND,
   encodeBookmarkPayload,
   parseBookmarkPayload,
