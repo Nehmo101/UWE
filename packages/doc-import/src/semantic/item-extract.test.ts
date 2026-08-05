@@ -125,6 +125,30 @@ describe("extractMagicItemData", () => {
     assert.equal(data.requiresAttunement, true);
   });
 
+  it("lässt aus einem Dokument kein Markup in die Felder durch", () => {
+    // Ein einzelner Tag-Durchgang würde „<scr<script>ipt>" wieder zusammensetzen,
+    // und ein Entity-Decoding danach könnte spitze Klammern zurückbringen.
+    const data = extractMagicItemData(
+      "Böser Reif",
+      `<p><strong>Selten · Gegenstand</strong></p>
+<p>Ein Reif <scr<script>ipt>alert(1)</script> mit &lt;script&gt;alert(2)&lt;/script&gt; darin.</p>
+<h2 id="eigenschaften">Eigenschaften</h2>
+<ul><li>Trägt <img src=x onerror=alert(3)> Zierrat</li></ul>`,
+    );
+    assert.ok(data);
+    const alleFelder = [
+      data.visibleDescription ?? "",
+      ...(data.properties ?? []),
+      data.dmSecret ?? "",
+      data.curse ?? "",
+      data.itemType,
+    ].join("\n");
+    // Das ist die Zusicherung, auf die es ankommt: ohne spitze Klammern kann
+    // aus dem Text nirgends wieder ein Element werden. Dass das Wort „script"
+    // als reiner Text übrig bleibt, ist harmlos.
+    assert.doesNotMatch(alleFelder, /[<>]/, "keine spitzen Klammern in den Feldern");
+  });
+
   it("legt ohne belastbaren Inhalt keinen Datensatz an", () => {
     assert.equal(extractMagicItemData("Leer", ""), null);
     assert.equal(extractMagicItemData("Nur Überschrift", "<h2>Verbindungen</h2>"), null);

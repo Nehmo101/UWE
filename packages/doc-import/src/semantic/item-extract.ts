@@ -95,14 +95,36 @@ function decodeEntities(value: string): string {
     .replace(/&amp;/g, "&");
 }
 
+/**
+ * HTML zu Klartext machen — und zwar so, dass am Ende nachweislich kein
+ * Markup mehr entstehen kann.
+ *
+ * Ein einzelner `replace(/<[^>]+>/g, "")` genügt dafür nicht: `<scr<script>ipt>`
+ * überlebt einen Durchgang, und ein anschließendes Entity-Decoding kann aus
+ * `&lt;script&gt;` wieder echte spitze Klammern machen. Deshalb wird erst in
+ * Schleife entfernt, bis sich nichts mehr ändert, dann decodiert, und zuletzt
+ * bleiben keine spitzen Klammern übrig. Die Felder landen in Exporten und im
+ * Spieler-Handout — dort darf aus einem importierten Dokument nichts werden,
+ * was sich als Element lesen lässt.
+ */
+function stripMarkup(html: string): string {
+  let current = html;
+  let previous: string;
+  do {
+    previous = current;
+    current = current.replace(/<[^>]*>/g, "");
+  } while (current !== previous);
+
+  return decodeEntities(current).replace(/[<>]/g, "");
+}
+
 /** HTML → Klartext, Zeilenstruktur erhalten, Tabellenzellen als „Label: Wert". */
 function toText(html: string): string {
-  return decodeEntities(
+  return stripMarkup(
     html
       .replace(/<br\s*\/?>/gi, " ")
       .replace(/<\/(p|li|tr|h[1-6]|blockquote)>/gi, "\n")
-      .replace(/<\/td>\s*<td[^>]*>/gi, ": ")
-      .replace(/<[^>]+>/g, ""),
+      .replace(/<\/td>\s*<td[^>]*>/gi, ": "),
   )
     .replace(/[ \t]+/g, " ")
     .split("\n")
@@ -145,7 +167,7 @@ function splitSections(html: string): Section[] {
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(html))) {
     sections.push({ heading, html: html.slice(cursor, match.index) });
-    heading = decodeEntities(match[1].replace(/<[^>]+>/g, "")).trim();
+    heading = stripMarkup(match[1]).trim();
     cursor = pattern.lastIndex;
   }
   sections.push({ heading, html: html.slice(cursor) });
