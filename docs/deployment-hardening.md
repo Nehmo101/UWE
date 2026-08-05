@@ -4,7 +4,7 @@ Anleitung für den **sicheren Selfhosting-Betrieb** von UWE auf einem alten Linu
 
 | Prinzip | Umsetzung |
 |---------|-----------|
-| Keine WAN-Ports | UFW blockiert eingehend; UWE lauscht nur auf `127.0.0.1` |
+| Keine WAN-Ports | UFW blockiert eingehend; Cloudflare erreicht UWE über `127.0.0.1`. Studio/Portal/Landing binden per Default `0.0.0.0` (LAN-Zugriff) und werden durch UFW vor dem WAN geschützt; Brain/Family binden bereits `127.0.0.1`. Für maximale Härtung `HOST`/`HOSTNAME` in der systemd-Unit auf `127.0.0.1` setzen. |
 | Nur Cloudflare Tunnel | Öffentlicher HTTPS-Traffic über `cloudflared`, nicht über den Router |
 | Least privilege | Dedizierter Linux-User `uwe`, keine Root-Prozesse |
 | Getrennte Daten | App-Daten unter `/var/lib/uwe`, Backups unter `/var/backups/uwe` |
@@ -430,7 +430,7 @@ sudo fail2ban-client status sshd
 
 - [ ] Keine Router-Portfreigabe (80/443/3000/3001)
 - [ ] UFW aktiv (`default deny incoming`)
-- [ ] UWE lauscht auf `127.0.0.1` (systemd + `HOSTNAME=127.0.0.1`)
+- [ ] UWE hinter UFW; für maximale Härtung `HOSTNAME=127.0.0.1` (Studio/Portal/Landing binden sonst `0.0.0.0` fürs LAN)
 - [ ] `cloudflared` läuft und zeigt nur auf Studio/Portal
 - [ ] `/etc/uwe/uwe.env` mode `600`, starke `AUTH_SECRET` und `STUDIO_API_TOKEN`
 - [ ] `RUN_DB_SEED=false`
@@ -440,7 +440,27 @@ sudo fail2ban-client status sshd
 - [ ] `/var/lib/uwe` (Daten) und `/var/backups/uwe` (Backups) getrennt
 - [ ] `unattended-upgrades` aktiv
 - [ ] Öffentliches Monitoring nutzt `/api/health/public`
-- [ ] Details nur über `/api/health/private` + Token/Owner
+- [ ] Details nur über `/api/health/private` + Token/Owner (auch die fette `/api/health` liefert Details nur mit `STUDIO_API_TOKEN`-Bearer)
+
+### Schutz gegen anonyme externe Angreifer (Login-/Rate-Limit-Schicht)
+
+Diese Punkte sind der eigentliche Anti-Automatisierungs-Schutz. Ohne sie bleibt
+die kontobasierte Sperre und das Rate-Limit unvollständig:
+
+- [ ] `TRUST_PROXY=true` **und** `CLOUDFLARE_TUNNEL=true` gesetzt — sonst wird die
+      echte Client-IP nicht aus `CF-Connecting-IP` gelesen und alle IP-Limits/Audits
+      sind fälschbar.
+- [ ] `TRUSTED_PROXY_HOPS` nur ändern, wenn eine **weitere** vertrauenswürdige
+      Proxy-Schicht zwischen Cloudflare und UWE steht (Default `1` = nur Cloudflare).
+- [ ] **Turnstile aktiv**: `TURNSTILE_SITE_KEY` **und** `TURNSTILE_SECRET_KEY` gesetzt,
+      `TURNSTILE_ENABLED` nicht auf `false`. Ohne Keys ist die „Mensch"-Prüfung aus
+      (fail-open) und Passwort-/2FA-Automatisierung ungebremst.
+- [ ] **2FA für alle Owner-/Studio-Konten aktiviert** — der Challenge-Fehlerzähler und
+      das Konto-Lockout greifen nur, wenn 2FA überhaupt gesetzt ist.
+- [ ] Konto-Lockout ist im Code fest (10 Fehlversuche → 15 min Sperre, kontobasiert,
+      läuft automatisch ab). Der **Owner ist nicht ausgenommen** — bei versehentlicher
+      Selbstsperre 15 min warten oder `failed_login_count`/`locked_until` in der DB
+      zurücksetzen.
 
 ---
 
