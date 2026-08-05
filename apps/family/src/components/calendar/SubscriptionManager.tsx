@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { MemberChecklist } from "../members/MemberChecklist";
 
 /**
  * Kalender-Abos anlegen und widerrufen.
@@ -15,7 +16,8 @@ export interface SubscriptionRow {
   id: string;
   label: string;
   tokenPrefix: string;
-  member: { id: string; displayName: string; colour: string } | null;
+  /** Leer = ganzer Haushalt; sonst genau diese Personen. */
+  members: { id: string; displayName: string; colour: string }[];
   isActive: boolean;
   lastUsedAt: string | null;
 }
@@ -23,6 +25,7 @@ export interface SubscriptionRow {
 export interface SubscriptionMember {
   id: string;
   displayName: string;
+  colour: string;
 }
 
 export function SubscriptionManager({
@@ -57,7 +60,7 @@ export function SubscriptionManager({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           label: String(formData.get("label") ?? ""),
-          memberId: String(formData.get("memberId") ?? ""),
+          memberIds: formData.getAll("memberIds").map(String),
         }),
       });
       if (!response.ok) {
@@ -92,18 +95,12 @@ export function SubscriptionManager({
             Bezeichnung
             <input name="label" placeholder="z. B. iPhone von Anna" required />
           </label>
-          <label>
-            Nur eine Person
-            <select name="memberId" defaultValue="">
-              <option value="">Ganzer Haushalt</option>
-              {members.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.displayName}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
+        <MemberChecklist
+          members={members}
+          name="memberIds"
+          legend="Auf welche Personen? (nichts angekreuzt = ganzer Haushalt)"
+        />
         <div>
           <button type="submit" className="family-btn family-btn-sm" disabled={busy}>
             Abo anlegen
@@ -135,7 +132,11 @@ export function SubscriptionManager({
           <li key={row.id} className="family-row">
             <div className="family-row-head">
               <strong>{row.label}</strong>
-              <span className="family-tag">{row.member?.displayName ?? "ganzer Haushalt"}</span>
+              <span className="family-tag">
+                {row.members.length > 0
+                  ? row.members.map((member) => member.displayName).join(", ")
+                  : "ganzer Haushalt"}
+              </span>
               <code className="family-muted">{row.tokenPrefix}…</code>
               {row.isActive ? null : <span className="family-tag family-tag-warn">widerrufen</span>}
               <span className="family-muted">

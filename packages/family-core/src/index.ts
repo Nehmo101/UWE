@@ -11,6 +11,7 @@ export * from "./family-types";
 export * from "./member-colours";
 export * from "./anniversaries";
 export * from "./member-service";
+export * from "./member-links";
 export * from "./event-members";
 export * from "./subscription-service";
 export * from "./ics-feed";

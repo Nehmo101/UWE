@@ -61,8 +61,10 @@ In iOS: *Einstellungen → Apps → Kalender → Accounts → Account hinzufüge
 Kalenderabo hinzufügen.*
 
 Im Abo landen Termine (ein Jahr zurück, zwei nach vorn), Geburtstage und Jahrestage sowie
-fällige Einträge der Gesundheitsakte. Ein an eine Person gebundenes Abo zeigt nur deren
-Termine plus die des ganzen Haushalts.
+fällige Einträge der Gesundheitsakte. Ein auf Personen eingeschränktes Abo zeigt nur deren
+Termine plus die des ganzen Haushalts. Die Einschränkung darf **mehrere** Personen
+umfassen — das Küchen-Tablet für beide Kinder ist ein Abo, nicht zwei. Kein Häkchen heisst
+weiterhin: ganzer Haushalt.
 
 ### Warum ein eigener Token-Typ
 

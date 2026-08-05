@@ -8,12 +8,9 @@
  */
 import type { FamilyPrismaClient } from "@uwe/database/family-client";
 import { resolveMemberColour } from "./member-colours";
+import { setMemberLinks, sortMemberBadges, type FamilyMemberBadge } from "./member-links";
 
-export interface EventMemberBadge {
-  id: string;
-  displayName: string;
-  colour: string;
-}
+export type EventMemberBadge = FamilyMemberBadge;
 
 /**
  * Setzt die Mitglieder eines Termins auf genau die übergebene Menge.
@@ -25,29 +22,29 @@ export async function setEventMembers(
   eventId: string,
   memberIds: readonly string[],
 ): Promise<void> {
-  const unique = [...new Set(memberIds.filter((id) => id.trim() !== ""))];
-
-  await db.calendarEventMember.deleteMany({
-    where: unique.length > 0 ? { eventId, memberId: { notIn: unique } } : { eventId },
-  });
-
-  if (unique.length === 0) return;
-
-  // Nur die fehlenden Zuordnungen anlegen. `skipDuplicates` gibt es auf SQLite
-  // nicht, und ein erneutes Speichern derselben Auswahl darf nicht am
-  // zusammengesetzten Primaerschluessel scheitern.
-  const existing = await db.calendarEventMember.findMany({
-    where: { eventId },
-    select: { memberId: true },
-  });
-  const known = new Set(existing.map((row) => row.memberId));
-  const missing = unique.filter((memberId) => !known.has(memberId));
-
-  if (missing.length === 0) return;
-
-  await db.calendarEventMember.createMany({
-    data: missing.map((memberId) => ({ eventId, memberId })),
-  });
+  await setMemberLinks(
+    {
+      listMemberIds: async (id) =>
+        (
+          await db.calendarEventMember.findMany({
+            where: { eventId: id },
+            select: { memberId: true },
+          })
+        ).map((row) => row.memberId),
+      removeExcept: async (id, keep) => {
+        await db.calendarEventMember.deleteMany({
+          where: keep.length > 0 ? { eventId: id, memberId: { notIn: [...keep] } } : { eventId: id },
+        });
+      },
+      add: async (id, ids) => {
+        await db.calendarEventMember.createMany({
+          data: ids.map((memberId) => ({ eventId: id, memberId })),
+        });
+      },
+    },
+    eventId,
+    memberIds,
+  );
 }
 
 /** Mitglieder-Kennungen je Termin, für eine ganze Terminliste in einem Zug. */
@@ -113,10 +110,11 @@ export async function attachMembersToEvents<T extends { id: string }>(
 
   return events.map((event) => ({
     ...event,
-    members: (byEvent.get(event.id) ?? [])
-      .map((id) => badgeById.get(id))
-      .filter((badge): badge is EventMemberBadge => badge !== undefined)
-      .sort((a, b) => a.displayName.localeCompare(b.displayName, "de")),
+    members: sortMemberBadges(
+      (byEvent.get(event.id) ?? [])
+        .map((id) => badgeById.get(id))
+        .filter((badge): badge is EventMemberBadge => badge !== undefined),
+    ),
   }));
 }
 

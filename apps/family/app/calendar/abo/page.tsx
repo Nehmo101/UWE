@@ -2,6 +2,7 @@ import { familyPrisma } from "@uwe/database/family-client";
 import {
   createFamilyCalendarSubscriptionService,
   createFamilyMemberService,
+  resolveMemberColour,
 } from "@uwe/family-core";
 import { getFamilyUser } from "@/src/lib/page-family";
 import { FamilyShell, FamilyDenied } from "@/src/components/FamilyShell";
@@ -11,8 +12,10 @@ import { SubscriptionManager } from "@/src/components/calendar/SubscriptionManag
  * Kalender-Abo — den Haushalts-Kalender auf dem Handy abonnieren.
  *
  * Ein Abo ist eine URL mit einem eigenen, nur lesenden Token. Sie zeigt
- * Termine, Geburtstage und fällige Einträge der Gesundheitsakte; ein an eine
- * Person gebundenes Abo zeigt nur deren Termine plus die des ganzen Haushalts.
+ * Termine, Geburtstage und fällige Einträge der Gesundheitsakte; ein auf
+ * Personen eingeschränktes Abo zeigt nur deren Termine plus die des ganzen
+ * Haushalts. Die Einschränkung darf mehrere Personen umfassen — ein Tablet für
+ * beide Kinder ist ein Abo, nicht zwei.
  */
 
 export const dynamic = "force-dynamic";
@@ -51,13 +54,14 @@ export default async function FamilyCalendarSubscriptionPage() {
             id: row.id,
             label: row.label,
             tokenPrefix: row.tokenPrefix,
-            member: row.member,
+            members: row.members,
             isActive: row.isActive,
             lastUsedAt: row.lastUsedAt?.toISOString() ?? null,
           }))}
           members={members.map((member) => ({
             id: member.id,
             displayName: member.displayName,
+            colour: resolveMemberColour(member),
           }))}
           baseUrl={baseUrl}
         />
