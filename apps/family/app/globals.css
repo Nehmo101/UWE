@@ -725,8 +725,16 @@ body {
   white-space: nowrap;
 }
 
-/* Kontrollkästchen mit Beschriftung daneben statt darunter. */
-.family-check {
+/*
+ * Kontrollkästchen mit Beschriftung daneben statt darunter.
+ *
+ * Die zweite Auswahl ist kein Schmuck: `.family-form label` (0,1,1) stellt
+ * Beschriftung über Feld und schlägt `.family-check` (0,1,0). Ohne sie steht
+ * das Kästchen in einer eigenen Rasterzeile über seiner Beschriftung — es
+ * sieht dann versetzt zum Eintrag aus.
+ */
+.family-check,
+.family-form .family-check {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -736,6 +744,33 @@ body {
 
 .family-check input {
   width: auto;
+  flex: 0 0 auto;
+}
+
+/*
+ * Gruppe von Kontrollkästchen mit eigener Überschrift (Fieldset + Legende),
+ * etwa „Wen betrifft der Termin?“. Das Fieldset bleibt Block — die Kästchen
+ * laufen im inneren Container nebeneinander und brechen um. `min-width: 0`,
+ * weil ein Fieldset sonst `min-content` breit bleibt und das Formularraster
+ * aufspreizt.
+ */
+.family-checkgroup {
+  min-width: 0;
+  border: 1px solid var(--uwe-border);
+  border-radius: 0.5rem;
+  padding: 0.35rem 0.75rem 0.7rem;
+}
+
+.family-checkgroup > legend {
+  padding: 0 0.3rem;
+  font-size: 0.8rem;
+  color: var(--uwe-fg-muted);
+}
+
+.family-checkgroup-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.1rem;
 }
 
 /* Farbpunkt einer Person — Kalender, Mitgliederliste, Akte. Klein genug, um
