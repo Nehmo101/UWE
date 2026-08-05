@@ -129,6 +129,16 @@ function assetSchauGelaende() {
   basisGeaendert(0, VW - 1, 0, VW - 1);
 }
 
+function setzeAssetSchauLegende(legende, titel, details) {
+  legende.replaceChildren();
+  var kopf = document.createElement("strong");
+  var zeile = document.createElement("span");
+  kopf.textContent = titel;
+  zeile.textContent = details;
+  legende.append(kopf, zeile);
+}
+
+
 /**
  * Museumskarte fuer die Abnahme: jeder der 505 physischen Pools genau einmal,
  * die animierte Landschildkroete als zusaetzliche Hero-Landmarke daneben.
@@ -138,8 +148,8 @@ function assetSchauMap() {
   document.title = "terra - vollstaendige Asset-Schau (505/505)";
   var legende = document.createElement("aside");
   legende.className = "assetSchauLegende";
-  legende.innerHTML = "<strong>Asset-Schau &middot; 505 / 505</strong>"
-    + "<span>12 &times; 18 Architektur &middot; 289 Umwelt-, Kultur- und Weltassets</span>";
+  setzeAssetSchauLegende(legende, "Asset-Schau \u00b7 505 / 505",
+    "12 \u00d7 18 Architektur \u00b7 289 Umwelt-, Kultur- und Weltassets");
   document.body.appendChild(legende);
   if (SCHAU_FOKUS) {
     // Der Fokusmodus erzeugt nur das Zielasset. Dadurch wird weder Geometrie
@@ -157,8 +167,8 @@ function assetSchauMap() {
       bounds: { minX: -8, maxX: 8, minZ: -8, maxZ: 8 },
       counts: { physical: 1, architecture: 0, other: 1 }
     } });
-    legende.innerHTML = "<strong>Asset-Fokus &middot; " + SCHAU_FOKUS + "</strong>"
-      + "<span>Silhouette &middot; Formaufbau &middot; Material &middot; Laufzeit</span>";
+    setzeAssetSchauLegende(legende, "Asset-Fokus \u00b7 " + SCHAU_FOKUS,
+      "Silhouette \u00b7 Formaufbau \u00b7 Material \u00b7 Laufzeit");
     var fokusPool = POOLS[SCHAU_FOKUS];
     fokusPool.geo.computeBoundingBox();
     var fokusBox = fokusPool.geo.boundingBox;
@@ -182,8 +192,8 @@ function assetSchauMap() {
   var familienBlock = SCHAU_BLICK !== "architektur" &&
     schau.layout.blocks.find(function (b) { return b.id === SCHAU_BLICK; });
   if (familienBlock) {
-    legende.innerHTML = "<strong>Asset-Familie &middot; " + familienBlock.label + "</strong>"
-      + "<span>" + familienBlock.count + " Pools &middot; identische Abnahmekamera</span>";
+    setzeAssetSchauLegende(legende, "Asset-Familie \u00b7 " + familienBlock.label,
+      familienBlock.count + " Pools \u00b7 identische Abnahmekamera");
     return { x: (familienBlock.minX + familienBlock.maxX) / 2,
       z: (familienBlock.minZ + familienBlock.maxZ) / 2,
       dist: Math.max(familienBlock.maxX - familienBlock.minX,

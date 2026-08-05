@@ -74,7 +74,7 @@ test('Nadelbaum kalibriert das neue 505-Asset-Niveau mit drei dichten Kronenform
 
 test('Externes Baum-GLB wird zu einer farbigen Instancing-Geometrie gebacken', async () => {
   const THREE = await import('three');
-  const { backeGruppeZuPoolGeometrie } =
+  const { backeGruppeZuPoolGeometrie, installiereExternenPool } =
     await ladeTerra('assets/external-pool-geometrie.js');
   const gruppe = new THREE.Group();
 
@@ -106,6 +106,8 @@ test('Externes Baum-GLB wird zu einer farbigen Instancing-Geometrie gebacken', a
   assert.ok(Array.from(wind).some((wert) => Math.abs(wert - 0.008) < 1e-6));
   assert.ok(Array.from(wind).some((wert) => Math.abs(wert - 0.72) < 1e-6));
   assert.equal(geo.userData.terraExternPool, true);
+  assert.equal(installiereExternenPool('__proto__', gruppe), false);
+  assert.equal(installiereExternenPool('constructor', gruppe), false);
 });
 
 test('GLB-Decoder respektiert den Byte-Offset bei engem Vertex-Stride', async () => {
@@ -136,6 +138,8 @@ test('Ausgewaehlter Kandidat rendert isoliert und bleibt texturfrei optimierbar'
   assert.match(cli, /devicePixelRatio: window\.devicePixelRatio/);
   assert.match(main, /placements: \[fokusPlatz\]/);
   assert.match(main, /SCHAU_FOKUS \? 128/);
+  assert.match(main, /kopf\.textContent = titel/);
+  assert.doesNotMatch(main, /legende\.innerHTML/);
   assert.match(main, /if \(!SCHAU_MODUS\) tickLeistung\(raw\)/);
   assert.match(leistung, /\[1, 0\.92, 0\.82, 0\.72, 0\.6\]/);
 });

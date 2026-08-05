@@ -47,7 +47,8 @@ export function backeGruppeZuPoolGeometrie(gruppe) {
 }
 
 export function installiereExternenPool(id, gruppe) {
-  var pool = POOLS[id];
+  var eintrag = typeof id === 'string' ? Object.getOwnPropertyDescriptor(POOLS, id) : null;
+  var pool = eintrag && eintrag.value;
   if (!pool || pool.mesh) return false;
   pool.geo = weiteHuelle(backeGruppeZuPoolGeometrie(gruppe));
   pool.mat.map = null;
