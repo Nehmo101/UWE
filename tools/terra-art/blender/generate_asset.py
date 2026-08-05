@@ -6,6 +6,9 @@ import os
 import sys
 
 import bpy
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from conifer_asset import stylized_conifer
+
 from mathutils import Vector
 
 
@@ -326,6 +329,8 @@ def main():
         turtle_head(args.variant)
     elif asset_id == "baum":
         stylized_tree(args.variant)
+    elif asset_id == "nadelbaum":
+        stylized_conifer(args.variant)
     else:
         raise SystemExit("Kein Blender-Adapter fuer " + str(asset_id))
     scene = bpy.context.scene

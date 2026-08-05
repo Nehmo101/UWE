@@ -58,6 +58,20 @@ test('Normaler Terra-Baum hat drei gerichtete Blender-Kandidaten und feste Szene
   assert.match(generator, /elif asset_id == "baum":/);
 });
 
+test('Nadelbaum kalibriert das neue 505-Asset-Niveau mit drei dichten Kronenformen', () => {
+  const brief = JSON.parse(lesen('terra/art-direction/briefs/nadelbaum.json'));
+  const generator = lesen('tools/terra-art/blender/generate_asset.py');
+  const adapter = lesen('tools/terra-art/blender/conifer_asset.py');
+
+  assert.equal(brief.assetId, 'nadelbaum');
+  assert.equal(brief.type, 'normal-instanced-pool');
+  assert.deepEqual(brief.candidates.map((candidate) => candidate.id), ['a', 'b', 'c']);
+  assert.deepEqual(brief.scenes, ['tree-detail', 'tree-family']);
+  assert.match(generator, /elif asset_id == "nadelbaum":/);
+  assert.match(adapter, /def bough_cluster\(/);
+  assert.match(adapter, /TerraConiferCrownBase/);
+});
+
 test('Externes Baum-GLB wird zu einer farbigen Instancing-Geometrie gebacken', async () => {
   const THREE = await import('three');
   const { backeGruppeZuPoolGeometrie } =
@@ -111,12 +125,17 @@ test('Ausgewaehlter Kandidat rendert isoliert und bleibt texturfrei optimierbar'
   const leistung = lesen('terra/src/render/leistungsregler.js');
 
   assert.match(cli, /options\.candidate && id !== options\.candidate/);
-  assert.match(cli, /runTool\(tool, \['optimize'/);
+  assert.match(cli, /spawnSync\(tool, \['optimize'/);
   assert.match(cli, /'--palette', 'false'/);
   assert.match(cli, /'--texture-compress', 'false'/);
+  assert.match(cli, /const brief = options\.brief \? readJson\(briefFile\(options\.brief\)\) : null/);
+  assert.match(cli, /scene\.id === 'tree-detail'/);
+  assert.match(cli, /terraFocus=/);
+  assert.match(cli, /options\.scene/);
+  assert.match(cli, /for \(const scene of selectedScenes\)/);
   assert.match(cli, /devicePixelRatio: window\.devicePixelRatio/);
   assert.match(main, /placements: \[fokusPlatz\]/);
-  assert.match(main, /SCHAU_BLICK === "baum" \? 128/);
+  assert.match(main, /SCHAU_FOKUS \? 128/);
   assert.match(main, /if \(!SCHAU_MODUS\) tickLeistung\(raw\)/);
   assert.match(leistung, /\[1, 0\.92, 0\.82, 0\.72, 0\.6\]/);
 });

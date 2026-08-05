@@ -163,6 +163,10 @@ test('Architektur - alle 216 Pools haben eindeutige vollstaendige Geometrien', (
     assert.ok(Number.isInteger(geo.userData.architekturTeile)
       && geo.userData.architekturTeile > 0,
     id + ': Teile-Metadatum fehlt');
+    assert.equal(geo.userData.architekturFormensprache, 'waldsaeule-a',
+      id + ': Waldsaeule-A-Formensprache fehlt');
+    assert.ok(geo.userData.architekturFormDetails > 0,
+      id + ': zu wenige neue Formdetails');
   }
   assert.equal(hashes.size, 216,
     'Jede Stil-mal-Bautyp-Kombination braucht eine eigene Geometrie');

@@ -27,13 +27,8 @@ function argsOf(values) {
   }
   return result;
 }
-function runTool(name, args, options = {}) {
-  const windowsWrapper = process.platform === 'win32'
-    && (!path.extname(name) || /\.(?:cmd|bat)$/i.test(name));
-  return spawnSync(name, args, { ...options, shell: windowsWrapper });
-}
 function executable(name) {
-  const probe = runTool(name, ['--version'], { encoding: 'utf8' });
+  const probe = spawnSync(name, ['--version'], { encoding: 'utf8' });
   return probe.status === 0 ? (probe.stdout || probe.stderr).split('\n')[0].trim() : null;
 }
 function sha256(file) {
@@ -108,6 +103,16 @@ function staticServer(root) {
 
 async function baseline(options) {
   const { scenes } = validateContracts();
+  const brief = options.brief ? readJson(briefFile(options.brief)) : null;
+  const briefScenes = brief ? new Set(brief.scenes || []) : null;
+  const selectedScenes = scenes.scenes.filter((scene) =>
+    (!briefScenes || briefScenes.has(scene.id)) &&
+    (!options.scene || scene.id === options.scene));
+  if (!selectedScenes.length) {
+    throw new Error(options.scene ? 'Unbekannte Szene: ' + options.scene :
+      'Brief enthaelt keine bekannte Abnahmeszene');
+  }
+
   const target = path.resolve(ROOT, options.output || path.join(ART, 'baseline'));
   fs.mkdirSync(target, { recursive: true });
   const { chromium } = await import('@playwright/test');
@@ -117,7 +122,7 @@ async function baseline(options) {
   const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined });
   const report = { version: 1, createdAt: new Date().toISOString(), scenes: [] };
   try {
-    for (const scene of scenes.scenes) {
+    for (const scene of selectedScenes) {
       const page = await browser.newPage({ viewport: scene.viewport });
       const errors = [];
       page.on('pageerror', (error) => errors.push(String(error)));
@@ -168,7 +173,9 @@ async function renderCandidates(options) {
         });
         const assetUrl = '/' + path.relative(ROOT, model).split(path.sep).join('/');
         const separator = scene.query.includes('?') ? '&' : '?';
-        await page.goto(`http://127.0.0.1:${port}/terra/index.html${scene.query}${separator}terraAsset=${encodeURIComponent(assetUrl)}`,
+        const fokus = brief.type === 'normal-instanced-pool' && scene.id === 'tree-detail'
+          ? `&terraFocus=${encodeURIComponent(brief.assetId)}` : '';
+        await page.goto(`http://127.0.0.1:${port}/terra/index.html${scene.query}${separator}terraAsset=${encodeURIComponent(assetUrl)}${fokus}`,
           { waitUntil: 'load', timeout: 90000 });
         await page.waitForFunction(() => window.__terraOk === true, null, { timeout: 90000 });
         const zustand = await page.evaluate((assetId) => {
@@ -221,7 +228,7 @@ async function generate(options) {
     if (options.candidate && id !== options.candidate) continue;
     const out = path.join(target, id, 'model.glb');
     fs.mkdirSync(path.dirname(out), { recursive: true });
-    const child = runTool(blender, ['--background', '--factory-startup', '--python',
+    const child = spawnSync(blender, ['--background', '--factory-startup', '--python',
       path.join(ROOT, 'tools', 'terra-art', 'blender', 'generate_asset.py'), '--',
       '--brief', file, '--variant', id, '--output', out], { stdio: 'inherit' });
     if (child.status !== 0) throw new Error(`Blender-Variante ${id} fehlgeschlagen`);
@@ -237,7 +244,7 @@ function optimize(options) {
   const tool = process.env.GLTF_TRANSFORM_BIN || 'gltf-transform';
   fs.mkdirSync(path.dirname(output), { recursive: true });
   if (executable(tool)) {
-    const child = runTool(tool, ['optimize', input, output,
+    const child = spawnSync(tool, ['optimize', input, output,
       '--compress', 'false', '--instance', 'false', '--palette', 'false',
       '--texture-compress', 'false', '--vertex-layout', 'separate'],
     { stdio: 'inherit' });

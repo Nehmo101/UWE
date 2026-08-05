@@ -65,6 +65,9 @@ test('Luftinseln - vier harte Formen registrieren skalierbare Poolgeometrien', (
     assert.ok(pool.radius >= 5.8, form + ': Kollisionsradius zu klein');
     assert.equal(g.userData.terraUnterseite, 'facetten-streben-mineral');
     assert.equal(g.userData.terraMaterialZonen, 8);
+    assert.equal(g.userData.terraLuftweltFormensprache, 'waldsaeule-a');
+    assert.ok(g.userData.terraLuftweltFormDetails >= 3,
+      id + ': Waldsaeule-A-Plateaudetails fehlen');
     grenzen[form] = [
       g.boundingBox.max.x - g.boundingBox.min.x,
       -g.boundingBox.min.y,
@@ -156,10 +159,15 @@ test('Hochbambus - drei Pooltypen bilden extreme Hoehe bei begrenzter Geometrie'
     let uvOben = 0;
     assert.equal(g.userData.terraMaterialZonen, 10);
     assert.equal(g.userData.terraBlattFaechern, art === 'kronendach' ? 3 : 2);
+    assert.equal(g.userData.terraHochbambusFormensprache, 'waldsaeule-a');
+    assert.ok(g.userData.terraHochbambusFormDetails >= 6,
+      id + ': Waldsaeule-A-Blattdetails fehlen');
     for (let i = 0; i < uv.count; i++) uvOben = Math.max(uvOben, uv.getY(i));
     assert.ok(uvOben > 0.9, id + ': Wind-UV erreicht die Krone nicht');
   }
-  assert.ok(vertexZahl.bambus_kronendach > vertexZahl.bambus_hoch * 3.8,
+  // Der Einzelhalm traegt im A-Pass einen eigenen Blattfaecher. Der Horst
+  // bleibt mit sieben Halmen und 3,6-fachem Vertexumfang klar dichter.
+  assert.ok(vertexZahl.bambus_kronendach > vertexZahl.bambus_hoch * 3.6,
     'Kronendach ist visuell nicht dicht genug');
   assert.equal(BAMBUS_ASSETS.HOCHBAMBUS_STAENGEL_PRO_INSTANZ.bambus_kronendach, 7);
 });

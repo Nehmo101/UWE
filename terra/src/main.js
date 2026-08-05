@@ -40,8 +40,11 @@ import {
   erzeugeAssetSchau
 } from './generators/asset-schau.js';
 
-var SCHAU_MODUS = new URLSearchParams(window.location.search).get("schau");
-var SCHAU_BLICK = new URLSearchParams(window.location.search).get("blick");
+var SCHAU_PARAM = new URLSearchParams(window.location.search);
+var SCHAU_MODUS = SCHAU_PARAM.get("schau");
+var SCHAU_BLICK = SCHAU_PARAM.get("blick");
+var SCHAU_FOKUS = SCHAU_PARAM.get("terraFocus") ||
+  (SCHAU_BLICK === "baum" ? "baum" : null);
 
 /* ==========================================================================
    Startkarte (unveraendert portiert — gleiche Seed, gleiche Karte)
@@ -138,12 +141,15 @@ function assetSchauMap() {
   legende.innerHTML = "<strong>Asset-Schau &middot; 505 / 505</strong>"
     + "<span>12 &times; 18 Architektur &middot; 289 Umwelt-, Kultur- und Weltassets</span>";
   document.body.appendChild(legende);
-  if (SCHAU_BLICK === "baum") {
+  if (SCHAU_FOKUS) {
     // Der Fokusmodus erzeugt nur das Zielasset. Dadurch wird weder Geometrie
     // der 504 Nachbarn gepackt noch ein riesiges Galerie-Terrain benoetigt.
     var ganzesLayout = baueAssetSchauLayout();
-    var baumPlatz = ganzesLayout.placements.find(function (p) { return p.name === "baum"; });
-    var fokusPlatz = Object.assign({}, baumPlatz, { x: 0, y: 0, z: 0 });
+    var fokusQuelle = ganzesLayout.placements.find(function (p) {
+      return p.name === SCHAU_FOKUS;
+    });
+    if (!fokusQuelle) throw new Error("Unbekanntes Fokusasset: " + SCHAU_FOKUS);
+    var fokusPlatz = Object.assign({}, fokusQuelle, { x: 0, y: 0, z: 0 });
     erzeugeAssetSchau({ hoeheAn: heightAt, markiere: false, layout: {
       version: ganzesLayout.version,
       placements: [fokusPlatz],
@@ -151,10 +157,18 @@ function assetSchauMap() {
       bounds: { minX: -8, maxX: 8, minZ: -8, maxZ: 8 },
       counts: { physical: 1, architecture: 0, other: 1 }
     } });
-    legende.innerHTML = "<strong>Asset-Fokus &middot; Windweide B</strong>"
-      + "<span>Silhouette &middot; Astbau &middot; Material &middot; Laufzeit</span>";
-    return { x: 0, z: 0, dist: 22, pitch: 18 * DEG,
-      yaw: 0.48, fov: 30, hebung: 3.75 };
+    legende.innerHTML = "<strong>Asset-Fokus &middot; " + SCHAU_FOKUS + "</strong>"
+      + "<span>Silhouette &middot; Formaufbau &middot; Material &middot; Laufzeit</span>";
+    var fokusPool = POOLS[SCHAU_FOKUS];
+    fokusPool.geo.computeBoundingBox();
+    var fokusBox = fokusPool.geo.boundingBox;
+    var fokusBreite = (fokusBox.max.x - fokusBox.min.x) * fokusPlatz.scale;
+    var fokusHoehe = (fokusBox.max.y - fokusBox.min.y) * fokusPlatz.scale;
+    var fokusTiefe = (fokusBox.max.z - fokusBox.min.z) * fokusPlatz.scale;
+    var fokusSpanne = Math.max(fokusBreite, fokusHoehe * 1.12, fokusTiefe * 0.72);
+    return { x: 0, z: 0, dist: Math.max(5.8, fokusSpanne * 2.35),
+      pitch: 18 * DEG, yaw: 0.48, fov: 30,
+      hebung: Math.max(0.8, fokusHoehe * 0.48) };
   }
   var schau = erzeugeAssetSchau({ hoeheAn: heightAt, markiere: false });
   var archBlock = schau.layout.blocks[0];
@@ -165,12 +179,15 @@ function assetSchauMap() {
     drehung: 112,
     kopfbewegung: 0.78
   });
-  if (SCHAU_BLICK === "natur") {
-    var naturBlock = schau.layout.blocks.find(function (b) { return b.id === "natur"; });
-    return { x: (naturBlock.minX + naturBlock.maxX) / 2,
-      z: (naturBlock.minZ + naturBlock.maxZ) / 2,
-      dist: Math.max(naturBlock.maxX - naturBlock.minX,
-        naturBlock.maxZ - naturBlock.minZ) * 1.32,
+  var familienBlock = SCHAU_BLICK !== "architektur" &&
+    schau.layout.blocks.find(function (b) { return b.id === SCHAU_BLICK; });
+  if (familienBlock) {
+    legende.innerHTML = "<strong>Asset-Familie &middot; " + familienBlock.label + "</strong>"
+      + "<span>" + familienBlock.count + " Pools &middot; identische Abnahmekamera</span>";
+    return { x: (familienBlock.minX + familienBlock.maxX) / 2,
+      z: (familienBlock.minZ + familienBlock.maxZ) / 2,
+      dist: Math.max(familienBlock.maxX - familienBlock.minX,
+        familienBlock.maxZ - familienBlock.minZ) * 1.32,
       pitch: 48 * DEG, yaw: 0.08, fov: 31 };
   }
   if (SCHAU_BLICK === "architektur") {
@@ -324,7 +341,7 @@ if (SCHAU_MODUS === "luft") {
   if (biomSelect) biomSelect.value = S.biom;
 }
 if (SCHAU_MODUS === "assets") setzeKartenGroesseFuerSchau(
-  SCHAU_BLICK === "baum" ? 128 : ASSET_SCHAU_KARTENGROESSE);
+  SCHAU_FOKUS ? 128 : ASSET_SCHAU_KARTENGROESSE);
 // Farbrampe des Startbioms setzen (F1) — muss nach initIO stehen, weil die
 // Funktion dort lebt und BIOME liest.
 palettePassend();

@@ -126,8 +126,11 @@ function pruefeGeometrie(name, basis, geo) {
 }
 
 test('Bestandsbau - umfasst exakt 81 gefrorene Pools in vier Gruppen', () => {
-  assert.deepEqual(Object.keys(BAU).sort(),
-    ['BESTAND_BAU_VERFEINERTE_POOLS', 'veredleBestandBau']);
+  assert.deepEqual(Object.keys(BAU).sort(), [
+    'BESTAND_BAU_FAMILIEN',
+    'BESTAND_BAU_VERFEINERTE_POOLS',
+    'veredleBestandBau'
+  ]);
   assert.equal(Object.isFrozen(BAU.BESTAND_BAU_VERFEINERTE_POOLS), true);
   assert.equal(ERWARTET.length, 81);
   assert.equal(new Set(ERWARTET).size, 81);

@@ -36,6 +36,13 @@ var HAFEN = Object.freeze([
   'leuchtturm', 'kanalschleuse'
 ]);
 
+export var BESTAND_BAU_FAMILIEN = Object.freeze({
+  kultur: KULTUR,
+  begleiter: BEGLEITER,
+  wehr: WEHR,
+  hafen: HAFEN
+});
+
 export var BESTAND_BAU_VERFEINERTE_POOLS = Object.freeze(
   KULTUR.concat(BEGLEITER, WEHR, HAFEN)
 );
@@ -264,7 +271,7 @@ function begleiterBauDetails(m, c, seed) {
   ];
 }
 
-function wehrDetails(m, c, seed, zeichen) {
+function wehrDetails(name, m, c, seed, zeichen) {
   var steinTon = ton(c, 0.73, seed);
   var licht = ton(c, 1.22, seed);
   var parts = [
@@ -277,33 +284,27 @@ function wehrDetails(m, c, seed, zeichen) {
       m.cx + s * m.sx * 0.49, m.minY + m.sy * 0.29,
       m.cz - s * m.sz * 0.25, 0, s * 0.04, s * 0.10, steinTon));
   }
-  for (var k = 0; k < 3; k++) {
-    parts.push(box(m.sx * 0.16, m.sy * (zeichen ? 0.12 : 0.17), m.sz * 0.18,
-      m.cx + (k - 1) * m.sx * 0.32, m.maxY + m.sy * 0.055,
-      m.cz + ((seed >>> (k + 1)) % 3 - 1) * m.sz * 0.035,
-      0, 0, (k - 1) * 0.025, k === 1 ? licht : steinTon));
+  if (!/turm|bergfried|banner|wappen/.test(name)) {
+    for (var k = 0; k < 3; k++) {
+      parts.push(box(m.sx * 0.16, m.sy * (zeichen ? 0.12 : 0.17), m.sz * 0.18,
+        m.cx + (k - 1) * m.sx * 0.32, m.maxY + m.sy * 0.055,
+        m.cz + ((seed >>> (k + 1)) % 3 - 1) * m.sz * 0.035,
+        0, 0, (k - 1) * 0.025, k === 1 ? licht : steinTon));
+    }
   }
   return parts;
 }
 
 function schiffDetails(m, c, seed) {
   var holz = ton(c, 0.63, seed);
-  var segel = ton(c, 1.34, seed);
   var quer = m.sx >= m.sz;
   var laenge = Math.max(m.sx, m.sz);
   var breite = Math.min(m.sx, m.sz);
-  var rx = quer ? 0 : Math.PI / 2;
   var parts = [
     box(quer ? laenge * 0.92 : breite * 0.13, breite * 0.12,
       quer ? breite * 0.13 : laenge * 0.92, m.cx, m.minY - m.sy * 0.015,
-      m.cz, 0, seed * 0.0012, 0, holz),
-    zylinder(breite * 0.055, m.sy * 0.94, 6, m.cx, m.minY + m.sy * 0.58,
-      m.cz, 0, 0, 0, holz)
+      m.cz, 0, seed * 0.0012, 0, holz)
   ];
-  parts.push(box(quer ? laenge * 0.42 : m.sx * 0.045, m.sy * 0.38,
-    quer ? m.sz * 0.045 : laenge * 0.42,
-    m.cx + (quer ? laenge * 0.12 : 0), m.minY + m.sy * 0.67,
-    m.cz + (quer ? 0 : laenge * 0.12), 0, rx, seed % 2 ? 0.08 : -0.08, segel));
   for (var i = 0; i < 2; i++) {
     var s = i ? 1 : -1;
     parts.push(box(quer ? breite * 0.05 : breite * 0.82, m.sy * 0.055,
@@ -354,7 +355,9 @@ export function veredleBestandBau(name, geo) {
   else if (BEGLEITER_SET.has(name)) {
     details = SCHIFFE.has(name) ? schiffDetails(m, c, seed) :
       begleiterBauDetails(m, c, seed);
-  } else if (WEHR_SET.has(name)) details = wehrDetails(m, c, seed, ZEICHEN.has(name));
+  } else if (WEHR_SET.has(name)) {
+    details = wehrDetails(name, m, c, seed, ZEICHEN.has(name));
+  }
   else details = SCHIFFE.has(name) ? schiffDetails(m, c, seed) :
     hafenDetails(m, c, seed);
   return verschmelze([geo].concat(details));

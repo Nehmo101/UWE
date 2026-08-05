@@ -36,6 +36,318 @@
       "query": "?schau=assets&blick=natur",
       "viewport": { "width": 1440, "height": 1000 },
       "settleMs": 4500
+    },
+    {
+      "id": "catalog-arbor",
+      "query": "?schau=assets&blick=arbor",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4500
+    },
+    {
+      "id": "catalog-landleben",
+      "query": "?schau=assets&blick=landleben",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4500
+    },
+    {
+      "id": "catalog-requisiten",
+      "query": "?schau=assets&blick=requisiten",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4500
+    },
+    {
+      "id": "catalog-focus-rankentor",
+      "query": "?schau=assets&terraFocus=rankentor",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "catalog-focus-pferd",
+      "query": "?schau=assets&terraFocus=pferd",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "catalog-focus-schmiede",
+      "query": "?schau=assets&terraFocus=schmiede",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "bau-wehr",
+      "query": "?schau=assets&blick=wehrbau",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4500
+    },
+    {
+      "id": "bau-hafen",
+      "query": "?schau=assets&blick=wasserwelt",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4500
+    },
+    {
+      "id": "bau-infrastruktur",
+      "query": "?schau=assets&blick=infrastruktur",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4500
+    },
+    {
+      "id": "bau-siedlung",
+      "query": "?schau=assets&blick=siedlung",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4500
+    },
+    {
+      "id": "bau-focus-bergfried",
+      "query": "?schau=assets&terraFocus=bergfried",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "bau-focus-kogge",
+      "query": "?schau=assets&terraFocus=kogge",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "bau-focus-marktstand",
+      "query": "?schau=assets&terraFocus=marktstand",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "arch-culture-board",
+      "query": "?schau=architektur",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4500
+    },
+    {
+      "id": "arch-focus-mondelfen-palast",
+      "query": "?schau=assets&terraFocus=arch_mondelfen_palast",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "arch-focus-tiefenzwerge-schmiede",
+      "query": "?schau=assets&terraFocus=arch_tiefenzwerge_schmiede",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "arch-focus-korallenhoefe-tempel",
+      "query": "?schau=assets&terraFocus=arch_korallenhoefe_tempel",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "arch-focus-wurzelbund-wohnhaus",
+      "query": "?schau=assets&terraFocus=arch_wurzelbund_wohnhaus",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "arch-focus-drachenbasalt-wehrturm",
+      "query": "?schau=assets&terraFocus=arch_drachenbasalt_wehrturm",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "arch-focus-windweiden-windmuehle",
+      "query": "?schau=assets&terraFocus=arch_windweiden_windmuehle",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "air-assets-overview",
+      "query": "?schau=assets&blick=luftwelt",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4500
+    },
+    {
+      "id": "air-world",
+      "query": "?schau=luft",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 5000
+    },
+    {
+      "id": "air-focus-luftschiff-menschenbund",
+      "query": "?schau=assets&terraFocus=luftschiff_menschenbund",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "air-focus-luftzug-menschenbund",
+      "query": "?schau=assets&terraFocus=luftzug_menschenbund",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "air-focus-luftschiff-mondelfen",
+      "query": "?schau=assets&terraFocus=luftschiff_mondelfen",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "air-focus-luftzug-mondelfen",
+      "query": "?schau=assets&terraFocus=luftzug_mondelfen",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "air-focus-luftschiff-tiefenzwerge",
+      "query": "?schau=assets&terraFocus=luftschiff_tiefenzwerge",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "air-focus-luftzug-tiefenzwerge",
+      "query": "?schau=assets&terraFocus=luftzug_tiefenzwerge",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "air-focus-luftschiff-goblinzunft",
+      "query": "?schau=assets&terraFocus=luftschiff_goblinzunft",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "air-focus-luftzug-goblinzunft",
+      "query": "?schau=assets&terraFocus=luftzug_goblinzunft",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "air-focus-luftschiff-orklegion",
+      "query": "?schau=assets&terraFocus=luftschiff_orklegion",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "air-focus-luftzug-orklegion",
+      "query": "?schau=assets&terraFocus=luftzug_orklegion",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "air-focus-luftinsel-fels",
+      "query": "?schau=assets&terraFocus=luftinsel_fels",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "air-focus-luftinsel-scherbe",
+      "query": "?schau=assets&terraFocus=luftinsel_scherbe",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "air-focus-luftinsel-tafel",
+      "query": "?schau=assets&terraFocus=luftinsel_tafel",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "air-focus-luftinsel-archipel",
+      "query": "?schau=assets&terraFocus=luftinsel_archipel",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "air-focus-bambus-hoch",
+      "query": "?schau=assets&terraFocus=bambus_hoch",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "air-focus-bambus-kronendach",
+      "query": "?schau=assets&terraFocus=bambus_kronendach",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "air-focus-bambus-jung",
+      "query": "?schau=assets&terraFocus=bambus_jung",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "tier-focus-pferd",
+      "query": "?schau=assets&terraFocus=pferd",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "tier-focus-rind",
+      "query": "?schau=assets&terraFocus=rind",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "tier-focus-schaf",
+      "query": "?schau=assets&terraFocus=schaf",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "tier-focus-ziege",
+      "query": "?schau=assets&terraFocus=ziege",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "tier-focus-moewe",
+      "query": "?schau=assets&terraFocus=moewe",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "tier-focus-ochsengespann",
+      "query": "?schau=assets&terraFocus=ochsengespann",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "tier-focus-rankengleiter",
+      "query": "?schau=assets&terraFocus=rankengleiter",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "requisiten-focus-laterne",
+      "query": "?schau=assets&terraFocus=laterne",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "requisiten-focus-dreimaster",
+      "query": "?schau=assets&terraFocus=dreimaster",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "requisiten-focus-marktstand",
+      "query": "?schau=assets&terraFocus=marktstand",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "requisiten-focus-schubkarre",
+      "query": "?schau=assets&terraFocus=schubkarre",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "requisiten-focus-marktkorb",
+      "query": "?schau=assets&terraFocus=marktkorb",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
+    },
+    {
+      "id": "requisiten-focus-zwergentor",
+      "query": "?schau=assets&terraFocus=zwergentor",
+      "viewport": { "width": 1440, "height": 1000 },
+      "settleMs": 4000
     }
   ]
 }

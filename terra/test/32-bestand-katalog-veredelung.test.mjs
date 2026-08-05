@@ -132,8 +132,11 @@ function pruefeGeometrie(geo, name, basis) {
 }
 
 test('Bestandskatalog - erfasst exakt die 149 auditierten Welle-3-Pools', () => {
-  assert.deepEqual(Object.keys(KATALOG).sort(),
-    ['BESTAND_KATALOG_VERFEINERTE_POOLS', 'veredleBestandKatalog']);
+  assert.deepEqual(Object.keys(KATALOG).sort(), [
+    'BESTAND_KATALOG_FAMILIEN',
+    'BESTAND_KATALOG_VERFEINERTE_POOLS',
+    'veredleBestandKatalog'
+  ]);
   assert.ok(Object.isFrozen(KATALOG.BESTAND_KATALOG_VERFEINERTE_POOLS));
   const alle = welleDreiPools();
   assert.equal(alle.length, 164, 'Welle-3-Quellumfang hat sich verschoben');

@@ -117,6 +117,7 @@ function kontext(stil, variante, farben, masse) {
   };
   return {
     w: w, d: d, h: h, spitze: spitze,
+    stil: stil.id, familie: stil.familie,
     si: si, vi: vi, f: f,
     profil: variante.profil || variante.id,
     gruppe: variante.gruppe
@@ -419,6 +420,92 @@ function rolleInfrastruktur(parts, k) {
   }
 }
 
+/*
+ * Letzte Waldsaeule-A-Schicht: kleine Materialbrueche statt weiterer
+ * Grossformen. Alle Teile bleiben im bestehenden statischen Geometriemerge.
+ */
+function waldsaeuleSockel(parts, k) {
+  var basis = Math.min(k.w, k.d);
+  var stein = farbton(k.f.wandDunkel, 0.82);
+  var anzahl = k.profil === "bruecke" ? 3 : 5;
+  for (var i = 0; i < anzahl; i++) {
+    var a = i * 2.399 + muster(k, 41, 9) * 0.17;
+    var r = basis * (0.052 + i % 3 * 0.011);
+    kristall(parts, r * 1.35, r * 0.62, r,
+      Math.cos(a) * k.w * (0.43 + i % 2 * 0.05), r * 0.31,
+      Math.sin(a) * k.d * (0.42 + i % 3 * 0.03),
+      i % 2 ? stein : farbton(stein, 1.14), a * 0.07, a, -a * 0.05);
+  }
+  if (!istBruecke(k)) {
+    for (var p = 0; p < 2; p++) {
+      box(parts, k.w * 0.12, k.h * 0.025, k.d * 0.07,
+        (p - 0.5) * k.w * 0.14, k.h * 0.0175,
+        k.d * (0.61 + p * 0.09), farbton(stein, 1.08 + p * 0.08),
+        0.03 * (p ? 1 : -1), 0, 0.06 * (p ? 1 : -1));
+    }
+  }
+}
+
+function waldsaeuleMaterial(parts, k) {
+  if (k.profil === "halle" || k.profil === "schrein" ||
+      k.profil === "pavillon" || k.profil === "bruecke" ||
+      k.profil === "tor" || k.gruppe === "wehr" ||
+      k.stil === "wurzelbund") return;
+  var z = k.d * 0.552;
+  var dunkel = farbton(k.f.wandDunkel, 0.78);
+  if (k.familie === "stein") {
+    for (var i = 0; i < 3; i++) {
+      box(parts, k.w * (0.075 + i % 2 * 0.02), k.h * 0.028, k.d * 0.018,
+        (i - 1) * k.w * 0.24, k.h * (0.25 + i % 2 * 0.19), z,
+        i === 1 ? k.f.akzent : dunkel, 0, 0, (i - 1) * 0.035);
+    }
+  } else if (k.familie === "holz" || k.familie === "rinde") {
+    for (var s = -1; s <= 1; s += 2) {
+      box(parts, k.w * 0.032, k.h * 0.30, k.d * 0.018,
+        s * k.w * 0.22, k.h * 0.36, z, k.f.holz, 0, 0, s * 0.35);
+    }
+    box(parts, k.w * 0.42, k.h * 0.026, k.d * 0.020,
+      0, k.h * 0.58, z, farbton(k.f.holz, 1.12));
+  } else if (k.familie === "metall") {
+    for (var n = 0; n < 4; n++) {
+      kristall(parts, k.w * 0.04, k.h * 0.035, k.d * 0.018,
+        (n - 1.5) * k.w * 0.17, k.h * (0.30 + n % 2 * 0.18), z,
+        n % 2 ? k.f.akzent : dunkel, 0, n, 0);
+    }
+  } else if (k.familie === "stoff") {
+    for (var t = 0; t < 4; t++) {
+      kegel(parts, k.w * 0.045, k.h * 0.10, k.d * 0.015,
+        (t - 1.5) * k.w * 0.16, k.h * 0.55, z,
+        t % 2 ? k.f.akzent : k.f.dach, 5, Math.PI, 0, (t - 1.5) * 0.035);
+    }
+  } else {
+    for (var q = -1; q <= 1; q += 2) {
+      box(parts, k.w * 0.035, k.h * 0.22, k.d * 0.015,
+        q * k.w * 0.31, k.h * 0.32, z,
+        farbton(k.f.akzent, 0.92), 0, 0, q * 0.05);
+    }
+  }
+}
+
+function waldsaeuleNutzung(parts, k) {
+  var z = k.d * 0.63;
+  var s = muster(k, 43, 2) ? 1 : -1;
+  if (k.gruppe === "handwerk") {
+    box(parts, k.w * 0.14, k.h * 0.06, k.d * 0.12,
+      s * k.w * 0.48, k.h * 0.06, z, k.f.wandDunkel);
+    box(parts, k.w * 0.20, k.h * 0.045, k.d * 0.10,
+      s * k.w * 0.48, k.h * 0.11, z, k.f.akzent, 0, 0, s * 0.05);
+    kristall(parts, k.w * 0.10, k.h * 0.07, k.d * 0.09,
+      s * k.w * 0.25, k.h * 0.055, z, k.f.fenster, 0, s, 0);
+  } else if (k.gruppe === "wehr") {
+    for (var a = 0; a < 3; a++) {
+      box(parts, k.w * 0.045, k.h * 0.09, k.d * 0.024,
+        (a - 1) * k.w * 0.20, k.h * (0.32 + a * 0.16),
+        k.d * 0.558, farbton(k.f.wandDunkel, 0.56));
+    }
+  }
+}
+
 var ROLLEN_VEREDLER = {
   wohnen: rolleWohnen, gemeinschaft: rolleGemeinschaft,
   handwerk: rolleHandwerk, wissen: rolleWissen,
@@ -451,4 +538,15 @@ export function veredleArchitektur(parts, stil, variante, farben, masse) {
   VEREDLER[stil.id](parts, k);
   ROLLEN_VEREDLER[k.gruppe](parts, k);
   return parts;
+}
+
+/** Fuegt den freigegebenen Waldsaeule-A-Nahpass hinzu und meldet seine Teile. */
+export function gestalteArchitekturFormensprache(parts, stil, variante, farben, masse) {
+  if (!Array.isArray(parts)) throw new TypeError("Architektur-parts muss ein Array sein");
+  var vorher = parts.length;
+  var k = kontext(stil, variante, farben, masse);
+  waldsaeuleSockel(parts, k);
+  waldsaeuleMaterial(parts, k);
+  waldsaeuleNutzung(parts, k);
+  return parts.length - vorher;
 }

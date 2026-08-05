@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "assetId": "tierwesen-waldsaeule-a",
+  "type": "procedural-pool-family",
+  "intent": {
+    "character": [
+      "sanfte glaubhafte Tierkoerper mit klarer Anatomie",
+      "Ghibli-nahe handgebaute Waldsaeule-A-Formensprache",
+      "freundliche ausdrucksstarke Gesichter und lesbare Bewegungsachsen"
+    ],
+    "palette": [
+      "warme natuerliche Felltoene",
+      "ruhige helle Akzente an Augen, Maehnen und Gefieder",
+      "bestehende Terra-Materialwirkung ohne neue Texturen"
+    ],
+    "focus": "Alle sieben Tier- und Kreaturenpools ohne Auslassung auf das Niveau des freigegebenen Baums heben"
+  },
+  "avoid": [
+    "kastenartige Platzhalter-Anatomie",
+    "duerre Drahtbeine ohne Gelenke und Hufe",
+    "starre identische Koerperhaltung",
+    "fotorealistische oder fremde Stilmittel",
+    "neue Runtime-Draw-Calls oder Texturen"
+  ],
+  "preserve": [
+    "alle sieben Pool-IDs",
+    "InstancedMesh-Laufzeitpfad",
+    "bestehende Groessen und Kollisionsradien",
+    "deterministische Geometrie und alte Karten",
+    "Doppelseitigkeit von Ziege, Moewe und Rankengleiter"
+  ],
+  "candidateCount": 1,
+  "candidates": [
+    {
+      "id": "a",
+      "label": "Waldsaeule",
+      "use": "bereits global ausgewaehlte, organisch facettierte Terra-Formensprache"
+    }
+  ],
+  "scenes": [
+    "catalog-landleben",
+    "tier-focus-pferd",
+    "tier-focus-rind",
+    "tier-focus-schaf",
+    "tier-focus-ziege",
+    "tier-focus-moewe",
+    "tier-focus-ochsengespann",
+    "tier-focus-rankengleiter"
+  ]
+}

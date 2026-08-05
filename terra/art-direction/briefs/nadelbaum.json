@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "assetId": "nadelbaum",
+  "type": "normal-instanced-pool",
+  "intent": {
+    "character": ["malerische Ghibli-Tanne", "plastische Aststaffelung", "klare asymmetrische Fernsilhouette"],
+    "palette": ["warme rissige Rinde", "tiefes Waldgruen", "moosige Mittentoene", "sonnige Nadelspitzen"],
+    "focus": "Kalibrierasset fuer das neue Qualitaetsniveau aller 505 physischen Terra-Pools"
+  },
+  "avoid": [
+    "drei glatte Kegel auf einem Pfahl",
+    "flache Pappsilhouette",
+    "einfarbige Krone",
+    "symmetrischer Weihnachtsbaum",
+    "mehrere Runtime-Draw-Calls pro Instanz"
+  ],
+  "preserve": [
+    "Pool-ID nadelbaum",
+    "InstancedMesh-Laufzeitpfad",
+    "Windbewegung ueber UV-Gewichtung",
+    "prozeduraler Fallback",
+    "deterministische Geometrie",
+    "bestehende Karten und Objektgeneratoren"
+  ],
+  "candidateCount": 3,
+  "candidates": [
+    { "id": "a", "label": "Waldsaeule", "use": "ruhige, natuerlich gestaffelte Standardtanne" },
+    { "id": "b", "label": "Sturmfichte", "use": "gerichtete Krone mit starken sichtbaren Astarmen" },
+    { "id": "c", "label": "Alter Wachtbaum", "use": "breite, knorrige Silhouette mit gebrochener Spitze" }
+  ],
+  "scenes": ["tree-detail", "tree-family"]
+}
