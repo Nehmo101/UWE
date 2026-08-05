@@ -103,6 +103,16 @@ function staticServer(root) {
 
 async function baseline(options) {
   const { scenes } = validateContracts();
+  const brief = options.brief ? readJson(briefFile(options.brief)) : null;
+  const briefScenes = brief ? new Set(brief.scenes || []) : null;
+  const selectedScenes = scenes.scenes.filter((scene) =>
+    (!briefScenes || briefScenes.has(scene.id)) &&
+    (!options.scene || scene.id === options.scene));
+  if (!selectedScenes.length) {
+    throw new Error(options.scene ? 'Unbekannte Szene: ' + options.scene :
+      'Brief enthaelt keine bekannte Abnahmeszene');
+  }
+
   const target = path.resolve(ROOT, options.output || path.join(ART, 'baseline'));
   fs.mkdirSync(target, { recursive: true });
   const { chromium } = await import('@playwright/test');
@@ -112,13 +122,13 @@ async function baseline(options) {
   const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined });
   const report = { version: 1, createdAt: new Date().toISOString(), scenes: [] };
   try {
-    for (const scene of scenes.scenes) {
+    for (const scene of selectedScenes) {
       const page = await browser.newPage({ viewport: scene.viewport });
       const errors = [];
       page.on('pageerror', (error) => errors.push(String(error)));
       const started = performance.now();
       await page.goto(`http://127.0.0.1:${port}/index.html${scene.query}`, { waitUntil: 'load', timeout: 90000 });
-      await page.waitForFunction(() => window.__terraOk === true, { timeout: 90000 });
+      await page.waitForFunction(() => window.__terraOk === true, null, { timeout: 90000 });
       await page.waitForTimeout(scene.settleMs || 3000);
       const file = path.join(target, scene.id + '.png');
       await page.screenshot({ path: file });
@@ -147,16 +157,51 @@ async function renderCandidates(options) {
     for (let i = 0; i < (brief.candidateCount || 3); i++) {
       const candidate = String.fromCharCode(97 + i);
       const model = path.join(ART, 'candidates', brief.assetId, candidate, 'model-optimized.glb');
+      if (options.candidate && candidate !== options.candidate) continue;
       requireFile(model, `Optimierter Kandidat ${candidate}`);
       const candidateTarget = path.join(target, candidate);
       fs.mkdirSync(candidateTarget, { recursive: true });
-      for (const scene of scenes.scenes.filter((item) => brief.scenes.includes(item.id))) {
+      for (const scene of scenes.scenes.filter((item) => brief.scenes.includes(item.id) &&
+        (!options.scene || item.id === options.scene))) {
         const page = await browser.newPage({ viewport: scene.viewport });
+        const meldungen = [];
+        page.on('pageerror', (error) => meldungen.push('pageerror: ' + String(error)));
+        page.on('console', (message) => {
+          if (message.type() === 'warning' || message.type() === 'error') {
+            meldungen.push(message.type() + ': ' + message.text());
+          }
+        });
         const assetUrl = '/' + path.relative(ROOT, model).split(path.sep).join('/');
         const separator = scene.query.includes('?') ? '&' : '?';
-        await page.goto(`http://127.0.0.1:${port}/terra/index.html${scene.query}${separator}terraAsset=${encodeURIComponent(assetUrl)}`,
+        const fokus = brief.type === 'normal-instanced-pool' && scene.id === 'tree-detail'
+          ? `&terraFocus=${encodeURIComponent(brief.assetId)}` : '';
+        await page.goto(`http://127.0.0.1:${port}/terra/index.html${scene.query}${separator}terraAsset=${encodeURIComponent(assetUrl)}${fokus}`,
           { waitUntil: 'load', timeout: 90000 });
-        await page.waitForFunction(() => window.__terraOk === true, { timeout: 90000 });
+        await page.waitForFunction(() => window.__terraOk === true, null, { timeout: 90000 });
+        const zustand = await page.evaluate((assetId) => {
+          const pool = window.__terraDebug && window.__terraDebug.POOLS[assetId];
+          const canvas = document.querySelector('canvas');
+          return pool ? {
+            extern: pool.externesAsset || null,
+            vertices: pool.geo && pool.geo.attributes.position.count,
+            radius: pool.geo && pool.geo.boundingSphere && pool.geo.boundingSphere.radius,
+            min: pool.geo && pool.geo.boundingBox && pool.geo.boundingBox.min.toArray(),
+            max: pool.geo && pool.geo.boundingBox && pool.geo.boundingBox.max.toArray(),
+            render: window.__terraDebug.getRenderInfo(),
+            canvas: canvas && {
+              width: canvas.width, height: canvas.height,
+              clientWidth: canvas.clientWidth, clientHeight: canvas.clientHeight,
+              devicePixelRatio: window.devicePixelRatio
+            }
+          } : null;
+        }, brief.assetId);
+        if (!zustand || zustand.extern !== brief.assetId || !zustand.vertices ||
+            !Number.isFinite(zustand.radius)) {
+          throw new Error(`Kandidat ${candidate}/${scene.id} nicht aktiv: `
+            + JSON.stringify({ zustand, meldungen }));
+        }
+        console.log(`Kandidat ${candidate}/${scene.id}: ${zustand.vertices} Vertices, `
+          + `Bounds ${JSON.stringify(zustand)}`);
         await page.waitForTimeout(scene.settleMs || 3000);
         await page.screenshot({ path: path.join(candidateTarget, scene.id + '.png') });
         await page.close();
@@ -177,16 +222,20 @@ async function generate(options) {
   if (!executable(blender)) throw new Error('Blender fehlt. Erst `pnpm terra:art:doctor --strict` beheben.');
   const target = path.join(ART, 'candidates', brief.assetId);
   fs.mkdirSync(target, { recursive: true });
+  let generated = 0;
   for (let i = 0; i < count; i++) {
     const id = String.fromCharCode(97 + i);
+    if (options.candidate && id !== options.candidate) continue;
     const out = path.join(target, id, 'model.glb');
     fs.mkdirSync(path.dirname(out), { recursive: true });
     const child = spawnSync(blender, ['--background', '--factory-startup', '--python',
       path.join(ROOT, 'tools', 'terra-art', 'blender', 'generate_asset.py'), '--',
       '--brief', file, '--variant', id, '--output', out], { stdio: 'inherit' });
     if (child.status !== 0) throw new Error(`Blender-Variante ${id} fehlgeschlagen`);
+    generated++;
   }
-  console.log(`${count} Kandidaten -> ${path.relative(ROOT, target)}`);
+  if (!generated) throw new Error('Kein passender Kandidat fuer --candidate');
+  console.log(`${generated} Kandidat(en) -> ${path.relative(ROOT, target)}`);
 }
 
 function optimize(options) {
@@ -195,7 +244,10 @@ function optimize(options) {
   const tool = process.env.GLTF_TRANSFORM_BIN || 'gltf-transform';
   fs.mkdirSync(path.dirname(output), { recursive: true });
   if (executable(tool)) {
-    const child = spawnSync(tool, ['optimize', input, output, '--compress', 'meshopt'], { stdio: 'inherit' });
+    const child = spawnSync(tool, ['optimize', input, output,
+      '--compress', 'false', '--instance', 'false', '--palette', 'false',
+      '--texture-compress', 'false', '--vertex-layout', 'separate'],
+    { stdio: 'inherit' });
     if (child.status !== 0) throw new Error('glTF Transform fehlgeschlagen');
   } else {
     fs.copyFileSync(input, output);

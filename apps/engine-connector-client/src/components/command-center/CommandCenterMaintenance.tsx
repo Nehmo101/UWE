@@ -223,7 +223,7 @@ export function CommandCenterMaintenance({
             checked={stopServicesOnExit}
             onChange={onStopServicesOnExitChange}
             label="Dienste beim Beenden stoppen"
-            hint="Empfohlen: Beenden trennt Tunnel und Dienste. Ohne diese Option bleibt UWE nach dem Schließen im Hintergrund erreichbar."
+            hint="Empfohlen: Beenden trennt Tunnel und Dienste. Ohne diese Option laufen Dienste und Tunnel nach dem Schließen weiter — das wirkt erst für Starts nach dem Umschalten, und bei einem Absturz der App räumt dann niemand mehr auf."
             recommended
           />
           <SettingSwitch
@@ -241,7 +241,7 @@ export function CommandCenterMaintenance({
             <span>
               {stopServicesOnExit
                 ? "Sicheres Beenden ist aktiv: öffentliche Dienste werden getrennt."
-                : "Hinweis: Dienste bleiben nach dem Beenden im Hintergrund aktiv."}
+                : "Hinweis: Dienste laufen nach dem Beenden weiter — wirksam ab dem nächsten Dienststart."}
             </span>
           </div>
           <Button variant="primary" onClick={onSaveSettings} disabled={busy !== null}>

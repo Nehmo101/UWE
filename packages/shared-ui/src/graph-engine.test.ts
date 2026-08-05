@@ -222,6 +222,61 @@ test("Bubbles überlappen sich nach dem Setzen nicht (Kollisionsauflösung)", ()
   }
 });
 
+test("Zeichenradius skaliert beim Rauszoomen mit dem Zoom (keine optische Überlappung)", () => {
+  // Regression: früher war die Skala bei 0.6 gedeckelt — Kreise schrumpften beim
+  // Rauszoomen langsamer als ihre Abstände und überdeckten sich auf dem Schirm.
+  const { engine } = setup();
+  for (const zoom of [0.35, 0.5, 1, 1.6]) {
+    engine["zoom"] = zoom;
+    assert.ok(
+      engine["nodeScale"]() <= zoom,
+      `nodeScale (${engine["nodeScale"]()}) darf den Zoom (${zoom}) nicht übersteigen`,
+    );
+  }
+  // Oberhalb der Deckelung wächst der Radius langsamer als der Zoom → nur mehr Abstand.
+  engine["zoom"] = 3.2;
+  assert.equal(engine["nodeScale"](), 1.6);
+});
+
+test("Knoten derselben Community rücken zusammen (Cluster-Anziehung)", () => {
+  // Zwei Dreiecke mit einer Brücke: nach der Simulation muss der mittlere Abstand
+  // innerhalb eines Grüppchens deutlich kleiner sein als zwischen den Grüppchen.
+  const mk = (id: string): GraphNode => node(id, "npc");
+  const nodes = ["a1", "a2", "a3", "b1", "b2", "b3"].map(mk);
+  const edge = (id: string, s: string, t: string): GraphEdge => ({
+    id,
+    sourceId: s,
+    targetId: t,
+    kind: "wiki",
+    relationType: "wiki",
+    label: "",
+  });
+  const edges = [
+    edge("e1", "a1", "a2"),
+    edge("e2", "a2", "a3"),
+    edge("e3", "a1", "a3"),
+    edge("e4", "b1", "b2"),
+    edge("e5", "b2", "b3"),
+    edge("e6", "b1", "b3"),
+    edge("e7", "a1", "b1"),
+  ];
+  const engine = new GraphEngine(makeCanvas(), { nodes, edges });
+  for (let i = 0; i < 300; i++) engine["step"]();
+  const pos = new Map(engine.nodes.map((n) => [n.id, n]));
+  const dist = (x: string, y: string) => {
+    const a = pos.get(x)!;
+    const b = pos.get(y)!;
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  };
+  const intra =
+    (dist("a1", "a2") + dist("a2", "a3") + dist("b1", "b2") + dist("b2", "b3")) / 4;
+  const inter = (dist("a2", "b2") + dist("a3", "b3") + dist("a2", "b3")) / 3;
+  assert.ok(
+    inter > intra,
+    `Grüppchen müssen sich trennen (intra=${intra.toFixed(1)}, inter=${inter.toFixed(1)})`,
+  );
+});
+
 test("Fixierter (gezogener) Knoten bleibt stehen und schiebt Nachbarn weg", () => {
   const { engine } = setup();
   const [a, b] = engine.nodes;

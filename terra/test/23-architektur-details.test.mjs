@@ -148,11 +148,33 @@ function signatur(parts, attribute) {
 }
 
 test('Architektur-Details - exportieren den stabilen Funktionsvertrag', () => {
-  assert.deepEqual(Object.keys(DETAILS).sort(), ['veredleArchitektur']);
+  assert.deepEqual(Object.keys(DETAILS).sort(), [
+    'gestalteArchitekturFormensprache', 'veredleArchitektur'
+  ]);
   assert.equal(typeof DETAILS.veredleArchitektur, 'function');
+  assert.equal(typeof DETAILS.gestalteArchitekturFormensprache, 'function');
   assert.ok(VARIANTE, 'Testvariante palast fehlt im Architektur-Katalog');
   assert.ok(VARIANTEN_INDEX >= 0);
   assert.equal(KATALOG.ARCHITEKTUR_STILE.length, 12);
+});
+
+test('Architektur-Details - Waldsaeule A gibt jedem Stil echte Nahdetails', () => {
+  for (let stilIndex = 0; stilIndex < KATALOG.ARCHITEKTUR_STILE.length; stilIndex++) {
+    const stil = KATALOG.ARCHITEKTUR_STILE[stilIndex];
+    const parts = [];
+    const anzahl = DETAILS.gestalteArchitekturFormensprache(
+      parts,
+      stil,
+      VARIANTE,
+      farbenFuer(stil),
+      masseFuer(stilIndex)
+    );
+    assert.equal(anzahl, parts.length, stil.id + ': gemeldete Detailzahl weicht ab');
+    assert.ok(anzahl >= 7, stil.id + ': Waldsaeule-A-Nahpass zu duenn');
+    for (let i = 0; i < parts.length; i++) {
+      pruefePart(parts[i], stil.id + ':waldsaeule:' + i);
+    }
+  }
 });
 
 test('Architektur-Details - alle 12 Stile sind deterministisch und vollstaendig', () => {

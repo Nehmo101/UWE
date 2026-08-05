@@ -304,6 +304,6 @@ export interface LocalHostUpdateInfo {
 }
 
 export interface LocalHostLogsResult {
-  target: LocalHostServiceId | "command-center";
+  target: LocalHostServiceId | "command-center" | "cloudflared";
   lines: string[];
 }

@@ -38,6 +38,24 @@ pnpm terra:art:approve --asset weltschildkroete --candidate a --by owner
 Baseline, Report und Vertragsprüfungen nutzbar. Arbeitsdateien liegen unter
 `.artifacts/terra-art/` und werden nicht eingecheckt.
 
+## Windows
+
+Die CLI startet externe Werkzeuge mit `spawnSync` ohne Shell. Node ab Version 20
+führt auf Windows keine `.cmd`-Dateien mehr direkt aus, deshalb bleibt ein global
+per npm installiertes `gltf-transform` für den Doctor unsichtbar. Einmalig
+
+```powershell
+npm install -g @gltf-transform/cli
+tools/terra-art/windows/setup.ps1
+```
+
+ausführen. Das Skript kompiliert `gltf-transform-shim.cs` mit dem C#-Compiler des
+.NET Framework zu einer echten `.exe`, die Argumente und Exit-Code an
+`node <cli.js>` durchreicht, sucht Blender unter `Program Files` und setzt
+`GLTF_TRANSFORM_BIN` und `BLENDER_BIN` dauerhaft im Benutzerprofil. Beide
+Variablen respektiert die CLI direkt; ohne `BLENDER_BIN` bleibt `generate`
+gesperrt, weil Blender seinen Ordner nicht in den PATH legt.
+
 ## Freigaberegeln
 
 - Bei visueller Arbeit genau drei Kandidaten erzeugen, sofern der Brief nichts

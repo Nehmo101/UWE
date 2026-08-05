@@ -81,6 +81,16 @@ Workspace-Datei — beim Umstieg wären die Pins sonst still weggefallen
 (`audit:prod` warnte bereits, weil es per `dlx` pnpm 11 benutzt). Gleiches
 Muster wie bei `onlyBuiltDependencies`, siehe unten.
 
+**Nachtrag (2026-08-04):** `fast-uri` von `>=3.1.4 <4` auf `>=3.1.5 <4`
+angehoben — neuer GHSA-Befund (*high*): Host-Confusion über einen
+Backslash-Authority-Introducer, verwundbar `>=3.0.0 <3.1.5`. Der Konsument ist
+unverändert Prisma (transitiv, über `@prisma/dev` → `@prisma/streams-local` →
+`ajv 8.20.0`). ajvs Range `^3.0.1` hätte 3.1.5 zwar zugelassen, aber der alte
+Override-Boden `>=3.1.4` hätte 3.1.4 weiterhin erlaubt — gleiche Logik wie beim
+`next`-Bereich oben: der Patch soll verlangt werden, nicht nur möglich sein.
+Major-Deckel `<4` bleibt aus demselben Grund wie oben bestehen. Verifiziert mit
+`pnpm why -r fast-uri`: überall 3.1.5.
+
 ## `onlyBuiltDependencies` — eine Quelle: `pnpm-workspace.yaml`
 
 pnpm 10 liest `onlyBuiltDependencies` aus `pnpm-workspace.yaml`; diese Quelle

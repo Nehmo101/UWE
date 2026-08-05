@@ -21,7 +21,6 @@ import {
 } from "@uwe/database/server";
 import {
   updatePageAction,
-  updateContentBlockAction,
   createContentBlockAction,
   deleteContentBlockAction,
 } from "../../../../../actions";
@@ -125,13 +124,21 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
         }
       />
       <div className="pb-24">
-        {saved && <Alert tone="success" className="mb-4">Änderungen gespeichert.</Alert>}
+        {saved && (
+          <Alert tone="success" className="mb-4">
+            Änderungen gespeichert.{" "}
+            <Link className="font-medium underline" href={pageHref}>
+              Zur Seitenansicht →
+            </Link>
+          </Alert>
+        )}
         <PageEditAutosave formId="world-page-edit-form" storageKey={`uwe:page-edit:${page.id}`} />
 
         <form id="world-page-edit-form" action={updatePageAction} className="flex flex-col gap-4">
           <input type="hidden" name="pageId" value={page.id} />
           <input type="hidden" name="worldSlug" value={worldSlug} />
           <input type="hidden" name="pageSlug" value={slug} />
+          <input type="hidden" name="category" value={category} />
 
           <div className={FIELD_CLASS}>
             <Label htmlFor="edit-title">Titel</Label>
@@ -215,26 +222,19 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
             <Input id="edit-aliases" name="aliases" defaultValue={aliases.join(", ")} />
           </div>
 
-          <div>
-            <Button type="submit">Seite speichern</Button>
-          </div>
-        </form>
-
-        <CollapsibleSection
-          title="ContentBlocks"
-          summary={`${page.contentBlocks.length} Blöcke`}
-          defaultOpen={page.contentBlocks.length <= 3}
-        >
-          {page.contentBlocks.map((block) => (
-            <Card key={block.id} className="mb-6">
-              <CardContent className="flex flex-col gap-4 pt-6">
-                <form action={updateContentBlockAction} className="flex flex-col gap-4">
-                  <input type="hidden" name="blockId" value={block.id} />
-                  <input type="hidden" name="worldSlug" value={worldSlug} />
-                  <input type="hidden" name="pageSlug" value={slug} />
-                  <input type="hidden" name="category" value={category} />
-                  <input type="hidden" name="sortOrder" value={block.sortOrder} />
-
+          {/*
+            Die Blöcke stecken im selben Formular wie die Seitenfelder — „Seite
+            speichern" speichert damit Seite UND alle Blöcke in einem Schritt.
+            Die Feldnamen tragen deshalb ein `blocks.<id>.`-Präfix.
+          */}
+          <CollapsibleSection
+            title="ContentBlocks"
+            summary={`${page.contentBlocks.length} Blöcke`}
+            defaultOpen={page.contentBlocks.length <= 3}
+          >
+            {page.contentBlocks.map((block) => (
+              <Card key={block.id} className="mb-6">
+                <CardContent className="flex flex-col gap-4 pt-6">
                   {/* TODO(design-kit): ContentBlockBody (apps/studio/components/**) bleibt
                       unmigriert und rendert eigene <label>/<select> ohne Kit-Styling — außerhalb
                       dieses Auftrags (S4). */}
@@ -246,6 +246,7 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
                     defaultContent={block.content}
                     defaultAssetId={block.assetId}
                     rows={6}
+                    fieldPrefix={`blocks.${block.id}.`}
                   />
 
                   <div className="flex flex-wrap items-center gap-2">
@@ -256,31 +257,39 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
                     >
                       Aus Block Label erstellen
                     </Link>
+                    <Button
+                      type="submit"
+                      variant="destructive"
+                      name="blockId"
+                      value={block.id}
+                      formAction={deleteContentBlockAction}
+                      formNoValidate
+                    >
+                      Block „{BLOCK_TYPE_LABELS[block.type]}“ löschen
+                    </Button>
                   </div>
-                </form>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            ))}
+          </CollapsibleSection>
 
-          {page.contentBlocks.map((block) => (
-            <form key={`del-${block.id}`} action={deleteContentBlockAction} className="mb-3">
-              <input type="hidden" name="blockId" value={block.id} />
-              <input type="hidden" name="worldSlug" value={worldSlug} />
-              <input type="hidden" name="pageSlug" value={slug} />
-              <input type="hidden" name="category" value={category} />
-              <Button type="submit" variant="destructive">
-                Block „{BLOCK_TYPE_LABELS[block.type]}“ löschen
-              </Button>
-            </form>
-          ))}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="submit">Seite speichern</Button>
+            <Button type="submit" variant="secondary" name="returnTo" value="view">
+              Speichern & zur Ansicht
+            </Button>
+            <p className="m-0 text-xs text-muted-foreground">
+              Speichert die Seite samt aller Blöcke.
+            </p>
+          </div>
+        </form>
 
+        <CollapsibleSection title="Neuer Block" summary="Block anhängen" defaultOpen={false}>
           <form action={createContentBlockAction} className="flex flex-col gap-4">
             <input type="hidden" name="pageId" value={page.id} />
             <input type="hidden" name="worldSlug" value={worldSlug} />
             <input type="hidden" name="pageSlug" value={slug} />
             <input type="hidden" name="category" value={category} />
-
-            <h3 className="m-0 text-sm font-semibold">Neuer Block</h3>
 
             <ContentBlockBody
               worldSlug={worldSlug}

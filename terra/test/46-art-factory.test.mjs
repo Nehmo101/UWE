@@ -6,7 +6,8 @@ import { spawnSync } from 'node:child_process';
 import { SRC } from './hilfen/laden.mjs';
 
 const ROOT = path.resolve(SRC, '..', '..');
-const lesen = (datei) => fs.readFileSync(path.join(ROOT, datei), 'utf8');
+const lesen = (datei) => fs.readFileSync(path.join(ROOT, datei), 'utf8')
+  .replace(/\r\n/g, '\n');
 
 test('Terra Art Factory - Vertraege und agentenunabhaengige CLI sind gueltig', () => {
   const contract = JSON.parse(lesen('terra/art-direction/quality-contract.json'));
@@ -28,14 +29,24 @@ test('Terra Art Factory - Vertraege und agentenunabhaengige CLI sind gueltig', (
   assert.equal(report.required.contractVersion, 1);
 });
 
-test('Terra Art Factory - leeres Runtime-Manifest und Fallback sind stabil', () => {
+test('Terra Art Factory - freigegebenes Runtime-Manifest und Fallback sind stabil', () => {
   const manifest = JSON.parse(lesen('terra/assets/models/manifest.json'));
-  assert.deepEqual(manifest, { version: 1, assets: [] });
+  assert.equal(manifest.version, 1);
+  assert.equal(manifest.assets.length, 1);
+  const baum = manifest.assets[0];
+  assert.equal(baum.id, 'baum');
+  assert.equal(baum.file, 'baum/model.glb');
+  assert.equal(baum.fallback, 'baum');
+  assert.equal(baum.approvedBy, 'lasse');
+  const approval = JSON.parse(lesen('terra/art-direction/approvals/baum.json'));
+  assert.equal(approval.status, 'approved');
+  assert.equal(approval.selectedCandidate, 'b');
+  assert.ok(fs.existsSync(path.join(ROOT, 'terra/assets/models', baum.file)));
   const loader = lesen('terra/src/assets/external-assets.js');
   assert.match(loader, /GLB-v2-Kopf fehlt/);
   assert.match(loader, /console\.warn\('\[terra-assets\] Fallback/);
-  assert.match(loader, /a-zA-Z0-9\/_-/,
-    'Kandidatenpfad braucht eine enge Positivliste');
+  assert.ok(loader.includes('[a-zA-Z0-9_-]+'),
+    'Kandidaten-ID braucht eine enge Positivliste');
   assert.match(lesen('terra/src/generators/weltschildkroete.js'),
     /externesAsset\('weltschildkroete'\) \|\| new THREE\.Mesh/);
 });
@@ -48,12 +59,29 @@ test('Terra Art Factory - Skills existieren fuer Codex, Claude und Cursor', () =
   ];
   for (const file of files) {
     const content = lesen(file);
+    // \r? weil ein frischer Windows-Checkout mit core.autocrlf=true CRLF liefert.
     assert.match(content, /^---\r?\nname: (?:uweterra|uwe-terra)\r?\n/);
     assert.match(content, /pnpm terra:art:doctor/);
     assert.match(content, /Zwischenabnahme stoppen/);
+    assert.match(content, /tools\/terra-art\/windows\/setup\.ps1/,
+      'der Windows-Weg gehoert in jeden Skill, sonst wird er nachgebaut');
   }
   const cursor = JSON.parse(lesen('.cursor/skills/manifest.json'));
   assert.ok(cursor.skills.some((skill) => skill.id === 'uwe-terra'));
+});
+
+test('Terra Art Factory - Windows-Starter ist versioniert und passt zur CLI', () => {
+  const shim = lesen('tools/terra-art/windows/gltf-transform-shim.cs');
+  const setup = lesen('tools/terra-art/windows/setup.ps1');
+  const cli = lesen('tools/terra-art/cli.mjs');
+  assert.ok(shim.includes('node_modules\\@gltf-transform\\cli\\bin\\cli.js'),
+    'der Starter muss die CLI von glTF Transform finden');
+  assert.ok(setup.includes('gltf-transform-shim.cs'),
+    'das Setup baut genau den versionierten Starter');
+  for (const variable of ['GLTF_TRANSFORM_BIN', 'BLENDER_BIN']) {
+    assert.ok(cli.includes(`process.env.${variable}`), `${variable} wird von der CLI gelesen`);
+    assert.ok(setup.includes(variable), `${variable} wird vom Setup gesetzt`);
+  }
 });
 
 test('Terra Art Factory - Approval ist ohne explizite Identitaet gesperrt', () => {

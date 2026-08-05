@@ -26,9 +26,9 @@ und ob etwas Neues dazugekommen ist. Für das Warum die `SKILL.md` von /uwefamil
 
 `auth` (12) · `calendar` (1) · `health` (1) · `kitchen` (2) · `scan` (2) · `v1` (8)
 
-**Server Actions** (`apps/family/app/*-actions.ts`, 10)
+**Server Actions** (`apps/family/app/*-actions.ts`, 11)
 
-`calendar-actions.ts` · `contracts-actions.ts` · `documents-actions.ts` · `family-actions.ts` · `health-actions.ts` · `household-actions.ts` · `kitchen-actions.ts` · `kitchen-bring-actions.ts` · `member-actions.ts` · `scan-inbox-actions.ts`
+`calendar-actions.ts` · `contracts-actions.ts` · `documents-actions.ts` · `family-actions.ts` · `health-actions.ts` · `household-actions.ts` · `kitchen-actions.ts` · `kitchen-bring-actions.ts` · `kitchen-plan-actions.ts` · `member-actions.ts` · `scan-inbox-actions.ts`
 
 **Pakete** (`@uwe/*` aus `apps/family/package.json`, 14)
 

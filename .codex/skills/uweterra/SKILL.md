@@ -24,6 +24,19 @@ Produktionsweg.
 10. Erst nach ausdrücklicher Freigabe `terra:art:approve`, vollständige Gates,
     Commit und Pull Request ausführen.
 
+## Windows
+
+Node startet externe Werkzeuge ohne Shell und kann die `.cmd`-Shims von npm
+nicht ausführen. Meldet der Doctor glTF Transform trotz Installation als
+fehlend, einmalig `tools/terra-art/windows/setup.ps1` in PowerShell ausführen.
+Das Skript kompiliert den versionierten C#-Starter
+`tools/terra-art/windows/gltf-transform-shim.cs` zu einer echten `.exe`, findet
+Blender und setzt `GLTF_TRANSFORM_BIN` und `BLENDER_BIN` dauerhaft; danach ist
+`doctor --strict` grün. Blender liegt nie im PATH, deshalb ist `BLENDER_BIN`
+Pflicht, sonst bleibt `generate` gesperrt. Den Starter nicht von Hand
+nachbauen und keine eigenen Wrapper erfinden: nur dieses Skript ist der
+reproduzierbare Weg.
+
 ## Grenzen
 
 - Genehmigte Baselines und Approval-Dateien nie ohne ausdrückliche Freigabe ersetzen.

@@ -3,6 +3,7 @@
  * Liefert Typ + Konfidenz; ein späterer LLM-Schritt kann verfeinern.
  */
 import { extractContractFields, extractGenericFields, extractInvoiceFields, extractWarrantyFields } from "./field-extraction";
+import { parseReceiptText } from "./parse-receipt";
 import type { ExtractedFields, ScanDocumentKind } from "./scan-types";
 
 interface KindRule {
@@ -49,8 +50,17 @@ export function detectKind(text: string): KindDetectionResult {
 export function extractFieldsForKind(kind: ScanDocumentKind, text: string): ExtractedFields {
   switch (kind) {
     case "invoice":
-    case "receipt":
       return extractInvoiceFields(text);
+    case "receipt": {
+      // Bon-Positionen zusätzlich zu den Rechnungs-Feldern — sie tragen die
+      // Vorrats-Ablage ("In den Vorrat").
+      const receipt = parseReceiptText(text);
+      return {
+        ...extractInvoiceFields(text),
+        ...(receipt.items.length > 0 ? { receiptItems: receipt.items } : {}),
+        ...(receipt.totalCents != null ? { amountCents: receipt.totalCents } : {}),
+      };
+    }
     case "contract_doc":
       return extractContractFields(text);
     case "warranty":

@@ -10,7 +10,7 @@
  * brain, or personal data.
  */
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
@@ -22,17 +22,66 @@ import {
 
 export const MODEL_STORE_FILENAME = "model-store.json";
 
+/** Per-user fallback directory name before the RTX → engine rebranding. */
+const LEGACY_FALLBACK_DIR_NAME = ".uwe-rtx-connector";
+const FALLBACK_DIR_NAME = ".uwe-engine-connector";
+
 /**
  * Resolve the connector client data directory from the environment, falling
  * back to a per-user directory when unset. The Tauri client always sets
  * `UWE_CONNECTOR_CLIENT_DATA_DIR`; the fallback keeps the CLI usable standalone.
+ *
+ * Before the rebranding the fallback was `~/.uwe-rtx-connector`. Standalone CLI
+ * users (running `index.ts start` or `client-cli.ts` without the desktop app)
+ * would otherwise restart with an empty model store, empty job history, and no
+ * Spotify session. The fallback branch therefore migrates the legacy directory
+ * once — mirroring `migrate_legacy_app_data_dir` in the Tauri client. The
+ * `home` parameter exists for tests only.
  */
-export function resolveConnectorDataDir(env: NodeJS.ProcessEnv = process.env): string {
+export function resolveConnectorDataDir(
+  env: NodeJS.ProcessEnv = process.env,
+  home: string = homedir(),
+): string {
   const configured = env.UWE_CONNECTOR_CLIENT_DATA_DIR?.trim();
   if (configured) {
     return resolve(configured);
   }
-  return join(homedir(), ".uwe-engine-connector");
+  return migrateLegacyFallbackDataDir(
+    join(home, FALLBACK_DIR_NAME),
+    join(home, LEGACY_FALLBACK_DIR_NAME),
+  );
+}
+
+function isDirectory(path: string): boolean {
+  return statSync(path, { throwIfNoEntry: false })?.isDirectory() ?? false;
+}
+
+/**
+ * One-time move of the pre-rename data directory to its new location. Runs only
+ * when the new directory does not exist yet and the old one does. A failed
+ * rename (locked file, cross-device link, …) is never fatal: the legacy
+ * directory is used as-is instead — same read fallback as
+ * `commandCenterDataRoot()` — so existing data keeps working either way.
+ */
+function migrateLegacyFallbackDataDir(current: string, legacy: string): string {
+  if (statSync(current, { throwIfNoEntry: false }) !== undefined) {
+    return current;
+  }
+  if (!isDirectory(legacy)) {
+    return current;
+  }
+  try {
+    renameSync(legacy, current);
+    process.stderr.write(
+      `[uwe-engine-connector] Datenverzeichnis von ${legacy} nach ${current} uebernommen.\n`,
+    );
+    return current;
+  } catch (error) {
+    process.stderr.write(
+      `[uwe-engine-connector] Datenverzeichnis ${legacy} konnte nicht nach ${current} verschoben werden (${String(error)}) — nutze weiterhin das alte Verzeichnis.\n`,
+    );
+    return legacy;
+  }
 }
 
 export function modelStorePath(dataDir: string): string {

@@ -2,6 +2,7 @@
 // Unterstuetzt die von tools/terra-art erzeugte statische Mesh-Teilmenge und
 // faellt bei jedem Lade-/Schemafehler lautlos auf die prozedurale Runtime zurueck.
 import * as THREE from 'three';
+import { installiereExternenPool } from './external-pool-geometrie.js';
 
 const externe = new Map();
 const komponentTyp = Object.freeze({ 5120: Int8Array, 5121: Uint8Array,
@@ -31,7 +32,11 @@ function accessor(daten, index) {
   var spec = daten.json.accessors[index];
   var bufferView = daten.json.bufferViews[spec.bufferView];
   var Typ = komponentTyp[spec.componentType], breite = elementBreite[spec.type];
-  if (!Typ || !breite || bufferView.byteStride) throw new Error('Nicht unterstuetzter GLB-Accessor');
+  if (!Typ || !breite) throw new Error('Nicht unterstuetzter GLB-Accessor');
+  var elementBytes = Typ.BYTES_PER_ELEMENT * breite;
+  if (bufferView.byteStride && bufferView.byteStride !== elementBytes) {
+    throw new Error('Interleaved GLB-Accessors werden nicht unterstuetzt');
+  }
   var start = (bufferView.byteOffset || 0) + (spec.byteOffset || 0);
   return { array: new Typ(daten.bin, start, spec.count * breite), breite: breite,
     normalisiert: !!spec.normalized };
@@ -41,7 +46,7 @@ function materialFuer(json, index) {
   var spec = index === undefined ? {} : (json.materials[index] || {});
   var pbr = spec.pbrMetallicRoughness || {};
   var faktor = pbr.baseColorFactor || [1, 1, 1, 1];
-  return new THREE.MeshStandardMaterial({
+  var material = new THREE.MeshStandardMaterial({
     color: new THREE.Color(faktor[0], faktor[1], faktor[2]),
     opacity: faktor[3], transparent: faktor[3] < 1,
     roughness: pbr.roughnessFactor === undefined ? 0.82 : pbr.roughnessFactor,
@@ -49,6 +54,8 @@ function materialFuer(json, index) {
     side: spec.doubleSided ? THREE.DoubleSide : THREE.FrontSide,
     vertexColors: false
   });
+  material.name = spec.name || '';
+  return material;
 }
 
 function meshFuer(daten, index) {
@@ -94,7 +101,7 @@ function knotenFuer(daten, index) {
   return objekt;
 }
 
-function szeneFuer(buffer) {
+export function szeneFuer(buffer) {
   var daten = parseGlb(buffer), gruppe = new THREE.Group();
   var szene = daten.json.scenes[(daten.json.scene || 0)] || { nodes: [] };
   for (var i = 0; i < (szene.nodes || []).length; i++) gruppe.add(knotenFuer(daten, szene.nodes[i]));
@@ -102,17 +109,24 @@ function szeneFuer(buffer) {
   return gruppe;
 }
 
+
+function registriereExternesAsset(id, gruppe) {
+  externe.set(id, gruppe);
+  installiereExternenPool(id, gruppe);
+}
 export async function ladeExterneAssets() {
   // Nur fuer die lokale Art-Factory: ein Kandidat wird aus derselben Herkunft
   // in die festen Referenzszenen eingesetzt, ohne Manifest oder Baseline zu
   // veraendern. Produktionsseiten setzen diesen Parameter nie.
   var kandidat = new URLSearchParams(window.location.search).get('terraAsset');
-  if (kandidat && /^\/\.artifacts\/terra-art\/[a-zA-Z0-9/_-]+\.glb$/.test(kandidat) &&
-      !kandidat.includes('..') && !kandidat.includes('//')) {
+  var kandidatTreffer = kandidat && kandidat.match(
+    /^\/\.artifacts\/terra-art\/candidates\/([a-zA-Z0-9_-]+)\/[a-z]\/model-optimized\.glb$/
+  );
+  if (kandidatTreffer && !kandidat.includes('..') && !kandidat.includes('//')) {
     try {
       var kandidatAntwort = await fetch(kandidat, { cache: 'no-store' });
       if (!kandidatAntwort.ok) throw new Error('HTTP ' + kandidatAntwort.status);
-      externe.set('weltschildkroete', szeneFuer(await kandidatAntwort.arrayBuffer()));
+      registriereExternesAsset(kandidatTreffer[1], szeneFuer(await kandidatAntwort.arrayBuffer()));
       return;
     } catch (fehler) {
       console.warn('[terra-assets] Kandidaten-Fallback: ' + fehler.message);
@@ -127,7 +141,7 @@ export async function ladeExterneAssets() {
       try {
         var datei = await fetch('./assets/models/' + asset.file);
         if (!datei.ok) throw new Error('HTTP ' + datei.status);
-        externe.set(asset.id, szeneFuer(await datei.arrayBuffer()));
+        registriereExternesAsset(asset.id, szeneFuer(await datei.arrayBuffer()));
       } catch (fehler) {
         console.warn('[terra-assets] Fallback fuer ' + asset.id + ': ' + fehler.message);
       }

@@ -90,6 +90,9 @@ function pruefeGeometrie(asset, geo) {
   assert.equal(geo.userData.steampunkTyp, asset.typ);
   assert.equal(geo.userData.steampunkArtPass, 'final-hart');
   assert.equal(geo.userData.steampunkMaterialZonen, 10);
+  assert.equal(geo.userData.steampunkFormensprache, 'waldsaeule-a');
+  assert.ok(geo.userData.steampunkFormDetails >= 15,
+    asset.id + ': Waldsaeule-A-Nahdetails fehlen');
   assert.ok(geo.userData.steampunkTeile >= 70, asset.id + ': zu wenige Formbauteile');
 }
 

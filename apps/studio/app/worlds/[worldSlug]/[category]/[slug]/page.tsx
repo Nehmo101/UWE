@@ -2,12 +2,12 @@ import { StudioWikiPageView } from "@/components/StudioWikiPageView";
 
 interface Props {
   params: Promise<{ worldSlug: string; category: string; slug: string }>;
-  searchParams: Promise<{ preview?: string }>;
+  searchParams: Promise<{ preview?: string; saved?: string }>;
 }
 
 export default async function StudioPageView({ params, searchParams }: Props) {
   const { worldSlug, category, slug } = await params;
-  const { preview } = await searchParams;
+  const { preview, saved } = await searchParams;
 
   return (
     <StudioWikiPageView
@@ -15,6 +15,7 @@ export default async function StudioPageView({ params, searchParams }: Props) {
       category={category}
       slug={slug}
       preview={preview}
+      saved={saved}
     />
   );
 }

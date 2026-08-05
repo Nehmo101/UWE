@@ -5,12 +5,19 @@
  */
 import { toPrismaJsonValue } from "@uwe/database/server";
 import type { FamilyPrismaClient as PrismaClient } from "@uwe/database/family-client";
-import type { IngredientUnit, ShoppingCategory } from "./kitchen-types";
+import type {
+  IngredientUnit,
+  MealPlanGoals,
+  ShoppingCategory,
+  ShoppingTrip,
+} from "./kitchen-types";
 import {
   consolidateIngredients,
   scaleAmount,
   type MergeableIngredient,
 } from "./ingredient-merge";
+import { datesOfIsoWeek } from "./meal-plan-service";
+import { assignShoppingTrip } from "./shopping-split";
 
 export interface RecurringBasic {
   name: string;
@@ -34,6 +41,8 @@ export class ShoppingService {
    * Baut aus einer Woche eine Einkaufsliste: alle Rezept-Zutaten auf die
    * geplante Portionszahl skaliert (`entry.servings` ?? `householdFactor`,
    * relativ zu `recipe.servingsBase`), konsolidiert und kategorisiert.
+   * Verderbliches, das erst ab dem Frische-Tag (Default Donnerstag) gebraucht
+   * wird, landet im Abschnitt `fresh` — der kleine zweite Einkauf.
    */
   async generateFromWeek(
     weekId: string,
@@ -66,11 +75,20 @@ export class ShoppingService {
           unitLabel: ingredient.unitLabel,
           category: ingredient.category as ShoppingCategory,
           sourceRecipeIds: [recipe.id],
+          firstUseDate: entry.date,
         });
       }
     }
 
     const consolidated = consolidateIngredients(collected);
+    const weekDates = datesOfIsoWeek(week.isoYear, week.isoWeek);
+    const freshWeekday = (week.goals as MealPlanGoals | null)?.freshWeekday;
+    const tripOf = (item: (typeof consolidated)[number]): ShoppingTrip =>
+      assignShoppingTrip(
+        { category: item.category, firstUseDate: item.firstUseDate },
+        weekDates,
+        freshWeekday,
+      );
 
     const basics = options.recurringBasics ?? [];
     const list = await this.db.shoppingList.create({
@@ -86,6 +104,7 @@ export class ShoppingService {
               unit: item.unit,
               unitLabel: item.unitLabel,
               category: item.category,
+              trip: tripOf(item),
               recurring: false,
               sourceRecipeIds: toPrismaJsonValue(item.sourceRecipeIds),
               sortIndex: index,

@@ -18,8 +18,11 @@
      Stufe; ohne Pause spraenge er zwei Stufen auf einmal.
    ========================================================================== */
 
-/** Skalenleiter: 1 = volle Aufloesung. 0.6 entspricht ~36 % der Pixellast. */
-export const LEISTUNGS_STUFEN = [1, 0.85, 0.72, 0.6, 0.5];
+/**
+ * Schaerfeorientierte Skalenleiter: der erste Schritt spart bereits 15 % Pixel,
+ * bleibt aber deutlich klarer als der alte direkte Sprung auf 0.85.
+ */
+export const LEISTUNGS_STUFEN = [1, 0.92, 0.82, 0.72, 0.6];
 
 /**
  * @param opts.stufen     Skalenleiter (absteigend), Default LEISTUNGS_STUFEN.
@@ -36,7 +39,7 @@ export function erzeugeLeistungsRegler(opts) {
   var stufen = opts.stufen || LEISTUNGS_STUFEN;
   var runterMs = opts.runterMs === undefined ? 38 : opts.runterMs;
   var hochMs = opts.hochMs === undefined ? 20 : opts.hochMs;
-  var runterNach = opts.runterNach === undefined ? 0.9 : opts.runterNach;
+  var runterNach = opts.runterNach === undefined ? 1.2 : opts.runterNach;
   var hochNach = opts.hochNach === undefined ? 2.5 : opts.hochNach;
   var ruhe = opts.ruhe === undefined ? 1.2 : opts.ruhe;
   var stufe = 0, ema = 16, langsam = 0, schnell = 0, pause = 0;

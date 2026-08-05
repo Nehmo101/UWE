@@ -134,6 +134,14 @@ function stengelTeile(cfg) {
       M(blattX, h - 0.18, blattZ, 0, -a + 0.62,
         -(1.06 + hashi(i, 17, seed) * 0.28), 0.82, 0.86, 1),
       BLATT_SCHATTEN));
+    if (!cfg.dicht) {
+      teile.push(part(blatt,
+        M(blattX + Math.cos(a) * cfg.radius * 0.30, h + 0.14,
+          blattZ + Math.sin(a) * cfg.radius * 0.30,
+          0, -a - 0.48, 1.00 + hashi(i, 23, seed) * 0.24,
+          0.76, 0.82, -1),
+        i % 3 ? BLATT_MITTEL : BLATT_HELL));
+    }
     if (cfg.dicht) {
       teile.push(part(blatt,
         M(blattX - Math.cos(a) * cfg.radius * 0.45, h + 0.12,
@@ -141,6 +149,17 @@ function stengelTeile(cfg) {
           0, -a - 0.68, 0.96 + hashi(i, 19, seed) * 0.30,
           0.74, 0.80, -1),
         i % 2 ? BLATT_MITTEL : BLATT_DUNKEL));
+    }
+  }
+  if (!cfg.dicht) {
+    for (i = 0; i < 3; i++) {
+      var bodenA = i / 3 * Math.PI * 2 + hashi(i, 31, seed) * 0.32;
+      teile.push(part(blatt,
+        M(cfg.x + Math.cos(bodenA) * cfg.radius * 1.6, 0.08,
+          cfg.z + Math.sin(bodenA) * cfg.radius * 1.6,
+          Math.PI / 2, -bodenA, (i - 1) * 0.16,
+          0.64, 0.58, i % 2 ? -1 : 1),
+        i === 1 ? KNOTEN_ALT : BLATT_DUNKEL));
     }
   }
   return teile;
@@ -154,7 +173,7 @@ function hochGeometrie() {
   return stengelGeometrie({
     x: 0, z: 0, hoehe: 18, basisHoehe: 18, radius: 0.25,
     abschnitte: 8, radial: 7, blaetter: 12,
-    blattLaenge: 1.55, blattBreite: 0.28,
+    blattLaenge: 1.62, blattBreite: 0.40,
     neigungX: 0.46, neigungZ: -0.24, seed: 0x811
   });
 }
@@ -176,8 +195,8 @@ function kronendachGeometrie() {
       radial: 6,
       blaetter: 5,
       dicht: true,
-      blattLaenge: 1.12,
-      blattBreite: 0.21,
+      blattLaenge: 1.20,
+      blattBreite: 0.30,
       neigungX: Math.cos(a) * (0.18 + hashi(i, 11, 0x853) * 0.30),
       neigungZ: Math.sin(a) * (0.18 + hashi(i, 13, 0x853) * 0.30),
       seed: 0x853 + i * 41
@@ -200,8 +219,8 @@ function jungGeometrie() {
       abschnitte: 5,
       radial: 6,
       blaetter: 4,
-      blattLaenge: 0.82,
-      blattBreite: 0.17,
+      blattLaenge: 0.92,
+      blattBreite: 0.25,
       neigungX: Math.cos(a) * 0.34,
       neigungZ: Math.sin(a) * 0.34,
       seed: 0x8d1 + i * 29
@@ -223,6 +242,9 @@ export function erzeugeHochbambusGeometrie(art) {
   geometrie.userData.terraArtDirection = 'hoch-kantig-erwachsen';
   geometrie.userData.terraMaterialZonen = 10;
   geometrie.userData.terraBlattFaechern = art === 'kronendach' ? 3 : 2;
+  geometrie.userData.terraHochbambusFormensprache = 'waldsaeule-a';
+  geometrie.userData.terraHochbambusFormDetails =
+    geometrie.userData.terraStaengel * 3 + (art === 'kronendach' ? 4 : 3);
   geometrie.computeBoundingBox();
   geometrie.computeBoundingSphere();
   return geometrie;

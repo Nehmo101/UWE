@@ -34,6 +34,9 @@ export function analyzeScanText(text: string): ScanAnalysis {
       uncertainties.push(`Feld fehlt: ${missing}.`);
     }
   }
+  if (proposal.target === "pantry" && !(fields.receiptItems?.length)) {
+    uncertainties.push("Keine Bon-Positionen erkannt — Vorrats-Ablage wäre leer.");
+  }
   if (!text.trim()) {
     uncertainties.push("Kein Text erkannt — evtl. Bildqualität zu gering.");
   }

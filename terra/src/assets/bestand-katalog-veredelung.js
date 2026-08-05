@@ -77,6 +77,7 @@ var FAMILIEN = Object.freeze({
     'schwebefels', 'sturzwurzel', 'moewe', 'rankengleiter'
   ])
 });
+export var BESTAND_KATALOG_FAMILIEN = FAMILIEN;
 
 export var BESTAND_KATALOG_VERFEINERTE_POOLS = Object.freeze(
   Object.values(FAMILIEN).flat()
@@ -394,27 +395,31 @@ function requisitenDetails(name, b, v) {
 }
 
 function tiereDetails(name, b, v) {
-  var x = b.cx + b.sx * 0.58;
   if (name === 'ochsengespann' || name === 'kutsche') {
     return [
-      stab(x, b.minY + b.sy * 0.26, b.cz, PI / 2, 0, 0,
-        b.sx * 0.1, b.sy * 0.72 * v, b.sz * 0.1, 0x684b39),
-      ring(x, b.minY + b.sy * 0.22, b.cz - b.sz * 0.24, 0, 0, 0,
-        b.sx * 0.38, b.sy * 0.38, b.sz * 0.12, 0x574338),
-      ring(x, b.minY + b.sy * 0.22, b.cz + b.sz * 0.24, 0, 0, 0,
-        b.sx * 0.38, b.sy * 0.38, b.sz * 0.12, 0x574338)
+      stab(b.cx, b.minY + b.sy * 0.3, b.cz + b.sz * 0.55,
+        PI / 2, 0, 0, b.sx * 0.045, b.sy * 0.62 * v, b.sz * 0.045, 0x684b39),
+      ring(b.cx - b.sx * 0.42, b.minY + b.sy * 0.23, b.cz - b.sz * 0.25,
+        0, 0, 0, b.sx * 0.3, b.sy * 0.3, b.sz * 0.1, 0x574338),
+      ring(b.cx + b.sx * 0.42, b.minY + b.sy * 0.23, b.cz - b.sz * 0.25,
+        0, 0, 0, b.sx * 0.3, b.sy * 0.3, b.sz * 0.1, 0x574338)
     ];
   }
-  return [
-    stab(x - b.sx * 0.1, b.minY + b.sy * 0.19, b.cz - b.sz * 0.1,
-      0, 0, 0.04, b.sx * 0.075, b.sy * 0.38 * v, b.sz * 0.075, 0x74513d),
-    stab(x + b.sx * 0.1, b.minY + b.sy * 0.19, b.cz + b.sz * 0.1,
-      0, 0, -0.04, b.sx * 0.075, b.sy * 0.38, b.sz * 0.075, 0x825c43),
-    knolle(x + b.sx * 0.16, b.minY + b.sy * 0.49, b.cz, 0, 0, 0,
-      b.sx * 0.32, b.sy * 0.27, b.sz * 0.27, 0x967051),
-    spitze(x + b.sx * 0.28, b.minY + b.sy * 0.57, b.cz - b.sz * 0.1,
-      0, 0, -0.75, b.sx * 0.1, b.sy * 0.24, b.sz * 0.1, 0xe5d2ae)
+  var hell = name === 'schaf' ? 0xd8d2bd : (name === 'rind' ? 0x8c6b51 : 0xac8764);
+  var kopfZ = b.cz + b.sz * 0.54;
+  var parts = [
+    stab(b.cx, b.minY + b.sy * 0.7, b.cz + b.sz * 0.34,
+      -0.55, 0, 0, b.sx * 0.16, b.sy * 0.48 * v, b.sz * 0.16, hell),
+    knolle(b.cx, b.minY + b.sy * 0.86, kopfZ, -0.08, 0, 0,
+      b.sx * 0.38, b.sy * 0.23, b.sz * 0.28, hell),
+    spitze(b.cx - b.sx * 0.14, b.minY + b.sy * 0.98, kopfZ - b.sz * 0.05,
+      0.2, 0, -0.24, b.sx * 0.1, b.sy * 0.2, b.sz * 0.09, 0x59483b),
+    spitze(b.cx + b.sx * 0.14, b.minY + b.sy * 0.98, kopfZ - b.sz * 0.05,
+      0.2, 0, 0.24, b.sx * 0.1, b.sy * 0.2, b.sz * 0.09, 0x59483b),
+    stab(b.cx, b.minY + b.sy * 0.58, b.cz - b.sz * 0.54,
+      0.8, 0, 0, b.sx * 0.045, b.sy * 0.36, b.sz * 0.045, 0x5e493b)
   ];
+  return parts;
 }
 
 function wasserfloraDetails(name, b, v) {

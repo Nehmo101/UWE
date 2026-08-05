@@ -75,6 +75,18 @@ describe("consolidateIngredients", () => {
     ]);
     assert.deepEqual(result.map((r) => r.name), ["Mehl", "Zucker"]);
   });
+
+  it("keeps the earliest first-use date across merged occurrences", () => {
+    const monday = new Date("2026-06-29T00:00:00Z");
+    const friday = new Date("2026-07-03T00:00:00Z");
+    const result = consolidateIngredients([
+      ing({ name: "Paprika", normalizedName: "paprika", amount: 1, unit: "piece", firstUseDate: friday }),
+      ing({ name: "Paprika", normalizedName: "paprika", amount: 2, unit: "piece", firstUseDate: monday }),
+      ing({ name: "Salz", normalizedName: "salz" }),
+    ]);
+    assert.equal(result[0].firstUseDate?.toISOString(), monday.toISOString());
+    assert.equal(result[1].firstUseDate, null);
+  });
 });
 
 describe("groupByCategory", () => {
