@@ -111,8 +111,13 @@ Navigation in `apps/family/src/navigation/family-nav.ts`, vier Abschnitte:
 | Verwaltung | `/members` · `/health` · `/account` |
 
 **Family-API v1** unter `apps/family/app/api/v1/`: `members`, `calendar`,
-`shopping`, `recipes`, `health`, `day-brief`. Das ist die token-authentifizierte
-Außenseite, die auch der MCP-Server benutzt — dokumentiert in `docs/family/api.md`.
+`shopping`, `recipes`, `meal-plan`, `health`, `day-brief`. Das ist die
+token-authentifizierte Außenseite, die auch der MCP-Server benutzt — dokumentiert
+in `docs/family/api.md`. Schreiben können externe Clients inzwischen mehr als
+Anlegen: Einkaufspositionen abhaken (`PATCH shopping/items/{id}`, Zielwert statt
+Toggle) und lokale Termine ändern/löschen (`PATCH`/`DELETE calendar/events/{id}`;
+Abo-/CalDAV-Termine antworten mit 409). Die Middleware lässt `/api/v1/*` mit
+Bearer-Header durch — CORS gibt es keins, ein Kiosk proxied serverseitig.
 
 **Tagesstand** (`/briefing`, `family_day_brief`): fasst Termine je Person,
 Geburtstage, Essensplan, offene Einkaufsliste und fällige Wartungsaufgaben in einem

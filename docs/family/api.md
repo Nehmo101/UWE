@@ -12,24 +12,48 @@ laufenden App.
 | `family_write` | Termine anlegen, Einkauf ergänzen, Akte ergänzen, Mitglieder ohne Konto anlegen |
 | `family_calendar` | Kalender-Abos auflisten, anlegen, widerrufen |
 
-Token erzeugen: **Studio → Admin → API-Tokens**.
+Token erzeugen: im **Command Center** (Ops-Aktion `api-tokens-create`; CLI:
+`tools/uwe-host-command-center` → `ops-cli api-tokens-create`). Der Klartext
+erscheint genau einmal in der Antwort.
 
 ## Endpunkte
 
 ```
-GET  /api/v1/members                     family_read
-POST /api/v1/members                     family_write
-GET  /api/v1/calendar/events             family_read
-POST /api/v1/calendar/events             family_write
-GET  /api/v1/shopping/items              family_read
-POST /api/v1/shopping/items              family_write
-GET  /api/v1/recipes                     family_read
-GET  /api/v1/day-brief                   family_read
-GET  /api/v1/health                      family_read
-POST /api/v1/health                      family_write
-GET  /api/v1/calendar/subscriptions      family_calendar
-POST /api/v1/calendar/subscriptions      family_calendar
+GET    /api/v1/members                     family_read
+POST   /api/v1/members                     family_write
+GET    /api/v1/calendar/events             family_read
+POST   /api/v1/calendar/events             family_write
+PATCH  /api/v1/calendar/events/{id}        family_write
+DELETE /api/v1/calendar/events/{id}        family_write
+GET    /api/v1/shopping/items              family_read
+POST   /api/v1/shopping/items              family_write
+PATCH  /api/v1/shopping/items/{id}         family_write
+GET    /api/v1/recipes                     family_read
+GET    /api/v1/recipes/{id}                family_read
+GET    /api/v1/recipes/{id}/image          family_read
+GET    /api/v1/meal-plan                   family_read
+GET    /api/v1/day-brief                   family_read
+GET    /api/v1/health                      family_read
+POST   /api/v1/health                      family_write
+GET    /api/v1/calendar/subscriptions      family_calendar
+POST   /api/v1/calendar/subscriptions      family_calendar
 ```
+
+`PATCH`/`DELETE` auf Termine gilt nur für den lokalen Feed: Einträge aus ICS-Abos
+oder fremden CalDAV-Feeds antworten mit 409 — der nächste Sync würde die Änderung
+kommentarlos überschreiben. `PATCH /shopping/items/{id}` nimmt `{"checked": true|false}`
+als **Zielwert**, kein Toggle — ein Client mit veraltetem Cache darf nichts umkehren.
+`GET /meal-plan?year=&week=` liefert die ganze ISO-Woche (Default: aktuelle Woche);
+eine Woche ohne Plan ist `entries: []`, kein 404.
+
+## Externe Clients: Bearer, kein CORS
+
+Die Middleware lässt `/api/v1/*` mit `Authorization: Bearer …` bis zum Route-Handler
+durch (der Token samt Scopes prüft); ohne Token und ohne Sitzung antwortet die Fläche
+mit 401. Die v1-Routen setzen **keine CORS-Header** und beantworten kein `OPTIONS` —
+eine Browser-Seite von fremdem Origin kann sie nicht direkt per `fetch` lesen. Ein
+Kiosk oder Display holt die Daten deshalb **serverseitig** (eigener kleiner Proxy)
+und hält den Token damit zugleich aus dem Browser-JavaScript heraus.
 
 Beispiel:
 
@@ -83,9 +107,9 @@ fallen. Zusammengeführt wird in `packages/family-core/src/day-brief-service.ts`
 selbst enthält keine Logik.
 
 **Es gibt bewusst keinen tokenlosen Weg.** Ein Tagesplan verrät, wer wann nicht zu Hause
-ist — anders als beim ICS-Abo (`/api/family/calendar/feed/[token]`, eigener Token-Typ) gibt
+ist — anders als beim ICS-Abo (`/api/calendar/feed/[token]`, eigener Token-Typ) gibt
 es hier keine Ausnahme von der Bearer-Regel. Ein Display braucht also einen Token mit
-`family_read` aus Studio → Admin → API-Tokens.
+`family_read` aus dem Command Center.
 
 ## Ein Guard, zwei Aufrufer
 
