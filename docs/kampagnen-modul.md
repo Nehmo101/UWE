@@ -234,9 +234,10 @@ und Service-Arbeit, kein Datenumzug.
 |---|---|---|
 | **0 — Bugfixes** ✅ | Druck-Buttons (Route-Allowlist + Matcher-Fix), Session-Löschung, RBAC-Guards für Radar/Dungeons/Open-Items | nein |
 | **1 — Zusammenlegen** ✅ | Radar-Karten (Dungeons, NSC-Stand) in den Kampagnen-Überblick, `/radar`-Redirect, Nav auf einen Eintrag „Kampagnen", Radar-Service aufgelöst (Overview erweitert, `formatClockLabel` → Kalender-Helfer), Weltuhr-Widget im Welt-Dashboard, „Vorbereiten" kampagnen-bewusst (`?campaign=` + `?sessionId=` echt), Akt-Tafel „Im Akt wichtig" aus Kapitel- + Quest-Texten | nein |
-| **2 — Session↔Kapitel + Spielabend** | Migration (oben), Kapitel-Dropdown an Session, Spielabend-Ansicht v1 (Akt-Tafel + Lesefläche + Protokoll), NSC-Pinnen | **ja** |
-| **3 — Portal-Notizen** | Session-Auswahl im Notizen-Panel, `take:1`-Kampagnen-Bug beheben, Tischmodus mit aktiver Session (Abschnitt 6) | nein |
-| **4 — Dungeon-Flow + Aufräumen** | Dungeon↔Kapitel-UI, Raum-Cockpit-Rückweg + Schnell-Protokoll, tote Radar-Links, zweite Nav-Quelle (`studio-navigation.ts`) konsolidieren, `campaigns/`-Stub entfernen | nein |
+| **2 — Session↔Kapitel + Spielabend** ✅ | Migration `kampagnen_session_story_arc` (GameSession.storyArcPageId + StoryArcEntityLink), Kapitel-Dropdown an Session (Default: aktuelles Kapitel), Akt-Tafel im Live-Modus (Quests mit Status-Schaltern, NSC/Orte/Fraktionen, Dungeons, offene Plots), NSC-Pinnen am Kapitel | **ja** |
+| **3 — Portal-Notizen** ✅ | Session-Auswahl im Notizen-Panel (Default: aktive Session, „Ohne Session" explizit), Kampagne folgt der Session (zentral in `createPlayerNoteForViewer`, deckt Formular UND Offline-Sync), Tischmodus hängt neue Notizen an die aktive Session des Abzugs | nein |
+| **4 — Dungeon-Flow** ✅ | Dungeon↔Kapitel-Zuordnung (parentPageId, Kampagne wandert mit), Kapitel-Seite + Akt-Tafel zeigen Kapitel-Dungeons, Dungeon-Seite verlinkt zurück ins Kapitel | nein |
+| **Rest (offen)** | Raum-Cockpit-Schnell-Protokoll in die Live-Session, zweite Nav-Quelle (`studio-navigation.ts`) konsolidieren, `campaigns/`-Stub-Rückbau, One-Shot mit Kampagne, `PlayerQuestion.campaignId` als echte FK, doc-import erzeugt story_arc | nein |
 
 Jede Etappe zieht die Bereichs-Skills nach (`pnpm skills:sync` +
 Prosa-Teil), sonst wird der Build rot.

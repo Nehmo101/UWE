@@ -103,8 +103,14 @@ Spielernotizen — private erreichen den Flow nie). Kapitel-Druck
 Fachlogik in `packages/campaign-cockpit`, Actions in
 `apps/studio/app/kampagnen-actions.ts`. „Session vorbereiten"
 (`/prepare-session`) versteht `?campaign=` (Kampagnen-Kontext samt aktuellem
-Kapitel) und `?sessionId=` (Vorauswahl). Konzept & Etappen:
-`docs/kampagnen-modul.md`. Die KI-Werkstatt des Cockpits (AiContextPanel
+Kapitel) und `?sessionId=` (Vorauswahl). Sessions tragen ihr Kapitel
+(`GameSession.storyArcPageId`, Vorschlag = aktuelles Kapitel); der Live-Modus
+zeigt darüber die **Akt-Tafel** (`SessionActBoard`): Quests mit
+Status-Schaltern (`returnTo=live`), NSC/Orte/Fraktionen aus Pins
+(`StoryArcEntityLink`, Verwaltung auf der Kapitel-Seite) plus
+`[[Wiki-Link]]`-Ableitung, Dungeons des Kapitels (Zuordnung über
+`parentPageId`, `assignDungeonToArcAction`) und offene Plots. Konzept &
+Etappen: `docs/kampagnen-modul.md`. Die KI-Werkstatt des Cockpits (AiContextPanel
 `kind="campaign"`) bietet zwei Brain-Aktionen mit `requiresCampaign`:
 `campaign_chapter_draft` (Apply → neue `story_arc`-Seite) und
 `campaign_session_hooks` (Apply → `openPlots` der nächsten geplanten Session);

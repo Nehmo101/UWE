@@ -222,6 +222,51 @@ describe("campaign cockpit (integration)", () => {
     assert.equal(after?.pins.length, 0);
   });
 
+  it("assigns dungeons to a chapter and adopts the chapter's campaign", async () => {
+    const service = createCampaignCockpitService(db);
+    const overview = await service.getCampaignOverview(worldSlug, "himmelsrouten");
+    assert.ok(overview);
+    const chapter = overview.chapters[0];
+
+    // „Alte Mine" wurde oben ohne Kampagne angelegt — beim Zuordnen wandert
+    // sie in die Kampagne des Kapitels.
+    const mine = await db.page.findFirst({ where: { worldId, slug: "alte-mine" } });
+    assert.ok(mine);
+    await service.assignDungeonToChapter(worldId, mine.id, chapter.id);
+
+    const view = await service.getChapterView(worldSlug, "himmelsrouten", chapter.slug, {
+      wikiIndex: [],
+      graph: null,
+    });
+    assert.ok(view);
+    assert.equal(view.dungeons.length, 1);
+    assert.equal(view.dungeons[0].title, "Alte Mine");
+    assert.ok(!view.assignableDungeons.some((dungeon) => dungeon.id === mine.id));
+
+    const assigned = await db.page.findUnique({ where: { id: mine.id } });
+    assert.equal(assigned?.campaignId, campaignId);
+    assert.equal(assigned?.parentPageId, chapter.id);
+
+    // Lösen: Kante fällt, die Kampagnen-Zuordnung bleibt bewusst stehen.
+    await service.assignDungeonToChapter(worldId, mine.id, null);
+    const detachedView = await service.getChapterView(worldSlug, "himmelsrouten", chapter.slug, {
+      wikiIndex: [],
+      graph: null,
+    });
+    assert.equal(detachedView?.dungeons.length, 0);
+    const detached = await db.page.findUnique({ where: { id: mine.id } });
+    assert.equal(detached?.parentPageId, null);
+    assert.equal(detached?.campaignId, campaignId);
+
+    // Nur echte Dungeons: eine Quest-Seite wird abgelehnt.
+    const quest = await db.page.findFirst({ where: { worldId, type: "quest" } });
+    assert.ok(quest);
+    await assert.rejects(
+      service.assignDungeonToChapter(worldId, quest.id, chapter.id),
+      /Dungeon nicht gefunden/,
+    );
+  });
+
   it("derives the act board from the chapter text itself", async () => {
     const service = createCampaignCockpitService(db);
     const created = await service.createChapter({

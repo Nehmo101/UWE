@@ -12,17 +12,15 @@ import {
   parseWorldCalendarMonths,
   renderPageContentHtml,
   suggestSlugFromTitle,
-  type InGameDate,
 } from "@uwe/database/server";
 import { buildPageUrl } from "@uwe/database/page-types";
 import type { WorldWikiGraph } from "@uwe/database/page-service";
-import { chapterProgress, compareChapterOrder, type ChapterProgress } from "./chapter-helpers";
+import { chapterProgress, compareChapterOrder } from "./chapter-helpers";
 import {
   deriveQuestBacklinks,
   deriveQuestRelations,
   mergeQuestRelations,
   type QuestRelations,
-  type QuestRelationTarget,
 } from "./quest-relations";
 
 /*
@@ -35,109 +33,29 @@ import {
 
 export const STORY_ARC_TYPE = "story_arc" as const;
 
-export interface ChapterSummary {
-  id: string;
-  title: string;
-  slug: string;
-  summary: string | null;
-  prepStatus: DungeonPrepStatus | null;
-  sortIndex: number | null;
-  href: string;
-  questCounts: { open: number; completed: number; failed: number; total: number };
-}
-
-export interface CockpitQuest {
-  id: string;
-  title: string;
-  slug: string;
-  href: string;
-  status: QuestLifecycleStatus;
-  chapterId: string | null;
-}
-
-export interface CockpitFaction {
-  pageId: string;
-  title: string;
-  href: string;
-  agenda: string;
-  powerLevel: number | null;
-}
-
-export interface CockpitSessionRef {
-  id: string;
-  title: string;
-  sessionNumber: number;
-  date: Date | null;
-  status: string;
-  href: string;
-}
-
-export interface CockpitEvent {
-  id: string;
-  title: string;
-  summary: string;
-  inGameDate: InGameDate;
-  dateLabel: string;
-}
-
-/** Dungeon dieser Kampagne — vom aufgelösten Kampagnen-Radar hierher gezogen. */
-export interface CockpitDungeon {
-  id: string;
-  title: string;
-  slug: string;
-  href: string;
-  summary: string | null;
-  prepStatus: DungeonPrepStatus | null;
-}
-
-export interface CampaignOverview {
-  campaign: Campaign;
-  worldId: string;
-  chapters: ChapterSummary[];
-  unassignedQuests: CockpitQuest[];
-  factions: CockpitFaction[];
-  lastSession: CockpitSessionRef | null;
-  nextSession: CockpitSessionRef | null;
-  recentEvents: CockpitEvent[];
-  noteQueueCount: number;
-  canonConflicts: number;
-  progress: ChapterProgress;
-  dungeons: CockpitDungeon[];
-  npcSummary: { total: number; flagged: number };
-}
-
-export interface ChapterQuest extends CockpitQuest {
-  relations: QuestRelations;
-  linkedEvents: Array<{ eventId: string; title: string; role: string; roleLabel: string }>;
-}
-
-export interface ChapterView {
-  campaign: Campaign;
-  chapter: {
-    id: string;
-    title: string;
-    slug: string;
-    summary: string | null;
-    prepStatus: DungeonPrepStatus | null;
-    sortIndex: number | null;
-  };
-  html: string;
-  quests: ChapterQuest[];
-  backlinks: QuestRelationTarget[];
-  /** Kampagnen-Quests außerhalb dieses Kapitels — fürs „Quest zuordnen"-Select. */
-  assignableQuests: Array<{ id: string; title: string }>;
-  /**
-   * NSC-Tafel des ganzen Akts: explizit gepinnte Seiten zuerst, dann
-   * [[Wiki-Links]] aus dem Kapiteltext selbst plus alle Quest-Texte,
-   * dedupliziert. Der Kapiteltext zählte früher nicht mit — wer den
-   * Bösewicht nur im Akt-Text erwähnte, sah ihn nirgends.
-   */
-  actRelations: QuestRelations;
-  /** Explizit gepinnte Seiten (StoryArcEntityLink) — für die Pin-Verwaltung. */
-  pins: Array<{ id: string; role: string; target: QuestRelationTarget }>;
-  /** Dungeons, die per parentPageId an diesem Kapitel hängen. */
-  dungeons: CockpitDungeon[];
-}
+// View-Typen wohnen in cockpit-types.ts (Datei-Budget); Re-Export hält alle
+// Bestandsimporte über diesen Modulpfad gültig.
+export type {
+  CampaignCockpitSummary,
+  CampaignOverview,
+  ChapterQuest,
+  ChapterSummary,
+  ChapterView,
+  CockpitDungeon,
+  CockpitEvent,
+  CockpitFaction,
+  CockpitQuest,
+  CockpitSessionRef,
+} from "./cockpit-types";
+import type {
+  CampaignCockpitSummary,
+  CampaignOverview,
+  ChapterQuest,
+  ChapterSummary,
+  ChapterView,
+  CockpitQuest,
+  CockpitSessionRef,
+} from "./cockpit-types";
 
 const EVENT_ROLE_LABELS: Record<string, string> = {
   primary: "Hauptakteur",
@@ -150,13 +68,6 @@ const EVENT_ROLE_LABELS: Record<string, string> = {
 
 function questStatus(value: string | null): QuestLifecycleStatus {
   return (value ?? "open") as QuestLifecycleStatus;
-}
-
-export interface CampaignCockpitSummary {
-  campaignId: string;
-  progress: ChapterProgress;
-  openQuests: number;
-  lastSession: { sessionNumber: number; title: string } | null;
 }
 
 export class CampaignCockpitService {
@@ -461,7 +372,7 @@ export class CampaignCockpitService {
     });
     if (!chapter) return null;
 
-    const [quests, campaignQuests, pinLinks, chapterDungeons] = await Promise.all([
+    const [quests, campaignQuests, pinLinks, chapterDungeons, worldDungeons] = await Promise.all([
       this.db.page.findMany({
         where: { worldId: campaign.worldId, parentPageId: chapter.id, type: "quest" },
         include: { contentBlocks: { orderBy: { sortOrder: "asc" } }, campaign: true },
@@ -485,6 +396,15 @@ export class CampaignCockpitService {
       this.db.page.findMany({
         where: { worldId: campaign.worldId, parentPageId: chapter.id, type: "dungeon" },
         select: { id: true, title: true, slug: true, summary: true, prepStatus: true },
+        orderBy: { title: "asc" },
+      }),
+      this.db.page.findMany({
+        where: {
+          worldId: campaign.worldId,
+          type: "dungeon",
+          NOT: { parentPageId: chapter.id },
+        },
+        select: { id: true, title: true },
         orderBy: { title: "asc" },
       }),
     ]);
@@ -578,6 +498,7 @@ export class CampaignCockpitService {
         summary: dungeon.summary,
         prepStatus: dungeon.prepStatus,
       })),
+      assignableDungeons: worldDungeons,
     };
   }
 
@@ -690,6 +611,41 @@ export class CampaignCockpitService {
     await this.db.page.update({
       where: { id: questId },
       data: { parentPageId: chapterId },
+    });
+  }
+
+  /**
+   * Dungeon einem Kapitel zuordnen (F6: eigenes Werkzeug, bessere Verbindung).
+   * Dieselbe Kante wie bei Quests (`parentPageId`); beim Zuordnen wandert der
+   * Dungeon zusätzlich in die Kampagne des Kapitels, damit Filter und
+   * Kampagnen-Überblick ihn führen. Lösen (`chapterId: null`) lässt die
+   * Kampagnen-Zuordnung stehen.
+   */
+  async assignDungeonToChapter(
+    worldId: string,
+    dungeonId: string,
+    chapterId: string | null,
+  ): Promise<void> {
+    const dungeon = await this.db.page.findFirst({
+      where: { id: dungeonId, worldId, type: "dungeon" },
+      select: { id: true },
+    });
+    if (!dungeon) throw new Error("Dungeon nicht gefunden.");
+    let campaignId: string | null | undefined;
+    if (chapterId) {
+      const chapter = await this.db.page.findFirst({
+        where: { id: chapterId, worldId, type: STORY_ARC_TYPE },
+        select: { id: true, campaignId: true },
+      });
+      if (!chapter) throw new Error("Kapitel nicht gefunden.");
+      campaignId = chapter.campaignId;
+    }
+    await this.db.page.update({
+      where: { id: dungeonId },
+      data: {
+        parentPageId: chapterId,
+        ...(campaignId !== undefined ? { campaignId } : {}),
+      },
     });
   }
 }

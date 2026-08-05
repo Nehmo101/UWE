@@ -237,6 +237,29 @@ export async function assignQuestToArcAction(formData: FormData) {
   redirect(`${returnPath}?saved=1`);
 }
 
+/** Dungeon einem Kapitel zuordnen/lösen — dieselbe Kante wie bei Quests. */
+export async function assignDungeonToArcAction(formData: FormData) {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  const campaignSlug = String(formData.get("campaignSlug"));
+  const kapitelSlug = String(formData.get("kapitelSlug"));
+  const dungeonId = String(formData.get("dungeonId"));
+  const chapterId = String(formData.get("chapterId") || "") || null;
+  await requireStudioContentEdit(worldSlug, dungeonId);
+
+  const campaign = await requireCampaign(worldSlug, campaignSlug);
+  await createCampaignCockpitService(prisma).assignDungeonToChapter(
+    campaign.worldId,
+    dungeonId,
+    chapterId,
+  );
+
+  const kapitelPath = `${cockpitPath(worldSlug, campaignSlug)}/kapitel/${kapitelSlug}`;
+  revalidatePath(kapitelPath);
+  revalidatePath(cockpitPath(worldSlug, campaignSlug));
+  redirect(`${kapitelPath}?saved=1#kapitel-dungeons`);
+}
+
 /**
  * Seite an ein Kapitel pinnen (Akt-Tafel). Die Rolle leitet der Service aus
  * dem Seitentyp ab; erlaubt sind NSC-, Orts-, Fraktions- und Handout-Seiten.

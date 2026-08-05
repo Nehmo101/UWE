@@ -14,6 +14,7 @@ import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components
 import { campaignCockpitBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { requireStudioWorldRead } from "@/src/lib/authz";
 import {
+  assignDungeonToArcAction,
   assignQuestToArcAction,
   pinPageToStoryArcAction,
   preparePrintListFromChapterAction,
@@ -250,7 +251,8 @@ export default async function ChapterCockpitPage({ params, searchParams }: Props
             )}
             <p className="mt-2 text-sm text-muted-foreground">
               Abgeleitet aus dem Kapiteltext und allen Quest-Texten dieses Akts — plus
-              gepinnte Seiten.
+              gepinnte Seiten. Am Spieltisch erscheint diese Tafel im Live-Modus der
+              Session.
             </p>
 
             <div className="mt-4 flex flex-col gap-3 border-t border-border pt-3">
@@ -305,6 +307,71 @@ export default async function ChapterCockpitPage({ params, searchParams }: Props
                 </form>
               ) : null}
             </div>
+          </CardContent>
+        </Card>
+
+        <Card id="kapitel-dungeons">
+          <CardHeader>
+            <CardTitle>Dungeons in diesem Kapitel</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {view.dungeons.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Kein Dungeon zugeordnet — der Spielabend zeigt Dungeons dieses Kapitels
+                direkt auf der Akt-Tafel.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-2 text-sm">
+                {view.dungeons.map((dungeon) => (
+                  <li key={dungeon.id} className="flex flex-wrap items-center gap-2">
+                    <Link href={dungeon.href}>{dungeon.title}</Link>
+                    <DungeonPrepStatusBadge status={dungeon.prepStatus} />
+                    {dungeon.summary ? (
+                      <span className="text-muted-foreground"> — {dungeon.summary}</span>
+                    ) : null}
+                    <form action={assignDungeonToArcAction} className="inline-flex">
+                      <input type="hidden" name="worldSlug" value={worldSlug} />
+                      <input type="hidden" name="campaignSlug" value={campaignSlug} />
+                      <input type="hidden" name="kapitelSlug" value={kapitelSlug} />
+                      <input type="hidden" name="dungeonId" value={dungeon.id} />
+                      <input type="hidden" name="chapterId" value="" />
+                      <Button type="submit" variant="ghost" size="sm">
+                        Lösen
+                      </Button>
+                    </form>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {view.assignableDungeons.length > 0 ? (
+              <form
+                action={assignDungeonToArcAction}
+                className="mt-3 flex flex-wrap items-center gap-2"
+              >
+                <input type="hidden" name="worldSlug" value={worldSlug} />
+                <input type="hidden" name="campaignSlug" value={campaignSlug} />
+                <input type="hidden" name="kapitelSlug" value={kapitelSlug} />
+                <input type="hidden" name="chapterId" value={chapter.id} />
+                {/* TODO(design-kit): natives Select — Leerwert nötig. */}
+                <select name="dungeonId" required className={NATIVE_SELECT_CLASS}>
+                  <option value="">Dungeon diesem Kapitel zuordnen…</option>
+                  {view.assignableDungeons.map((dungeon) => (
+                    <option key={dungeon.id} value={dungeon.id}>
+                      {dungeon.title}
+                    </option>
+                  ))}
+                </select>
+                <Button type="submit" variant="ghost" size="sm">
+                  Zuordnen
+                </Button>
+              </form>
+            ) : (
+              <p className="mt-3 text-sm text-muted-foreground">
+                <Link href={`${base}/dungeons/new?campaign=${campaignSlug}`}>
+                  Neuen Dungeon anlegen →
+                </Link>
+              </p>
+            )}
           </CardContent>
         </Card>
 

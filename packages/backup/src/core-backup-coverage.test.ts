@@ -71,6 +71,7 @@ const CORE_MODELS_NOT_BACKED_UP = new Set([
   "RollTable", // GAP
   "SessionAvailability", // GAP
   "SessionLiveEntry", // GAP
+  "StoryArcEntityLink", // GAP — Akt-Tafel-Pins, wie WorldEventEntityLink nur im Roh-Snapshot
   "StructuredItem", // GAP
   "StructuredStatblock", // GAP
   "Tag", // GAP
