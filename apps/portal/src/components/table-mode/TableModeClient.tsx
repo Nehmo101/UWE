@@ -161,14 +161,20 @@ export function TableModeClient() {
 
   const handleCreate = useCallback(
     async (content: string) => {
-      if (!snapshot?.campaignId) return;
+      if (!snapshot) return;
+      // Neue Notizen hängen an der aktiven Session des Abzugs — dadurch stimmt
+      // auch die Kampagne. Ältere Abzüge ohne activeSession fallen auf die
+      // Welt-Kampagne zurück (Notiz ohne Session-Bezug).
+      const activeSession = snapshot.activeSession ?? null;
+      const campaignId = activeSession?.campaignId ?? snapshot.campaignId;
+      if (!campaignId) return;
       await addToQueue({
         op: "create",
         clientRef: newClientRef(),
-        campaignId: snapshot.campaignId,
+        campaignId,
         content,
         pageId: null,
-        gameSessionId: null,
+        gameSessionId: activeSession?.id ?? null,
         clientUpdatedAt: new Date().toISOString(),
       });
     },

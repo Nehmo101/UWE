@@ -33,6 +33,8 @@ export default async function PortalPlayerNotesPage({ params }: Props) {
   let notes;
   let canComment = false;
   let campaignId: string | null = null;
+  let sessionOptions: Array<{ id: string; label: string }> = [];
+  let activeSessionId: string | null = null;
   const userId = user?.id ?? null;
 
   try {
@@ -49,12 +51,28 @@ export default async function PortalPlayerNotesPage({ params }: Props) {
     notes = await auth.listPlayerNotesForViewer(worldSlug, ctx);
     canComment = canCreatePlayerNote(ctx);
 
-    const campaigns = await db.campaign.findMany({
-      where: { world: { slug: worldSlug } },
-      select: { id: true },
-      take: 1,
-    });
-    campaignId = campaigns[0]?.id ?? null;
+    // Session-Bezug (F5): sichtbare Sessions als Auswahl, vorausgewählt die
+    // aktive (jüngste). Die Kampagne folgt der Session — früher wurde stumpf
+    // die erste Kampagne der Welt genommen, bei mehreren Kampagnen landeten
+    // Notizen damit in der falschen.
+    const sessions = [...(await auth.listGameSessionsForViewer(worldSlug, ctx))].sort(
+      (a, b) => b.sessionNumber - a.sessionNumber,
+    );
+    sessionOptions = sessions.map((session) => ({
+      id: session.id,
+      label: `Session ${session.sessionNumber}: ${session.title}`,
+    }));
+    activeSessionId = sessions[0]?.id ?? null;
+    campaignId = sessions[0]?.campaignId ?? null;
+
+    if (!campaignId) {
+      const campaigns = await db.campaign.findMany({
+        where: { world: { slug: worldSlug } },
+        select: { id: true },
+        take: 1,
+      });
+      campaignId = campaigns[0]?.id ?? null;
+    }
   } finally {
     await db.$disconnect();
   }
@@ -80,6 +98,8 @@ export default async function PortalPlayerNotesPage({ params }: Props) {
           notes={myNotes}
           currentUserId={userId}
           canComment={canComment}
+          sessions={sessionOptions}
+          defaultSessionId={activeSessionId}
           returnPath={returnPath}
         />
       ) : (

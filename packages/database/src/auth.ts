@@ -1334,13 +1334,30 @@ export class AuthService {
       return null;
     }
 
+    // Session-Bezug: nur Sessions DIESER Welt; die Kampagne folgt der Session,
+    // damit Notizen nie in der falschen Kampagne landen (Formular und
+    // Offline-Sync laufen beide hier durch).
+    let campaignId = input.campaignId;
+    let gameSessionId = input.gameSessionId ?? null;
+    if (gameSessionId) {
+      const session = await this.db.gameSession.findFirst({
+        where: { id: gameSessionId, worldId: world.id },
+        select: { campaignId: true },
+      });
+      if (!session) {
+        gameSessionId = null;
+      } else if (session.campaignId) {
+        campaignId = session.campaignId;
+      }
+    }
+
     const note = await this.playerNotes.create({
       worldId: world.id,
-      campaignId: input.campaignId,
+      campaignId,
       userId: ctx.user.id,
       content: input.content,
       pageId: input.pageId,
-      gameSessionId: input.gameSessionId,
+      gameSessionId,
       clientRef: input.clientRef,
     });
 

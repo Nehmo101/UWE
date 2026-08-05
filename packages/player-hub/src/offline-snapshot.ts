@@ -51,12 +51,25 @@ export interface PortalOfflineNote {
   own: boolean;
 }
 
+/** Die aktive Session zum Zeitpunkt des Abzugs — neue Notizen hängen daran. */
+export interface PortalOfflineActiveSession {
+  id: string;
+  campaignId: string | null;
+  title: string;
+  sessionNumber: number;
+}
+
 export interface PortalOfflineSnapshot {
   version: number;
   snapshotAt: string;
   world: { slug: string; name: string };
   /** Ohne Kampagne kann offline nichts Neues angelegt werden. */
   campaignId: string | null;
+  /**
+   * Jüngste für Spieler sichtbare Session. Optional, weil ältere Abzüge das
+   * Feld nicht tragen — fehlt es, entstehen Notizen ohne Session-Bezug.
+   */
+  activeSession?: PortalOfflineActiveSession | null;
   viewerUserId: string | null;
   characters: PortalCharacterView[];
   notes: PortalOfflineNote[];
@@ -89,6 +102,7 @@ export interface BuildPortalOfflineSnapshotInput {
   snapshotAt: Date;
   world: { slug: string; name: string };
   campaignId: string | null;
+  activeSession?: PortalOfflineActiveSession | null;
   viewerUserId: string | null;
   characters: readonly PortalCharacterView[];
   notes: readonly PlayerNoteLike[];
@@ -133,6 +147,7 @@ export function buildPortalOfflineSnapshot(
     snapshotAt: input.snapshotAt.toISOString(),
     world: input.world,
     campaignId: input.campaignId,
+    activeSession: input.activeSession ?? null,
     viewerUserId: input.viewerUserId,
     characters: [...input.characters],
     notes,

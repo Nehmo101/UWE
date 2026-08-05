@@ -14,6 +14,14 @@ interface PlayerNotesPanelProps {
   canComment: boolean;
   pageId?: string;
   gameSessionId?: string;
+  /**
+   * Frei wählbarer Session-Bezug (F5): Liste der für Spieler sichtbaren
+   * Sessions als Dropdown. Vorausgewählt ist die aktive Session
+   * (`defaultSessionId`) — keine Auswahl nötig, „Ohne Session" ist explizit.
+   * Nur wirksam, wenn kein festes `gameSessionId` gesetzt ist.
+   */
+  sessions?: Array<{ id: string; label: string }>;
+  defaultSessionId?: string | null;
   returnPath: string;
 }
 
@@ -25,6 +33,8 @@ export function PlayerNotesPanel({
   canComment,
   pageId,
   gameSessionId,
+  sessions,
+  defaultSessionId,
   returnPath,
 }: PlayerNotesPanelProps) {
   return (
@@ -83,7 +93,25 @@ export function PlayerNotesPanel({
           <input type="hidden" name="campaignId" value={campaignId} />
           <input type="hidden" name="returnPath" value={returnPath} />
           {pageId && <input type="hidden" name="pageId" value={pageId} />}
-          {gameSessionId && <input type="hidden" name="gameSessionId" value={gameSessionId} />}
+          {gameSessionId ? (
+            <input type="hidden" name="gameSessionId" value={gameSessionId} />
+          ) : sessions && sessions.length > 0 ? (
+            <>
+              <label htmlFor="note-session">Session</label>
+              <select
+                id="note-session"
+                name="gameSessionId"
+                defaultValue={defaultSessionId ?? ""}
+              >
+                <option value="">Ohne Session</option>
+                {sessions.map((session) => (
+                  <option key={session.id} value={session.id}>
+                    {session.label}
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : null}
           <label htmlFor="note-content">Neue Notiz</label>
           <textarea
             id="note-content"

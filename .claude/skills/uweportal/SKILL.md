@@ -67,6 +67,13 @@ Wer hier etwas ändert, muss an beides denken: Snapshot **und** Sync. Ein Snapsh
 der mehr enthält als die Spielersicht, ist ein Leak — der Offline-Store liegt im
 Browser des Spielers.
 
+Notizen hängen an Sessions: der Snapshot trägt die **aktive Session** (jüngste
+für Spieler sichtbare, `activeSession` im `PortalOfflineSnapshot`), der
+Tischmodus hängt neue Notizen daran; die Notizen-Übersicht bietet die Session
+als Dropdown an (Default: aktive Session, „Ohne Session" explizit). Die
+Kampagne folgt dabei serverseitig immer der Session — zentral in
+`createPlayerNoteForViewer`, Sessions fremder Welten werden verworfen.
+
 ## Aufbau
 
 Navigation in `apps/portal/src/navigation/portal-nav.ts`: `PORTAL_NAV` (Weltenliste,

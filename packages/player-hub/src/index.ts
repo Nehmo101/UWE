@@ -14,6 +14,7 @@ export {
   PORTAL_OFFLINE_SNAPSHOT_VERSION,
   type BuildPortalOfflineSnapshotInput,
   type PlayerNoteLike,
+  type PortalOfflineActiveSession,
   type PortalOfflineNote,
   type PortalOfflineSnapshot,
 } from "./offline-snapshot";

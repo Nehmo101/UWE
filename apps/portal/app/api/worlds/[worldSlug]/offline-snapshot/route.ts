@@ -52,19 +52,32 @@ export async function GET(
     assertPortalCanReadWorld(ctx, world.id);
 
     const auth = createAuthService(db);
-    const [characters, notes, treasury, campaigns] = await Promise.all([
+    const [characters, notes, treasury, sessions, campaigns] = await Promise.all([
       auth.listCharactersForViewer(worldSlug, ctx),
       auth.listPlayerNotesForViewer(worldSlug, ctx),
       createPartyTreasuryService(db).getForViewer(worldSlug, ctx),
-      // Ohne Kampagne lässt sich offline nichts Neues anlegen — die Kennung
-      // muss deshalb mit in den Abzug.
+      // Aktive Session: die jüngste für Spieler sichtbare — neue Notizen am
+      // Tisch hängen daran, und ihre Kampagne bestimmt die Zuordnung.
+      auth.listGameSessionsForViewer(worldSlug, ctx),
+      // Rückfallebene ohne sichtbare Session: erste Kampagne der Welt (wie
+      // bisher) — ohne Kampagne lässt sich offline nichts Neues anlegen.
       db.campaign.findMany({ where: { world: { slug: worldSlug } }, select: { id: true }, take: 1 }),
     ]);
+
+    const activeSession = [...sessions].sort((a, b) => b.sessionNumber - a.sessionNumber)[0];
 
     const snapshot = buildPortalOfflineSnapshot({
       snapshotAt: new Date(),
       world: { slug: worldSlug, name: world.name },
-      campaignId: campaigns[0]?.id ?? null,
+      campaignId: activeSession?.campaignId ?? campaigns[0]?.id ?? null,
+      activeSession: activeSession
+        ? {
+            id: activeSession.id,
+            campaignId: activeSession.campaignId,
+            title: activeSession.title,
+            sessionNumber: activeSession.sessionNumber,
+          }
+        : null,
       viewerUserId: ctx.user?.id ?? null,
       characters,
       notes,
