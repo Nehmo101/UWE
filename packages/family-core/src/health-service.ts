@@ -2,9 +2,10 @@
  * Gesundheits- und Tierarzt-Akte je Haushalts-Mitglied.
  *
  * Impfungen, Vorsorge, Medikamente, Tierarzt — für Menschen und Tiere
- * gleichermaßen, weil beide im Haushalt Termine erzeugen. Ein Eintrag mit
- * `nextDueOn` erscheint automatisch im Kalender und im ICS-Feed, ohne dass
- * jemand daraus von Hand einen Termin macht.
+ * gleichermaßen, weil beide im Haushalt Termine erzeugen. Ein Eintrag mit Datum
+ * erscheint automatisch im Kalender, ohne dass jemand daraus von Hand einen
+ * Termin macht (`health-calendar.ts`); der ICS-Feed nimmt davon nur die
+ * Fälligkeiten mit.
  */
 import type { FamilyPrismaClient } from "@uwe/database/family-client";
 import type { FamilyHealthRecordKind } from "./family-types";
@@ -72,6 +73,24 @@ export class FamilyHealthService {
     return this.db.familyHealthRecord.findMany({
       where: { nextDueOn: { not: null, gte: from, lte: until } },
       orderBy: { nextDueOn: "asc" },
+      include: { member: MEMBER_SELECT },
+    });
+  }
+
+  /**
+   * Alles, was in einem Zeitraum ein Datum trägt — Fälligkeit **oder**
+   * Vergangenes. Grundlage für den Monatskalender, der beides zeigt;
+   * `listDueUntil` bleibt für Feed und Briefing, die nur Fälligkeiten wollen.
+   */
+  async listInRange(from: Date, to: Date) {
+    return this.db.familyHealthRecord.findMany({
+      where: {
+        OR: [
+          { nextDueOn: { not: null, gte: from, lte: to } },
+          { occurredOn: { not: null, gte: from, lte: to } },
+        ],
+      },
+      orderBy: [{ nextDueOn: "asc" }, { occurredOn: "asc" }],
       include: { member: MEMBER_SELECT },
     });
   }

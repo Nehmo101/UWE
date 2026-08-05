@@ -8,8 +8,10 @@ import {
 import { familyPrisma } from "@uwe/database/family-client";
 import {
   attachMembersToEvents,
+  createFamilyHealthService,
   createFamilyMemberService,
   expandAnniversaries,
+  expandHealthOccurrences,
   resolveMemberColour,
 } from "@uwe/family-core";
 import { getFamilyUser } from "@/src/lib/page-family";
@@ -31,6 +33,10 @@ import {
  * iCal, FamilyWall) sind schreibgeschützt sichtbar: sie werden über die
  * Kalender-API angelegt und von einem Job abgeholt, nicht hier bearbeitet — eine
  * Änderung würde beim nächsten Sync überschrieben.
+ *
+ * Drei Quellen laufen zusammen: gespeicherte Termine, aufgespannte Geburtstage
+ * und die Gesundheitsakte. Die beiden aufgespannten sind hier nicht änderbar —
+ * sie gehören den Mitgliedern bzw. der Akte, nicht dem Kalender.
  */
 
 export const dynamic = "force-dynamic";
@@ -161,10 +167,12 @@ export default async function FamilyCalendarPage({
 
   const calendar = createCalendarService(familyPrisma, prisma);
   const memberService = createFamilyMemberService(familyPrisma);
-  const [rawEvents, feeds, memberRows] = await Promise.all([
+  const healthService = createFamilyHealthService(familyPrisma);
+  const [rawEvents, feeds, memberRows, healthRows] = await Promise.all([
     calendar.listEvents({ from: rangeStart, to: rangeEnd, limit: 400 }),
     calendar.listFeeds(true),
     memberService.listMembers(),
+    healthService.listInRange(rangeStart, rangeEnd),
   ]);
 
   const members: PickerMember[] = memberRows.map((row) => ({
@@ -189,6 +197,15 @@ export default async function FamilyCalendarPage({
     to: rangeEnd,
     colourOf: resolveMemberColour,
   }).filter((occurrence) => !activeMemberId || occurrence.memberId === activeMemberId);
+
+  // Die Gesundheitsakte wird genauso aufgespannt: Fälligkeiten und Vergangenes
+  // stehen im Monat, ohne dass daraus gespeicherte Termine werden.
+  const healthOccurrences = expandHealthOccurrences(healthRows, {
+    from: rangeStart,
+    to: rangeEnd,
+    colourOf: resolveMemberColour,
+    memberId: activeMemberId,
+  });
 
   const monthLabel = new Intl.DateTimeFormat("de-DE", {
     month: "long",
@@ -246,6 +263,14 @@ export default async function FamilyCalendarPage({
               memberNames: event.members.map((m) => m.displayName),
             })),
             ...anniversaries.map((occurrence) => ({
+              id: occurrence.uid,
+              title: occurrence.title,
+              startAt: occurrence.date.toISOString(),
+              allDay: true,
+              memberColours: [occurrence.colour],
+              memberNames: [occurrence.memberName],
+            })),
+            ...healthOccurrences.map((occurrence) => ({
               id: occurrence.uid,
               title: occurrence.title,
               startAt: occurrence.date.toISOString(),
@@ -326,6 +351,41 @@ export default async function FamilyCalendarPage({
           </ul>
         )}
       </section>
+
+      {healthOccurrences.length > 0 ? (
+        <section className="family-section">
+          <h2>Aus der Gesundheitsakte · {healthOccurrences.length}</h2>
+          <ul className="family-list">
+            {healthOccurrences.map((occurrence) => (
+              <li key={occurrence.uid} id={`event-${occurrence.uid}`} className="family-row">
+                <div className="family-row-head">
+                  <MemberDot colour={occurrence.colour} title={occurrence.memberName} />
+                  <strong>{occurrence.title}</strong>
+                  <span className="family-tag">{occurrence.kindLabel}</span>
+                  <span className="family-muted">
+                    {occurrence.memberName} ·{" "}
+                    {formatWhen(occurrence.date, true)}
+                    {occurrence.occurrenceKind === "due" ? " · fällig" : ""}
+                  </span>
+                  <Link
+                    href="/health"
+                    className="family-btn family-btn-ghost family-btn-sm"
+                    style={{ marginLeft: "auto" }}
+                  >
+                    Zur Akte
+                  </Link>
+                </div>
+                {occurrence.notes ? <p className="family-muted">{occurrence.notes}</p> : null}
+              </li>
+            ))}
+          </ul>
+          <p className="family-muted">
+            Das sind keine eigenständigen Termine, sondern die Akte im Kalender gespiegelt.
+            Geändert wird unter <Link href="/health">Gesundheit</Link> — dort verschwindet der
+            Eintrag auch wieder aus dem Monat.
+          </p>
+        </section>
+      ) : null}
 
       {externalFeeds.length > 0 ? (
         <section className="family-section">

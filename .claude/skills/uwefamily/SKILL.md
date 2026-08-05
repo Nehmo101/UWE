@@ -52,6 +52,10 @@ gibt es keinen Endpunkt, nicht nur kein Tool.
   `family_calendar_upcoming` spannt sie mit `includeAnniversaries` auf.
 - **Die Gesundheitsakte gilt auch für Tiere** — `family_health_due` liefert
   Impfungen und Vorsorge für Menschen und Katze gleichermaßen.
+- **Akteneinträge sind keine gespeicherten Termine, stehen aber im Kalender.**
+  `expandHealthOccurrences` spannt sie wie Geburtstage für den Zeitraum auf:
+  `nextDueOn` als „… fällig", `occurredOn` als Notiz. Geändert wird nur in der
+  Akte; das ICS-Abo bekommt weiterhin nur die Fälligkeiten.
 - **`family_shopping_list` ist zweistufig:** ohne `listId` die Übersicht, mit
   `listId` die Positionen. So zieht ein Blick auf die Listen nicht die Historie.
 - **Der Wocheneinkauf hat zwei Abschnitte** (`ShoppingListItem.trip`):
