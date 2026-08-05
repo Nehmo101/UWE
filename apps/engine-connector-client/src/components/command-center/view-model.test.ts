@@ -31,4 +31,30 @@ describe("commandCenterGuidance", () => {
 
     assert.equal(commandCenterGuidance(status).primaryAction, "setup");
   });
+
+  /*
+   * Der Kern des Fehlers vom 2026-08-04: Während eines Laufs fehlt zeitweise
+   * das Standalone-`server.js` der gerade gebauten App, `buildReady` kippt auf
+   * false — und der Hauptknopf lud zu einem zweiten Setup-Lauf ein.
+   */
+  it("never offers setup while a setup is already running", () => {
+    const status = buildMockHostStatus(false);
+    status.installation.buildReady = false;
+    status.longRun = { action: "setup", pid: 4711, startedAt: "2026-08-04T21:15:20.715Z" };
+
+    const guidance = commandCenterGuidance(status);
+
+    assert.equal(guidance.primaryAction, "wait");
+    assert.equal(guidance.title, "UWE wird gerade eingerichtet");
+  });
+
+  it("reports a running update even while every area is still online", () => {
+    const status = buildMockHostStatus(true);
+    status.longRun = { action: "update", pid: 4712, startedAt: "2026-08-04T21:15:20.715Z" };
+
+    const guidance = commandCenterGuidance(status);
+
+    assert.equal(guidance.primaryAction, "wait");
+    assert.equal(guidance.title, "UWE wird gerade aktualisiert");
+  });
 });

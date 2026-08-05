@@ -5,6 +5,7 @@ import {
   Cpu,
   Database,
   HardDrive,
+  Hourglass,
   Play,
   RefreshCw,
   Server,
@@ -69,9 +70,12 @@ export function CommandCenterOverview({
   const anyRunning = services.some((service) => service.state !== "stopped");
   const allOnline = services.length > 0 && healthyCount === services.length;
   const launchService = services.find((service) => service.id === "studio") ?? services[0];
-  const primaryDisabled = busy !== null || status === null;
+  // „wait" heißt: es läuft bereits eine Einrichtung oder ein Update. Der Knopf
+  // bleibt sichtbar (sonst springt das Layout), führt aber nichts aus.
+  const primaryDisabled = busy !== null || status === null || guidance.primaryAction === "wait";
 
   function runPrimaryAction() {
+    if (guidance.primaryAction === "wait") return;
     if (guidance.primaryAction === "setup") {
       onSetup();
       return;
@@ -102,7 +106,9 @@ export function CommandCenterOverview({
               onClick={runPrimaryAction}
               disabled={primaryDisabled}
             >
-              {guidance.primaryAction === "setup" ? (
+              {guidance.primaryAction === "wait" ? (
+                <Hourglass aria-hidden size={18} />
+              ) : guidance.primaryAction === "setup" ? (
                 <Wrench aria-hidden size={18} />
               ) : guidance.primaryAction === "open" ? (
                 <ArrowUpRight aria-hidden size={18} />

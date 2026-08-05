@@ -14,6 +14,7 @@ import {
   stopHostService,
 } from "./desktop-host.ts";
 import { runSetupAction } from "./setup-action.ts";
+import { withLongRunLock } from "./long-run-lock.ts";
 import { applyDesktopHostUpdate, checkDesktopHostUpdate } from "./desktop-host-update.ts";
 import { setHostProgressSink } from "./desktop-host-progress.ts";
 import { getHostEnv, setHostEnv } from "./desktop-host-env.ts";
@@ -80,8 +81,11 @@ async function main(): Promise<void> {
       // damit der minutenlange Einrichtungslauf keine offene Eingabe braucht.
       // Die Weiche Checkout/Bundle liegt in `runSetupAction` — dieselbe Logik
       // wie beim `update` weiter unten.
+      // Die Sperre sitzt hier und nicht in `runSetupAction`, weil `update`
+      // intern `setupHost` aufruft — eine Sperre pro langem Lauf, nicht pro
+      // Teilschritt, sonst sperrte sich das Update selbst aus.
       case "setup":
-        result = await runSetupAction(root);
+        result = await withLongRunLock(root, "setup", () => runSetupAction(root));
         break;
       case "get-install-selection":
         result = { ok: true, ...getInstallSelection(root) };
@@ -141,12 +145,13 @@ async function main(): Promise<void> {
         // Bundle-Installation über das Release-Manifest. Die Weiche liegt hier,
         // damit der Update-Knopf im Command Center in beiden Welten derselbe ist.
         const updateRoot = resolveDesktopHostRoot(root);
-        if (detectHostMode(updateRoot) === "bundle") {
-          const dataDir = path.join(commandCenterDataRoot(), "data");
-          result = await applyBundleUpdate(updateRoot, dataDir, path.join(dataDir, "backups"));
-        } else {
-          result = await applyDesktopHostUpdate(root);
-        }
+        result = await withLongRunLock(root, "update", async () => {
+          if (detectHostMode(updateRoot) === "bundle") {
+            const dataDir = path.join(commandCenterDataRoot(), "data");
+            return applyBundleUpdate(updateRoot, dataDir, path.join(dataDir, "backups"));
+          }
+          return applyDesktopHostUpdate(root);
+        });
         break;
       }
       case "bundle-install": {
@@ -154,12 +159,16 @@ async function main(): Promise<void> {
         const apps = Array.isArray(payload.apps) ? payload.apps.filter(isHostServiceId) : [];
         if (apps.length === 0) throw new Error("bundle-install erwartet {\"apps\": [\"studio\", …]} auf stdin.");
         const dataDir = path.join(commandCenterDataRoot(), "data");
-        result = await applyBundleInstall(apps as HostServiceId[], bundleInstallRoot(), dataDir);
+        result = await withLongRunLock(root, "bundle-install", () =>
+          applyBundleInstall(apps as HostServiceId[], bundleInstallRoot(), dataDir),
+        );
         break;
       }
       case "bundle-update": {
         const dataDir = path.join(commandCenterDataRoot(), "data");
-        result = await applyBundleUpdate(bundleInstallRoot(), dataDir, path.join(dataDir, "backups"));
+        result = await withLongRunLock(root, "bundle-update", () =>
+          applyBundleUpdate(bundleInstallRoot(), dataDir, path.join(dataDir, "backups")),
+        );
         break;
       }
       case "get-env":

@@ -5,9 +5,16 @@ export interface CommandCenterGuidance {
   eyebrow: string;
   title: string;
   description: string;
-  primaryAction: "setup" | "start" | "open";
+  primaryAction: "setup" | "start" | "open" | "wait";
   primaryLabel: string;
 }
+
+const LONG_RUN_TITLES: Record<NonNullable<LocalHostStatus["longRun"]>["action"], string> = {
+  setup: "UWE wird gerade eingerichtet",
+  update: "UWE wird gerade aktualisiert",
+  "bundle-install": "UWE wird gerade installiert",
+  "bundle-update": "UWE wird gerade aktualisiert",
+};
 
 export function commandCenterGuidance(
   status: LocalHostStatus | null,
@@ -20,6 +27,27 @@ export function commandCenterGuidance(
       description: "Der Zustand dieses Rechners wird gerade ermittelt.",
       primaryAction: "start",
       primaryLabel: "Status wird geladen",
+    };
+  }
+
+  /*
+   * Ein laufender Einrichtungs- oder Update-Lauf schlägt jede andere Aussage.
+   * Während er baut, fehlt zeitweise das Standalone-`server.js` der gerade
+   * gebauten App — `buildReady` kippt dadurch auf false, und der Knopf darunter
+   * würde „UWE jetzt einrichten" anbieten. Genau das ist am 2026-08-04 passiert:
+   * ein Klick startete einen zweiten Lauf über den ersten. Der Host verweigert
+   * das inzwischen per Sperre; hier wird gar nicht erst dazu eingeladen.
+   */
+  if (status.longRun) {
+    return {
+      tone: "attention",
+      eyebrow: "Läuft gerade",
+      title: LONG_RUN_TITLES[status.longRun.action],
+      description:
+        "Der Vorgang dauert einige Minuten und darf nicht doppelt laufen. " +
+        "Die Bereiche starten, sobald er durch ist.",
+      primaryAction: "wait",
+      primaryLabel: "Bitte warten …",
     };
   }
 

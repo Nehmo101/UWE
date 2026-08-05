@@ -57,6 +57,7 @@ export function buildMockHostStatus(running = false): LocalHostStatus {
     root: "C:\\git\\UWE",
     revision: "preview",
     branch: "main",
+    longRun: null,
     installation: {
       repoReady: true,
       dependenciesReady: true,
