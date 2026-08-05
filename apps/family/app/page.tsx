@@ -1,20 +1,38 @@
 import Link from "next/link";
 import { EmptyState, dayIndex } from "@uwe/shared-ui";
+import { createCalendarService, prisma } from "@uwe/database/server";
 import { createFamilyService } from "@uwe/database/family-service";
 import { familyPrisma } from "@uwe/database/family-client";
-import { createFamilyMemberService } from "@uwe/family-core";
+import {
+  createFamilyMemberService,
+  loadUpcomingCalendarEntries,
+  type UpcomingCalendarEntry,
+} from "@uwe/family-core";
 import { getFamilyUser } from "@/src/lib/page-family";
 import { FamilyShell, FamilyDenied } from "@/src/components/FamilyShell";
+import { MemberDot } from "@/src/components/members/MemberFields";
 
 /**
- * Start — was heute in der Family ansteht.
- *
- * Noch schmal: Verträge, Dokumente und Kalender liegen bis zum Umzug der 14
- * Bestandsmodelle in der Brain-DB (siehe Schritt 7a). Was hier steht, kommt
- * bereits aus `uwe-family.db`.
+ * Start — was in der Family ansteht: die nächsten Termine (samt Geburtstagen),
+ * dazu Chat und Wissen. Die Kalenderpflege bleibt unter `/calendar`.
  */
 
 export const dynamic = "force-dynamic";
+
+/** Wie weit die Startseite nach vorn schaut und wie viele Zeilen sie zeigt. */
+const UPCOMING_DAYS = 7;
+const UPCOMING_SHOWN = 6;
+
+function formatWhen(entry: UpcomingCalendarEntry): string {
+  return entry.startAt.toLocaleString("de-DE", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    ...(entry.allDay ? {} : { hour: "2-digit", minute: "2-digit" }),
+    // Jahrestage liegen auf UTC-Mitternacht — Ortszeit würde den Tag verschieben.
+    ...(entry.anniversary ? { timeZone: "UTC" } : {}),
+  });
+}
 
 export default async function FamilyStartPage() {
   const user = await getFamilyUser();
@@ -30,11 +48,13 @@ export default async function FamilyStartPage() {
   const memberService = createFamilyMemberService(familyPrisma);
   await memberService.ensureMemberForUser({ userId: user.id, displayName: user.displayName });
 
-  const [conversations, sharedFacts, privateFacts, members] = await Promise.all([
+  const calendar = createCalendarService(familyPrisma, prisma);
+  const [conversations, sharedFacts, privateFacts, members, upcoming] = await Promise.all([
     service.listConversations(user.id),
     service.listFacts(user.id, "shared"),
     service.listFacts(user.id, "private"),
     memberService.listMembers(),
+    loadUpcomingCalendarEntries({ familyDb: familyPrisma, calendar, days: UPCOMING_DAYS }),
   ]);
 
   return (
@@ -70,7 +90,56 @@ export default async function FamilyStartPage() {
           <strong>{members.length}</strong>
           <span>Mitglieder</span>
         </Link>
+        <Link className="family-kpi" href="/calendar">
+          <strong>{upcoming.entries.length}</strong>
+          <span>Termine in {UPCOMING_DAYS} Tagen</span>
+        </Link>
       </div>
+
+      <section className="family-section">
+        <h2>Nächste Termine</h2>
+        {upcoming.entries.length === 0 ? (
+          <EmptyState
+            icon="🗓"
+            title="Nichts eingetragen"
+            description={`In den nächsten ${UPCOMING_DAYS} Tagen steht im Haushalts-Kalender nichts an.`}
+            action={
+              <Link className="family-btn" href="/calendar">
+                Zum Kalender
+              </Link>
+            }
+          />
+        ) : (
+          <>
+            <ul className="family-list">
+              {upcoming.entries.slice(0, UPCOMING_SHOWN).map((entry) => (
+                <li key={entry.id} className="family-row">
+                  <div className="family-row-head">
+                    {entry.members.map((member) => (
+                      <MemberDot
+                        key={member.id}
+                        colour={member.colour}
+                        title={member.displayName}
+                      />
+                    ))}
+                    <strong>{entry.title}</strong>
+                    <span className="family-muted">
+                      {formatWhen(entry)}
+                      {entry.location ? ` · ${entry.location}` : ""}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <p className="family-muted">
+              {upcoming.entries.length > UPCOMING_SHOWN
+                ? `${upcoming.entries.length - UPCOMING_SHOWN} weitere in den nächsten ${UPCOMING_DAYS} Tagen — `
+                : ""}
+              <Link href="/calendar">Zum Kalender</Link>
+            </p>
+          </>
+        )}
+      </section>
 
       <section className="family-section">
         <h2>Zuletzt gesprochen</h2>
@@ -108,14 +177,6 @@ export default async function FamilyStartPage() {
             ))}
           </ul>
         )}
-      </section>
-
-      <section className="family-section">
-        <h2>Noch nicht hier</h2>
-        <p className="family-muted">
-          Verträge, Dokumente und der Familien-Kalender ziehen mit ihren Daten aus der Brain-DB
-          hierher um. Bis dahin stehen sie noch dort.
-        </p>
       </section>
     </FamilyShell>
   );

@@ -18,6 +18,7 @@ import { getFamilyUser } from "@/src/lib/page-family";
 import { FamilyShell, FamilyDenied } from "@/src/components/FamilyShell";
 import { FamilyCalendarMonth } from "@/src/components/FamilyCalendarMonth";
 import { EventMemberPicker, type PickerMember } from "@/src/components/calendar/EventMemberPicker";
+import { EventTimeFields } from "@/src/components/calendar/EventTimeFields";
 import { MemberFilter } from "@/src/components/calendar/MemberFilter";
 import { MemberDot } from "@/src/components/members/MemberFields";
 import {
@@ -101,21 +102,13 @@ function EventFields({
         Titel
         <input name="title" defaultValue={event?.title ?? ""} required placeholder="z. B. Zahnarzt" />
       </label>
-      <div className="family-form-row">
-        <label>
-          Beginn
-          <input
-            name="startAt"
-            type="datetime-local"
-            defaultValue={toLocalInput(event?.startAt ?? null)}
-            required
-          />
-        </label>
-        <label>
-          Ende
-          <input name="endAt" type="datetime-local" defaultValue={toLocalInput(event?.endAt ?? null)} />
-        </label>
-      </div>
+      {/* Beginn, Ende und „Ganztägig" hängen zusammen: die Startzeit belegt das
+          Ende mit einer Stunde vor, ganztägig blendet es aus. */}
+      <EventTimeFields
+        startAt={toLocalInput(event?.startAt ?? null)}
+        endAt={toLocalInput(event?.endAt ?? null)}
+        allDay={event?.allDay ?? false}
+      />
       <div className="family-form-row">
         <label>
           Art
@@ -130,10 +123,6 @@ function EventFields({
         <label>
           Ort
           <input name="location" defaultValue={event?.location ?? ""} placeholder="optional" />
-        </label>
-        <label className="family-check">
-          <input name="allDay" type="checkbox" defaultChecked={event?.allDay ?? false} />
-          Ganztägig
         </label>
       </div>
       <label>

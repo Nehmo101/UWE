@@ -48,6 +48,11 @@ gibt es keinen Endpunkt, nicht nur kein Tool.
   denn Termine, Akte und Filter arbeiten mit den dortigen Kennungen.
 - **Termine gehören keiner, einer oder mehreren Personen.** Ohne Zuordnung
   betreffen sie den ganzen Haushalt.
+- **Ein Termin ohne eigenes Ende dauert eine Stunde.** `resolveEventEnd`
+  (`packages/family-core/src/event-duration.ts`) belegt vor — im Formular, über
+  `POST /api/v1/calendar/events` und über `family_calendar_add_event`
+  gleichermaßen. Ein angegebenes Ende bleibt stehen, ganztägig bleibt ohne Ende,
+  und Nacharbeiten geht immer. Fremde Feeds fasst die Regel nicht an.
 - **Geburtstage und Jahrestage sind keine gespeicherten Termine.**
   `family_calendar_upcoming` spannt sie mit `includeAnniversaries` auf.
 - **Die Gesundheitsakte gilt auch für Tiere** — `family_health_due` liefert
