@@ -24,6 +24,10 @@
    nachgerechneten AA-Farbwerte müssen gegen die Bestandsschichten gewinnen.
    Siehe design-v3/index.css. */
 @import "./design-v3/index.css";
+/* Ganz zuletzt und bewusst ungelayert: die Popup-Farben des nativen <select>
+   müssen auch gegen `bg-transparent` aus @layer utilities gewinnen.
+   Siehe uwe-native-select.css. */
+@import "./uwe-native-select.css";
 
 :root {
   /* Core palette (overridden at runtime by theme engine) */

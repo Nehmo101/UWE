@@ -112,6 +112,7 @@ Diese Checkliste dokumentiert den Prüfstand des Theme-/UI-Systems für **UWE St
 |-------|-------|
 | `packages/shared-ui/src/ThemePicker.tsx` | Barrierefreier Theme-Picker |
 | `packages/shared-ui/src/uwe.css` | Tokens, focus-visible, reduced-motion, Theme-Picker-Styles |
+| `packages/shared-ui/src/uwe-native-select.css` | Popup-Farben des nativen `<select>` (ungelayert, Escape-Hatch `--uwe-select-bg`) |
 | `packages/shared-ui/src/useFocusTrap.ts` | Focus Trap Hook (Sidebar, Filter, Palette) |
 | `packages/shared-ui/src/CommandPalette.tsx` | Focus Trap, ARIA |
 | `packages/shared-ui/src/MobileComponents.tsx` | Bottom Nav, Filter Sheet |
@@ -145,9 +146,9 @@ die ins Leere zeigt.
 Die 44 px gelten bewusst nur auf Touch-Geräten. Ein pauschaler Wert hätte jede
 dichte Werkzeugleiste im Studio aufgebläht, ohne einen Mausnutzer zu schützen.
 
-### Zwei Kaskadenfallen, die dabei aufgefallen sind
+### Drei Kaskadenfallen, die dabei aufgefallen sind
 
-Beide kosteten je einen halben Prüflauf und sind deshalb hier festgehalten:
+Jede kostete einen halben Prüflauf und ist deshalb hier festgehalten:
 
 1. **Tailwind-Utilities verlieren gegen ungelayerte Regeln.**
    `a:not(.uwe-button-surface)` in `uwe.css` ist ungelayert, `text-…`-Utilities
@@ -160,6 +161,16 @@ Beide kosteten je einen halben Prüflauf und sind deshalb hier festgehalten:
    im Kontextpanel verwendet, das auf hellem Papier liegt. Die
    Sidebar-Mutedfarbe ergab dort 2,98:1. Regeln, die eine Farbe an eine Fläche
    binden, müssen auf diese Fläche eingegrenzt sein.
+3. **`bg-transparent` auf einem nativen `<select>`.** Das aufgeklappte Menü ist
+   kein DOM — Chrome und Firefox malen die Liste selbst und nehmen dafür die
+   Farben des Steuerelements. Ohne deckende Fläche fällt der Browser auf sein
+   eigenes Weiß zurück, während die Optionen die helle Theme-Schrift erben:
+   im dunklen Theme hell auf weiß. Beim `<input>` daneben ist dieselbe Klasse
+   harmlos, deshalb war sie überall mitkopiert (94 Selects in Studio, Portal
+   und `shared-ui`). Korrigiert in `uwe-native-select.css` — ungelayert, damit
+   die Regel gegen `@layer utilities` gewinnt. Wer für ein einzelnes Feld eine
+   andere Fläche braucht, setzt `--uwe-select-bg` (bzw. `--uwe-select-fg`),
+   nicht eine `bg-`-Utility. Fixiert in `uwe-native-select.test.ts`.
 
 ### Bekannt, nicht geändert
 
