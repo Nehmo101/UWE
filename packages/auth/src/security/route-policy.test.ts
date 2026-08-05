@@ -126,6 +126,37 @@ describe("route policy", () => {
     assert.equal(isUnknownProtectedApi("/api/health/private", "studio"), false);
   });
 
+  it("substitutes wildcards in the middle of trailing /* patterns", () => {
+    assert.ok(matchesRoutePattern("/api/worlds/terra/spotify/status", "/api/worlds/*/spotify/*"));
+    assert.ok(matchesRoutePattern("/api/worlds/terra/brain/e1", "/api/worlds/*/brain/*"));
+    assert.ok(matchesRoutePattern("/api/worlds/terra/kampagnen", "/api/worlds/*/kampagnen/*"));
+    assert.ok(!matchesRoutePattern("/api/worlds/terra/graph", "/api/worlds/*/spotify/*"));
+    assert.ok(!matchesRoutePattern("/api/other/terra/spotify/x", "/api/worlds/*/spotify/*"));
+  });
+
+  it("keeps studio feature APIs on the known-protected list (no deny-by-default 404)", () => {
+    for (const path of [
+      "/api/worlds/terra/kampagnen/kapitel-druck",
+      "/api/worlds/terra/spotify/status",
+      "/api/worlds/terra/brain/entry-1",
+      "/api/worlds/terra/pages/check-slug",
+      "/api/worlds/terra/pages/page-1/versions",
+      "/api/worlds/terra/print-queue",
+      "/api/worlds/terra/print-lists/pl-1/print-queue",
+      "/api/worlds/terra/soundboard/engine",
+      "/api/worlds/terra/inspector/diagnose",
+      "/api/worlds/terra/characters/print",
+      "/api/tags",
+      "/api/dnd/spells/search",
+      "/api/dnd/equipment/search",
+      "/api/documents/print",
+      "/api/bugs/upload",
+    ]) {
+      assert.equal(isUnknownProtectedApi(path, "studio"), false, path);
+      assert.equal(requiresStudioAuth(path), true, path);
+    }
+  });
+
   it("maps unified /studio and /players prefixes", () => {
     assert.equal(classifyRoute("/players/terra", "portal").access, "protected-session");
     assert.equal(requiresStudioAuth("/studio/brain"), true);

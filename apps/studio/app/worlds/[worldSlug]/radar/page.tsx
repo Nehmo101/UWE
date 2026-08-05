@@ -8,6 +8,7 @@ import { CampaignSidebar } from "@/src/components/wiki";
 import { campaignNavItems } from "@/src/lib/world-nav";
 import { updateQuestStatusInPlaceAction } from "../../../kampagnen-actions";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import { requireStudioWorldRead } from "@/src/lib/authz";
 import { Alert, Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
 
 interface Props {
@@ -23,6 +24,7 @@ const LIST_LIMIT = 8;
 export default async function CampaignRadarPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
   const { campaign: campaignSlug, saved } = await searchParams;
+  await requireStudioWorldRead(worldSlug);
   const repo = getAppRepository();
   const world = await repo.getWorldBySlug(worldSlug);
   if (!world) notFound();

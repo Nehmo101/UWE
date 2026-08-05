@@ -11,6 +11,7 @@ import {
 import { OpenItemsBulkClose } from "@/components/worlds/OpenItemsBulkClose";
 import { bulkCloseOpenQuestsAction } from "../open-items-actions";
 import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
+import { requireStudioWorldRead } from "@/src/lib/authz";
 import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui";
 
 interface Props {
@@ -27,6 +28,7 @@ const CATEGORY_ORDER: WorldOpenItemCategory[] = [
 
 export default async function WorldOpenItemsPage({ params }: Props) {
   const { worldSlug } = await params;
+  await requireStudioWorldRead(worldSlug);
   const repo = getAppRepository();
   const world = await repo.getWorldBySlug(worldSlug);
   if (!world) {

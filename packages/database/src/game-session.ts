@@ -397,6 +397,25 @@ export class GameSessionService {
     });
   }
 
+  /**
+   * Löscht eine Session endgültig. Live-Protokoll, Seiten-Verknüpfungen und
+   * Spieler-Verfügbarkeiten fallen per DB-Cascade mit; Chronik-Einträge,
+   * Spielernotizen und KI-Läufe bleiben erhalten und verlieren nur ihren
+   * Session-Bezug (SetNull). Der gespiegelte Kalender-Termin liegt in der
+   * Family-DB ohne FK und muss deshalb vorher explizit entfernt werden.
+   */
+  async remove(
+    worldSlug: string,
+    sessionId: string,
+  ): Promise<{ id: string; title: string } | null> {
+    const session = await this.getByIdForWorld(worldSlug, sessionId);
+    if (!session) return null;
+
+    await this.safeCalendarUnsync(session.id);
+    await this.db.gameSession.delete({ where: { id: session.id } });
+    return { id: session.id, title: session.title };
+  }
+
   async publishRecap(sessionId: string): Promise<GameSessionWithLinks> {
     const session = await this.update(sessionId, {
       recapPublished: true,

@@ -13,6 +13,14 @@ class FailingCalendarGameSessionService extends GameSessionService {
   }
 }
 
+/** Service that records calendar unsyncs instead of touching the family DB. */
+class TrackingUnsyncGameSessionService extends GameSessionService {
+  public unsyncedIds: string[] = [];
+  protected override async runCalendarUnsync(sessionId: string): Promise<void> {
+    this.unsyncedIds.push(sessionId);
+  }
+}
+
 describe("UWE game session management", () => {
   let databaseUrl: string;
   let worldId: string;
@@ -226,6 +234,50 @@ describe("UWE game session management", () => {
     const serialized = JSON.stringify(portalView);
     assert.ok(!serialized.includes("DM-only"));
     assert.ok(!serialized.includes("DM prep notes"));
+
+    await db.$disconnect();
+  });
+
+  it("removes a session including live protocol, links and availabilities", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const service = new TrackingUnsyncGameSessionService(db);
+
+    const session = await service.create({
+      worldId,
+      campaignId,
+      title: "Wegwerf-Session",
+      sessionNumber: 99,
+      status: "played",
+      linkedPageIds: [npcPageId],
+    });
+
+    await db.sessionLiveEntry.create({
+      data: { gameSessionId: session.id, kind: "note", content: "Am Tisch notiert" },
+    });
+    await db.sessionAvailability.create({
+      data: { sessionId: session.id, userId: playerUserId, status: "yes" },
+    });
+
+    // Tenant-Guard: falscher Welt-Slug löscht nichts.
+    assert.equal(await service.remove("andere-welt", session.id), null);
+    assert.ok(await service.getById(session.id));
+
+    const removed = await service.remove(worldSlug, session.id);
+    assert.ok(removed);
+    assert.equal(removed.title, "Wegwerf-Session");
+    assert.deepEqual(service.unsyncedIds, [session.id]);
+
+    assert.equal(await service.getById(session.id), null);
+    assert.equal(
+      await db.sessionLiveEntry.count({ where: { gameSessionId: session.id } }),
+      0,
+    );
+    assert.equal(
+      await db.sessionAvailability.count({ where: { sessionId: session.id } }),
+      0,
+    );
+    // Die verknüpfte Seite selbst bleibt bestehen.
+    assert.ok(await db.page.findUnique({ where: { id: npcPageId } }));
 
     await db.$disconnect();
   });

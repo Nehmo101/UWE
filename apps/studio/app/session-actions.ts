@@ -129,6 +129,23 @@ export async function updateGameSessionAction(formData: FormData) {
   redirect(`/worlds/${worldSlug}/sessions/${sessionId}?saved=1`);
 }
 
+export async function deleteGameSessionAction(formData: FormData) {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  const sessionId = String(formData.get("sessionId"));
+
+  await requireStudioWorldEdit(worldSlug);
+
+  const removed = await sessions().remove(worldSlug, sessionId);
+  if (!removed) {
+    throw new Error("Session nicht gefunden.");
+  }
+
+  revalidatePath(`/worlds/${worldSlug}/sessions`);
+  revalidatePath(`/auth/worlds/${worldSlug}/sessions`);
+  redirect(`/worlds/${worldSlug}/sessions?deleted=1`);
+}
+
 export async function publishSessionRecapAction(formData: FormData) {
   await requireStudioActionAuth();
   const worldSlug = String(formData.get("worldSlug"));

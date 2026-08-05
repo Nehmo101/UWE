@@ -320,11 +320,11 @@ bleiben normal.
 Eintrag in `PROTECTED_ROUTE_PREFIXES` antwortet mit `404 API-Route nicht gefunden` — auch
 für angemeldete Nutzer.
 
-> **Fallstrick:** `matchesRoutePattern` behandelt ein Muster, das auf `/*` endet, als reinen
-> **Präfixvergleich**. Ein `*` weiter vorne wird dann nicht mehr ersetzt, und das Muster
-> trifft nie. `/api/worlds/*/reader/*` funktioniert also **nicht** —
-> `/api/worlds/*/reader/[pageSlug]` funktioniert. Dieselbe Falle betrifft
-> `/api/worlds/*/spotify/*`, das dadurch aktuell unerreichbar ist.
+> **Hinweis:** Früher behandelte `matchesRoutePattern` ein Muster, das auf `/*` endet, als
+> reinen **Präfixvergleich** — ein `*` weiter vorne wurde dann nicht ersetzt, und Muster wie
+> `/api/worlds/*/spotify/*` trafen nie. Das ist behoben: Wildcards gelten jetzt auch vor
+> einem abschließenden `/*` (abgesichert in `route-policy.test.ts`). Der Allowlist-Eintrag
+> selbst bleibt trotzdem Pflicht.
 
 ## 8. Fremdes Material
 

@@ -12,6 +12,7 @@ import {
 import { buildPageUrl as dbBuildPageUrl } from "@uwe/database/page-types";
 import type { DmGameSessionView } from "@uwe/database/server";
 import {
+  deleteGameSessionAction,
   linkPageToSessionAction,
   publishSessionRecapAction,
   unlinkPageFromSessionAction,
@@ -330,6 +331,25 @@ export function SessionDetailClient({
           </Button>
         </form>
       ) : null}
+
+      <details className="mt-8 rounded-md border border-border p-3">
+        <summary className="cursor-pointer text-sm font-medium">Session löschen</summary>
+        <div className="mt-3 flex flex-col gap-3">
+          <Alert tone="warning">
+            Live-Protokoll, Lesezeichen, Seiten-Verknüpfungen und Spieler-Zusagen dieser
+            Session werden <strong>mitgelöscht</strong>. Chronik-Einträge und Spielernotizen
+            bleiben erhalten, verlieren aber ihren Session-Bezug; ein gespiegelter
+            Kalender-Termin wird entfernt.
+          </Alert>
+          <form action={deleteGameSessionAction}>
+            <input type="hidden" name="worldSlug" value={worldSlug} />
+            <input type="hidden" name="sessionId" value={sessionId} />
+            <Button type="submit" variant="destructive" size="sm">
+              Endgültig löschen
+            </Button>
+          </form>
+        </div>
+      </details>
     </>
   );
 }
