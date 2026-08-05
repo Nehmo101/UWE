@@ -32,11 +32,31 @@ describe("Brain Actions — catalog", () => {
     assert.ok(ids.includes("terra_name_regions"), "terra_name_regions action must be present");
     assert.ok(ids.includes("terra_describe_region"), "terra_describe_region action must be present");
     assert.ok(ids.includes("terra_world_draft"), "terra_world_draft action must be present");
+    assert.ok(ids.includes("campaign_chapter_draft"), "campaign_chapter_draft action must be present");
+    assert.ok(ids.includes("campaign_session_hooks"), "campaign_session_hooks action must be present");
     // 13 before 28.07.2026: the four Atlas actions were replaced by two Terra
     // ones. That the retired ids are gone from EVERY file the union lives in —
     // including the two in @uwe/cookbook that no compiler watches — is checked
-    // in `ai-task-taxonomy.test.ts`, not here.
-    assert.equal(BRAIN_ACTION_LIST.length, 11);
+    // in `ai-task-taxonomy.test.ts`, not here. Since 08/2026 the two campaign
+    // cockpit actions bring the catalog back to 13.
+    assert.equal(BRAIN_ACTION_LIST.length, 13);
+  });
+
+  it("campaign actions require a campaign and are never player safe", () => {
+    for (const id of ["campaign_chapter_draft", "campaign_session_hooks"] as const) {
+      const action = getBrainAction(id);
+      assert.equal(action.requiresCampaign, true);
+      assert.equal(action.playerSafe, false);
+      assert.equal(action.requiresSession, false);
+    }
+    assert.equal(
+      getBrainAction("campaign_chapter_draft").defaultProposalTarget,
+      "campaign_chapter_page",
+    );
+    assert.equal(
+      getBrainAction("campaign_session_hooks").defaultProposalTarget,
+      "session_open_plots",
+    );
   });
 
   it("marks player-safe actions correctly", () => {
