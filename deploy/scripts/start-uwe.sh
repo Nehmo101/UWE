@@ -143,15 +143,32 @@ PORTAL_PID=$!
 # Installation baut sie. Liegt ein Standalone-Build vor, läuft sie mit — sonst
 # zeigt jeder Family-Link ins Leere. Anders als Studio/Portal bindet sie auf
 # Loopback: erreichbar über den Tunnel/Reverse-Proxy, nicht direkt im LAN.
+#
+# Vor dem Next-Server sitzt der DAV-Methoden-Proxy: Next kennt kein
+# PROPFIND/REPORT, der iOS-CalDAV-Account braucht beides. Der Proxy hält
+# $FAMILY_PORT, der Next-Server läuft intern auf $FAMILY_PORT+10 (Loopback).
+# Fehlt das Proxy-Skript (ältere Checkouts), startet Family wie bisher direkt —
+# dann funktioniert nur der CalDAV-Teil nicht.
+FAMILY_DAV_PROXY="$UWE_HOME/deploy/scripts/uwe-dav-proxy.mjs"
 if [[ -f "$FAMILY_SERVER" ]]; then
-  echo "Starting Family on PORT=$FAMILY_PORT (bind=127.0.0.1)"
-  (
-    cd "$FAMILY_DIR"
-    export PORT="$FAMILY_PORT"
-    export HOSTNAME="127.0.0.1"
-    exec "$NODE_BIN" apps/family/server.js
-  ) &
-  FAMILY_PID=$!
+  if [[ -f "$FAMILY_DAV_PROXY" ]]; then
+    echo "Starting Family on PORT=$FAMILY_PORT (bind=127.0.0.1, DAV-Proxy, intern $((FAMILY_PORT + 10)))"
+    (
+      exec "$NODE_BIN" "$FAMILY_DAV_PROXY" \
+        --listen "$FAMILY_PORT" --upstream "$((FAMILY_PORT + 10))" --host 127.0.0.1 \
+        --child-cwd "$FAMILY_DIR" -- "$NODE_BIN" apps/family/server.js
+    ) &
+    FAMILY_PID=$!
+  else
+    echo "Starting Family on PORT=$FAMILY_PORT (bind=127.0.0.1, ohne DAV-Proxy)"
+    (
+      cd "$FAMILY_DIR"
+      export PORT="$FAMILY_PORT"
+      export HOSTNAME="127.0.0.1"
+      exec "$NODE_BIN" apps/family/server.js
+    ) &
+    FAMILY_PID=$!
+  fi
 else
   echo "Family standalone build fehlt — Family wird nicht gestartet (baut mit: pnpm build)."
 fi

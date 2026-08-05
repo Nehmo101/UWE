@@ -421,12 +421,21 @@ function spawnService(paths: HostPaths, service: ServiceDefinition): number {
   // 2. `next start` im App-Root: der Weg der Bundle-Installation. Deren
   //    node_modules ist flach (hoisted, ohne Symlinks), dort löst Next 16 die
   //    externalisierten Pakete auf.
+  // Family bekommt den DAV-Methoden-Proxy vorgeschaltet: der iOS-CalDAV-Account
+  // spricht PROPFIND/REPORT, Next-Route-Handler kennen diese Methoden nicht.
+  // Der Proxy hält den Service-Port und startet den eigentlichen Server als
+  // Kind auf Port+10 (Loopback). Fehlt das Skript (Bundle-Install ohne
+  // deploy/), startet Family direkt — dann ohne CalDAV-Funktion.
+  const davProxy = path.join(paths.root, "deploy", "scripts", "uwe-dav-proxy.mjs");
+  const useDavProxy = service.id === "family" && fs.existsSync(davProxy);
+  const listenPort = useDavProxy ? service.port + 10 : service.port;
+
   const standaloneDir = path.join(appRoot, ".next", "standalone");
   const standaloneServer = path.join(standaloneDir, "apps", service.id, "server.js");
   let spawnArgs: string[];
   let spawnCwd: string;
   if (fs.existsSync(standaloneServer)) {
-    env.PORT = String(service.port);
+    env.PORT = String(listenPort);
     env.HOSTNAME = loopbackOnly ? "127.0.0.1" : "0.0.0.0";
     spawnArgs = [path.join("apps", service.id, "server.js")];
     spawnCwd = standaloneDir;
@@ -437,9 +446,30 @@ function spawnService(paths: HostPaths, service: ServiceDefinition): number {
         `Startdateien für ${service.label} fehlen: weder ${standaloneServer} noch ${nextCli}.`,
       );
     }
-    spawnArgs = [nextCli, "start", "--port", String(service.port)];
+    spawnArgs = [nextCli, "start", "--port", String(listenPort)];
     if (loopbackOnly) spawnArgs.push("--hostname", "127.0.0.1");
     spawnCwd = appRoot;
+  }
+
+  if (useDavProxy) {
+    // Der Proxy setzt PORT/HOSTNAME für das Kind selbst.
+    delete env.PORT;
+    delete env.HOSTNAME;
+    spawnArgs = [
+      davProxy,
+      "--listen",
+      String(service.port),
+      "--upstream",
+      String(listenPort),
+      "--host",
+      "127.0.0.1",
+      "--child-cwd",
+      spawnCwd,
+      "--",
+      process.execPath,
+      ...spawnArgs,
+    ];
+    spawnCwd = paths.root;
   }
 
   const child = spawn(process.execPath, spawnArgs, {
