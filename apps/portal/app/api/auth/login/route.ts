@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     findExistingUser: (db, normalizedEmail) =>
       db.user.findUnique({
         where: { email: normalizedEmail },
-        select: { id: true, status: true },
+        select: { id: true, status: true, lockedUntil: true },
       }),
     // Only addresses with the Portal checkbox get in — there is no anonymous
     // and no „any active account" path left (Notiz Lasse, 2026-07-26).

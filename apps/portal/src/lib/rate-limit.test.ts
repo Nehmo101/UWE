@@ -50,8 +50,10 @@ describe("rate limiter", () => {
     process.env.TRUST_PROXY = "true";
 
     try {
+      // Read from the right: the trusted proxy appends the real client, a
+      // spoofed prefix must not win.
       const forwarded = new Headers({ "x-forwarded-for": "203.0.113.7, 10.0.0.1" });
-      assert.equal(clientIpFromHeaders(forwarded), "203.0.113.7");
+      assert.equal(clientIpFromHeaders(forwarded), "10.0.0.1");
 
       const realIp = new Headers({ "x-real-ip": "198.51.100.2" });
       assert.equal(clientIpFromHeaders(realIp), "198.51.100.2");

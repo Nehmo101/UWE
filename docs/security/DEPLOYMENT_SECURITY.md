@@ -110,8 +110,11 @@ The active host product path is Linux + `pnpm` + `systemd`; Docker and the old W
 ## Post-Deploy Verification
 
 1. **Health checks**
-   - Portal: `GET https://wiki.example.com/api/health`
-   - Studio: `GET https://studio.example.com/api/health` (via Access)
+   - Öffentliche Liveness-Probe (keine Details): `GET https://wiki.example.com/api/health/public`
+     bzw. `GET https://studio.example.com/api/health/public`
+   - Studio-Betriebsdetails (Commit, Migrationen, Proxy/Mail): `GET .../api/health`
+     oder `.../api/health/private` **mit** `Authorization: Bearer $STUDIO_API_TOKEN`.
+     Ohne Token liefert `/api/health` nur Status + App-Name.
 
 2. **Studio Access test**
    - Open `https://studio.example.com` without Access → should be blocked by Cloudflare

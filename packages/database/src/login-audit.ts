@@ -15,6 +15,7 @@ export type LoginAuditReason =
   | "human_verification_failed"
   | "invalid_credentials"
   | "account_inactive"
+  | "account_locked"
   | "studio_access_denied"
   | "two_factor_required"
   | "passkey_invalid"
@@ -30,6 +31,7 @@ export const LOGIN_AUDIT_REASON_LABELS: Record<LoginAuditReason, string> = {
   human_verification_failed: "„Mensch“-Prüfung (Turnstile) fehlgeschlagen",
   invalid_credentials: "Ungültige Anmeldedaten",
   account_inactive: "Konto deaktiviert",
+  account_locked: "Konto vorübergehend gesperrt (zu viele Fehlversuche)",
   studio_access_denied: "Kein Studio-Zugriff für diese Rolle",
   two_factor_required: "Passwort ok — 2FA ausstehend",
   passkey_invalid: "Passkey-Anmeldung fehlgeschlagen",

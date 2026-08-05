@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     findExistingUser: (db, normalizedEmail) =>
       db.user.findUnique({
         where: { email: normalizedEmail },
-        select: { id: true, status: true },
+        select: { id: true, status: true, lockedUntil: true },
       }),
     hasAccess: canAccessStudio,
     clientIpFromHeaders,

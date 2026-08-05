@@ -10,6 +10,15 @@ import { decryptSecret, encryptSecret, resolveTokenEncryptionSecret } from "./to
 
 const CHALLENGE_TTL_MS = 5 * 60_000;
 
+/**
+ * Wrong TOTP codes allowed per challenge before it is burned. Without this the
+ * 5-minute TTL lets an attacker try unlimited codes against a single challenge
+ * (the IP rate limit is the only other gate and is itself spoofable). Five
+ * attempts keeps a fat-fingered code recoverable while making brute force of a
+ * 6-digit TOTP within one challenge hopeless.
+ */
+export const MAX_CHALLENGE_ATTEMPTS = 5;
+
 export interface TwoFactorSetupStart {
   secret: string;
   otpauthUri: string;
@@ -87,6 +96,14 @@ export class TwoFactorService {
     const challengeToken = generateOpaqueToken();
     const expiresAt = new Date(Date.now() + CHALLENGE_TTL_MS);
 
+    // Burn any still-open challenges for this user first. Otherwise an attacker
+    // who knows the password could loop "password login → fresh challenge" to
+    // reset the per-challenge attempt budget indefinitely.
+    await this.db.twoFactorChallenge.updateMany({
+      where: { userId, consumedAt: null },
+      data: { consumedAt: new Date() },
+    });
+
     await this.db.twoFactorChallenge.create({
       data: {
         userId,
@@ -130,6 +147,16 @@ export class TwoFactorService {
 
     const secret = decryptSecret(secretRecord.secretEncrypted, resolveTokenEncryptionSecret());
     if (!verifyTotpCode(secret, code)) {
+      // Count the failure and burn the challenge once the budget is spent, so
+      // the 5-minute TTL is not an unlimited TOTP guessing window.
+      const nextAttemptCount = challenge.attemptCount + 1;
+      await this.db.twoFactorChallenge.update({
+        where: { id: challenge.id },
+        data: {
+          attemptCount: nextAttemptCount,
+          ...(nextAttemptCount >= MAX_CHALLENGE_ATTEMPTS ? { consumedAt: new Date() } : {}),
+        },
+      });
       return null;
     }
 

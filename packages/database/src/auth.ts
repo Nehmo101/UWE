@@ -85,6 +85,24 @@ import { USER_SAFE_SELECT } from "./user-service";
 const SESSION_ACTIVITY_TOUCH_THROTTLE_MS = 60_000;
 
 /**
+ * A valid-format scrypt hash used only to equalize timing in `authenticate`.
+ * When the e-mail is unknown or the account is inactive we still run one
+ * `verifyPassword` against this constant so the scrypt cost is paid on every
+ * path — otherwise the missing-scrypt shortcut is a user-enumeration timing
+ * oracle. The value never matches any password (it is not derived from one).
+ */
+export const DUMMY_PASSWORD_HASH = `scrypt:v1:${"0".repeat(32)}:${"0".repeat(128)}`;
+
+/**
+ * Account-lockout policy. Deliberately loose (10 tries / 15 min) so a
+ * fat-fingered legitimate user is not locked out, while password spraying —
+ * which the account-keyed counter catches across rotating IPs — cannot make
+ * meaningful progress. The owner is not code-exempt; the window auto-expires.
+ */
+export const MAX_FAILED_LOGINS = 10;
+export const LOCKOUT_MS = 15 * 60_000;
+
+/**
  * Die vier Häkchen plus das KI-Flag, alle optional. `aiAccess` ist kein
  * fünftes Häkchen — siehe `packages/auth/src/area-access.ts`.
  */
@@ -565,15 +583,47 @@ export class AuthService {
     });
   }
 
+  /**
+   * Count a failed password attempt for this account. Once it reaches
+   * MAX_FAILED_LOGINS the account is locked for LOCKOUT_MS. This is keyed on the
+   * account, not the IP, so an attacker rotating source IPs (which the spoofable
+   * X-Forwarded-For made trivial) still runs into the same wall. The window
+   * auto-expires; a successful login clears the counter.
+   */
+  async recordFailedLogin(userId: string) {
+    const updated = await this.db.user.update({
+      where: { id: userId },
+      data: { failedLoginCount: { increment: 1 } },
+      select: { failedLoginCount: true },
+    });
+    if (updated.failedLoginCount >= MAX_FAILED_LOGINS) {
+      await this.db.user.update({
+        where: { id: userId },
+        data: { lockedUntil: new Date(Date.now() + LOCKOUT_MS) },
+      });
+    }
+  }
+
+  async resetFailedLogins(userId: string) {
+    await this.db.user.update({
+      where: { id: userId },
+      data: { failedLoginCount: 0, lockedUntil: null },
+    });
+  }
+
   async authenticate(email: string, password: string) {
     const user = await this.db.user.findUnique({
       where: { email: email.trim().toLowerCase() },
     });
     if (!user?.passwordHash) {
+      // Pay the scrypt cost anyway so an unknown e-mail is not distinguishable
+      // from a wrong password by response time (user-enumeration oracle).
+      await verifyPassword(password, DUMMY_PASSWORD_HASH);
       return null;
     }
 
     if (user.status !== "active") {
+      await verifyPassword(password, DUMMY_PASSWORD_HASH);
       return null;
     }
 

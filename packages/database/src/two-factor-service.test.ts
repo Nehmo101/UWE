@@ -3,7 +3,7 @@ import { after, before, describe, it } from "node:test";
 import { generateTotpCode, hashOpaqueToken } from "@uwe/auth/server";
 import { createPrismaClient } from "./client";
 import { createTestDatabaseUrl } from "./test-helpers";
-import { createTwoFactorService } from "./two-factor-service";
+import { createTwoFactorService, MAX_CHALLENGE_ATTEMPTS } from "./two-factor-service";
 
 /**
  * Liefert einen strukturell gültigen 6-stelligen Code, der garantiert
@@ -117,7 +117,7 @@ describe("two-factor service", () => {
     await db.$disconnect();
   });
 
-  it("rejects a wrong code without consuming the challenge", async () => {
+  it("counts a wrong code but keeps the challenge usable below the limit", async () => {
     const db = createPrismaClient(databaseUrl);
     const twoFactor = createTwoFactorService(db);
 
@@ -132,17 +132,66 @@ describe("two-factor service", () => {
     const rejected = await twoFactor.verifyLoginChallenge(challenge.challengeToken, wrongCode);
     assert.equal(rejected, null);
 
-    // Die Challenge darf nach einem falschen Code nicht verbraucht sein …
+    // One wrong code is counted but the challenge is NOT yet burned — a
+    // fat-fingered legitimate code must stay recoverable.
     const stored = await db.twoFactorChallenge.findUnique({
       where: { challengeTokenHash: hashOpaqueToken(challenge.challengeToken) },
-      select: { consumedAt: true },
+      select: { consumedAt: true, attemptCount: true },
     });
     assert.equal(stored?.consumedAt, null);
+    assert.equal(stored?.attemptCount, 1);
 
-    // … und mit dem korrekten Code weiterhin einlösbar sein.
     const accepted = await twoFactor.verifyLoginChallenge(challenge.challengeToken, validCode);
     assert.ok(accepted);
     assert.equal(accepted?.userId, userId);
+
+    await db.$disconnect();
+  });
+
+  it("burns the challenge after MAX_CHALLENGE_ATTEMPTS wrong codes", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const twoFactor = createTwoFactorService(db);
+
+    const setup = await twoFactor.beginSetup(userId, "2fa@uwe.local");
+    const counter = Math.floor(Date.now() / 1000 / 30);
+    const validCode = generateTotpCode(setup.secret, counter);
+    await twoFactor.confirmSetup(userId, validCode);
+
+    const challenge = await twoFactor.createLoginChallenge(userId);
+    const wrongCode = pickWrongCode(setup.secret, counter);
+
+    for (let i = 0; i < MAX_CHALLENGE_ATTEMPTS; i += 1) {
+      assert.equal(await twoFactor.verifyLoginChallenge(challenge.challengeToken, wrongCode), null);
+    }
+
+    // Budget spent → challenge burned, unusable even with the correct code.
+    const stored = await db.twoFactorChallenge.findUnique({
+      where: { challengeTokenHash: hashOpaqueToken(challenge.challengeToken) },
+      select: { consumedAt: true, attemptCount: true },
+    });
+    assert.notEqual(stored?.consumedAt, null);
+    assert.equal(stored?.attemptCount, MAX_CHALLENGE_ATTEMPTS);
+
+    assert.equal(await twoFactor.verifyLoginChallenge(challenge.challengeToken, validCode), null);
+
+    await db.$disconnect();
+  });
+
+  it("burns older open challenges when a new one is created", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const twoFactor = createTwoFactorService(db);
+
+    const setup = await twoFactor.beginSetup(userId, "2fa@uwe.local");
+    const counter = Math.floor(Date.now() / 1000 / 30);
+    const validCode = generateTotpCode(setup.secret, counter);
+    await twoFactor.confirmSetup(userId, validCode);
+
+    const first = await twoFactor.createLoginChallenge(userId);
+    // A second challenge invalidates the first so an attacker cannot stack live
+    // challenges to multiply the attempt budget.
+    await twoFactor.createLoginChallenge(userId);
+
+    assert.equal(await twoFactor.verifyLoginChallenge(first.challengeToken, validCode), null);
 
     await db.$disconnect();
   });

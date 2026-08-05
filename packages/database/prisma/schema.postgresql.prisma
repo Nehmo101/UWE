@@ -458,6 +458,11 @@ model User {
   status              UserStatus @default(active)
   emailVerifiedAt     DateTime?  @map("email_verified_at")
   lastLoginAt         DateTime?  @map("last_login_at")
+  /// Fehlgeschlagene Login-Versuche seit dem letzten Erfolg. Kontobasiert (nicht
+  /// IP-gekeyt), damit ein Angreifer die Sperre nicht durch IP-Rotation umgeht.
+  failedLoginCount    Int        @default(0) @map("failed_login_count")
+  /// Gesetzt, solange das Konto nach zu vielen Fehlversuchen gesperrt ist.
+  lockedUntil         DateTime?  @map("locked_until")
   forcePasswordChange Boolean    @default(false) @map("force_password_change")
   resetTokenHash      String?    @map("reset_token_hash")
   resetTokenExpiresAt DateTime?  @map("reset_token_expires_at")
@@ -2274,6 +2279,10 @@ model TwoFactorChallenge {
   challengeTokenHash String    @unique @map("challenge_token_hash")
   expiresAt          DateTime  @map("expires_at")
   consumedAt         DateTime? @map("consumed_at")
+  /// Fehlversuche gegen diese Challenge. Ab MAX_CHALLENGE_ATTEMPTS wird sie
+  /// verbrannt (consumedAt gesetzt), damit die 5-Minuten-TTL kein Freibrief für
+  /// beliebig viele TOTP-Rateversuche ist.
+  attemptCount       Int       @default(0) @map("attempt_count")
   createdAt          DateTime  @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

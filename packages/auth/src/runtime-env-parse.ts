@@ -30,6 +30,22 @@ export function parseBoolEnv(value: string | undefined, defaultValue: boolean): 
   return defaultValue;
 }
 
+/**
+ * Parse a positive integer env value (e.g. TRUSTED_PROXY_HOPS). Anything
+ * missing, non-numeric or < 1 falls back to the safe default — a broken value
+ * must never crash boot.
+ */
+export function parseIntEnv(value: string | undefined, defaultValue: number): number {
+  if (value === undefined || value.trim() === "") {
+    return defaultValue;
+  }
+  const parsed = Number.parseInt(value.trim(), 10);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return defaultValue;
+  }
+  return parsed;
+}
+
 export function parseSameSite(value: string | undefined): SessionCookieSameSite {
   const normalized = value?.trim().toLowerCase();
   if (normalized === "strict" || normalized === "none") {

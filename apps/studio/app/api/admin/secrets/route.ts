@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { brainPrisma } from "@uwe/database/brain-client";
 import {
   assertSecretsStatusHasNoSecrets,
+  auditRequestFromHeaders,
   getSecretsStatusSnapshot,
   logAuditEvent,
   prisma,
@@ -38,10 +39,7 @@ export async function GET(request: Request) {
     action: "secret_status_viewed",
     targetType: "settings",
     targetId: "secrets-status",
-    request: {
-      ip: request.headers.get("x-forwarded-for") ?? request.headers.get("x-real-ip"),
-      userAgent: request.headers.get("user-agent"),
-    },
+    request: auditRequestFromHeaders(request.headers),
     metadata: {
       authMethod: context.authMethod,
       apiTokenId: context.apiTokenId ?? null,

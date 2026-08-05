@@ -74,7 +74,7 @@ node --import tsx --test scripts/studio-route-auth.test.ts
 | 3.4 | `/admin/*` | Redirect `/login` | Allowed (owner/admin) | ✓ | pass |
 | 3.5 | `/settings`, `/backup`, `/brain` | Redirect `/login` | Allowed | ✓ | pass |
 | 3.6 | `/login`, `/logout`, `/setup`, `/forgot-password`, `/reset-password` | Public (setup gated by availability) | Public | ✓ | pass |
-| 3.6 | `/api/health` | Allowed | Allowed | ✓ | pass |
+| 3.6 | `/api/health` | Public liveness only (status + app name); operational detail requires `STUDIO_API_TOKEN` bearer | Detail with token | ✓ health.test.ts (detail gating) | pass |
 | 3.7 | `/api/auth/*` | Allowed (login/setup/logout) | Allowed | ✓ | pass |
 | 3.8 | `/api/settings`, `/api/backup`, etc. | HTTP 401 | Allowed (session or bearer) | ✓ studio-route-auth (91 routes) | pass |
 | 3.9 | Cross-origin API POST | HTTP 403 | HTTP 403 | ✓ route-authz.test.ts | pass |

@@ -155,11 +155,14 @@ export async function POST(request: Request) {
     findExistingUser: (db, normalizedEmail) =>
       db.user.findUnique({
         where: { email: normalizedEmail },
-        select: { id: true, status: true },
+        select: { id: true, status: true, lockedUntil: true },
       }),
     hasAccess: (user) => hasTargetAccess(target, user),
     clientIpFromHeaders,
-    loginRateKey: (ip, normalizedEmail) => `enter:${ip}:${normalizedEmail}:${target}`,
+    // Key on (ip, email) only — NOT the target. Including `:${target}` gave the
+    // same credential pair one 8-attempt budget per target (studio/portal/brain/
+    // family), i.e. a 4× brute-force allowance from a single IP.
+    loginRateKey: (ip, normalizedEmail) => `enter:${ip}:${normalizedEmail}`,
     rateLimitOptions: RATE_LIMIT_PRESETS.login,
     checkRateLimitAsync,
     resetRateLimitAsync,

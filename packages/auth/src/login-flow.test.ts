@@ -44,6 +44,8 @@ interface Recorded {
   challenges: number;
   resets: string[];
   rateKeys: string[];
+  failedLoginRecords: string[];
+  failedLoginResets: string[];
 }
 
 function newRecorded(): Recorded {
@@ -55,6 +57,8 @@ function newRecorded(): Recorded {
     challenges: 0,
     resets: [],
     rateKeys: [],
+    failedLoginRecords: [],
+    failedLoginResets: [],
   };
 }
 
@@ -68,6 +72,7 @@ function buildLoginDeps(
     turnstileOk?: boolean;
     email?: string | undefined;
     password?: string | undefined;
+    lockedUntil?: Date | null;
   } = {},
 ): PerformLoginFlowDeps<FakeDb, FakeUser> {
   const db = createFakeDb();
@@ -94,6 +99,12 @@ function buildLoginDeps(
         return { id: "sess-1", token: "cookie-token" };
       },
       recordSuccessfulLogin: async () => {},
+      recordFailedLogin: async (userId) => {
+        recorded.failedLoginRecords.push(userId);
+      },
+      resetFailedLogins: async (userId) => {
+        recorded.failedLoginResets.push(userId);
+      },
     }),
     createTwoFactorService: () => ({
       isEnabled: overrides.isEnabled ?? (async () => false),
@@ -103,7 +114,11 @@ function buildLoginDeps(
       },
       verifyLoginChallenge: async () => ({ userId: USER.id }),
     }),
-    findExistingUser: async () => ({ id: USER.id, status: "active" }),
+    findExistingUser: async () => ({
+      id: USER.id,
+      status: "active",
+      lockedUntil: overrides.lockedUntil ?? null,
+    }),
     hasAccess: (user) => (overrides.hasAccess ? overrides.hasAccess(user as FakeUser) : true),
     clientIpFromHeaders: () => "1.2.3.4",
     loginRateKey: (ip, email) => `studio-login:${ip}:${email}`,
@@ -140,6 +155,33 @@ describe("performLoginFlow", () => {
     assert.equal(recorded.cookies.length, 0);
     const reasons = recorded.audits.map((a) => ({ reason: a.reason, status: a.httpStatus }));
     assert.deepEqual(reasons, [{ reason: "invalid_credentials", status: 401 }]);
+    // A genuine password failure counts toward the account lockout.
+    assert.deepEqual(recorded.failedLoginRecords, ["user-1"]);
+  });
+
+  it("locked account → 401 account_locked before any auth attempt", async () => {
+    const recorded = newRecorded();
+    const res = await performLoginFlow(
+      buildLoginDeps(recorded, {
+        lockedUntil: new Date("2999-01-01T00:00:00.000Z"),
+        authenticate: async () => {
+          throw new Error("authenticate must not run while locked");
+        },
+      }),
+    );
+
+    assert.equal(res.status, 401);
+    assert.deepEqual(await res.json(), { error: "Ungültige Anmeldedaten." });
+    assert.equal(recorded.sessions.length, 0);
+    assert.equal(recorded.audits.at(-1)?.reason, "account_locked");
+    // No new failure recorded — the account is already locked.
+    assert.deepEqual(recorded.failedLoginRecords, []);
+  });
+
+  it("access denied with a valid password does not count toward lockout", async () => {
+    const recorded = newRecorded();
+    await performLoginFlow(buildLoginDeps(recorded, { hasAccess: () => false }));
+    assert.deepEqual(recorded.failedLoginRecords, [], "valid password, wrong surface");
   });
 
   it("success → session WITH ipAddress, cookie, success audit, 200", async () => {
@@ -163,6 +205,7 @@ describe("performLoginFlow", () => {
     ]);
     assert.deepEqual(recorded.cookies, ["cookie-token"]);
     assert.deepEqual(recorded.resets, ["studio-login:1.2.3.4:ada@example.com"]);
+    assert.deepEqual(recorded.failedLoginResets, ["user-1"], "lockout counter cleared on success");
     const success = recorded.audits.at(-1);
     assert.equal(success?.sessionId, "sess-1");
     assert.equal(success?.httpStatus, 200);
@@ -315,7 +358,9 @@ describe("completeTwoFactorLogin", () => {
     ]);
     assert.deepEqual(recorded.cookies, ["cookie-2fa"]);
     assert.equal(recorded.successAudits, 1);
-    assert.deepEqual(recorded.rateKeys, ["studio-2fa:9.9.9.9:challeng"]);
+    // Keyed on IP only, not the challenge token — a fresh challenge must not
+    // grant a fresh attempt budget.
+    assert.deepEqual(recorded.rateKeys, ["studio-2fa:9.9.9.9"]);
   });
 
   it("invalid challenge → 401, no session", async () => {

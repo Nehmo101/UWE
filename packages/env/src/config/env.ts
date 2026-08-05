@@ -4,7 +4,10 @@ export const MIN_SECRET_LENGTH = 16;
 export const RECOMMENDED_SECRET_LENGTH = 32;
 
 export const WEAK_SECRET_PATTERNS: RegExp[] = [
-  /^change[-_]?me$/i,
+  // Unanchored on the right so the shipped `.env.production.example` placeholder
+  // `CHANGE_ME_generate_with_openssl_rand_base64_32` is caught, not just a bare
+  // "change-me". A strong secret never starts with "change[-_]me".
+  /^change[-_]?me/i,
   /^changeme$/i,
   /^change-me-in-production$/i,
   /^change-me-in-production-use-openssl-rand-base64-32$/i,
