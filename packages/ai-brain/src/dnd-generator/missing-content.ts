@@ -13,6 +13,10 @@ export interface ContentSnapshot {
   playerText?: string | null;
   readAloud?: string | null;
   dmNotes?: string | null;
+  /** Kampagnen-Kontext: Titel der nächsten geplanten Session, falls vorhanden. */
+  plannedSession?: string | null;
+  /** Kampagnen-Kontext: Kapitel-Titel in Lesereihenfolge (leer = keine Kapitel). */
+  chapterList?: string | null;
 }
 
 function isEmpty(value: string | null | undefined): boolean {
@@ -115,6 +119,27 @@ export function detectMissingContent(
           label: "Handout ohne Spielerfassung",
           severity: "warn",
           suggestedActionId: "player_version",
+        });
+      }
+      break;
+
+    case "campaign":
+      // Ohne geplante Session hat „Session-Aufhänger" kein Anwenden-Ziel —
+      // der Hinweis erklärt das VOR dem Lauf statt beim Apply-Fehler.
+      if (isEmpty(content.plannedSession)) {
+        hints.push({
+          field: "plannedSession",
+          label: "Keine geplante Session — Aufhänger hätten kein Ziel",
+          severity: "warn",
+          suggestedActionId: "campaign_session_hooks",
+        });
+      }
+      if (isEmpty(content.chapterList)) {
+        hints.push({
+          field: "chapterList",
+          label: "Noch keine Kapitel — Entwurf startet die Struktur",
+          severity: "info",
+          suggestedActionId: "campaign_chapter_draft",
         });
       }
       break;
