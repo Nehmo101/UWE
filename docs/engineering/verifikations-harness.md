@@ -90,14 +90,33 @@ Probelauf für Datenumbauten**.
 
 ## 4. Was gebaut wird
 
-### B1 — `pnpm verify:ui` (Stufe 3)
+### B1 — `pnpm verify:ui` (Stufe 3) — **gebaut**
 
 Ein Lauf, der Routen als Argument nimmt statt sie fest zu verdrahten:
 
 ```bash
-pnpm verify:ui --routen "/worlds/terra/kampagnen,/worlds/terra/kampagnen/himmelsrouten" \
-               --als dm --ausgabe <verzeichnis>
+# immer aus einem eigenen Arbeitsbaum, nie aus dem, der die Dienste bedient
+git worktree add ../UWE-verify -b verify/<thema> origin/main
+cd ../UWE-verify && pnpm install
+
+pnpm verify:ui --routen "/worlds/terra/kampagnen,/worlds/terra/magic-items"
+pnpm verify:ui --als spieler --routen "/worlds/terra"
 ```
+
+Bausteine: `scripts/verify-ui.mjs` (CLI + Startsperre), `e2e/studio-verify-ui.spec.ts`
+und `e2e/portal-verify-ui.spec.ts` (die zwei Sichten), `e2e/helpers/verify-ui.ts`
+(Aufnahme + Manifest). Der Wegwerf-Stack kommt unverändert von
+`scripts/e2e-servers.mjs`; hier wird nichts davon nachgebaut.
+
+Ausgabe je Route ein Vollbild plus `manifest-<sicht>.json` mit Route,
+HTTP-Status, Zieladresse, Seitentitel und den sichtbaren Überschriften.
+
+**Auf Git Bash unter Windows** schreibt MSYS Argumente um, die wie ein Unix-Pfad
+aussehen: Aus `--routen "/worlds/terra/dashboard"` wird
+`C:/Program Files/Git/worlds/terra/dashboard`, und der Lauf holt eine Seite, die
+es nicht gibt. Das Werkzeug erkennt das und sagt es; am einfachsten schreibt man
+die Routen ohne führenden Schrägstrich (`--routen "worlds/terra/kampagnen"`) oder
+setzt `MSYS_NO_PATHCONV=1`.
 
 Er startet den Stack (nur die nötigen Apps), meldet sich an, ruft jede Route auf,
 wartet auf Ruhe im Netzwerk, schießt einen Vollbild-Screenshot und schreibt
@@ -154,13 +173,28 @@ wurde sie durch einen selbstgeschriebenen Trockenlauf — also durch dasselbe
 Denken, das auch das Skript geschrieben hat. Ein unabhängiger Feld-Diff ist ein
 Beleg, keine Wiederholung derselben Annahme.
 
-### B4 — Leitplanken als Code
+### B4 — Leitplanken als Code — **gebaut** (für `verify:ui`)
 
-- `verify:*` weigert sich zu starten, wenn das Arbeitsverzeichnis der Baum ist,
-  aus dem laufende Dienste bedient werden (Prüfung: laufender Prozess mit
-  `cwd` unter `<repo>/apps/*/.next/standalone`).
-- `verify:migration` weigert sich, wenn `--quelle` und Ziel dieselbe Datei sind.
-- Beide schreiben ausschließlich unter das mit `--ausgabe` genannte Verzeichnis.
+`scripts/verify-ui-guard.mjs` entscheidet vor jedem Start. Die Entscheidung ist
+eine reine Funktion und getestet (`scripts/verify-ui-guard.test.ts`); das
+Sammeln der Tatsachen steht daneben:
+
+| Lage | Ergebnis |
+|---|---|
+| Verifikations-Port = Live-Port | **Abbruch** — Portüberschneidung, wiegt am schwersten |
+| Haupt-Arbeitsbaum **und** ein Live-Dienst antwortet | **Abbruch** mit Anleitung zum `git worktree` |
+| Haupt-Arbeitsbaum, kein Dienst antwortet | Start mit Hinweis |
+| Eigener Arbeitsbaum | Start |
+
+„Haupt-Arbeitsbaum" wird an `git rev-parse --git-dir` erkannt (ein verknüpfter
+Arbeitsbaum meldet einen Pfad unter `.git/worktrees/…`) — kein Herumraten an
+Prozesslisten. Die Live-Ports kommen aus der `.env`.
+
+Am 2026-08-05 in der Wirklichkeit geprüft: Im echten Arbeitsbaum mit laufenden
+Diensten bricht der Lauf mit Exit-Code 1 ab und nennt die Ports 3100–3103.
+
+Für `verify:migration` gilt sinngemäß: Abbruch, wenn `--quelle` und Ziel
+dieselbe Datei sind; geschrieben wird ausschließlich unter `--ausgabe`.
 
 ---
 
@@ -188,16 +222,36 @@ Oberfläche geschehen ist.
 
 ## 6. Umsetzung in Schnitten
 
-| Schnitt | Inhalt | Aufwand | Nutzen |
-|---|---|---|---|
-| 1 | B1 `verify:ui` mit `--routen`, DM-Konto, Manifest | klein | schließt die Hauptlücke |
-| 2 | B2 Fixture-Import als Seed | mittel | macht die Bilder überhaupt aussagekräftig |
-| 3 | B1 Erweiterung `--als spieler` + Portal-Gegenprobe | klein | belegt Spieler-Zusagen |
-| 4 | B3 `verify:migration` mit Feld-Diff | mittel | unabhängiger Beleg statt Selbstbestätigung |
-| 5 | B4 Leitplanken | klein | verhindert den Live-Unfall |
+| Schnitt | Inhalt | Stand |
+|---|---|---|
+| 1 | B1 `verify:ui` mit `--routen`, DM-Konto, Manifest | **fertig** |
+| 5 | B4 Leitplanken (Startsperre) | **fertig** |
+| 3 | B1 `--als spieler` + Portal-Gegenprobe | **fertig** (Spec vorhanden, gegen Portal noch nicht gefahren) |
+| 2 | B2 Fixture-Import als Seed | offen |
+| 4 | B3 `verify:migration` mit Feld-Diff | offen |
 
-Schnitt 1 und 5 gehören zusammen — ein Werkzeug, das die laufende Installation
-beschädigen kann, wird nicht ohne seine Sicherung ausgeliefert.
+Schnitt 1 und 5 gehörten zusammen und wurden gemeinsam ausgeliefert — ein
+Werkzeug, das die laufende Installation beschädigen kann, geht nicht ohne seine
+Sicherung heraus.
+
+**Was der erste echte Lauf gelehrt hat:** Das CLI rief Playwright direkt auf und
+übersprang damit `db:generate`, das `test:e2e` und `qa:theme-matrix` vorher
+machen. In einem frischen Arbeitsbaum — also im Regelfall dieses Werkzeugs —
+fehlt der Prisma-Client, und der Seed brach mit „Cannot find module
+'./generated/prisma/client'" ab. Ein Werkzeug, das man nur schreibt und nicht
+laufen lässt, hätte diesen Fehler in die erste ernste Verifikation getragen.
+
+Zweiter Fund desselben Laufs: Git Bash verunstaltet Routen mit führendem
+Schrägstrich (siehe oben) — eine Route ging deshalb ins Leere. Beide Fehler sind
+jetzt als Regressionstest festgehalten (`scripts/verify-ui-guard.test.ts`).
+
+Der nächste sinnvolle Schnitt ist **2**, und der erste Lauf hat auch dafür den
+Beleg geliefert: Auf dem Demo-Seed zeigt `/worlds/terra/magic-items` die Meldung
+„Keine Item-Seiten in dieser Welt", und die Kampagnenliste nennt „0 offene
+Quests · noch keine gespielte Session". Ein funktionierendes Cockpit sieht dort
+genauso aus wie ein kaputtes. Erst ein Fixture-Kampagnenbuch, das durch den
+echten Import läuft, macht die Bilder zu einem Beleg statt zu einer hübschen
+leeren Seite.
 
 ---
 
