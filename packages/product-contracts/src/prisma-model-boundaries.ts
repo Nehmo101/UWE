@@ -200,7 +200,9 @@ export const PRISMA_MODEL_BOUNDARIES = {
   FamilyMemberProfile: F("family"),
   CalendarEventMember: F("family"),
   FamilyHealthRecord: F("family"),
+  FamilyHealthRecordMember: F("family"),
   FamilyCalendarSubscription: F("family"),
+  FamilyCalendarSubscriptionMember: F("family"),
   FamilyCalDavAccount: F("family"),
 } as const satisfies Record<string, PrismaModelBoundary>;
 

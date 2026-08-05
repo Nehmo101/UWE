@@ -15,16 +15,16 @@ und ob etwas Neues dazugekommen ist. Für das Warum die `SKILL.md` von /uwefamil
 | Häkchen | `family` |
 | Datenbank | uwe-family.db |
 | MCP-Server | `uwe-family` |
-| Seiten | 22 |
-| API-Routen | 30 |
+| Seiten | 23 |
+| API-Routen | 32 |
 
 **Seiten-Bereiche** (Top-Level unter `app/`, Zahl = Seiten darunter)
 
-`account` (1) · `briefing` (1) · `calendar` (3) · `chat` (2) · `contracts` (1) · `documents` (1) · `health` (1) · `household` (1) · `kitchen` (6) · `login` (1) · `members` (1) · `scan-inbox` (2)
+`account` (1) · `briefing` (1) · `calendar` (4) · `chat` (2) · `contracts` (1) · `documents` (1) · `health` (1) · `household` (1) · `kitchen` (6) · `login` (1) · `members` (1) · `scan-inbox` (2)
 
 **API-Bereiche** (Top-Level unter `app/api/`, Zahl = Route-Handler darunter)
 
-`auth` (12) · `calendar` (1) · `dav` (1) · `health` (1) · `kitchen` (2) · `scan` (2) · `v1` (10)
+`auth` (12) · `calendar` (3) · `dav` (1) · `health` (1) · `kitchen` (2) · `scan` (2) · `v1` (10)
 
 **Server Actions** (`apps/family/app/*-actions.ts`, 11)
 

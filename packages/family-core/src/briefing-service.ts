@@ -22,7 +22,7 @@ export interface BriefingEvent {
 }
 
 export interface BriefingHealthItem {
-  memberName: string;
+  memberNames: readonly string[];
   kind: FamilyHealthRecordKind;
   title: string;
   nextDueOn: Date;
@@ -94,7 +94,7 @@ export function buildBriefingContext(input: BriefingInput): string {
   } else {
     for (const item of input.healthDue) {
       lines.push(
-        `- ${WEEKDAY.format(item.nextDueOn)}: ${item.memberName} — ${item.title} (${FAMILY_HEALTH_KIND_LABEL[item.kind]})`,
+        `- ${WEEKDAY.format(item.nextDueOn)}: ${item.memberNames.join(", ")} — ${item.title} (${FAMILY_HEALTH_KIND_LABEL[item.kind]})`,
       );
     }
   }

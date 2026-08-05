@@ -5,7 +5,6 @@
 
 import { assertUserProvidedFetchUrlAllowed } from "@uwe/security";
 import { fetchCalDavEventsViaGet } from "./caldav-sync";
-import { zonedTimeToUtc } from "./ical-timezones";
 
 export interface ParsedIcalEvent {
   uid: string;
@@ -36,7 +35,55 @@ function unfoldIcalLines(content: string): string[] {
   return lines;
 }
 
-function parseIcalDate(value: string, tzid?: string): { date: Date; allDay: boolean } {
+/**
+ * Versatz einer Zeitzone zu einem Zeitpunkt, in Millisekunden.
+ * `Intl` kennt die Zonendatenbank; eine Bibliothek braucht es dafür nicht.
+ */
+function timeZoneOffsetMs(timestamp: number, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(new Date(timestamp));
+
+  const get = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? "0");
+  const asUtc = Date.UTC(
+    get("year"),
+    get("month") - 1,
+    get("day"),
+    get("hour"),
+    get("minute"),
+    get("second"),
+  );
+  return asUtc - timestamp;
+}
+
+/**
+ * Ortszeit in einer Zeitzone → echter Zeitpunkt.
+ *
+ * Zwei Runden, weil der Versatz selbst vom Zeitpunkt abhängt: die erste Runde
+ * schätzt mit dem Versatz der naiven Zeit, die zweite korrigiert ihn — das
+ * trägt auch über die Zeitumstellung.
+ */
+function zonedTimeToUtc(naiveUtcMs: number, timeZone: string): Date {
+  let timestamp = naiveUtcMs;
+  for (let round = 0; round < 2; round += 1) {
+    timestamp = naiveUtcMs - timeZoneOffsetMs(timestamp, timeZone);
+  }
+  return new Date(timestamp);
+}
+
+/**
+ * `timeZone` kommt aus dem `TZID`-Parameter der Zeile. Ohne `Z` und ohne
+ * `TZID` bleibt es bei der bisherigen Auslegung als UTC — eine schwebende
+ * Zeitangabe hat keine Zone, und das Raten wäre schlimmer als die Annahme.
+ */
+function parseIcalDate(value: string, timeZone?: string): { date: Date; allDay: boolean } {
   const trimmed = value.trim();
   if (/^\d{8}$/.test(trimmed)) {
     const y = Number(trimmed.slice(0, 4));
@@ -46,38 +93,33 @@ function parseIcalDate(value: string, tzid?: string): { date: Date; allDay: bool
   }
   const match = trimmed.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(Z?)$/);
   if (match) {
-    const [, ys, ms, ds, hs, mins, ss, zulu] = match;
-    // Lokalzeit mit TZID (so schickt es der iOS-Kalender) wird über die Zone
-    // umgerechnet; Zulu-Zeiten und Zeiten ohne TZID bleiben wie bisher UTC.
-    const date =
-      !zulu && tzid
-        ? zonedTimeToUtc(
-            Number(ys),
-            Number(ms),
-            Number(ds),
-            Number(hs),
-            Number(mins),
-            Number(ss),
-            tzid,
-          )
-        : new Date(
-            Date.UTC(
-              Number(ys),
-              Number(ms) - 1,
-              Number(ds),
-              Number(hs),
-              Number(mins),
-              Number(ss),
-            ),
-          );
-    return { date, allDay: false };
+    const [, ys, ms, ds, hs, mins, ss, utcMarker] = match;
+    const naive = Date.UTC(
+      Number(ys),
+      Number(ms) - 1,
+      Number(ds),
+      Number(hs),
+      Number(mins),
+      Number(ss),
+    );
+    if (!utcMarker && timeZone) {
+      try {
+        return { date: zonedTimeToUtc(naive, timeZone), allDay: false };
+      } catch {
+        // Unbekannte Zone (Intl wirft) — lieber die Zeit als UTC lesen als den
+        // ganzen Termin verlieren.
+      }
+    }
+    return { date: new Date(naive), allDay: false };
   }
   const parsed = new Date(trimmed);
   return { date: parsed, allDay: false };
 }
 
-function tzidOf(keyPart: string): string | undefined {
-  return keyPart.match(/;TZID=([^;:]+)/i)?.[1];
+/** `DTSTART;TZID=Europe/Berlin:…` → „Europe/Berlin". */
+function timeZoneOf(keyPart: string): string | undefined {
+  const match = keyPart.match(/;TZID=([^;:]+)/i);
+  return match?.[1]?.replace(/^"|"$/g, "").trim() || undefined;
 }
 
 function unescapeIcalText(value: string): string {
@@ -94,9 +136,9 @@ export function parseIcalEvents(content: string): ParsedIcalEvent[] {
   let inEvent = false;
   let current: Partial<ParsedIcalEvent> & {
     dtStart?: string;
-    dtStartTzid?: string;
+    dtStartTz?: string;
     dtEnd?: string;
-    dtEndTzid?: string;
+    dtEndTz?: string;
   } = {};
 
   for (const line of lines) {
@@ -108,9 +150,9 @@ export function parseIcalEvents(content: string): ParsedIcalEvent[] {
     if (line === "END:VEVENT") {
       inEvent = false;
       if (current.uid && current.title && current.dtStart) {
-        const start = parseIcalDate(current.dtStart, current.dtStartTzid);
+        const start = parseIcalDate(current.dtStart, current.dtStartTz);
         const end = current.dtEnd
-          ? parseIcalDate(current.dtEnd, current.dtEndTzid).date
+          ? parseIcalDate(current.dtEnd, current.dtEndTz).date
           : undefined;
         events.push({
           uid: current.uid,
@@ -149,11 +191,11 @@ export function parseIcalEvents(content: string): ParsedIcalEvent[] {
         break;
       case "DTSTART":
         current.dtStart = keyPart.includes("VALUE=DATE") ? value.slice(0, 8) : value;
-        current.dtStartTzid = tzidOf(keyPart);
+        current.dtStartTz = timeZoneOf(keyPart);
         break;
       case "DTEND":
         current.dtEnd = keyPart.includes("VALUE=DATE") ? value.slice(0, 8) : value;
-        current.dtEndTzid = tzidOf(keyPart);
+        current.dtEndTz = timeZoneOf(keyPart);
         break;
       case "RRULE":
         current.hasRecurrence = true;
@@ -280,8 +322,6 @@ export {
   type CalDavSyncResult,
   type CalDavRemoteEvent,
 } from "./caldav-sync";
-
-export { resolveTimezone, zonedTimeToUtc } from "./ical-timezones";
 
 export {
   DAV_NS,

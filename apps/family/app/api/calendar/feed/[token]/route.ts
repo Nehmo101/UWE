@@ -68,15 +68,15 @@ export async function GET(
 
   const enriched = await attachMembersToEvents(familyPrisma, rawEvents);
 
-  // Ein an eine Person gebundenes Abo zeigt nur deren Termine. Termine ohne
-  // Zuordnung gehören dem Haushalt und bleiben in jedem Abo sichtbar.
-  const memberId = subscription.memberId;
+  // Ein auf Personen eingeschränktes Abo zeigt nur deren Termine. Termine ohne
+  // Zuordnung gehören dem Haushalt und bleiben in jedem Abo sichtbar. Leere
+  // Einschränkung heisst: der ganze Haushalt.
+  const scope = new Set(subscription.memberIds);
+  const scoped = scope.size > 0;
   const events: FeedEventInput[] = enriched
     .filter(
       (event) =>
-        !memberId ||
-        event.members.length === 0 ||
-        event.members.some((m) => m.id === memberId),
+        !scoped || event.members.length === 0 || event.members.some((m) => scope.has(m.id)),
     )
     .map((event) => ({
       id: event.id,
@@ -94,16 +94,16 @@ export async function GET(
     to,
     colourOf: resolveMemberColour,
     includeInactive: true,
-  }).filter((occurrence) => !memberId || occurrence.memberId === memberId);
+  }).filter((occurrence) => !scoped || scope.has(occurrence.memberId));
 
   const due: FeedHealthInput[] = healthDue
-    .filter((record) => !memberId || record.memberId === memberId)
+    .filter((record) => !scoped || record.members.some((member) => scope.has(member.id)))
     .flatMap((record) =>
       record.nextDueOn
         ? [
             {
               id: record.id,
-              memberName: record.member.displayName,
+              memberNames: record.members.map((member) => member.displayName),
               kind: record.kind,
               title: record.title,
               nextDueOn: record.nextDueOn,
@@ -112,10 +112,11 @@ export async function GET(
         : [],
     );
 
-  const ownerName = memberId
-    ? memberRows.find((row) => row.id === memberId)?.displayName
-    : undefined;
-  const calendarName = ownerName ? `UWE Family — ${ownerName}` : "UWE Family";
+  const ownerNames = scoped
+    ? memberRows.filter((row) => scope.has(row.id)).map((row) => row.displayName)
+    : [];
+  const calendarName =
+    ownerNames.length > 0 ? `UWE Family — ${ownerNames.join(", ")}` : "UWE Family";
 
   const ics = renderFamilyIcs({ events, anniversaries, healthDue: due }, calendarName);
 

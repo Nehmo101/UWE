@@ -48,7 +48,7 @@ export default async function WorldBackupPage({ params }: Props) {
               ))}
             </ul>
           )}
-          <Link href={`/worlds/${worldSlug}/campaigns`} className="mt-2 inline-block text-xs">
+          <Link href={`/worlds/${worldSlug}/kampagnen`} className="mt-2 inline-block text-xs">
             Kampagnen verwalten
           </Link>
         </SidebarSection>

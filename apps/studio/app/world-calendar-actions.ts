@@ -106,6 +106,10 @@ export async function advanceWorldCalendarAction(formData: FormData) {
 
   const worldSlug = String(formData.get("worldSlug"));
   const advanceDays = Number(formData.get("advanceDays"));
+  // Optionaler Rücksprung in den Session-Abschluss-Flow — validiert, kein freies Ziel.
+  const returnTo = String(formData.get("returnTo") || "");
+  const campaignSlug = String(formData.get("campaignSlug") || "");
+  const sessionId = String(formData.get("sessionId") || "");
 
   if (!Number.isFinite(advanceDays) || advanceDays < 1 || advanceDays > 365) {
     throw new Error("Vorlauf muss zwischen 1 und 365 Tagen liegen.");
@@ -136,5 +140,15 @@ export async function advanceWorldCalendarAction(formData: FormData) {
 
   revalidatePath(`/worlds/${worldSlug}/calendar`);
   revalidatePath(`/worlds/${worldSlug}/chronicle`);
+
+  if (returnTo === "abschluss" && campaignSlug) {
+    const abschlussPath = `/worlds/${worldSlug}/kampagnen/${campaignSlug}/abschluss`;
+    revalidatePath(abschlussPath);
+    redirect(
+      sessionId
+        ? `${abschlussPath}?session=${encodeURIComponent(sessionId)}&clock=1`
+        : `${abschlussPath}?clock=1`,
+    );
+  }
   redirect(`/worlds/${worldSlug}/calendar?saved=1`);
 }

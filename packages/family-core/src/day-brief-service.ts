@@ -17,6 +17,7 @@ import { createMealPlanService, createShoppingService, isoWeekOf } from "@uwe/ki
 import { expandAnniversaries, type AnniversaryKind } from "./anniversaries";
 import { attachMembersToEvents } from "./event-members";
 import type { FamilyHealthRecordKind } from "./family-types";
+import { createFamilyHealthService } from "./health-service";
 import { resolveMemberColour } from "./member-colours";
 import { createFamilyMemberService } from "./member-service";
 
@@ -77,8 +78,9 @@ export interface FamilyDayBriefTask {
 
 export interface FamilyDayBriefHealthItem {
   id: string;
-  memberId: string;
-  memberName: string;
+  /** Wie beim Termin: eine Fälligkeit kann mehrere Personen betreffen. */
+  memberIds: readonly string[];
+  memberNames: readonly string[];
   kind: FamilyHealthRecordKind;
   title: string;
   nextDueOn: Date;
@@ -370,11 +372,7 @@ export async function loadFamilyDayBrief(
   const [rawEvents, members, healthRecords, maintenance, meals, shopping] = await Promise.all([
     options.calendar.listEvents({ from, to, limit: 200 }),
     createFamilyMemberService(options.familyDb).listMembers(),
-    options.familyDb.familyHealthRecord.findMany({
-      where: { nextDueOn: { not: null, gte: from, lte: to } },
-      orderBy: { nextDueOn: "asc" },
-      include: { member: { select: { id: true, displayName: true } } },
-    }),
+    createFamilyHealthService(options.familyDb).listDueUntil(to, from),
     options.familyDb.maintenanceTask.findMany({
       where: { nextDueAt: { not: null, lte: to } },
       orderBy: { nextDueAt: "asc" },
@@ -437,8 +435,8 @@ export async function loadFamilyDayBrief(
         ? [
             {
               id: record.id,
-              memberId: record.member.id,
-              memberName: record.member.displayName,
+              memberIds: record.members.map((member) => member.id),
+              memberNames: record.members.map((member) => member.displayName),
               kind: record.kind as FamilyHealthRecordKind,
               title: record.title,
               nextDueOn: record.nextDueOn,

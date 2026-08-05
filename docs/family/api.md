@@ -38,6 +38,29 @@ curl -H "Authorization: Bearer uwe_…" \
   "http://localhost:3004/api/v1/calendar/events?includeAnniversaries=true"
 ```
 
+## Personen kommen als Liste
+
+Überall, wo etwas an Personen hängt, heisst das Feld `memberIds` und nimmt mehrere:
+
+| Endpunkt | Feld | Leer heisst |
+|---|---|---|
+| `POST /api/v1/calendar/events` | `memberIds` | betrifft den ganzen Haushalt |
+| `POST /api/v1/health` | `memberIds` | ungültig — 400, mindestens eine Person |
+| `POST /api/v1/calendar/subscriptions` | `memberIds` | Abo zeigt den ganzen Haushalt |
+
+Die Antworten führen entsprechend `members: [{ id, displayName }]` statt eines einzelnen
+`member`. Das alte Einzelfeld `memberId` wird beim Schreiben weiterhin angenommen und wie
+eine einelementige Liste behandelt — ein Bestandsaufrufer bricht also nicht.
+
+Als **Filter** bleibt `?memberId=` einzeln: `GET /api/v1/health?memberId=…` liefert die
+ganze Akte einer Person, jetzt einschliesslich der Einträge, die sie mit anderen teilt.
+
+```bash
+curl -X POST -H "Authorization: Bearer uwe_…" -H "Content-Type: application/json" \
+  -d '{"memberIds":["mem_a","mem_b"],"title":"Wurmkur","kind":"vet","nextDueOn":"2026-11-01"}' \
+  "http://localhost:3004/api/v1/health"
+```
+
 ## Tagesstand für ein Küchen-Tablet
 
 `GET /api/v1/day-brief` liefert in **einem** Aufruf, was heute ansteht: Termine je Person,

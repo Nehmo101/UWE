@@ -3,6 +3,7 @@ import {
   createFamilyCalDavAccountService,
   createFamilyCalendarSubscriptionService,
   createFamilyMemberService,
+  resolveMemberColour,
 } from "@uwe/family-core";
 import { getFamilyUser } from "@/src/lib/page-family";
 import { FamilyShell, FamilyDenied } from "@/src/components/FamilyShell";
@@ -14,8 +15,10 @@ import { CalDavAccountManager } from "@/src/components/calendar/CalDavAccountMan
  *
  * Zwei Wege aufs Handy:
  * 1. Abo (ICS): eine URL mit eigenem, nur lesendem Token. Zeigt Termine,
- *    Geburtstage und fällige Einträge der Gesundheitsakte; personengebundene
- *    Abos filtern.
+ *    Geburtstage und fällige Einträge der Gesundheitsakte; ein auf Personen
+ *    eingeschränktes Abo zeigt nur deren Termine plus die des ganzen
+ *    Haushalts. Die Einschränkung darf mehrere Personen umfassen — ein Tablet
+ *    für beide Kinder ist ein Abo, nicht zwei.
  * 2. CalDAV-Account: lesen UND schreiben — Termine auf dem iPhone anlegen,
  *    ändern und löschen. Haushalts-Zugang mit eigenem Token als Passwort.
  */
@@ -57,13 +60,14 @@ export default async function FamilyCalendarSubscriptionPage() {
             id: row.id,
             label: row.label,
             tokenPrefix: row.tokenPrefix,
-            member: row.member,
+            members: row.members,
             isActive: row.isActive,
             lastUsedAt: row.lastUsedAt?.toISOString() ?? null,
           }))}
           members={members.map((member) => ({
             id: member.id,
             displayName: member.displayName,
+            colour: resolveMemberColour(member),
           }))}
           baseUrl={baseUrl}
         />

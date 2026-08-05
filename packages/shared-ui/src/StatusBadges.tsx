@@ -122,6 +122,7 @@ export const PAGE_TYPE_LABELS: Record<PageType, string> = {
   map: "Karte",
   secret: "Geheimnis",
   note: "Notiz",
+  story_arc: "Kapitel",
 };
 
 export const QUEST_STATUS_LABELS: Record<QuestLifecycleStatus, string> = {

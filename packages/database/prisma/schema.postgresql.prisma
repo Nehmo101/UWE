@@ -33,6 +33,7 @@ enum PageType {
   sound
   map
   note
+  story_arc
 }
 
 enum DungeonPrepStatus {
@@ -383,6 +384,8 @@ enum WorldEventEntityRole {
   involved
   location
   faction
+  trigger
+  consequence
 }
 
 enum DndRulesEdition {

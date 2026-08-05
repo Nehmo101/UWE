@@ -90,7 +90,7 @@ describe("buildFamilyFeedEvents", () => {
       healthDue: [
         {
           id: "h1",
-          memberName: "Mimi",
+          memberNames: ["Mimi"],
           kind: "vet",
           title: "Impfung Tollwut",
           nextDueOn: utc(2026, 9, 1),
@@ -110,7 +110,7 @@ describe("buildFamilyFeedEvents", () => {
       healthDue: [
         {
           id: "h1",
-          memberName: "Mimi",
+          memberNames: ["Mimi"],
           kind: "vet",
           title: "Impfung",
           nextDueOn: utc(2026, 7, 1),

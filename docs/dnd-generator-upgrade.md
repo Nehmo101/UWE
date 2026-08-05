@@ -33,6 +33,17 @@ KI-gestützte DnD-Inhaltsgenerierung in UWE — kontextuelle Aktionen, Review/Ap
 | Dungeonraum füllen | `fill_dungeon_room` | Nein | `page_content_block` |
 | Wissenstext erweitern | `expand_knowledge` | Nein | `page_content_block` |
 | Mail-Entwurf | `mail_draft` | **Ja** | `mail_draft` |
+| Kapitel-Entwurf aus offenen Fäden | `campaign_chapter_draft` | Nein | `campaign_chapter_page` (neue `story_arc`-Seite, unvorbereitet) |
+| Session-Aufhänger aus der Chronik | `campaign_session_hooks` | Nein | `session_open_plots` (offene Plots der nächsten geplanten Session, additiv) |
+
+Die beiden Kampagnen-Aktionen tragen `requiresCampaign` und laufen nur aus dem
+Kampagnen-Cockpit (`/worlds/[w]/kampagnen/[slug]`, KI-Werkstatt in der
+Kontextspalte). Ihr Kontext ist der Kompakt-Digest der Kampagne
+(`buildCampaignAiDigest` in `@uwe/campaign-cockpit`) — er enthält DM-Material
+(Fraktions-Agenden, Chronik mit `summaryDm`) und darf deshalb nie in
+player-safe Aktionen fließen. Anwenden löst die Ziel-Session erst zur
+Apply-Zeit auf; ohne geplante Session bleibt der Vorschlag pending und
+kopierbar.
 
 ---
 
@@ -41,7 +52,7 @@ KI-gestützte DnD-Inhaltsgenerierung in UWE — kontextuelle Aktionen, Review/Ap
 UWE übernimmt **nichts automatisch**. Der Ablauf:
 
 ```txt
-1. DM wählt Kontext (Seite, Session, Dungeon-Raum)
+1. DM wählt Kontext (Seite, Session, Dungeon-Raum, Kampagne)
 2. DM startet KI-Aktion (lokaler Maschinenraum erforderlich)
 3. KI erzeugt Vorschlag (AI Run + Proposal)
 4. DM prüft Vorschlag in Review-UI

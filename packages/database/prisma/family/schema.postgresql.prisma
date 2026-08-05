@@ -234,9 +234,9 @@ model FamilyMemberProfile {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  eventLinks    CalendarEventMember[]
-  healthRecords FamilyHealthRecord[]
-  subscriptions FamilyCalendarSubscription[]
+  eventLinks        CalendarEventMember[]
+  healthRecordLinks FamilyHealthRecordMember[]
+  subscriptionLinks FamilyCalendarSubscriptionMember[]
 
   @@index([isActive, sortIndex])
   @@map("family_member_profiles")
@@ -257,8 +257,7 @@ model CalendarEventMember {
 }
 
 model FamilyHealthRecord {
-  id       String @id @default(cuid())
-  memberId String @map("member_id")
+  id String @id @default(cuid())
 
   kind  FamilyHealthRecordKind @default(other)
   title String
@@ -271,11 +270,25 @@ model FamilyHealthRecord {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  member FamilyMemberProfile @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberLinks FamilyHealthRecordMember[]
 
-  @@index([memberId, occurredOn])
+  @@index([occurredOn])
   @@index([nextDueOn])
   @@map("family_health_records")
+}
+
+model FamilyHealthRecordMember {
+  recordId String @map("record_id")
+  memberId String @map("member_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  record FamilyHealthRecord  @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  member FamilyMemberProfile @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@id([recordId, memberId])
+  @@index([memberId])
+  @@map("family_health_record_members")
 }
 
 model FamilyCalendarSubscription {
@@ -285,9 +298,6 @@ model FamilyCalendarSubscription {
   tokenHash   String @unique @map("token_hash")
   tokenPrefix String @map("token_prefix")
 
-  /// Leer = alle Termine des Haushalts; gesetzt = nur die dieser Person.
-  memberId String? @map("member_id")
-
   isActive   Boolean   @default(true) @map("is_active")
   lastUsedAt DateTime? @map("last_used_at")
   revokedAt  DateTime? @map("revoked_at")
@@ -295,7 +305,8 @@ model FamilyCalendarSubscription {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  member FamilyMemberProfile? @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  /// Leer = alle Termine des Haushalts; gesetzt = nur die dieser Personen.
+  memberLinks FamilyCalendarSubscriptionMember[]
 
   @@index([isActive])
   @@map("family_calendar_subscriptions")
@@ -317,6 +328,20 @@ model FamilyCalDavAccount {
 
   @@index([isActive])
   @@map("family_caldav_accounts")
+}
+
+model FamilyCalendarSubscriptionMember {
+  subscriptionId String @map("subscription_id")
+  memberId       String @map("member_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  subscription FamilyCalendarSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  member       FamilyMemberProfile        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@id([subscriptionId, memberId])
+  @@index([memberId])
+  @@map("family_calendar_subscription_members")
 }
 
 model ContractExpense {

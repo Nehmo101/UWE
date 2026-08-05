@@ -10,6 +10,8 @@ export type BrainActionId =
   | "player_handout"
   | "fill_dungeon_room"
   | "mail_draft"
+  | "campaign_chapter_draft"
+  | "campaign_session_hooks"
   | "terra_name_regions"
   | "terra_describe_region"
   | "terra_world_draft";
@@ -21,6 +23,8 @@ export type AiProposalTargetType =
   | "brain_document"
   | "idea_page"
   | "mail_draft"
+  | "campaign_chapter_page"
+  | "session_open_plots"
   | "terra_region_names"
   | "terra_region_description"
   | "terra_world_draft";
@@ -31,6 +35,8 @@ export interface BrainActionDefinition {
   description: string;
   taskType: AiTaskType;
   requiresSession: boolean;
+  /** Kampagnen-Aktionen laufen nur mit campaignSlug — der Runner erzwingt es. */
+  requiresCampaign?: boolean;
   playerSafe: boolean;
   defaultProposalTarget: AiProposalTargetType;
   defaultProposalLabel: string;
@@ -117,6 +123,34 @@ export const BRAIN_ACTIONS: Record<BrainActionId, BrainActionDefinition> = {
     playerSafe: true,
     defaultProposalTarget: "mail_draft",
     defaultProposalLabel: "Mail-Entwurf",
+  },
+  /* Kampagnen-Cockpit-Aktionen: laufen über den Kompakt-Digest der Kampagne
+     (extraPromptContext aus @uwe/campaign-cockpit) statt über eine einzelne
+     Seite. Der Digest enthält DM-Material (Fraktions-Agenden, summaryDm der
+     Chronik) — beide Aktionen sind deshalb NIE playerSafe. */
+  campaign_chapter_draft: {
+    id: "campaign_chapter_draft",
+    label: "Kapitel-Entwurf aus offenen Fäden",
+    description:
+      "Schlägt das nächste Kapitel der Kampagne vor — aus offenen Quests, jüngster Chronik und Fraktions-Agenden. Wird beim Übernehmen als unvorbereitete Kapitel-Seite angelegt.",
+    taskType: "draft_campaign_chapter",
+    requiresSession: false,
+    requiresCampaign: true,
+    playerSafe: false,
+    defaultProposalTarget: "campaign_chapter_page",
+    defaultProposalLabel: "Kapitel-Entwurf",
+  },
+  campaign_session_hooks: {
+    id: "campaign_session_hooks",
+    label: "Session-Aufhänger aus der Chronik",
+    description:
+      "3–5 konkrete Einstiegs-Hooks für den nächsten Spielabend. Landen beim Übernehmen in den offenen Plots der nächsten geplanten Session.",
+    taskType: "suggest_session_hooks",
+    requiresSession: false,
+    requiresCampaign: true,
+    playerSafe: false,
+    defaultProposalTarget: "session_open_plots",
+    defaultProposalLabel: "Session-Aufhänger",
   },
   /* The two surviving map text actions. They produce PROSE, not data — no
      validator, no JSON: a list of name suggestions and a description are read

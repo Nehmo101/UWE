@@ -66,7 +66,7 @@ export async function loadWeekBriefingInput(
       record.nextDueOn
         ? [
             {
-              memberName: record.member.displayName,
+              memberNames: record.members.map((member) => member.displayName),
               kind: record.kind as FamilyHealthRecordKind,
               title: record.title,
               nextDueOn: record.nextDueOn,

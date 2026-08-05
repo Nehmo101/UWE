@@ -35,7 +35,10 @@ export async function GET(request: Request) {
       title: record.title,
       kind: record.kind,
       nextDueOn: record.nextDueOn,
-      member: { id: record.member.id, displayName: record.member.displayName },
+      members: record.members.map((member) => ({
+        id: member.id,
+        displayName: member.displayName,
+      })),
     })),
   });
 }
@@ -44,23 +47,36 @@ export async function POST(request: Request) {
   const denied = await requireFamilyApiAuth(request, { scopes: ["family_write"] });
   if (denied) return denied;
 
-  let body: { memberId?: unknown; title?: unknown; kind?: unknown; nextDueOn?: unknown; notes?: unknown };
+  let body: {
+    memberId?: unknown;
+    memberIds?: unknown;
+    title?: unknown;
+    kind?: unknown;
+    nextDueOn?: unknown;
+    notes?: unknown;
+  };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Ungültiger Anfragekörper." }, { status: 400 });
   }
 
-  const memberId = typeof body.memberId === "string" ? body.memberId : "";
+  // `memberId` bleibt als Einzelform gültig — Bestandsaufrufer schicken sie.
+  const memberIds = [
+    ...(Array.isArray(body.memberIds)
+      ? body.memberIds.filter((id): id is string => typeof id === "string")
+      : []),
+    ...(typeof body.memberId === "string" ? [body.memberId] : []),
+  ];
   const title = typeof body.title === "string" ? body.title.trim() : "";
-  if (memberId === "" || title === "") {
-    return NextResponse.json({ error: "memberId und title sind nötig." }, { status: 400 });
+  if (memberIds.length === 0 || title === "") {
+    return NextResponse.json({ error: "memberIds und title sind nötig." }, { status: 400 });
   }
 
   const nextDue = typeof body.nextDueOn === "string" ? new Date(body.nextDueOn) : null;
 
   const record = await createFamilyHealthService(familyPrisma).createRecord({
-    memberId,
+    memberIds,
     title,
     kind: isFamilyHealthRecordKind(body.kind) ? body.kind : "other",
     notes: typeof body.notes === "string" ? body.notes : "",

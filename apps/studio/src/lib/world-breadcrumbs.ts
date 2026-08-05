@@ -75,6 +75,18 @@ export function wikiPageBreadcrumb(
   ];
 }
 
+/** Breadcrumb for the campaign cockpit hierarchy (Kampagne → Kapitel). */
+export function campaignCockpitBreadcrumb(
+  worldName: string,
+  worldSlug: string,
+  segments: BreadcrumbItem[],
+): BreadcrumbItem[] {
+  return [
+    ...worldSectionBreadcrumb(worldName, worldSlug, "Kampagnen", `/worlds/${worldSlug}/kampagnen`),
+    ...segments,
+  ];
+}
+
 /** Breadcrumb for dungeon hierarchy. */
 export function dungeonBreadcrumb(
   worldName: string,

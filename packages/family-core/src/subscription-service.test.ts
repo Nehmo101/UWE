@@ -91,10 +91,75 @@ describe("FamilyCalendarSubscriptionService", () => {
 
     const created = await service.createSubscription({
       label: "Nur Anna",
-      memberId: anna.id,
+      memberIds: [anna.id],
     });
 
-    assert.equal((await service.resolveByToken(created.token))?.memberId, anna.id);
+    assert.deepEqual((await service.resolveByToken(created.token))?.memberIds, [anna.id]);
+  });
+
+  it("bindet ein Abo an mehrere Mitglieder", async () => {
+    const members = createFamilyMemberService(db);
+    const lino = await members.createMember({ displayName: "Lino Abo" });
+    const mimi = await members.createMember({ displayName: "Mimi Abo" });
+
+    const created = await service.createSubscription({
+      label: "Tablet der Kinder",
+      memberIds: [lino.id, mimi.id, lino.id, "  "],
+    });
+
+    assert.deepEqual(created.memberIds, [lino.id, mimi.id], "doppelt und leer fallen weg");
+    assert.deepEqual(
+      [...((await service.resolveByToken(created.token))?.memberIds ?? [])].sort(),
+      [lino.id, mimi.id].sort(),
+    );
+
+    const listed = (await service.listSubscriptions()).find((row) => row.id === created.id);
+    assert.deepEqual(
+      listed?.members.map((member) => member.displayName),
+      ["Lino Abo", "Mimi Abo"],
+    );
+  });
+
+  it("ohne Mitglied gilt das Abo für den ganzen Haushalt", async () => {
+    const created = await service.createSubscription({ label: "Ganzer Haushalt" });
+
+    assert.deepEqual(created.memberIds, []);
+    assert.deepEqual((await service.resolveByToken(created.token))?.memberIds, []);
+  });
+
+  it("ändert die Personen eines bestehenden Abos", async () => {
+    const members = createFamilyMemberService(db);
+    const a = await members.createMember({ displayName: "Wechsel A" });
+    const b = await members.createMember({ displayName: "Wechsel B" });
+
+    const created = await service.createSubscription({ label: "Wechsel", memberIds: [a.id] });
+
+    await service.setSubscriptionMembers(created.id, [a.id, b.id]);
+    // Erneut dieselbe Auswahl darf nicht am Primärschlüssel scheitern.
+    await service.setSubscriptionMembers(created.id, [a.id, b.id]);
+
+    assert.deepEqual(
+      [...((await service.resolveByToken(created.token))?.memberIds ?? [])].sort(),
+      [a.id, b.id].sort(),
+    );
+
+    await service.setSubscriptionMembers(created.id, []);
+    assert.deepEqual((await service.resolveByToken(created.token))?.memberIds, []);
+  });
+
+  it("löscht ein auf Personen eingeschränktes Abo mit der letzten Person", async () => {
+    const members = createFamilyMemberService(db);
+    const solo = await members.createMember({ displayName: "Einziger im Abo" });
+    const created = await service.createSubscription({
+      label: "Nur diese Person",
+      memberIds: [solo.id],
+    });
+
+    await members.removeMember(solo.id);
+
+    // Sonst würde aus einem persönlichen Abo stillschweigend eines für den
+    // ganzen Haushalt.
+    assert.equal(await service.resolveByToken(created.token), null);
   });
 
   it("vermerkt die Nutzung", async () => {

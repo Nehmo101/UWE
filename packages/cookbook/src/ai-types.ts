@@ -38,6 +38,8 @@ export type CookbookAiTaskType =
   | "page_ai_convert"
   | "prepare_canon_check"
   | "prepare_next_session"
+  | "draft_campaign_chapter"
+  | "suggest_session_hooks"
   | "create_player_handout"
   | "fill_dungeon_room"
   | "prepare_mail_draft"

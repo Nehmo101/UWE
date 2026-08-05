@@ -6,6 +6,7 @@ import { worldNavItems as canonicalWorldNavItems } from "../navigation/world-nav
 export function worldDmToolQuickLinks(worldSlug: string): { label: string; href: string }[] {
   const highlightIds = new Set([
     "world-radar",
+    "world-campaigns",
     "world-prepare-session",
     "world-one-shot",
     "world-open-items",
@@ -43,6 +44,7 @@ export type WorldNavKey =
   | "backup"
   | "new-page"
   | "radar"
+  | "kampagnen"
   | "karten"
   | "magic-items"
   | "prepare-session"
@@ -81,7 +83,10 @@ export function worldNavSections(worldSlug: string, active?: WorldNavKey): World
     {
       id: "overview",
       title: "Übersicht",
-      items: [{ key: "overview", label: "Dashboard", href: `${base}/dashboard` }],
+      items: [
+        { key: "overview", label: "Dashboard", href: `${base}/dashboard` },
+        { key: "kampagnen", label: "Kampagnen", href: `${base}/kampagnen` },
+      ],
     },
     {
       id: "content",
@@ -150,7 +155,7 @@ export function worldNavItems(worldSlug: string, active?: WorldNavKey): WorldNav
 
 /** Map world nav key to mobile bottom nav active tab. */
 export function worldBottomNavKey(active: WorldNavKey, isSearching = false): WorldBottomNavKey {
-  if (active === "overview" || active === "radar") return "overview";
+  if (active === "overview" || active === "radar" || active === "kampagnen") return "overview";
   if (
     active === "pages" ||
     active === "new-page" ||
@@ -252,6 +257,9 @@ export function resolveWorldNavKey(pathname: string, worldSlug: string): WorldNa
   const normalized = pathname.replace(/\/$/, "");
 
   if (normalized === `${base}/radar`) return "radar";
+  // Vor den generischen Zwei-Segment-Wiki-Matches: /kampagnen hat eigene Tiefe.
+  if (normalized.startsWith(`${base}/kampagnen`)) return "kampagnen";
+  if (normalized.startsWith(`${base}/campaigns`)) return "kampagnen";
   if (normalized === `${base}/dashboard`) return "overview";
   if (normalized === `${base}/wiki`) return "pages";
   const sessionDetailMatch = normalized.match(new RegExp(`^${base}/sessions/([^/]+)$`));
