@@ -18,7 +18,6 @@ import {
   CANVAS_FONT,
   CHROME_FALLBACK,
   GRAPH_CATEGORY_COLORS,
-  capVector,
   clamp,
   isGraphPositionCacheValid,
   lerp,
@@ -26,34 +25,23 @@ import {
   type ChromeColors,
 } from "./graph-engine-visuals";
 import { buildDataset, type SimEdge, type SimNode } from "./graph-engine-dataset";
+import {
+  ALPHA_CACHED,
+  ALPHA_DRAG,
+  COLLIDE_PAD,
+  COLLIDE_PAD_INTER,
+  layoutCommunityPacks,
+  stepPhysics,
+} from "./graph-engine-physics";
 
 // Öffentliche API abwärtskompatibel halten (Importe über `./graph-engine`).
 export { GRAPH_CATEGORY_COLORS, isGraphPositionCacheValid };
 
-// --- Physik-Parameter ---------------------------------------------------------
-const REP = 2900; // Abstoßungsstärke (Basis, skaliert mit √n)
-const SPRING = 0.018; // Federkonstante
-const GRAV = 0.0065; // Zentrierungskraft
-const CLUSTER = 0.02; // sanfte Anziehung zum Community-Schwerpunkt
-const CLUSTER_PACK = 0.06; // Rückzug in den Pack-Kreis der Community (nur außerhalb des Pack-Radius)
-const PACK_DENSITY = 0.6; // angenommene Packdichte beim Community-Pack-Radius
-const BOUNDARY = 0.05; // weiche kreisförmige Weltgrenze — nichts driftet ins Unendliche
-const DAMP = 0.86; // Dämpfung → System kommt zur Ruhe
+// --- Render-/Interaktions-Parameter (Physik-Parameter: graph-engine-physics.ts) ---
 const REST = 0.045; // Schwelle "in Ruhe"
-// Simulated Annealing (wie d3-force `alpha`): Kräfte kühlen aus, das Layout
-// friert ein. Ohne Auskühlen schieben Dauer-Kräfte gegen die Kollisionsauflösung
-// und der Graph zittert/driftet endlos.
-const ALPHA_DECAY = 0.99; // Abkühlrate pro Schritt
-const ALPHA_MIN = 0.02; // darunter gelten die Kräfte als aus (nur noch Kollisionen)
-const ALPHA_DRAG = 0.3; // Wieder-Aufwärmen nach dem Ziehen eines Knotens
-const ALPHA_CACHED = 0.15; // gecachte Layouts (Remount) nur sanft nachsetzen lassen
 const HL_LERP = 0.16; // Fokus-/Sichtbarkeits-Interpolation pro Frame
 const EDGE_BEND = 0.12; // Kantenbiegung
-const MIN_DIST = 2.4; // Mindestabstand in der Abstoßung (verhindert Kraft-Spitzen)
-const COLLIDE_PAD = 14; // "Nicht berühren": harter Mindestabstand zwischen Bubble-Rändern (Weltkoordinaten)
-const COLLIDE_PAD_INTER = 42; // größerer Abstand zwischen verschiedenen Communities → sichtbarer Moat
 const COLLIDE_MAX_ITERS = 32; // Obergrenze der Kollisions-Iterationen pro Schritt (adaptiv, bricht früh ab)
-const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5)); // Phyllotaxis-Winkel fürs Initial-Layout
 const MIN_ZOOM = 0.35; // untere Zoom-Grenze (zoomBy/fit)
 const MAX_ZOOM = 3.2; // obere Zoom-Grenze
 // Zeichenradius-Skala: ab hier wächst der Radius langsamer als der Zoom (Lesbarkeit
@@ -63,8 +51,6 @@ const MAX_ZOOM = 3.2; // obere Zoom-Grenze
 // überdecken. Eine höhere Untergrenze (früher 0.6) ließ die Kreise beim Rauszoomen
 // langsamer schrumpfen als ihre Abstände → sichtbare Überlappung.
 const NODE_SCALE_MAX = 1.6;
-const MAX_FORCE = 42; // Obergrenze pro Knoten und Schritt
-const MAX_VEL = 24; // Obergrenze für Geschwindigkeit pro Schritt
 const PREWARM_BASE = 40; // Vorab-Schritte vor dem ersten Frame
 const PREWARM_PER_NODE = 0.35; // Zusätzliche Vorab-Schritte pro Knoten
 export interface GraphEngineOptions {
@@ -193,43 +179,8 @@ export class GraphEngine {
       nd.group = this.community.get(nd.id) ?? -1;
     });
 
-    // Grüppchen nach Größe sortiert im Sonnenblumen-Muster platzieren: die
-    // größten Communities sitzen nahe der Mitte, kleine und Einzelknoten außen.
-    // So starten Gruppen sichtbar getrennt — Pack-Kraft und Kollisions-Moat
-    // halten sie anschließend getrennt, statt alles in einen Brei zu ziehen.
-    const byGroup = new Map<number, SimNode[]>();
-    this.nodes.forEach((nd) => {
-      const list = byGroup.get(nd.group);
-      if (list) list.push(nd);
-      else byGroup.set(nd.group, [nd]);
-    });
-    this.packR.clear();
-    byGroup.forEach((members, g) => {
-      // Pack-Radius aus der Summe der Bubble-Flächen (inkl. halbem Abstands-Pad).
-      const area = members.reduce((sum, m) => sum + (m.r + COLLIDE_PAD * 0.5) ** 2, 0);
-      this.packR.set(g, Math.sqrt(area / PACK_DENSITY));
-    });
-    const ordered = [...byGroup.entries()].sort(
-      (a, b) => b[1].length - a[1].length || a[0] - b[0],
-    );
-    let covered = 0; // bereits belegte Fläche inkl. Moat-Luft
-    ordered.forEach(([g, members], k) => {
-      const packR = this.packR.get(g) ?? 8;
-      const dist = k === 0 ? 0 : Math.sqrt(covered / Math.PI) + packR * 0.5;
-      covered += Math.PI * (packR + COLLIDE_PAD_INTER * 0.5) ** 2;
-      const angle = k * GOLDEN_ANGLE;
-      const cx = Math.cos(angle) * dist;
-      const cy = Math.sin(angle) * dist;
-      members.forEach((m, i) => {
-        const ma = i * GOLDEN_ANGLE;
-        const mr = packR * Math.sqrt((i + 0.5) / members.length);
-        m.x = cx + Math.cos(ma) * mr + (Math.random() - 0.5) * 6;
-        m.y = cy + Math.sin(ma) * mr + (Math.random() - 0.5) * 6;
-      });
-    });
-    // Weiche Weltgrenze aus der belegten Gesamtfläche: hält lose Grüppchen und
-    // Einzelknoten in Sichtweite, statt sie ins Unendliche driften zu lassen.
-    this.boundR = Math.max(Math.sqrt(covered / Math.PI) * 1.15 + 60, 160);
+    // Grüppchen als eigene Kreis-Packungen platzieren (Details: graph-engine-physics.ts).
+    this.boundR = layoutCommunityPacks(this.nodes, this.packR);
 
     this.edges.forEach((e) => {
       e.hl = 1;
@@ -380,131 +331,23 @@ export class GraphEngine {
     this.wake();
   }
 
-  // --- Physik -----------------------------------------------------------------
+  // --- Physik (Kräfte + Annealing: graph-engine-physics.ts) --------------------
   private step(): number {
-    const ns = this.nodes;
-    // Ausgekühlte Simulation: Kräfte sind aus — nur noch Restgeschwindigkeit
-    // abbauen und Kollisionen auflösen. Das Layout bleibt stehen (kein Drift).
-    if (this.alpha < ALPHA_MIN) {
-      let ke = 0;
-      ns.forEach((a) => {
-        if (a.fixed) {
-          a.vx = 0;
-          a.vy = 0;
-          return;
-        }
-        a.vx *= DAMP;
-        a.vy *= DAMP;
-        a.x += a.vx;
-        a.y += a.vy;
-        ke += a.vx * a.vx + a.vy * a.vy;
-      });
-      return ke / Math.max(ns.length, 1) + this.resolveCollisions();
-    }
-    const minDist2 = MIN_DIST * MIN_DIST;
-    const repScale = REP / Math.sqrt(Math.max(ns.length, 1));
-    // Community-Schwerpunkte für die Cluster-Anziehung (Grüppchen-Bildung).
-    const centroids = new Map<number, { x: number; y: number; n: number }>();
-    ns.forEach((nd) => {
-      const e = centroids.get(nd.group);
-      if (e) {
-        e.x += nd.x;
-        e.y += nd.y;
-        e.n += 1;
-      } else {
-        centroids.set(nd.group, { x: nd.x, y: nd.y, n: 1 });
-      }
+    const { ke, alpha } = stepPhysics({
+      nodes: this.nodes,
+      edges: this.edges,
+      byId: (id) => this.map.get(id),
+      L: this.L,
+      alpha: this.alpha,
+      packR: this.packR,
+      boundR: this.boundR,
     });
-    for (let i = 0; i < ns.length; i++) {
-      const a = ns[i];
-      let fx = 0,
-        fy = 0;
-      for (let j = 0; j < ns.length; j++) {
-        if (i === j) continue;
-        const b = ns[j];
-        let dx = a.x - b.x,
-          dy = a.y - b.y;
-        let d2 = dx * dx + dy * dy;
-        if (d2 < minDist2) {
-          if (d2 < 1e-6) {
-            dx = Math.random() - 0.5;
-            dy = Math.random() - 0.5;
-          }
-          d2 = minDist2;
-        }
-        const d = Math.sqrt(d2);
-        // größere Knoten stoßen stärker ab → mehr Platz für Hubs
-        const f = (repScale * (0.55 + (a.r + b.r) / 42)) / d2;
-        fx += (dx / d) * f;
-        fy += (dy / d) * f;
-      }
-      fx -= a.x * GRAV;
-      fy -= a.y * GRAV;
-      // Zug zum eigenen Community-Schwerpunkt: hält stark verbundene Grüppchen
-      // zusammen, ohne die Abstoßung/Kollision auszuhebeln. Außerhalb des
-      // Pack-Radius zieht zusätzlich die Pack-Kraft zurück in den Kreis —
-      // so entstehen die dichten, runden Grüppchen-Packungen.
-      const cen = centroids.get(a.group);
-      if (cen && cen.n > 1) {
-        const cx = cen.x / cen.n - a.x,
-          cy = cen.y / cen.n - a.y;
-        fx += cx * CLUSTER;
-        fy += cy * CLUSTER;
-        const cd = Math.hypot(cx, cy);
-        const packR = this.packR.get(a.group) ?? 0;
-        if (cd > packR && cd > 1e-6) {
-          const f = ((cd - packR) * CLUSTER_PACK) / cd;
-          fx += cx * f;
-          fy += cy * f;
-        }
-      }
-      // Weiche Weltgrenze: jenseits von boundR wächst eine Rückholkraft —
-      // abgekoppelte Grüppchen driften nicht mehr ins Unendliche.
-      const rd = Math.hypot(a.x, a.y);
-      if (rd > this.boundR) {
-        const f = ((rd - this.boundR) * BOUNDARY) / rd;
-        fx -= a.x * f;
-        fy -= a.y * f;
-      }
-      [a._fx, a._fy] = capVector(fx, fy, MAX_FORCE);
-    }
-    this.edges.forEach((e) => {
-      const s = this.byId(e.sourceId),
-        t = this.byId(e.targetId);
-      if (!s || !t) return;
-      const dx = t.x - s.x,
-        dy = t.y - s.y;
-      const d = Math.sqrt(dx * dx + dy * dy) || 1;
-      // Ruhelänge inkl. Knotenradien, damit dicke Knoten nicht überlappen
-      const rest = this.L + s.r + t.r;
-      const f = SPRING * (d - rest);
-      const ux = dx / d,
-        uy = dy / d;
-      s._fx += ux * f;
-      s._fy += uy * f;
-      t._fx -= ux * f;
-      t._fy -= uy * f;
-    });
-    let ke = 0;
-    ns.forEach((a) => {
-      if (a.fixed) {
-        a.vx = 0;
-        a.vy = 0;
-        return;
-      }
-      a.vx = (a.vx + a._fx * this.alpha) * DAMP;
-      a.vy = (a.vy + a._fy * this.alpha) * DAMP;
-      [a.vx, a.vy] = capVector(a.vx, a.vy, MAX_VEL);
-      a.x += a.vx;
-      a.y += a.vy;
-      ke += a.vx * a.vx + a.vy * a.vy;
-    });
-    this.alpha *= ALPHA_DECAY;
+    this.alpha = alpha;
     // "Nicht berühren": Überlappungen nach der Integration hart auflösen, damit
     // sich Bubbles nie überdecken (Abstoßung allein garantiert das nicht). Die
     // (bereits pro Knoten normierte) Kollisions-Energie hält den Graph wach,
     // solange noch etwas entzerrt werden muss.
-    return ke / Math.max(ns.length, 1) + this.resolveCollisions();
+    return ke + this.resolveCollisions();
   }
 
   // "Nicht berühren": Bubble-Überlappungen hart auflösen (Details + Algorithmus in
