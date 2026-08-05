@@ -324,6 +324,29 @@ function stripHtmlComments(html: string): string {
   return result + html.slice(cursor);
 }
 
+/** Name eines Tags — ein verankerter Quantor, damit hier nichts backtracken kann. */
+const TAG_NAME = /^[a-zA-Z][a-zA-Z0-9-]*/;
+
+/** Steht `<…>` mitten im Wort, oder trennt es? `inner` ist der Inhalt ohne Klammern. */
+function isInlineTag(inner: string): boolean {
+  const name = TAG_NAME.exec(inner.startsWith("/") ? inner.slice(1) : inner)?.[0];
+  return name !== undefined && INLINE_TAGS.has(name.toLowerCase());
+}
+
+/** Die Entities, die der Sanitizer erzeugt — zurück in Zeichen. */
+function decodeEntities(text: string): string {
+  return (
+    text
+      .replace(/&nbsp;/g, " ")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#0?39;|&apos;/g, "'")
+      // Als Letztes: sonst würde aus `&amp;lt;` (im Text sichtbares „&lt;") ein „<".
+      .replace(/&amp;/g, "&")
+  );
+}
+
 /**
  * Der reine Text eines HTML-Abschnitts.
  *
@@ -331,29 +354,40 @@ function stripHtmlComments(html: string): string {
  * Entities zurückübersetzt, Weißraum zusammengefasst. Blockgrenzen werden zu
  * einem Leerzeichen — ohne das klebte das Ende eines Absatzes am Anfang des
  * nächsten und ergäbe Treffer, die im Text nicht stehen.
+ *
+ * Getrennt wird mit `indexOf`, nicht mit einem Tag-Regex. Ein Ausdruck wie
+ * `<\/?([a-zA-Z][a-zA-Z0-9-]*)[^>]*>` lässt sich auf `<A------…` (ohne `>`) auf
+ * beliebig viele Weisen aufteilen, weil Name und Attributteil sich beim `-`
+ * überlappen — quadratische Laufzeit auf Text, den der Spielleiter selbst
+ * schreibt. Dieser Durchlauf setzt den Zeiger nur vorwärts.
  */
 export function plainTextFromHtml(html: string): string {
   // Nicht über `htmlTextRanges`: das lässt Entities bewusst außen vor, weil dort
   // nie markiert werden darf. Hier sollen sie im Gegenteil zurückübersetzt
   // werden — ein Ausschnitt mit „&amp;" darin liest sich falsch.
-  return (
-    stripHtmlComments(html)
-      .replace(/<\/?([a-zA-Z][a-zA-Z0-9-]*)[^>]*>/g, (_tag, name: string) =>
-        INLINE_TAGS.has(name.toLowerCase()) ? "" : " ",
-      )
-      // Was danach noch wie ein Tag aussieht, ist keins mit Namen — weg damit.
-      .replace(/<[^>]*>/g, " ")
-      // Erst die benannten Entities, `&amp;` als Letztes: sonst würde aus
-      // `&amp;lt;` (im Text sichtbares „&lt;") ein „<".
-      .replace(/&nbsp;/g, " ")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&quot;/g, '"')
-      .replace(/&#0?39;|&apos;/g, "'")
-      .replace(/&amp;/g, "&")
-      .replace(/\s+/g, " ")
-      .trim()
-  );
+  const stripped = stripHtmlComments(html);
+  let text = "";
+  let cursor = 0;
+
+  for (;;) {
+    const open = stripped.indexOf("<", cursor);
+    if (open === -1) {
+      text += stripped.slice(cursor);
+      break;
+    }
+
+    text += stripped.slice(cursor, open);
+
+    const close = stripped.indexOf(">", open + 1);
+    // Unabgeschlossenes Tag: der Rest ist keiner mehr — so wirft es der Browser
+    // auch weg.
+    if (close === -1) break;
+
+    text += isInlineTag(stripped.slice(open + 1, close)) ? "" : " ";
+    cursor = close + 1;
+  }
+
+  return decodeEntities(text).replace(/\s+/g, " ").trim();
 }
 
 /**

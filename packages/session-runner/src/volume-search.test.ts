@@ -114,14 +114,21 @@ describe("plainTextFromHtml", () => {
     assert.equal(plainTextFromHtml("<p>Vor<!-- ohne Ende</p>"), "Vor");
   });
 
-  it("bleibt bei vielen offenen Kommentaren schnell", () => {
-    // Regressionsschutz gegen den quadratischen Regex-Vorgänger: derselbe Text
-    // brauchte dort Sekunden statt Millisekunden (CodeQL js/polynomial-redos).
-    const html = `<p>${"<!--".repeat(20_000)}</p>`;
-    const started = process.hrtime.bigint();
-    plainTextFromHtml(html);
-    const millis = Number(process.hrtime.bigint() - started) / 1e6;
-    assert.ok(millis < 500, `plainTextFromHtml brauchte ${millis.toFixed(0)} ms`);
+  it("bleibt auf entartetem Markup schnell", () => {
+    // Regressionsschutz gegen zwei quadratische Regex-Vorgänger (CodeQL
+    // js/polynomial-redos): viele offene Kommentare, und ein nie geschlossenes
+    // Tag, dessen Name sich mit dem Attributteil überlappte. Beides brauchte
+    // dort Sekunden statt Millisekunden.
+    for (const html of [`<p>${"<!--".repeat(20_000)}</p>`, `<p><A${"-".repeat(40_000)}`]) {
+      const started = process.hrtime.bigint();
+      plainTextFromHtml(html);
+      const millis = Number(process.hrtime.bigint() - started) / 1e6;
+      assert.ok(millis < 500, `plainTextFromHtml brauchte ${millis.toFixed(0)} ms`);
+    }
+  });
+
+  it("wirft ein unabgeschlossenes Tag samt Rest weg", () => {
+    assert.equal(plainTextFromHtml("<p>Vor<a href='/x' Rest ohne Klammer"), "Vor");
   });
 
   it("übersetzt maskierte Entities nicht doppelt", () => {
