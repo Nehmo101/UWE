@@ -51,7 +51,7 @@ export type WorldNavKey =
   | "one-shot"
   | "open-items"
   | "roll-tables"
-  | "questions"
+  | "gruppen"
   | "print-center"
   | "quality";
 
@@ -176,7 +176,7 @@ export function worldBottomNavKey(active: WorldNavKey, isSearching = false): Wor
     active === "one-shot" ||
     active === "open-items" ||
     active === "roll-tables" ||
-    active === "questions" ||
+    active === "gruppen" ||
     active === "dungeons"
   ) {
     return "sessions";
@@ -275,7 +275,7 @@ export function resolveWorldNavKey(pathname: string, worldSlug: string): WorldNa
   if (normalized.startsWith(`${base}/one-shot`)) return "one-shot";
   if (normalized.startsWith(`${base}/open-items`)) return "open-items";
   if (normalized.startsWith(`${base}/roll-tables`)) return "roll-tables";
-  if (normalized.startsWith(`${base}/questions`)) return "questions";
+  if (normalized.startsWith(`${base}/gruppen`)) return "gruppen";
   if (normalized.startsWith(`${base}/dungeons`)) return "dungeons";
   if (normalized.startsWith(`${base}/assets`)) return "assets";
   if (normalized.startsWith(`${base}/labels`)) return "labels";

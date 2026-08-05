@@ -65,8 +65,9 @@ const CORE_MODELS_NOT_BACKED_UP = new Set([
   "ImageStudioVersion", // GAP
   "InventoryItem", // GAP
   "PartyTreasury", // GAP
+  "PlayerGroup", // GAP
+  "PlayerGroupMember", // GAP
   "PlayerQuestFlag", // GAP
-  "PlayerQuestion", // GAP
   "PromptTemplate", // GAP
   "RollTable", // GAP
   "SessionAvailability", // GAP

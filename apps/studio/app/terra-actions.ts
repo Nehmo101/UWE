@@ -209,6 +209,30 @@ export async function gibTerraKarteFreiAction(formData: FormData): Promise<Terra
 }
 
 /**
+ * Setzt oder löst die Sperre — der Haken in der Kartenliste.
+ *
+ * Gesperrt heißt: im Portal nur noch lesbar, auch für den Autor, auch am
+ * eigenen Entwurf. Gedacht für den Moment, in dem eine Karte am Tisch gilt
+ * und niemand mehr daran schieben soll. Das Studio schreibt weiter.
+ */
+export async function setzeTerraKarteSperreAction(formData: FormData): Promise<TerraSpeichernErgebnis> {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  await requireStudioWorldEdit(worldSlug);
+
+  const karteId = String(formData.get("karteId"));
+  try {
+    const terra = createTerraService(prisma);
+    const ok = await terra.setzeSperre(worldSlug, karteId, formData.get("gesperrt") === "true");
+    if (!ok) throw new Error("Karte gehört nicht zu dieser Welt");
+    revalidatePath(`/worlds/${worldSlug}/karten`);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Sperren fehlgeschlagen" };
+  }
+}
+
+/**
  * Gibt eine Spielerkarte an ihren Autor zurück — mit Rückmeldung, die er im
  * Portal über seinem Entwurf liest.
  *

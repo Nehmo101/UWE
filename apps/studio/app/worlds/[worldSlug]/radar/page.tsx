@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { DungeonPrepStatusBadge, SidebarSection, StatGrid } from "@uwe/shared-ui";
-import { getAppRepository, prisma } from "@uwe/database/server";
+import { buildPageUrl, getAppRepository, prisma } from "@uwe/database/server";
 import { createCampaignRadarService } from "@uwe/database/campaign-radar";
+import { createPlayerGroupService } from "@uwe/player-hub";
 import { notFound } from "next/navigation";
 import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { CampaignSidebar } from "@/src/components/wiki";
+import { QuestGroupAssignmentCard } from "@/src/components/radar/QuestGroupAssignmentCard";
 import { campaignNavItems } from "@/src/lib/world-nav";
 import { updateQuestStatusInPlaceAction } from "../../../kampagnen-actions";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
@@ -12,7 +14,7 @@ import { Alert, Badge, Button, Card, CardContent, CardHeader, CardTitle } from "
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
-  searchParams: Promise<{ campaign?: string; saved?: string }>;
+  searchParams: Promise<{ campaign?: string; saved?: string; zugeordnet?: string }>;
 }
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
@@ -22,7 +24,7 @@ const LIST_LIMIT = 8;
 
 export default async function CampaignRadarPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
-  const { campaign: campaignSlug, saved } = await searchParams;
+  const { campaign: campaignSlug, saved, zugeordnet } = await searchParams;
   const repo = getAppRepository();
   const world = await repo.getWorldBySlug(worldSlug);
   if (!world) notFound();
@@ -40,7 +42,30 @@ export default async function CampaignRadarPage({ params, searchParams }: Props)
   );
   if (!radar) notFound();
 
+  // Quest-Zuordnung: bewusst ueber ALLE Quest-Seiten, nicht nur die offenen
+  // aus dem Radar. Wer eine abgeschlossene Quest nachtraeglich einer Runde
+  // zuschreibt, soll das hier koennen, ohne die Wiki-Liste zu suchen.
+  const groups = await createPlayerGroupService(prisma).listForWorld(world.id);
+  const questPages = await prisma.page.findMany({
+    where: {
+      worldId: world.id,
+      type: "quest",
+      ...(selectedCampaign?.id ? { campaignId: selectedCampaign.id } : {}),
+    },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      type: true,
+      questStatus: true,
+      questGroupId: true,
+      portalReleased: true,
+    },
+    orderBy: [{ title: "asc" }],
+  });
+
   const base = `/worlds/${worldSlug}`;
+  const radarReturnTo = `${base}/radar${campaignSlug ? `?campaign=${campaignSlug}` : ""}`;
   const factions = radar.factions.slice(0, LIST_LIMIT);
   const openQuests = radar.openQuests.slice(0, LIST_LIMIT);
   const dungeons = radar.dungeons.slice(0, LIST_LIMIT);
@@ -93,6 +118,12 @@ export default async function CampaignRadarPage({ params, searchParams }: Props)
       {saved ? (
         <Alert tone="success" className="mb-4">
           Quest-Status gespeichert.
+        </Alert>
+      ) : null}
+
+      {zugeordnet ? (
+        <Alert tone="success" className="mb-4">
+          Quest-Zuordnung gespeichert.
         </Alert>
       ) : null}
 
@@ -239,6 +270,20 @@ export default async function CampaignRadarPage({ params, searchParams }: Props)
             ) : null}
           </CardContent>
         </Card>
+
+        <QuestGroupAssignmentCard
+          worldSlug={worldSlug}
+          returnTo={radarReturnTo}
+          groups={groups.map((group) => ({ id: group.id, name: group.name }))}
+          quests={questPages.map((page) => ({
+            id: page.id,
+            title: page.title,
+            href: buildPageUrl(worldSlug, page.type, page.slug),
+            questStatus: page.questStatus,
+            questGroupId: page.questGroupId,
+            portalReleased: page.portalReleased,
+          }))}
+        />
 
         <Card id="radar-dungeons">
           <CardHeader>

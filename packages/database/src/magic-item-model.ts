@@ -56,7 +56,16 @@ export interface MagicItemData {
   dmSecret?: string;
   /** Nur-DM: Fluch / Nachteil. */
   curse?: string;
-  /** Wiki-Seite des aktuellen Besitzers (Spieler-Charakter, NPC, Fraktion …). */
+  /**
+   * Der Spielercharakter, der den Gegenstand traegt (Character-Datensatz).
+   *
+   * Das ist die eigentliche Zuweisung: ein magischer Gegenstand aus der
+   * Werkbank gehoert einem Spieler, nicht einem NPC. Die Wiki-Seite unten
+   * bleibt als Zusatzfeld fuer die Erzaehlung (welcher NPC huetet ihn,
+   * welche Fraktion sucht ihn) — sie ersetzt die Zuweisung nicht.
+   */
+  ownerCharacterId?: string;
+  /** Zusatzfeld: Wiki-Seite mit Bezug zum Gegenstand (NPC, Fraktion …). */
   ownerPageId?: string;
 }
 
@@ -171,6 +180,8 @@ export function parseMagicItemData(raw: unknown): MagicItemData {
     properties,
     dmSecret: typeof record.dmSecret === "string" ? record.dmSecret : undefined,
     curse: typeof record.curse === "string" ? record.curse : undefined,
+    ownerCharacterId:
+      typeof record.ownerCharacterId === "string" ? record.ownerCharacterId : undefined,
     ownerPageId: typeof record.ownerPageId === "string" ? record.ownerPageId : undefined,
   };
 }

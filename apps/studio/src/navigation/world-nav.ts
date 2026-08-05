@@ -137,6 +137,12 @@ export function worldNav(worldSlug: string): NavGroup[] {
           "quests",
           "open",
         ]),
+        item("world-groups", "Spielergruppen", `${base}/gruppen`, "users-round", "Spiel", [
+          "gruppen",
+          "spielergruppen",
+          "tischrunde",
+          "party",
+        ]),
         item("world-treasury", "Gruppenschatz", `${base}/treasury`, "coins", "Spiel", [
           "gruppenschatz",
           "treasury",
@@ -154,12 +160,6 @@ export function worldNav(worldSlug: string): NavGroup[] {
         item("world-notes", "Spielernotizen", `${base}/notes`, "sticky-note", "Spiel", [
           "notizen",
           "notes",
-        ]),
-        item("world-questions", "Spielerfragen", `${base}/questions`, "message-circle", "Spiel", [
-          "fragen",
-          "spielerfragen",
-          "questions",
-          "dm",
         ]),
         item("world-dungeons", "Dungeons", `${base}/dungeons`, "castle", "Spiel", [
           "dungeons",

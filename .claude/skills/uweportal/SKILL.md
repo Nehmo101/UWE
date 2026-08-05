@@ -1,6 +1,6 @@
 ---
 name: uweportal
-description: UWE Portal — das Spieler-Wiki auf Port 3001. Spielersicht prüfen, Tischmodus mit Offline-Snapshot und Service Worker, Charaktere, Notizen, Handouts, Karten, Schatzkammer. Nutze das für jede Aufgabe in apps/portal, für die Frage „was sieht ein Spieler wirklich?" und für die MCP-Tools portal_*.
+description: UWE Portal — das Spieler-Wiki auf Port 3001. Spielersicht prüfen, Charaktere, Spielernotizen als Logbuch, Handouts, Karten, Gruppenschatz. Nutze das für jede Aufgabe in apps/portal, für die Frage „was sieht ein Spieler wirklich?" und für die MCP-Tools portal_*.
 ---
 
 # UWE Portal
@@ -47,32 +47,35 @@ Geschützt wird das von `scripts/security-leaks.test.ts` und
 `packages/security-tests/`. Bei Änderungen an Portal-Ausgaben diese Tests laufen
 lassen.
 
-## Tischmodus
+## Tischrunden (Spielergruppen)
 
-Der jüngste und am wenigsten offensichtliche Teil des Portals — für den Spielabend
-gebaut, funktioniert offline:
+Seit 2026-08 gibt es unterhalb der Welt die **Tischrunde** (`PlayerGroup`,
+verwaltet in `/uwestudio` unter `/worlds/[slug]/gruppen`). Sie ist kein Recht
+und kein Häkchen — Lesen bleibt Welt-Sache. Die Gruppe entscheidet zwei Dinge:
 
-- UI in `apps/portal/src/components/table-mode/` — `TableModeClient.tsx`,
-  `CharacterCard.tsx`, `TreasuryCard.tsx`, `NotesOffline.tsx`,
-  `offline-store.ts`, `sync-runner.ts`, `offline-reset.ts`
-- Service Worker `apps/portal/public/sw.js`, registriert über
-  `apps/portal/src/components/ServiceWorkerRegistrar.tsx`
-- Web-App-Manifest als Route: `apps/portal/app/manifest.ts`
-- Einstieg `/auth/tisch`
-- Routen dahinter: `apps/portal/app/api/worlds/[worldSlug]/offline-snapshot/route.ts`
-  (Snapshot ziehen) und `.../notes/sync/route.ts` (Notizen zurückspielen)
-- Geteilte Logik in `packages/player-hub`
+- **Gruppenschatz**: jede Runde führt ihre eigene Kasse und Beute selbst
+  (`packages/player-hub/src/group-treasury.ts`, UI in
+  `apps/portal/src/components/GroupTreasurySection.tsx`).
+- **Questlog**: das Portal zeigt nur Quests, die der eigenen Runde zugeordnet
+  sind (`Page.questGroupId`, vergeben im Kampagnen-Radar des Studios). Ohne
+  Zuordnung erscheint eine Quest bei niemandem.
 
-Wer hier etwas ändert, muss an beides denken: Snapshot **und** Sync. Ein Snapshot,
-der mehr enthält als die Spielersicht, ist ein Leak — der Offline-Store liegt im
-Browser des Spielers.
+Charaktere legen Spieler selbst im Portal an
+(`packages/player-hub/src/player-characters.ts` — Wiki-Seite + leerer Bogen);
+die Kampagnen-Zuweisung bleibt im Studio (Kampagnen-Cockpit).
+
+Der frühere Tischmodus (Offline-Snapshot, Service Worker, `/auth/tisch`) und
+„Fragen an den DM" sind 2026-08 ersatzlos entfernt. Fragen an den Spielleiter
+laufen über Spielernotizen mit Sichtbarkeit „Nur GM".
 
 ## Aufbau
 
 Navigation in `apps/portal/src/navigation/portal-nav.ts`: `PORTAL_NAV` (Weltenliste,
-Konto), `portalWorldNav()` (Wiki, NPCs, Graph, Sessions, Schatzkammer, Zeitleiste,
-Quests, Charaktere, Handouts, Assets, Notizen, Fragen, Soundboard, Karten) und
-`shareNavGroups()` für Freigabe-Links.
+Konto), `portalWorldNav()` (Wiki, NPCs, Graph, Sessions, Gruppenschatz, Zeitleiste,
+Quests, Charaktere, Handouts, Assets, Notizen, Soundboard, Karten) und
+`shareNavGroups()` für Freigabe-Links. Wer genau **einer** Welt zugeordnet ist,
+landet direkt in ihr — die Weltauswahl erscheint nur bei mehreren Welten
+(`?alle=1` erzwingt sie).
 
 Portal-Seiten liegen unter `apps/portal/app/auth/**`, Server Actions als
 `apps/portal/app/*-actions.ts`.
@@ -98,7 +101,7 @@ Portal-Seiten liegen unter `apps/portal/app/auth/**`, Server Actions als
 | „Was sieht ein Spieler?" | `portal_player_view_brain` + `portal_player_view_graph` mit dem Welt-Slug |
 | Verbindungs-/Token-Problem | `portal_config` zeigt die genutzten Endpunkte |
 | Inhalt fehlt im Portal | Nicht im Portal suchen — in Studio prüfen, ob veröffentlicht und die Welt zugeordnet ist |
-| Tischmodus-Änderung | Snapshot-Route **und** Sync-Route anfassen, danach `pnpm test:security` |
+| Quest fehlt im Questlog | Im Studio prüfen: ist sie im Kampagnen-Radar einer Tischrunde zugeordnet? |
 
 Karte: `references/karte.md` · Depth: `docs/engineering/portal-security.md`,
 `docs/engineering/mcp-servers.md`, `docs/engineering/access-model.md`

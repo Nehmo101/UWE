@@ -8,6 +8,7 @@ import {
 } from "@uwe/auth";
 import {
   createAuthService,
+  normalizePlayerNoteCategory,
   prisma,
 } from "@uwe/database/server";
 import {
@@ -47,6 +48,9 @@ export async function createPlayerNoteAction(formData: FormData) {
     worldSlug,
     campaignId,
     content,
+    title,
+    category,
+    sessionDate,
     pageId,
     gameSessionId,
     returnPath,
@@ -69,6 +73,11 @@ export async function createPlayerNoteAction(formData: FormData) {
   await auth.createPlayerNoteForViewer(worldSlug, ctx, {
     campaignId,
     content,
+    title: title || null,
+    category: normalizePlayerNoteCategory(category),
+    // Als lokales Mitternachtsdatum gespeichert — die Uhrzeit ist egal, der
+    // Abend zaehlt.
+    sessionDate: sessionDate ? new Date(`${sessionDate}T00:00:00`) : null,
     pageId: pageId ?? null,
     gameSessionId: gameSessionId ?? null,
   });
@@ -97,10 +106,8 @@ export async function submitPlayerNoteAction(formData: FormData) {
 
 export async function updatePlayerNoteAction(formData: FormData) {
   await requirePortalActionAuth();
-  const { worldSlug, noteId, content, returnPath } = parseFormDataOrThrow(
-    formData,
-    playerNoteUpdateSchema,
-  );
+  const { worldSlug, noteId, content, title, category, sessionDate, returnPath } =
+    parseFormDataOrThrow(formData, playerNoteUpdateSchema);
   const path = returnPath ?? `/auth/worlds/${worldSlug}`;
 
   const { ctx } = await getAuthContext(worldSlug);
@@ -111,7 +118,11 @@ export async function updatePlayerNoteAction(formData: FormData) {
     throw new Error("Keine Berechtigung");
   }
 
-  await auth.updatePlayerNoteForViewer(worldSlug, noteId, ctx, content);
+  await auth.updatePlayerNoteForViewer(worldSlug, noteId, ctx, content, {
+    title: title || null,
+    category: normalizePlayerNoteCategory(category),
+    sessionDate: sessionDate ? new Date(`${sessionDate}T00:00:00`) : null,
+  });
 
   revalidatePath(path);
 }

@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/src/components/ui/button";
-import { resetOfflineState } from "@/src/components/table-mode/offline-reset";
 
 interface LogoutButtonProps {
   displayName: string;
@@ -16,8 +15,6 @@ export function LogoutButton({ displayName }: LogoutButtonProps) {
   async function handleLogout() {
     setLoading(true);
     await fetch("/api/auth/logout", { method: "POST" });
-    // Der Tischmodus hat Inhalte auf dem Gerät liegen — die gehen mit.
-    await resetOfflineState();
     setLoading(false);
     router.push("/");
     router.refresh();

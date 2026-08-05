@@ -8,14 +8,35 @@ import { EmptyState } from "@/src/components/ui/states";
 import { canAccessStudio } from "@uwe/auth";
 import { listWorldTemplateOptions } from "@uwe/database/server";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
-export default async function AuthWorldsPage() {
+interface Props {
+  searchParams: Promise<{ alle?: string }>;
+}
+
+export default async function AuthWorldsPage({ searchParams }: Props) {
+  const { alle } = await searchParams;
   const user = await getCurrentUser();
   const [worlds, templates] = await Promise.all([
     listAuthWorlds(),
     Promise.resolve(listWorldTemplateOptions()),
   ]);
   const canCreateWorld = user ? canAccessStudio(user) : false;
+
+  /*
+    Wer genau einer Welt zugeordnet ist, hat hier nichts zu wählen. Die
+    Zwischenseite kostete dann bei jedem Einstieg einen Klick und ließ die
+    Seitenleiste ohne Welt-Navigation dastehen — die Taskleiste sah anders aus
+    als überall sonst. Bei mehreren Welten bleibt die Auswahl, weil es dann
+    wirklich etwas zu entscheiden gibt.
+
+    `?alle=1` hebt die Weiterleitung auf. Das ist kein Feinschliff, sondern
+    nötig: sonst käme niemand mit einer Welt je wieder an das Formular zum
+    Anlegen einer zweiten.
+  */
+  if (worlds.length === 1 && alle !== "1") {
+    redirect(`/auth/worlds/${worlds[0]!.slug}`);
+  }
 
   if (worlds.length === 0) {
     return (
