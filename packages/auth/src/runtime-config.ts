@@ -10,6 +10,7 @@ import {
   normalizePublicAppUrl,
   parseAllowedCorsOrigins,
   parseBoolEnv,
+  parseIntEnv,
   parsePublicUrlHost,
   parseSameSite,
 } from "./runtime-env-parse";
@@ -21,6 +22,13 @@ export interface UweRuntimeConfig {
   publicAppUrl: string | null;
   trustProxy: boolean;
   cloudflareTunnel: boolean;
+  /**
+   * How many proxy hops to trust when reading `X-Forwarded-For` from the right.
+   * Cloudflare appends exactly one element (the real client), so the default is
+   * 1. Raise it only when another trusted proxy sits between Cloudflare and the
+   * app (e.g. cloudflared → nginx → app).
+   */
+  trustedProxyHops: number;
   studioPath: string;
   portalPath: string;
   authRequired: boolean;
@@ -482,6 +490,7 @@ export function getUweRuntimeConfig(env: NodeJS.ProcessEnv = process.env): UweRu
     isProduction && Boolean(publicAppUrl) && !publicLoopback,
   );
   const cloudflareTunnel = parseBoolEnv(env.CLOUDFLARE_TUNNEL, trustProxy);
+  const trustedProxyHops = parseIntEnv(env.TRUSTED_PROXY_HOPS, 1);
 
   const sessionCookieSecure = parseBoolEnv(
     env.SESSION_COOKIE_SECURE,
@@ -495,6 +504,7 @@ export function getUweRuntimeConfig(env: NodeJS.ProcessEnv = process.env): UweRu
     publicAppUrl,
     trustProxy,
     cloudflareTunnel,
+    trustedProxyHops,
     studioPath: normalizeAppPath(env.STUDIO_PATH, "/studio"),
     portalPath: normalizeAppPath(env.PORTAL_PATH, "/portal", { allowRoot: true }),
     authRequired: parseBoolEnv(env.AUTH_REQUIRED, isProduction),

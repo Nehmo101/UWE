@@ -454,8 +454,49 @@ describe("resolveClientIp", () => {
     assert.equal(resolveClientIp(headers, { TRUST_PROXY: "false" }), "unknown");
   });
 
-  it("uses forwarded headers when TRUST_PROXY is true", () => {
+  it("reads X-Forwarded-For from the right so a spoofed prefix does not win", () => {
+    // Attacker prepends 203.0.113.7; the trusted proxy appends the real client.
     const headers = new Headers({ "x-forwarded-for": "203.0.113.7, 10.0.0.1" });
-    assert.equal(resolveClientIp(headers, { TRUST_PROXY: "true" }), "203.0.113.7");
+    assert.equal(resolveClientIp(headers, { TRUST_PROXY: "true", CLOUDFLARE_TUNNEL: "false" }), "10.0.0.1");
+  });
+
+  it("honours TRUSTED_PROXY_HOPS when several trusted proxies append", () => {
+    const headers = new Headers({ "x-forwarded-for": "1.1.1.1, 10.0.0.1, 10.0.0.2" });
+    assert.equal(
+      resolveClientIp(headers, { TRUST_PROXY: "true", CLOUDFLARE_TUNNEL: "false", TRUSTED_PROXY_HOPS: "2" }),
+      "10.0.0.1",
+    );
+  });
+
+  it("prefers CF-Connecting-IP behind a Cloudflare tunnel", () => {
+    const headers = new Headers({
+      "x-forwarded-for": "203.0.113.7, 198.51.100.9",
+      "cf-connecting-ip": "192.0.2.5",
+    });
+    assert.equal(
+      resolveClientIp(headers, { TRUST_PROXY: "true", CLOUDFLARE_TUNNEL: "true" }),
+      "192.0.2.5",
+    );
+  });
+
+  it("ignores CF-Connecting-IP when the tunnel flag is off", () => {
+    const headers = new Headers({
+      "x-forwarded-for": "198.51.100.9",
+      "cf-connecting-ip": "192.0.2.5",
+    });
+    assert.equal(
+      resolveClientIp(headers, { TRUST_PROXY: "true", CLOUDFLARE_TUNNEL: "false" }),
+      "198.51.100.9",
+    );
+  });
+
+  it("degrades malformed forwarded values to unknown", () => {
+    const headers = new Headers({ "x-forwarded-for": "not-an-ip" });
+    assert.equal(resolveClientIp(headers, { TRUST_PROXY: "true", CLOUDFLARE_TUNNEL: "false" }), "unknown");
+  });
+
+  it("degrades oversized forwarded values to unknown", () => {
+    const headers = new Headers({ "x-forwarded-for": "a".repeat(9000) });
+    assert.equal(resolveClientIp(headers, { TRUST_PROXY: "true", CLOUDFLARE_TUNNEL: "false" }), "unknown");
   });
 });
