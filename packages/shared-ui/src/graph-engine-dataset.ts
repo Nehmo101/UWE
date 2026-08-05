@@ -15,6 +15,8 @@ export interface SimNode extends GraphNode {
   hl: number;
   deg: number;
   r: number;
+  /** Community-Index (Grüppchen) — steuert Cluster-Kraft und Kollisions-Moat. */
+  group: number;
   _fx: number;
   _fy: number;
 }
@@ -66,6 +68,7 @@ export function buildDataset(
       hl: 1,
       deg: 0,
       r: 8,
+      group: 0,
       _fx: 0,
       _fy: 0,
     }));

@@ -1,0 +1,40 @@
+/*
+ * Natives <select> — Popup-Lesbarkeit in allen Themes.
+ *
+ * Das aufgeklappte Menü eines nativen <select> ist kein DOM-Element, das man
+ * über der Seite stylen könnte: Chrome/Firefox malen die Liste selbst und
+ * nehmen dafür die Farben des Steuerelements. Ist auf dem <select> keine
+ * deckende Hintergrundfarbe gesetzt, fällt der Browser für die Liste auf sein
+ * eigenes Weiß zurück — die Optionen erben aber die helle Theme-Schriftfarbe.
+ * Ergebnis im dunklen Theme: helle Schrift auf weißer Liste, praktisch nicht
+ * lesbar.
+ *
+ * Genau das passiert im Studio flächendeckend: die Klassenketten der nativen
+ * Selects tragen (wie die Inputs daneben) `bg-transparent`. Bei einem <input>
+ * ist das harmlos, beim <select> zerstört es das Popup.
+ *
+ * Deshalb steht hier eine ungelayerte Regel. Tailwind-Utilities liegen in
+ * `@layer utilities` und verlieren damit gegen jede ungelayerte Deklaration —
+ * anders als der Button-Reset (`uwe-base-reset.css`, `@layer base`) muss diese
+ * Regel gewinnen, sonst schlägt `bg-transparent` sie wieder tot. Der Preis:
+ * eine Hintergrund-Utility auf einem <select> wirkt nicht mehr. Wer für ein
+ * einzelnes Feld eine andere Fläche braucht, setzt stattdessen die
+ * Escape-Hatch-Variable:
+ *
+ *     <select style={{ "--uwe-select-bg": "var(--uwe-card-bg)" }} />
+ *
+ * Die Schriftfarbe des geschlossenen Steuerelements bleibt unangetastet
+ * (`text-foreground`, `text-muted-foreground` … gelten weiter); gesetzt wird
+ * sie nur auf <option>/<optgroup>, damit jede Zeile der Liste ein bekanntes,
+ * kontrastierendes Paar aus Fläche und Schrift hat.
+ */
+
+select {
+  background-color: var(--uwe-select-bg, var(--uwe-input-bg, var(--uwe-bg-elevated)));
+}
+
+select option,
+select optgroup {
+  background-color: var(--uwe-select-bg, var(--uwe-input-bg, var(--uwe-bg-elevated)));
+  color: var(--uwe-select-fg, var(--uwe-fg));
+}

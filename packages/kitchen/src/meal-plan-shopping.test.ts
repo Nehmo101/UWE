@@ -105,6 +105,13 @@ describe("meal plan + shopping (integration)", () => {
     const item = list.items[0];
     const toggled = await shopping.toggleItem(item.id);
     assert.equal(toggled.checked, true);
+
+    // Zielwert-Setzen ist idempotent und meldet unbekannte Positionen als null.
+    const kept = await shopping.setItemChecked(item.id, true);
+    assert.equal(kept?.checked, true);
+    const cleared = await shopping.setItemChecked(item.id, false);
+    assert.equal(cleared?.checked, false);
+    assert.equal(await shopping.setItemChecked("gibt-es-nicht", true), null);
   });
 
   it("splits perishables needed late in the week into the fresh trip", async () => {
