@@ -30,21 +30,31 @@ export function SidebarSection({
 export function StatGrid({
   stats,
 }: {
-  stats: { label: string; value: string | number; hint?: string }[];
+  stats: { label: string; value: string | number; hint?: string; href?: string }[];
 }) {
+  /* uwe-glass-surface: reiner Theme-Hook für body.uwe-theme-frosted (uwe.css) */
+  const surfaceClass =
+    "uwe-glass-surface rounded-[var(--radius)] border border-border bg-card px-5 py-4 transition-colors hover:border-[color-mix(in_srgb,var(--uwe-accent)_22%,var(--uwe-border-muted))]";
   return (
     <div className="grid grid-cols-[repeat(auto-fit,minmax(9.5rem,1fr))] gap-4">
-      {stats.map((stat) => (
-        <div
-          key={stat.label}
-          /* uwe-glass-surface: reiner Theme-Hook für body.uwe-theme-frosted (uwe.css) */
-          className="uwe-glass-surface rounded-[var(--radius)] border border-border bg-card px-5 py-4 transition-colors hover:border-[color-mix(in_srgb,var(--uwe-accent)_22%,var(--uwe-border-muted))]"
-        >
-          <span className="block text-2xl font-semibold leading-tight text-foreground">{stat.value}</span>
-          <span className="block text-xs text-muted-foreground">{stat.label}</span>
-          {stat.hint && <span className="mt-1 block text-[length:var(--uwe-text-2xs)] text-muted-foreground">{stat.hint}</span>}
-        </div>
-      ))}
+      {stats.map((stat) => {
+        const content = (
+          <>
+            <span className="block text-2xl font-semibold leading-tight text-foreground">{stat.value}</span>
+            <span className="block text-xs text-muted-foreground">{stat.label}</span>
+            {stat.hint && <span className="mt-1 block text-[length:var(--uwe-text-2xs)] text-muted-foreground">{stat.hint}</span>}
+          </>
+        );
+        return stat.href ? (
+          <a key={stat.label} href={stat.href} className={surfaceClass}>
+            {content}
+          </a>
+        ) : (
+          <div key={stat.label} className={surfaceClass}>
+            {content}
+          </div>
+        );
+      })}
     </div>
   );
 }
