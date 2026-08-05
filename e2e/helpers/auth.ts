@@ -16,12 +16,22 @@ export async function loginStudioForShellTests(page: Page): Promise<void> {
   expect(response.ok()).toBeTruthy();
 }
 
+/**
+ * Anmeldung als Spieler im Portal.
+ *
+ * Nach dem Anmelden springt das Portal bei **genau einer** zugeordneten Welt
+ * direkt in diese Welt (`/auth/worlds` → `/auth/worlds/<slug>`, siehe
+ * `apps/portal/app/auth/worlds/(hub)/page.tsx`). Der Test muss deshalb warten,
+ * bis diese Weiterleitung durch ist — sonst reißt sie die nächste Navigation
+ * ab (`net::ERR_ABORTED`), und der Fehler sieht aus wie eine kaputte Seite.
+ */
 export async function loginPortalPlayer(page: Page): Promise<void> {
   await page.goto("/login");
   await page.getByLabel("E-Mail").fill("aman@uwe.local");
   await page.getByLabel("Passwort").fill("uwe-dev");
   await page.getByRole("button", { name: "Anmelden" }).click();
   await expect(page).toHaveURL(/\/auth\/worlds/);
+  await page.waitForLoadState("networkidle");
 }
 
 /**
