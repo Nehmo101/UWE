@@ -1,36 +1,20 @@
 import type { PrismaClient } from "@uwe/database/server";
+import {
+  normalizeAvailabilityStatus,
+  type AvailabilityStatus,
+  type SessionAvailabilitySummary,
+} from "./portal-types";
 
-export const AVAILABILITY_STATUSES = ["yes", "maybe", "no"] as const;
-export type AvailabilityStatus = (typeof AVAILABILITY_STATUSES)[number];
-
-export const AVAILABILITY_LABELS: Record<AvailabilityStatus, string> = {
-  yes: "Bin dabei",
-  maybe: "Vielleicht",
-  no: "Kann nicht",
-};
-
-export function normalizeAvailabilityStatus(
-  raw: string | null | undefined,
-): AvailabilityStatus | null {
-  const value = raw?.trim().toLowerCase();
-  return (AVAILABILITY_STATUSES as readonly string[]).includes(value ?? "")
-    ? (value as AvailabilityStatus)
-    : null;
-}
-
-export interface AvailabilityVote {
-  userId: string;
-  displayName: string;
-  status: AvailabilityStatus;
-  note: string | null;
-  updatedAt: Date;
-}
-
-export interface SessionAvailabilitySummary {
-  sessionId: string;
-  votes: AvailabilityVote[];
-  counts: Record<AvailabilityStatus, number>;
-}
+// Die client-sicheren Teile liegen in portal-types.ts und werden hier weiter
+// ausgegeben, damit bestehende Aufrufer unveraendert bleiben.
+export {
+  AVAILABILITY_LABELS,
+  AVAILABILITY_STATUSES,
+  normalizeAvailabilityStatus,
+  type AvailabilityStatus,
+  type AvailabilityVote,
+  type SessionAvailabilitySummary,
+} from "./portal-types";
 
 function emptyCounts(): Record<AvailabilityStatus, number> {
   return { yes: 0, maybe: 0, no: 0 };

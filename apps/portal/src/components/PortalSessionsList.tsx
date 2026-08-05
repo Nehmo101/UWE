@@ -6,7 +6,7 @@ import {
   AVAILABILITY_LABELS,
   AVAILABILITY_STATUSES,
   type SessionAvailabilitySummary,
-} from "@uwe/player-hub";
+} from "@uwe/player-hub/portal-types";
 
 export interface PortalSessionListItem {
   id: string;
