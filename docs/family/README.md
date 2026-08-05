@@ -23,7 +23,8 @@ flowchart TB
   end
 
   subgraph Aussen["Nach aussen"]
-    ICS["ICS-Abo<br/>iPhone-Kalender"]
+    ICS["ICS-Abo<br/>iPhone-Kalender (lesen)"]
+    DAV["CalDAV-Server<br/>iPhone-Kalender (lesen + schreiben)"]
     API["REST-API<br/>/api/v1 mit Scopes"]
     MCP["MCP-Server<br/>uwe-family"]
   end
@@ -31,6 +32,7 @@ flowchart TB
   A --> Family
   K -.wird gepflegt.-> Family
   CAL --> ICS
+  CAL <--> DAV
   Family --> API --> MCP
   GES --> CAL
 ```
@@ -40,7 +42,7 @@ flowchart TB
 | Doku | Thema |
 |------|-------|
 | [mitglieder.md](mitglieder.md) | Personen mit und ohne Konto, Farben, Zugangsmodell |
-| [kalender.md](kalender.md) | Termine je Person, fremde Kalender, iPhone-Abo |
+| [kalender.md](kalender.md) | Termine je Person, fremde Kalender, iPhone-Abo, CalDAV-Account (bidirektional) |
 | [api.md](api.md) | Externe API, Scopes, Token, MCP-Server |
 | [kochbuch.md](kochbuch.md) | Rezepte, KI-Aufbereitung, 6×4-Zoll-Druck |
 | [essensplan.md](essensplan.md) | KI-Wochenvorschlag, Großeinkauf/Frische-Einkauf, Kassenbon → Vorrat, PWA |

@@ -117,33 +117,33 @@ Schnelle Einordnung. Quelle der Wahrheit für aktive Runtime/CI ist
 | Kriterium | Status |
 |-----------|--------|
 | Vorhanden | Ja |
-| Scaffolding | CalDAV Write-back (Code da, UI blockiert `read_only`) |
-| UI | Ja — `/calendar`, Monats- und Wochenansicht |
-| API | Ja — `/api/calendar/events`, `/api/calendar/feeds` |
-| DB | Ja — `CalendarFeed`, `CalendarEvent` |
-| Tests | Ja — iCal-Parse, CalDAV-Href, Service-Smoke |
-| Nutzbar | **Ja** — lokaler Kalender + iCal/CalDAV/FamilyWall (read/write CalDAV optional) |
+| Scaffolding | — |
+| UI | Ja — Family `/calendar`, Monats- und Listenansicht |
+| API | Ja — `/api/calendar/events`, `/api/calendar/feeds`, Family `/api/dav` |
+| DB | Ja — `CalendarFeed`, `CalendarEvent`, `FamilyCalDavAccount` |
+| Tests | Ja — iCal-Parse, TZID, DAV-XML, CalDAV-Server-Protokollwalk |
+| Nutzbar | **Ja** — lokaler Kalender + iCal/CalDAV/FamilyWall-Import + CalDAV-Server fürs iPhone |
 | Production-ready | **Teilweise** — SSRF-Schutz + ENV-Gates ergänzt |
 
-**iOS Calendar:** Kein natives SDK. Indirekt über iCloud-`.ics`-URL oder CalDAV-URL + `CALDAV_PASSWORD` in `.env`.
+**iOS Calendar:** Bidirektional über den Family-CalDAV-Server (`/api/dav`, Token-Typ `uwedav_`, DAV-Proxy vor dem Next-Server). Read-only zusätzlich über das ICS-Abo (`uwecal_`).
 
 **FamilyWall:** Typ `familywall` = iCal-URL-Fetch, read-only, kein proprietäres API.
 
-**CalDAV:** GET-Import + optional `read_write` in UI; Feed-Passwort verschlüsselt; bidirektionaler Code (`putCalDavEvent`) bei Event-Änderungen.
+**CalDAV (Import):** GET/PROPFIND/REPORT-Import fremder Kalender; Feed-Passwort verschlüsselt; strukturell read-only (der frühere Write-back an fremde Server ist entfernt — ersetzt durch den eigenen CalDAV-Server).
 
 **Risiken**
 
 - SSRF bei Feed-URLs (behoben: `assertUserProvidedFetchUrlAllowed`).
 - `CALENDAR_CALDAV_ENABLED` / `CALENDAR_FAMILYWALL_ENABLED` waren nicht enforced (behoben).
 - PROPFIND/REPORT-Vollsync (`syncCalDavCollection`) — externe Events werden importiert und fehlende UIDs entfernt.
-- Timezone vereinfacht (UTC).
+- Timezone beim Import vereinfacht (UTC); TZID-Lokalzeiten werden seit dem CalDAV-Server korrekt umgerechnet.
 
 **Nächste Schritte**
 
-1. Delete-Sync (`deleteCalDavEvent`) wo Provider es unterstützen.
-2. CalDAV-Mock-Integrationstest.
+1. CalDAV-Mock-Integrationstest gegen einen echten iOS-Mitschnitt.
+2. sync-collection-REPORT (Sync-Token statt ctag-Polling), braucht ein Lösch-Journal.
 
-**Referenzen:** `docs/CALENDAR_INTEGRATION.md`, `packages/calendar/`, `apps/studio/app/calendar/`
+**Referenzen:** `docs/CALENDAR_INTEGRATION.md`, `docs/family/kalender.md`, `packages/calendar/`, `packages/family-core/`
 
 ---
 

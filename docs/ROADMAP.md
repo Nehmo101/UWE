@@ -88,7 +88,7 @@ Shells-Nav-Vertrag: `@uwe/shared-utils/navigation` — alle drei Apps (Studio, P
 
 | Phase 1 | Phase 2 |
 |---------|---------|
-| `/calendar`, iCal/CalDAV/FamilyWall, Wochenansicht, Session-Sync, Write-back-Basis | ✅ CalDAV PROPFIND/REPORT-Vollsync (`syncCalDavCollection`) |
+| `/calendar`, iCal/CalDAV/FamilyWall, Wochenansicht, Session-Sync | ✅ CalDAV PROPFIND/REPORT-Vollsync (`syncCalDavCollection`) · ✅ CalDAV-Server fürs iPhone (`/api/dav`, bidirektional) |
 
 ### DnD API (`docs/DND_API_INTEGRATION.md`)
 

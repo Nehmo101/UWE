@@ -50,6 +50,13 @@ gibt es keinen Endpunkt, nicht nur kein Tool.
   betreffen sie den ganzen Haushalt.
 - **Geburtstage und Jahrestage sind keine gespeicherten Termine.**
   `family_calendar_upcoming` spannt sie mit `includeAnniversaries` auf.
+- **Zwei Wege aufs iPhone:** das ICS-Abo (`uwecal_`, nur lesen, inkl. Geburtstage
+  und Akte) und der CalDAV-Account (`uwedav_`, lesen und schreiben, nur der
+  lokale Feed). Der CalDAV-Server lebt in
+  `packages/family-core/src/caldav-server.ts`; PROPFIND/REPORT erreichen Next
+  nur über den DAV-Proxy (`deploy/scripts/uwe-dav-proxy.mjs`), der sie als
+  POST + `x-uwe-dav-method` an `apps/family/app/api/dav/[[...segments]]/route.ts`
+  weiterreicht. Details: `docs/family/kalender.md`.
 - **Die Gesundheitsakte gilt auch für Tiere** — `family_health_due` liefert
   Impfungen und Vorsorge für Menschen und Katze gleichermaßen.
 - **`family_shopping_list` ist zweistufig:** ohne `listId` die Übersicht, mit

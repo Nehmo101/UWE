@@ -16,7 +16,7 @@ und ob etwas Neues dazugekommen ist. Für das Warum die `SKILL.md` von /uwefamil
 | Datenbank | uwe-family.db |
 | MCP-Server | `uwe-family` |
 | Seiten | 22 |
-| API-Routen | 26 |
+| API-Routen | 30 |
 
 **Seiten-Bereiche** (Top-Level unter `app/`, Zahl = Seiten darunter)
 
@@ -24,7 +24,7 @@ und ob etwas Neues dazugekommen ist. Für das Warum die `SKILL.md` von /uwefamil
 
 **API-Bereiche** (Top-Level unter `app/api/`, Zahl = Route-Handler darunter)
 
-`auth` (12) · `calendar` (1) · `health` (1) · `kitchen` (2) · `scan` (2) · `v1` (8)
+`auth` (12) · `calendar` (1) · `dav` (1) · `health` (1) · `kitchen` (2) · `scan` (2) · `v1` (10)
 
 **Server Actions** (`apps/family/app/*-actions.ts`, 11)
 
