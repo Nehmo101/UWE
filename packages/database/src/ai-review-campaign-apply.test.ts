@@ -23,4 +23,18 @@ describe("splitChapterTitle (pure)", () => {
     const { title } = splitChapterTitle("Vorbemerkung.\n# Später Titel\nRest.");
     assert.equal(title, "Später Titel");
   });
+
+  it("does not treat the next line as title when the heading line is bare", () => {
+    // \s+ hätte den Zeilenumbruch geschluckt und „Kein Titel" zum Titel gemacht.
+    const { title } = splitChapterTitle("#\nKein Titel.");
+    assert.equal(title, null);
+  });
+
+  it("stays fast on hostile whitespace input (ReDoS guard)", () => {
+    const hostile = `# a${" ".repeat(50_000)}b`;
+    const started = Date.now();
+    const { title } = splitChapterTitle(hostile);
+    assert.ok(Date.now() - started < 1000, "regex must run in linear time");
+    assert.ok(title?.startsWith("a"));
+  });
 });

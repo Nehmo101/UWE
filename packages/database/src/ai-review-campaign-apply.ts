@@ -28,7 +28,10 @@ export type CampaignApplyOutcome =
 
 /** Erste `# `-Überschrift wird Seitentitel; sie fliegt aus dem Seitentext. */
 export function splitChapterTitle(content: string): { title: string | null; body: string } {
-  const match = content.match(/^#\s+(.+)\s*$/m);
+  // Bewusst [ \t] statt \s und ohne \s*$-Suffix: \s würde den Zeilenumbruch
+  // nach dem # schlucken, und `(.+)\s*$` backtrackt polynomiell (CodeQL js/
+  // polynomial-redos). Getrimmt wird die Capture ohnehin darunter.
+  const match = content.match(/^#[ \t]+(.+)$/m);
   if (!match || typeof match.index !== "number") {
     return { title: null, body: content.trim() };
   }
