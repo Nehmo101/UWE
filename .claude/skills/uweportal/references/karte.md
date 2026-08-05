@@ -16,7 +16,7 @@ und ob etwas Neues dazugekommen ist. Für das Warum die `SKILL.md` von /uweporta
 | Datenbank | uwe.db (lesend, über Studio-Guards) |
 | MCP-Server | `uwe-portal` |
 | Seiten | 28 |
-| API-Routen | 31 |
+| API-Routen | 30 |
 
 **Seiten-Bereiche** (Top-Level unter `app/`, Zahl = Seiten darunter)
 
@@ -24,7 +24,7 @@ und ob etwas Neues dazugekommen ist. Für das Warum die `SKILL.md` von /uweporta
 
 **API-Bereiche** (Top-Level unter `app/api/`, Zahl = Route-Handler darunter)
 
-`admin` (1) · `assets` (1) · `auth` (19) · `health` (3) · `maintenance` (2) · `worlds` (5)
+`admin` (1) · `assets` (1) · `auth` (19) · `health` (3) · `maintenance` (2) · `worlds` (4)
 
 **Server Actions** (`apps/portal/app/*-actions.ts`, 7)
 
