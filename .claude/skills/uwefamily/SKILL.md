@@ -52,12 +52,28 @@ gibt es keinen Endpunkt, nicht nur kein Tool.
   das Feld überall `memberIds`, in der Antwort `members`. Ohne Zuordnung
   betrifft ein Termin den ganzen Haushalt und ein Abo zeigt ihn ganz — ein
   Akten-Eintrag ohne Person wird abgelehnt. Gesetzt wird überall über
-  `setMemberLinks` (`packages/family-core/src/member-links.ts`).
+  `setMemberLinks` (`packages/family-core/src/member-links.ts`), in der
+  Oberfläche über die Kästchenliste `MemberChecklist`.
+- **Ein Termin ohne eigenes Ende dauert eine Stunde.** `resolveEventEnd`
+  (`packages/family-core/src/event-duration.ts`) belegt vor — im Formular, über
+  `POST /api/v1/calendar/events`, über `family_calendar_add_event` und beim
+  ICS-Import gleichermaßen. Ein angegebenes Ende bleibt stehen, ganztägig bleibt
+  ohne Ende, und Nacharbeiten geht immer. Fremde Feeds fasst die Regel nicht an.
+- **Import und Abo sind zwei Wege, keine Varianten.** `/calendar/import` liest
+  eine `.ics`-**Datei** einmalig ein: die Termine gehören danach dem Haushalt
+  (lokaler Feed, `kind: personal`, wiedererkannt an `externalUid` mit Präfix
+  `ics-import:`). `/calendar/feeds` abonniert eine **Adresse**, die fremd und
+  schreibgeschützt bleibt. Erst Vorschau, dann Übernahme — nie automatisch.
+  Serien werden nicht aufgespannt, nur der erste Termin kommt mit.
 - **Geburtstage und Jahrestage sind keine gespeicherten Termine.**
   `family_calendar_upcoming` spannt sie mit `includeAnniversaries` auf.
 - **Die Gesundheitsakte gilt auch für Tiere** — `family_health_due` liefert
   Impfungen und Vorsorge für Menschen und Katze gleichermaßen; ein Eintrag darf
   auf mehrere lauten (Wurmkur für beide Katzen).
+- **Akteneinträge sind keine gespeicherten Termine, stehen aber im Kalender.**
+  `expandHealthOccurrences` spannt sie wie Geburtstage für den Zeitraum auf:
+  `nextDueOn` als „… fällig", `occurredOn` als Notiz. Geändert wird nur in der
+  Akte; das ICS-Abo bekommt weiterhin nur die Fälligkeiten.
 - **`family_shopping_list` ist zweistufig:** ohne `listId` die Übersicht, mit
   `listId` die Positionen. So zieht ein Blick auf die Listen nicht die Historie.
 - **Der Wocheneinkauf hat zwei Abschnitte** (`ShoppingListItem.trip`):
@@ -83,7 +99,7 @@ Navigation in `apps/family/src/navigation/family-nav.ts`, vier Abschnitte:
 | Abschnitt | Seiten |
 |---|---|
 | Überblick | `/` · `/briefing` · `/chat` · `/chat/privat` |
-| Haushalt | `/contracts` · `/documents` · `/calendar` (+ `/feeds`, `/abo`) |
+| Haushalt | `/contracts` · `/documents` · `/calendar` (+ `/feeds`, `/import`, `/abo`) |
 | Alltag | `/kitchen` · `/household` · `/scan-inbox` |
 | Verwaltung | `/members` · `/health` · `/account` |
 
@@ -121,6 +137,7 @@ nicht in den Route Handlers.
 | Essensplanung | `family_recipes` gegen `family_shopping_list` abgleichen; Wochenplan/KI/Einkaufs-Split: `docs/family/essensplan.md` |
 | Ganze Akte einer Person | `family_health_due` mit `memberId` — auch geteilte Einträge |
 | Termin anlegen | `family_calendar_add_event` — nur mit `UWE_MCP_ALLOW_WRITES=true` |
+| ICS-Datei einlesen | `/calendar/import` in der App; Fachlogik `@uwe/family-core` → `ics-import.ts` |
 | Family alleine starten | `pnpm dev:family` |
 
 Karte: `references/karte.md` · Depth: `docs/family/README.md`, `docs/family/api.md`,

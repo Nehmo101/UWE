@@ -5,6 +5,7 @@ import {
   attachMembersToEvents,
   createFamilyMemberService,
   expandAnniversaries,
+  resolveEventEnd,
   resolveMemberColour,
   setEventMembers,
 } from "@uwe/family-core";
@@ -111,6 +112,7 @@ export async function POST(request: Request) {
   }
 
   const endAt = typeof body.endAt === "string" ? new Date(body.endAt) : null;
+  const allDay = body.allDay === true;
   const calendar = createCalendarService(familyPrisma, prisma);
   // Ohne lokalen Feed haette der Termin keine Heimat.
   const local = await calendar.ensureLocalFeed();
@@ -121,8 +123,9 @@ export async function POST(request: Request) {
     description: typeof body.description === "string" ? body.description : null,
     location: typeof body.location === "string" ? body.location : null,
     startAt,
-    endAt: endAt && !Number.isNaN(endAt.getTime()) ? endAt : null,
-    allDay: body.allDay === true,
+    // Ohne `endAt` dauert ein Termin eine Stunde; ganztägig bleibt ohne Ende.
+    endAt: resolveEventEnd(startAt, endAt, { allDay }),
+    allDay,
     kind: "personal",
   });
 

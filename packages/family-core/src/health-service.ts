@@ -2,9 +2,10 @@
  * Gesundheits- und Tierarzt-Akte des Haushalts.
  *
  * Impfungen, Vorsorge, Medikamente, Tierarzt — für Menschen und Tiere
- * gleichermaßen, weil beide im Haushalt Termine erzeugen. Ein Eintrag mit
- * `nextDueOn` erscheint automatisch im Kalender und im ICS-Feed, ohne dass
- * jemand daraus von Hand einen Termin macht.
+ * gleichermaßen, weil beide im Haushalt Termine erzeugen. Ein Eintrag mit Datum
+ * erscheint automatisch im Kalender, ohne dass jemand daraus von Hand einen
+ * Termin macht (`health-calendar.ts`); der ICS-Feed nimmt davon nur die
+ * Fälligkeiten mit.
  *
  * Ein Eintrag gehört einer **oder mehreren** Personen: die Wurmkur betrifft
  * beide Katzen, die Grippeimpfung die ganze Familie. Die Zuordnung liegt wie
@@ -135,6 +136,25 @@ export class FamilyHealthService {
     const rows = await this.db.familyHealthRecord.findMany({
       where: { nextDueOn: { not: null, gte: from, lte: until } },
       orderBy: { nextDueOn: "asc" },
+      include: RECORD_INCLUDE,
+    });
+    return rows.map(toView);
+  }
+
+  /**
+   * Alles, was in einem Zeitraum ein Datum trägt — Fälligkeit **oder**
+   * Vergangenes. Grundlage für den Monatskalender, der beides zeigt;
+   * `listDueUntil` bleibt für Feed und Briefing, die nur Fälligkeiten wollen.
+   */
+  async listInRange(from: Date, to: Date) {
+    const rows = await this.db.familyHealthRecord.findMany({
+      where: {
+        OR: [
+          { nextDueOn: { not: null, gte: from, lte: to } },
+          { occurredOn: { not: null, gte: from, lte: to } },
+        ],
+      },
+      orderBy: [{ nextDueOn: "asc" }, { occurredOn: "asc" }],
       include: RECORD_INCLUDE,
     });
     return rows.map(toView);

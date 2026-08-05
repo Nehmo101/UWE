@@ -73,6 +73,12 @@ export const FAMILY_NAV_SECTIONS: FamilyNavSection[] = [
         keywords: ["fremde", "abonnieren", "ical", "caldav", "schule", "verein", "feed"],
       },
       {
+        href: "/calendar/import",
+        label: "Kalender-Import",
+        icon: "⤓",
+        keywords: ["import", "ics", "datei", "einlesen", "übernehmen", "einladung", "kalender"],
+      },
+      {
         href: "/calendar/abo",
         label: "Kalender-Abo",
         icon: "◵",

@@ -22,9 +22,9 @@ import {
  *
  * Eine Akte für den ganzen Haushalt, für Menschen und Tiere gleichermaßen:
  * beide erzeugen Termine. Ein Eintrag betrifft eine oder mehrere Personen — die
- * Wurmkur beide Katzen, die Grippeimpfung die ganze Familie. Was eine
- * Fälligkeit hat, erscheint automatisch im Kalender und im Abo aufs Handy —
- * niemand muss daraus von Hand einen Termin machen.
+ * Wurmkur beide Katzen, die Grippeimpfung die ganze Familie. Was ein Datum hat,
+ * erscheint automatisch im Kalender — niemand muss daraus von Hand einen Termin
+ * machen. Ins Abo aufs Handy gehen nur die Fälligkeiten.
  */
 
 export const dynamic = "force-dynamic";
@@ -86,7 +86,7 @@ export default async function FamilyHealthPage() {
       active="/health"
       title="Gesundheit"
       eyebrow="Gemeinsamer Bereich"
-      lede={`${records.length} Eintrag/Einträge. Was eine Fälligkeit hat, steht automatisch im Kalender — auch für die Katze.`}
+      lede={`${records.length} Eintrag/Einträge. Was ein Datum hat, steht automatisch im Kalender — auch für die Katze.`}
     >
       {due.length > 0 ? (
         <section className="family-section">

@@ -207,6 +207,39 @@ describe("FamilyHealthService", () => {
     assert.deepEqual(mine, ["Erste", "Zweite"]);
   });
 
+  it("liefert im Zeitraum sowohl Fälligkeit als auch Vergangenes", async () => {
+    const member = (await createFamilyMemberService(db).createMember({
+      displayName: "Zeitraum",
+    })) as { id: string };
+
+    await service.createRecord({
+      memberIds: [member.id],
+      title: "War im Monat",
+      occurredOn: utc(2026, 5, 3),
+    });
+    await service.createRecord({
+      memberIds: [member.id],
+      title: "Faellig im Monat",
+      nextDueOn: utc(2026, 5, 20),
+    });
+    await service.createRecord({
+      memberIds: [member.id],
+      title: "Daneben",
+      occurredOn: utc(2026, 4, 30),
+      nextDueOn: utc(2026, 6, 1),
+    });
+    await service.createRecord({ memberIds: [member.id], title: "Ohne Datum" });
+
+    const rows = await service.listInRange(utc(2026, 5, 1), utc(2026, 5, 31));
+    const titles = rows
+      .filter((r) => r.members.some((m) => m.id === member.id))
+      .map((r) => r.title)
+      .sort();
+
+    assert.deepEqual(titles, ["Faellig im Monat", "War im Monat"]);
+    assert.equal(rows[0]?.members[0]?.displayName !== undefined, true);
+  });
+
   it("ändert einen Eintrag", async () => {
     const record = await service.createRecord({ memberIds: [cat.id], title: "Vorher" });
     const updated = await service.updateRecord(record.id, {

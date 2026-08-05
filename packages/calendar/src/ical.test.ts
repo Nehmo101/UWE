@@ -22,6 +22,46 @@ describe("parseIcalEvents", () => {
     assert.equal(events[0]?.allDay, false);
   });
 
+  it("converts TZID wall-clock times to the real instant", () => {
+    const ics = [
+      "BEGIN:VCALENDAR",
+      "BEGIN:VEVENT",
+      "UID:tz-1",
+      "SUMMARY:Elternabend",
+      "DTSTART;TZID=Europe/Berlin:20260910T180000",
+      "DTEND;TZID=Europe/Berlin:20260910T200000",
+      "END:VEVENT",
+      "BEGIN:VEVENT",
+      "UID:tz-2",
+      "SUMMARY:Winterzeit",
+      "DTSTART;TZID=Europe/Berlin:20261210T180000",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
+
+    const events = parseIcalEvents(ics);
+    // Sommerzeit UTC+2, Winterzeit UTC+1 — der Versatz haengt am Zeitpunkt.
+    assert.equal(events[0]?.startAt.toISOString(), "2026-09-10T16:00:00.000Z");
+    assert.equal(events[0]?.endAt?.toISOString(), "2026-09-10T18:00:00.000Z");
+    assert.equal(events[1]?.startAt.toISOString(), "2026-12-10T17:00:00.000Z");
+  });
+
+  it("falls back to UTC for an unknown TZID", () => {
+    const ics = [
+      "BEGIN:VCALENDAR",
+      "BEGIN:VEVENT",
+      "UID:tz-broken",
+      "SUMMARY:Kaputte Zone",
+      "DTSTART;TZID=Nirgendwo/Erfunden:20260910T180000",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
+
+    const events = parseIcalEvents(ics);
+    assert.equal(events.length, 1);
+    assert.equal(events[0]?.startAt.toISOString(), "2026-09-10T18:00:00.000Z");
+  });
+
   it("parses all-day events", () => {
     const ics = [
       "BEGIN:VCALENDAR",
