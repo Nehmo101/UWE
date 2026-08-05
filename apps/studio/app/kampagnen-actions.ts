@@ -3,14 +3,19 @@
 import { z } from "zod";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
+  createAuthService,
+  createGameSessionService,
   createPrismaClient,
   createQuestLifecycleService,
+  createWorldEventService,
   getAppRepository,
+  parseInGameDate,
   prisma,
   type DungeonPrepStatus,
   type QuestLifecycleStatus,
 } from "@uwe/database/server";
-import { createCampaignCockpitService } from "@uwe/campaign-cockpit";
+import type { WorldEventEntityRole } from "@uwe/database/enums";
+import { createCampaignCockpitService, createSessionWrapUpService } from "@uwe/campaign-cockpit";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireStudioContentEdit, requireStudioWorldEdit } from "@/src/lib/authz";
@@ -228,4 +233,176 @@ export async function assignQuestToArcAction(formData: FormData) {
     : cockpitPath(worldSlug, campaignSlug);
   revalidatePath(returnPath);
   redirect(`${returnPath}?saved=1`);
+}
+
+/* ── Session-Abschluss-Flow ─────────────────────────────────────────────── */
+
+function abschlussPath(worldSlug: string, campaignSlug: string, sessionId: string) {
+  return `${cockpitPath(worldSlug, campaignSlug)}/abschluss?session=${encodeURIComponent(sessionId)}`;
+}
+
+/**
+ * Die Session muss zur Kampagne gehören — sonst könnte ein präparierter
+ * sessionId-Wert Notizen einer fremden Kampagne in den Flow ziehen.
+ */
+async function requireWrapUpSession(
+  worldSlug: string,
+  campaignSlug: string,
+  sessionId: string,
+) {
+  const wrapUp = await createSessionWrapUpService(prisma).getSessionWrapUp(
+    worldSlug,
+    campaignSlug,
+    sessionId,
+  );
+  if (!wrapUp?.session) throw new Error("Session nicht gefunden.");
+  return wrapUp;
+}
+
+function parseEventDate(formData: FormData) {
+  const year = Number(formData.get("eventYear"));
+  const month = Number(formData.get("eventMonth"));
+  const day = Number(formData.get("eventDay"));
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+    throw new Error("Weltzeit-Datum ist ungültig.");
+  }
+  return parseInGameDate({ year: Math.floor(year), month: Math.floor(month), day: Math.floor(day) });
+}
+
+const EVENT_LINK_ROLES = new Set<WorldEventEntityRole>(["trigger", "consequence", "involved", "faction"]);
+
+/** Ereignis aus dem Abschluss-Flow in die Chronik, optional mit Verknüpfungen. */
+export async function createEventFromWrapUpAction(formData: FormData) {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  const campaignSlug = String(formData.get("campaignSlug"));
+  const sessionId = String(formData.get("sessionId"));
+  await requireStudioWorldEdit(worldSlug);
+  const wrapUp = await requireWrapUpSession(worldSlug, campaignSlug, sessionId);
+
+  const title = parseTitle(formData);
+  const linkedPages: Array<{ pageId: string; role: WorldEventEntityRole }> = [];
+  const questId = String(formData.get("questPageId") || "");
+  if (questId) {
+    const questRole = String(formData.get("questRole") || "involved") as WorldEventEntityRole;
+    if (!EVENT_LINK_ROLES.has(questRole)) throw new Error("Ungültige Verknüpfungs-Rolle.");
+    linkedPages.push({ pageId: questId, role: questRole });
+  }
+  const factionId = String(formData.get("factionPageId") || "");
+  if (factionId) {
+    linkedPages.push({ pageId: factionId, role: "faction" });
+  }
+
+  await createWorldEventService(prisma).create({
+    worldId: wrapUp.worldId,
+    gameSessionId: sessionId,
+    inGameDate: parseEventDate(formData),
+    title,
+    summaryPlayer: String(formData.get("summaryPlayer") || "") || null,
+    summaryDm: String(formData.get("summaryDm") || "") || null,
+    sourceType: "manual",
+    linkedPages,
+  });
+
+  const path = abschlussPath(worldSlug, campaignSlug, sessionId);
+  revalidatePath(`/worlds/${worldSlug}/chronicle`);
+  revalidatePath(path);
+  redirect(`${path}&event=1#schritt-ereignisse`);
+}
+
+/** Geteilte Spielernotiz als Chronik-Ereignis übernehmen; Notiz wird accepted. */
+export async function adoptNoteAsEventAction(formData: FormData) {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  const campaignSlug = String(formData.get("campaignSlug"));
+  const sessionId = String(formData.get("sessionId"));
+  const noteId = String(formData.get("noteId"));
+  await requireStudioWorldEdit(worldSlug);
+  const wrapUp = await requireWrapUpSession(worldSlug, campaignSlug, sessionId);
+
+  // Nur Notizen aus der Review-Liste dieser Session — nie private/fremde.
+  const note = wrapUp.sharedNotes.find((candidate) => candidate.id === noteId);
+  if (!note) throw new Error("Notiz nicht gefunden.");
+
+  const firstLine = note.content.split("\n")[0]?.trim() ?? "";
+  const title =
+    String(formData.get("title") || "").trim() ||
+    (firstLine.length > 80 ? `${firstLine.slice(0, 77)}…` : firstLine) ||
+    "Spielernotiz";
+
+  await createWorldEventService(prisma).create({
+    worldId: wrapUp.worldId,
+    gameSessionId: sessionId,
+    inGameDate: wrapUp.clock.current ?? parseInGameDate(null),
+    title,
+    summaryDm: note.content,
+    sourceType: "manual",
+  });
+  await createAuthService(prisma).getPlayerNoteService().accept(noteId);
+
+  const path = abschlussPath(worldSlug, campaignSlug, sessionId);
+  revalidatePath(`/worlds/${worldSlug}/chronicle`);
+  revalidatePath(path);
+  redirect(`${path}&note=1#schritt-notizen`);
+}
+
+/** Geteilte Spielernotiz an eine Quest hängen (ContentBlock); Notiz wird accepted. */
+export async function attachNoteToQuestAction(formData: FormData) {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  const campaignSlug = String(formData.get("campaignSlug"));
+  const sessionId = String(formData.get("sessionId"));
+  const noteId = String(formData.get("noteId"));
+  const questPageId = String(formData.get("questPageId"));
+  await requireStudioContentEdit(worldSlug, questPageId);
+  const wrapUp = await requireWrapUpSession(worldSlug, campaignSlug, sessionId);
+
+  const note = wrapUp.sharedNotes.find((candidate) => candidate.id === noteId);
+  if (!note) throw new Error("Notiz nicht gefunden.");
+  if (!wrapUp.openQuests.some((quest) => quest.id === questPageId)) {
+    throw new Error("Quest nicht gefunden.");
+  }
+
+  await createAuthService(prisma).getPlayerNoteService().adoptAsContentBlock(noteId, questPageId);
+
+  const path = abschlussPath(worldSlug, campaignSlug, sessionId);
+  revalidatePath(path);
+  redirect(`${path}&note=1#schritt-notizen`);
+}
+
+/** Notiz aus der Review-Liste ausblenden (hidden) — nichts wird übernommen. */
+export async function ignoreNoteInWrapUpAction(formData: FormData) {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  const campaignSlug = String(formData.get("campaignSlug"));
+  const sessionId = String(formData.get("sessionId"));
+  const noteId = String(formData.get("noteId"));
+  await requireStudioWorldEdit(worldSlug);
+  const wrapUp = await requireWrapUpSession(worldSlug, campaignSlug, sessionId);
+
+  const note = wrapUp.sharedNotes.find((candidate) => candidate.id === noteId);
+  if (!note) throw new Error("Notiz nicht gefunden.");
+
+  await createAuthService(prisma).getPlayerNoteService().hide(noteId);
+
+  const path = abschlussPath(worldSlug, campaignSlug, sessionId);
+  revalidatePath(path);
+  redirect(`${path}&note=1#schritt-notizen`);
+}
+
+/** Session als ausgewertet markieren (Status summarized). */
+export async function markSessionWrappedAction(formData: FormData) {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  const campaignSlug = String(formData.get("campaignSlug"));
+  const sessionId = String(formData.get("sessionId"));
+  await requireStudioWorldEdit(worldSlug);
+  await requireWrapUpSession(worldSlug, campaignSlug, sessionId);
+
+  await createGameSessionService().update(sessionId, { status: "summarized" });
+
+  const path = cockpitPath(worldSlug, campaignSlug);
+  revalidatePath(path);
+  revalidatePath(`/worlds/${worldSlug}/sessions`);
+  redirect(`${path}?saved=1`);
 }

@@ -8,6 +8,7 @@ export type {
   PlayerNoteVisibility,
   QuestLifecycleStatus,
   AssetType,
+  WorldEventEntityRole,
 } from "./generated/prisma/client";
 
 export {
