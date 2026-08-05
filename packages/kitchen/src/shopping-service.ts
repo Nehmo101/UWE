@@ -171,6 +171,17 @@ export class ShoppingService {
     });
   }
 
+  /**
+   * Setzt den Haken auf einen Zielwert statt zu wechseln — idempotent, damit
+   * ein externer Client mit veraltetem Stand (Kiosk-Cache) nichts umkehrt.
+   * `null` statt Fehler, wenn die Position nicht (mehr) existiert.
+   */
+  async setItemChecked(itemId: string, checked: boolean) {
+    const item = await this.db.shoppingListItem.findUnique({ where: { id: itemId } });
+    if (!item) return null;
+    return this.db.shoppingListItem.update({ where: { id: itemId }, data: { checked } });
+  }
+
   async addItem(input: {
     listId: string;
     name: string;

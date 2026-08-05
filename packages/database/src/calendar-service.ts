@@ -214,6 +214,14 @@ export class CalendarService {
     });
   }
 
+  /** Einzelner Termin samt Feed — für die Lokal-Feed-Prüfung vor Ändern/Löschen. */
+  async getEvent(id: string) {
+    return this.familyDb.calendarEvent.findUnique({
+      where: { id },
+      include: { feed: { select: { id: true, type: true } } },
+    });
+  }
+
   async updateEvent(id: string, input: Partial<CreateCalendarEventInput>) {
     const existing = await this.familyDb.calendarEvent.findUnique({
       where: { id },

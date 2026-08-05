@@ -43,7 +43,12 @@ export async function GET(request: Request) {
         name: item.name,
         amount: item.amount,
         unit: item.unit,
+        // Freitext-Einheit („2 Packungen") — beim Schreiben angenommen, also
+        // auch beim Lesen sichtbar.
+        unitLabel: item.unitLabel,
         category: item.category,
+        // Großeinkauf (`main`) vs. Frische-Einkauf (`fresh`).
+        trip: item.trip,
         checked: item.checked,
       })),
     },
