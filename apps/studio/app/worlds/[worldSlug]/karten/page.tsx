@@ -47,6 +47,7 @@ export default async function TerraKartenIndexPage({ params }: Props) {
             eingereichtAm: karte.eingereichtAm
               ? `eingereicht ${karte.eingereichtAm.toLocaleDateString("de-DE")}`
               : null,
+            gesperrt: karte.gesperrt,
           }))}
         />
       </div>

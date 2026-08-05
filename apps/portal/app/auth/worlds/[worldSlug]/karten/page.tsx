@@ -116,6 +116,7 @@ function KartenZeile({ worldSlug, karte }: { worldSlug: string; karte: TerraKart
         {karte.status === "eingereicht" ? (
           <span className="text-xs text-muted-foreground">wartet auf Abnahme</span>
         ) : null}
+        {karte.gesperrt ? <span className="text-xs text-muted-foreground">gesperrt</span> : null}
       </Link>
     </li>
   );

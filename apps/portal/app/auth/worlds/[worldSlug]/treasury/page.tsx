@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import { getAccessContextForWorld } from "@/src/lib/auth";
+import { GroupTreasurySection } from "@/src/components/GroupTreasurySection";
+import { createGroupTreasuryService, type ViewerGroupTreasury } from "@uwe/player-hub";
 import {
   assignTreasuryItemToCharacterAction,
   returnTreasuryItemFromCharacterAction,
@@ -88,6 +90,7 @@ export default async function PortalTreasuryPage({ params }: Props) {
 
   const db = createPrismaClient();
   let view: PortalTreasuryView | null = null;
+  let groupView: ViewerGroupTreasury | null = null;
   let ownCharacters: OwnCharacterInventory[] = [];
   const canMoveItems = Boolean(
     ctx.user && !ctx.previewAsUserId && ctx.worldMembership !== null,
@@ -96,6 +99,9 @@ export default async function PortalTreasuryPage({ params }: Props) {
   try {
     const treasuryService = createPartyTreasuryService(db);
     view = await treasuryService.getForViewer(worldSlug, ctx);
+    // Der Schatz der eigenen Tischrunde — `null`, wenn dieses Konto (noch)
+    // keiner Gruppe angehoert. Dann bleibt es bei der Welt-Schatzkammer unten.
+    groupView = await createGroupTreasuryService(db).getForViewer(worldSlug, ctx);
     if (!view) {
       notFound();
     }
@@ -139,8 +145,12 @@ export default async function PortalTreasuryPage({ params }: Props) {
   return (
     <>
       <PageHeader
-        title={view.name}
-        summary="Gemeinsame Währung und Gegenstände eurer Gruppe."
+        title={groupView ? "Gruppenschatz" : view.name}
+        summary={
+          groupView
+            ? `Kasse und Beute von „${groupView.group.name}" — ihr führt sie selbst. Darunter: die Schatzkammer der Welt.`
+            : "Gemeinsame Währung und Gegenstände eurer Gruppe."
+        }
         meta={
           view.updatedAt ? (
             <span className="text-sm text-muted-foreground">
@@ -149,6 +159,15 @@ export default async function PortalTreasuryPage({ params }: Props) {
           ) : null
         }
       />
+
+      {groupView ? <GroupTreasurySection worldSlug={worldSlug} view={groupView} /> : null}
+
+      {!groupView && canMoveItems ? (
+        <p className="text-sm text-muted-foreground">
+          Du bist noch keiner Tischrunde zugeordnet — deshalb siehst du hier nur die Schatzkammer
+          der Welt. Die Gruppen legt der Spielleiter im Studio an.
+        </p>
+      ) : null}
 
       <div className="grid gap-4">
         <Card>

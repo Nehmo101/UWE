@@ -72,8 +72,11 @@ export const STUDIO_PALETTE_EXTRA: {
   group: string;
   keywords?: string[];
 }[] = [
-  { id: "command-center", label: "NL Command Center", href: "/command", group: "System / Übersicht", keywords: ["command", "nl", "admin"] },
-  { id: "brain-store", label: "Brain Store", href: "/brain", group: "Knowledge & Brain", keywords: ["brain", "wissen", "canon"] },
+  { id: "admin-hub", label: "Admin Übersicht", href: "/admin", group: "System / Betrieb", keywords: ["admin", "betrieb", "übersicht"] },
+  { id: "admin-activity", label: "Verlauf", href: "/admin/activity", group: "System / Betrieb", keywords: ["activity", "audit", "verlauf"] },
+  { id: "admin-ai-gateway", label: "AI Gateway", href: "/admin/ai-gateway", group: "System / Betrieb", keywords: ["gateway", "provider", "model", "budget"] },
+  { id: "admin-ai-prompt", label: "Prompt-Konsole", href: "/admin/ai-prompt", group: "System / Betrieb", keywords: ["prompt", "konsole", "ollama", "engine"] },
+  { id: "command-center", label: "NL Command Center", href: "/command", group: "System / Betrieb", keywords: ["command", "nl", "admin"] },
 ];
 
 const PAGE_TEMPLATE_SHORTCUTS: {

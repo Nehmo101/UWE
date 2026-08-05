@@ -71,9 +71,20 @@ kein Shell-Wrapper, keine eigene Sidebar. Die aktive Welt ist Context + Cookie, 
 Rahmenwechsel (`docs/engineering/studio-shell.md`).
 
 Navigationsziele kommen aus `apps/studio/src/navigation/`:
-`studio-nav.ts` (Start, Welten, Wissen, KI, Werkzeuge), `world-nav.ts` (Welt-Cockpit:
+`studio-nav.ts` (nur noch Start · Welten · System), `world-nav.ts` (Welt-Cockpit:
 Übersicht · Wiki · Spiel · Medien · Wissen & KI · Freigabe & Betrieb),
-`system-nav.ts` (Admin-Hub), `organization-nav.ts`.
+`system-nav.ts` (Konto).
+
+**Die Seitenleiste ist absichtlich schmal.** Gearbeitet wird in einer Welt, also
+steht alles Welt-Bezogene im Welt-Cockpit und *nur* dort: Brain, KI & Generatoren,
+Seiten-Templates, Import & Konvertierung, Import-Zentrale, Hintergrund-Jobs. Wer
+einen neuen Bereich baut, trägt ihn in `world-nav.ts` ein — ein globaler Eintrag
+daneben wäre ein zweiter Weg zum selben Ziel, nur ohne Welt-Kontext. Owner-privater
+Alltag (Mach weiter, Ideen, Bug-Center, Capture) liegt in Brain. Die Betriebsflächen
+(Admin-Hub, Verlauf, KI-Gateway, Prompt-Konsole, NL-Befehle, Design & Theme,
+Prompt-Bibliothek, Image Studio) existieren als Routen weiter; erreichbar sind sie
+über die Befehlspalette (`STUDIO_PALETTE_EXTRA` in `src/lib/studio-navigation.ts`),
+nicht über die Seitenleiste.
 
 ```
 Schema-Änderung   → packages/database/prisma/schema.prisma + Migration

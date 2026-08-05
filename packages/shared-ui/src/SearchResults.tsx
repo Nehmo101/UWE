@@ -197,11 +197,14 @@ export function GlobalSearchForm({
   action,
   query = "",
   placeholder = "Global suchen…",
+  label = "Globale Suche",
   extraFields,
 }: {
   action: string;
   query?: string;
   placeholder?: string;
+  /** Beschriftung für Screenreader — bei bereichsweiten Suchen anpassen. */
+  label?: string;
   extraFields?: ReactNode;
 }) {
   return (
@@ -215,7 +218,7 @@ export function GlobalSearchForm({
         name="q"
         placeholder={placeholder}
         defaultValue={query}
-        aria-label="Globale Suche"
+        aria-label={label}
         enterKeyHint="search"
         className="min-h-11 min-w-0 flex-1 rounded-[0.55rem] border border-border bg-card px-[0.85rem] py-[0.65rem] text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       />

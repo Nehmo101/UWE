@@ -56,8 +56,10 @@ const nextConfig: NextConfig = {
         headers: getUweSecurityHeaderEntries(),
       },
       {
-        // Der Service Worker darf nicht altern: ein zwischengespeicherter
-        // sw.js liefert wochenlang eine Fassung aus, die niemand mehr hat.
+        // Nachlass des entfernten Tischmodus: Browser, die den alten Service
+        // Worker noch registriert haben, sollen bei jedem Besuch die frische
+        // (jetzt fehlende) Datei sehen und ihn dadurch loswerden — nicht
+        // wochenlang eine zwischengespeicherte Fassung weiterfahren.
         source: "/sw.js",
         headers: [
           ...getUweSecurityHeaderEntries(),

@@ -53,11 +53,9 @@ describe("portal navigation (login-first)", () => {
   });
 
   it("world nav items stay scoped to the selected world", () => {
-    // Der Regelfall ist ein Pfad unter /auth/worlds/[slug]. Der Tischmodus ist
-    // die begründete Ausnahme: seine Hülle gilt für alle Welten, damit der
-    // Service Worker genau ein Dokument vorhalten muss — die Welt reist
-    // deshalb in der Query mit. Wer hier eine weitere Ausnahme braucht, muss
-    // die Welt ebenso mitgeben; ganz aus der Welt herausführen darf kein Eintrag.
+    // Jeder Welt-Eintrag liegt unter /auth/worlds/[slug]. Wer eine Ausnahme
+    // braucht, muss die Welt wenigstens in der Query mitgeben; ganz aus der
+    // Welt herausführen darf kein Eintrag.
     for (const item of portalWorldNav("terra").flatMap((g) => g.items)) {
       const scoped =
         item.href.startsWith("/auth/worlds/terra") || item.href.includes("welt=terra");

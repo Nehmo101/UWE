@@ -4,15 +4,12 @@ import { portalBasePath } from "@/src/lib/base-path";
 /**
  * Web-App-Manifest des Portals.
  *
- * Früher lag es als feste Datei unter `public/manifest.webmanifest`. Seit der
- * Tischmodus offline funktionieren soll, muss es erzeugt werden: läuft das
- * Portal unter einem Unterpfad (`PORTAL_PATH`), gehören dieser Präfix in
- * `start_url`, `scope` und Icon-Pfad — eine statische Datei kann das nicht.
+ * Früher lag es als feste Datei unter `public/manifest.webmanifest`. Es muss
+ * erzeugt werden, weil das Portal unter einem Unterpfad laufen kann
+ * (`PORTAL_PATH`): dieser Präfix gehört in `start_url`, `scope` und Icon-Pfad —
+ * eine statische Datei kann das nicht.
  *
- * `scope` deckt das ganze Portal ab, damit der Service Worker greift; die
- * Verknüpfung führt trotzdem auf die Weltenübersicht, weil das der normale
- * Einstieg ist. Ohne Netz fängt der Service Worker die Navigation ab und zeigt
- * den Tischmodus — dafür gibt es zusätzlich eine eigene Verknüpfung.
+ * `scope` deckt das ganze Portal ab; der Einstieg ist die Weltenübersicht.
  */
 /**
  * Zur Laufzeit erzeugt, nicht beim Bauen: `PORTAL_PATH` steht erst auf dem
@@ -42,14 +39,6 @@ export default function manifest(): MetadataRoute.Manifest {
         sizes: "any",
         type: "image/svg+xml",
         purpose: "any",
-      },
-    ],
-    shortcuts: [
-      {
-        name: "Tischmodus",
-        short_name: "Tisch",
-        description: "Charakterbogen, Notizen und Inventar — auch ohne Netz",
-        url: `${base}/auth/tisch`,
       },
     ],
   };

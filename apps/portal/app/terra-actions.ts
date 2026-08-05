@@ -163,6 +163,13 @@ export async function speichereSpielerKarteAction(formData: FormData): Promise<T
         error: "Diese Karte wurde inzwischen an anderer Stelle gespeichert. Bitte die Seite neu laden.",
       };
     }
+    if (ergebnis.grund === "gesperrt") {
+      return {
+        ok: false,
+        error:
+          "Diese Karte ist vom Spielleiter gesperrt. Sie lässt sich nur noch ansehen — sprich ihn an, wenn du weiterbauen willst.",
+      };
+    }
     // „unbekannt" deckt hier drei Fälle ab, die der Spieler gleich behandeln
     // soll: fremde Welt, fremde Karte, oder der Spielleiter hat sie in der
     // Zwischenzeit abgenommen. In allen dreien ist Weiterschreiben falsch.

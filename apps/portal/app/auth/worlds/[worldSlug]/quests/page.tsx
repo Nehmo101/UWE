@@ -14,6 +14,7 @@ import {
   type QuestLifecycleStatus,
 } from "@uwe/database/server";
 import {
+  createPlayerGroupService,
   createQuestFlagService,
   QUEST_PRIORITIES,
   QUEST_PRIORITY_LABELS,
@@ -77,11 +78,42 @@ export default async function AuthWorldQuestsPage({ params, searchParams }: Prop
   const db = createPrismaClient();
   const auth = createAuthService(db);
 
-  let quests;
+  let quests: Awaited<ReturnType<typeof auth.listPagesForViewer>> = [];
   let flags: Map<string, QuestFlagView> = new Map();
+  let groupName: string | null = null;
+  let hasGroup = false;
   try {
     const pages = await auth.listPagesForViewer(worldSlug, ctx);
-    quests = pages.filter((page) => page.type === "quest");
+    const allQuests = pages.filter((page) => page.type === "quest");
+
+    /*
+      Das Questlog zeigt nur, was der eigenen Tischrunde zugeordnet ist.
+      `listPagesForViewer` kennt die Zuordnung nicht (sie ist juenger als die
+      Auswahl dort), deshalb wird sie hier nachgeschlagen: erst die Gruppe des
+      Viewers, dann die `questGroupId` der Quest-Seiten. Eine Quest ohne
+      Gruppe ist DM-Material und erscheint bei niemandem — auch nicht bei der
+      Runde, die sie „eigentlich" betrifft, solange der Spielleiter sie nicht
+      im Kampagnen-Radar vergeben hat.
+    */
+    const world = await db.world.findUnique({ where: { slug: worldSlug }, select: { id: true } });
+    const group =
+      world && viewerId
+        ? await createPlayerGroupService(db).findForUser(world.id, viewerId)
+        : null;
+    groupName = group?.name ?? null;
+    hasGroup = group !== null;
+
+    if (group && allQuests.length > 0) {
+      const assignments = await db.page.findMany({
+        where: { id: { in: allQuests.map((page) => page.id) }, questGroupId: group.id },
+        select: { id: true },
+      });
+      const assignedIds = new Set(assignments.map((row) => row.id));
+      quests = allQuests.filter((page) => assignedIds.has(page.id));
+    } else {
+      quests = [];
+    }
+
     if (viewerId && quests.length > 0) {
       flags = await createQuestFlagService(db).listForUser(
         viewerId,
@@ -124,7 +156,11 @@ export default async function AuthWorldQuestsPage({ params, searchParams }: Prop
     <>
       <PageHeader
         title="Questlog"
-        summary="Alle Quests dieser Welt — filterbar nach Status."
+        summary={
+          groupName
+            ? `Die Quests eurer Runde „${groupName}" — filterbar nach Status.`
+            : "Die Quests deiner Tischrunde."
+        }
       />
 
       <p className="mb-4 text-sm text-muted-foreground">
@@ -233,8 +269,20 @@ export default async function AuthWorldQuestsPage({ params, searchParams }: Prop
 
       {filtered.length === 0 ? (
         <PortalEmptyState
-          title={query ? "Keine passenden Quests gefunden" : "Keine Quests freigeschaltet"}
-          description={query ? "Probiere einen anderen Suchbegriff." : undefined}
+          title={
+            query
+              ? "Keine passenden Quests gefunden"
+              : hasGroup
+                ? "Eurer Runde ist noch keine Quest zugeordnet"
+                : "Du bist noch keiner Tischrunde zugeordnet"
+          }
+          description={
+            query
+              ? "Probiere einen anderen Suchbegriff."
+              : hasGroup
+                ? "Der Spielleiter vergibt Quests im Kampagnen-Radar an eure Runde."
+                : "Sobald der Spielleiter dich einer Gruppe zuordnet, erscheinen hier eure Quests."
+          }
           icon="scroll"
         />
       ) : null}

@@ -225,9 +225,17 @@ export class PartyTreasuryService {
     return visible.map(toPlayerSafeInventoryItemView);
   }
 
+  /**
+   * Der welt-weite Schatz — der ohne Tischrunde.
+   *
+   * Seit es Spielergruppen gibt, ist `worldId` nicht mehr eindeutig: neben
+   * diesem Datensatz kann pro Gruppe ein eigener stehen. `groupId: null`
+   * grenzt genau den alten ab. Kein `findUnique`, weil beide Datenbanken NULL
+   * im zusammengesetzten UNIQUE als jeweils eigenen Wert lesen.
+   */
   async getByWorldId(worldId: string) {
-    return this.db.partyTreasury.findUnique({
-      where: { worldId },
+    return this.db.partyTreasury.findFirst({
+      where: { worldId, groupId: null },
       include: {
         items: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
       },
@@ -239,26 +247,42 @@ export class PartyTreasuryService {
     if (existing) {
       return existing;
     }
-    return this.db.partyTreasury.create({
-      data: {
-        worldId,
-        currencies: DEFAULT_CURRENCIES as unknown as Prisma.InputJsonValue,
-      },
-      include: { items: true },
-    });
+    try {
+      return await this.db.partyTreasury.create({
+        data: {
+          worldId,
+          currencies: DEFAULT_CURRENCIES as unknown as Prisma.InputJsonValue,
+        },
+        include: { items: true },
+      });
+    } catch {
+      // Zwei gleichzeitige Aufrufe: der zweite liest, was der erste angelegt hat.
+      const raced = await this.getByWorldId(worldId);
+      if (!raced) {
+        throw new Error("Gruppenschatz konnte nicht angelegt werden.");
+      }
+      return raced;
+    }
   }
 
   async upsert(input: UpsertPartyTreasuryInput) {
     const currencies = input.currencies ?? DEFAULT_CURRENCIES;
-    return this.db.partyTreasury.upsert({
-      where: { worldId: input.worldId },
-      create: {
-        worldId: input.worldId,
-        name: input.name ?? "Gruppenschatz",
-        currencies: currencies as unknown as Prisma.InputJsonValue,
-        notes: input.notes ?? "",
-      },
-      update: {
+    const existing = await this.getByWorldId(input.worldId);
+
+    if (!existing) {
+      return this.db.partyTreasury.create({
+        data: {
+          worldId: input.worldId,
+          name: input.name ?? "Gruppenschatz",
+          currencies: currencies as unknown as Prisma.InputJsonValue,
+          notes: input.notes ?? "",
+        },
+      });
+    }
+
+    return this.db.partyTreasury.update({
+      where: { id: existing.id },
+      data: {
         name: input.name,
         currencies: input.currencies
           ? (input.currencies as unknown as Prisma.InputJsonValue)

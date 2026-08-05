@@ -19,7 +19,6 @@ import "./globals.css";
 import "./wiki.css";
 import { PortalThemeSyncProvider } from "../components/PortalThemeSyncProvider";
 import { PortalSessionChrome } from "../components/PortalSessionChrome";
-import { ServiceWorkerRegistrar } from "@/src/components/ServiceWorkerRegistrar";
 import { portalBasePath } from "@/src/lib/base-path";
 import { enforcePortalMaintenance } from "@/src/lib/maintenance";
 
@@ -108,8 +107,6 @@ export default async function RootLayout({
             <AppUrlsProvider value={resolveCrossAppUrls()}>
               {children}
               <PortalSessionChrome />
-              {/* Hält die Hülle des Tischmodus offline verfügbar. */}
-              <ServiceWorkerRegistrar basePath={portalBasePath()} />
             </AppUrlsProvider>
           ) : (
             <main className="page">

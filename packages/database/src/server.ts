@@ -1235,8 +1235,11 @@ export type {
 export {
   createPlayerNoteService,
   PlayerNoteService,
+  PLAYER_NOTE_CATEGORIES,
+  PLAYER_NOTE_CATEGORY_LABELS,
   PLAYER_NOTE_STATUS_LABELS,
   PLAYER_NOTE_VISIBILITY_LABELS,
+  normalizePlayerNoteCategory,
   toDmPlayerNoteView,
   toPortalPlayerNoteView,
   PlayerNoteStatusEnum,
@@ -1249,6 +1252,7 @@ export type {
   DmPlayerNoteView,
   PortalPlayerNoteView,
   PlayerNoteWithRelations,
+  PlayerNoteCategory,
   PlayerNoteStatus,
   PlayerNoteVisibility,
 } from "./player-note-service";

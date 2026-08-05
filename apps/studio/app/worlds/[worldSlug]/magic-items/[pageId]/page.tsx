@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   buildPageUrl,
+  createCharacterService,
   getAppRepository,
   prisma,
 } from "@uwe/database/server";
@@ -52,14 +53,22 @@ export default async function MagicItemWorkbenchPage({ params, searchParams }: P
   });
   if (!page) notFound();
 
+  // Zugewiesen wird an einen SPIELERCHARAKTER (Character-Datensatz) — das ist
+  // der, dessen Spieler den Gegenstand am Tisch trägt. Die Wiki-Seiten unten
+  // sind nur noch das Zusatzfeld für die Erzählung (NPC, Fraktion).
+  const characters = await createCharacterService(prisma).listForWorld(world.id);
+
   const ownerPages = await prisma.page.findMany({
-    where: { worldId: world.id, type: { in: ["player_character", "npc", "faction"] } },
+    where: { worldId: world.id, type: { in: ["npc", "faction"] } },
     select: { id: true, title: true, type: true, slug: true },
     orderBy: { title: "asc" },
   });
 
   const stored = await createMagicItemService(prisma).getForPage(pageId);
   const data: MagicItemData = stored?.data ?? {};
+  const ownerCharacter = data.ownerCharacterId
+    ? characters.find((entry) => entry.id === data.ownerCharacterId)
+    : null;
   const ownerPage = data.ownerPageId
     ? ownerPages.find((entry) => entry.id === data.ownerPageId)
     : null;
@@ -119,16 +128,44 @@ export default async function MagicItemWorkbenchPage({ params, searchParams }: P
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="item-owner">Besitzer (Wiki-Seite)</Label>
+          <Label htmlFor="item-owner-character">Besitzer (Spielercharakter)</Label>
           {/* TODO(design-kit): Kit-Select (Radix) erlaubt keinen leeren value="" für
               "kein Besitzer" — natives Select beibehalten. */}
+          <select
+            id="item-owner-character"
+            name="ownerCharacterId"
+            defaultValue={data.ownerCharacterId ?? ""}
+            className={NATIVE_SELECT_CLASS}
+          >
+            <option value="">— kein Besitzer —</option>
+            {characters.map((entry) => (
+              <option key={entry.id} value={entry.id}>
+                {entry.displayName}
+                {entry.owner ? ` (${entry.owner.displayName})` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+        {ownerCharacter?.page ? (
+          <p className="text-sm text-muted-foreground">
+            Charakterbogen:{" "}
+            <Link href={buildPageUrl(worldSlug, ownerCharacter.page.type, ownerCharacter.page.slug)}>
+              {ownerCharacter.displayName}
+            </Link>
+          </p>
+        ) : null}
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="item-owner">NPC / Fraktion mit Bezug (Zusatzfeld)</Label>
+          {/* Erzähl-Bezug, keine Zuweisung: welcher NPC hütet den Gegenstand,
+              welche Fraktion sucht ihn. */}
           <select
             id="item-owner"
             name="ownerPageId"
             defaultValue={data.ownerPageId ?? ""}
             className={NATIVE_SELECT_CLASS}
           >
-            <option value="">— kein Besitzer —</option>
+            <option value="">— kein Bezug —</option>
             {ownerPages.map((entry) => (
               <option key={entry.id} value={entry.id}>
                 {entry.title}
@@ -138,7 +175,7 @@ export default async function MagicItemWorkbenchPage({ params, searchParams }: P
         </div>
         {ownerPage ? (
           <p className="text-sm text-muted-foreground">
-            Wiki-Seite des Besitzers:{" "}
+            Wiki-Seite:{" "}
             <Link href={buildPageUrl(worldSlug, ownerPage.type, ownerPage.slug)}>
               {ownerPage.title}
             </Link>

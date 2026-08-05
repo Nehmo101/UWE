@@ -500,6 +500,26 @@ export class UweRepository {
     });
   }
 
+  /**
+   * Werkbank-Daten einer Gegenstandsseite (Magic-Item-Werkbank).
+   *
+   * Ein Datensatz je Seite; der Import legt ihn beim Anlegen mit an, das
+   * Studio-Formular überschreibt ihn später. `StructuredItem.pageId` hängt per
+   * `onDelete: Cascade` an der Seite — ein rückgängig gemachter Import nimmt
+   * die Werkbank-Daten deshalb von selbst mit.
+   */
+  async upsertStructuredItem(input: {
+    worldId: string;
+    pageId: string;
+    data: Prisma.InputJsonValue;
+  }) {
+    return this.db.structuredItem.upsert({
+      where: { pageId: input.pageId },
+      create: { worldId: input.worldId, pageId: input.pageId, data: input.data },
+      update: { data: input.data },
+    });
+  }
+
   async listPageLinksForWorld(worldSlug: string) {
     const world = await this.getWorldBySlug(worldSlug);
     if (!world) return [];

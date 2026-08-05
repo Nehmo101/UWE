@@ -36,7 +36,7 @@ function worldRouteExists(href: string, slug: string): boolean {
 }
 
 describe("studio navigation", () => {
-  it("exposes the seven canonical IA sections in order", () => {
+  it("exposes the three canonical IA sections in order", () => {
     const titles = STUDIO_NAV.map((group) => group.title);
     // Sections may have multiple groups; ensure each canonical section appears.
     for (const section of STUDIO_SECTIONS) {
@@ -84,20 +84,45 @@ describe("studio navigation", () => {
   });
 
   it("resolves active state for nested routes", () => {
-    // Studio's admin routes moved to Brain and the Command Center (Abschnitt D);
-    // the AI-Gateway view is a remaining route with a nested path.
-    const sidebar = studioSidebar("/admin/ai-gateway/logs");
-    const gatewayActive = sidebar
+    // Die Konto-Routen sind das, was von Studios Betriebsfläche in der
+    // Seitenleiste übrig ist — Admin, KI-Gateway und Prompt-Konsole laufen über
+    // die Befehlspalette (STUDIO_PALETTE_EXTRA).
+    const sidebar = studioSidebar("/account/security/recovery-codes");
+    const securityActive = sidebar
       .flatMap((group) => group.items)
-      .some((item) => item.id === "ai-gateway" && item.active);
-    assert.ok(gatewayActive);
+      .some((item) => item.id === "system-account-security" && item.active);
+    assert.ok(securityActive);
   });
 
   it("builds command palette entries from the IA", () => {
     const commands = studioCommands();
     assert.ok(commands.some((cmd) => cmd.href === "/worlds"));
-    assert.ok(commands.some((cmd) => cmd.href === "/admin"));
+    assert.ok(commands.some((cmd) => cmd.href === "/search"));
     assert.ok(commands.every((cmd) => cmd.group.includes(" / ")));
+  });
+
+  it("keeps the Studio sidebar out of the world's business", () => {
+    // Die Seitenleiste trägt nur noch Start / Welten / System. Alles, was eine
+    // Welt braucht, steht im Welt-Cockpit — sonst gäbe es einen zweiten Weg
+    // zum selben Ziel, nur ohne Welt-Kontext.
+    const hrefs = studioNavItems().map((item) => item.href);
+    for (const gone of [
+      "/brain",
+      "/knowledge",
+      "/ai",
+      "/continue",
+      "/templates",
+      "/prompts",
+      "/image-studio",
+      "/import",
+      "/jobs",
+      "/ideas",
+      "/bugs",
+      "/admin",
+      "/settings",
+    ]) {
+      assert.ok(!hrefs.includes(gone), `should no longer be in the Studio sidebar: ${gone}`);
+    }
   });
 
   it("includes STUDIO_PALETTE_EXTRA shortcuts in command palette output", () => {
@@ -110,14 +135,6 @@ describe("studio navigation", () => {
         `missing palette shortcut: ${shortcut.href}`,
       );
     }
-  });
-
-  it("marks the admin hub active for /admin/* routes", () => {
-    const adminSidebar = studioSidebar("/admin/status");
-    const adminHubActive = adminSidebar
-      .flatMap((group) => group.items)
-      .some((item) => item.id === "system-admin" && item.active);
-    assert.ok(adminHubActive);
   });
 
   it("marks worlds list active inside world shell paths", () => {
@@ -151,6 +168,9 @@ describe("world cockpit navigation", () => {
       "Labels & Print",
       "Verbindungen / Graph",
       "Import & Konvertierung",
+      "Import-Zentrale",
+      "Hintergrund-Jobs",
+      "Seiten-Templates",
       "KI / Generatoren",
       "Brain / Wissen",
       "Session vorbereiten",

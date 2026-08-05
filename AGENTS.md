@@ -109,6 +109,7 @@ production file (apps/, packages/, tools/) outgrows its budget:
 ## Further reading
 
 - `docs/engineering/ci.md` — CI workflows, local commands, debugging
+- `docs/engineering/verifikations-harness.md` — wie eine Änderung nachweisbar wird: vier Stufen, Wegwerf-Stack statt Produktion, warum ein E2E-Lauf im Live-Arbeitsbaum die Seite herunterreißt
 - `docs/engineering/self-hosted-ci.md` — Self-hosted CI, Hardware, Billing (historical / optional reference — **not** the active gate)
 - `docs/engineering/cursor-workflow.md` — Cursor rules, commands, agent PR workflow
 - `.cursor/rules/` — project, coding, CI, security, and docs rules for Cursor

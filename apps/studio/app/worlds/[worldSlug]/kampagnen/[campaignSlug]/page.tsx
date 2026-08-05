@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAppRepository, prisma } from "@uwe/database/server";
+import { buildPageUrl, createCharacterService, getAppRepository, prisma } from "@uwe/database/server";
 import { createCampaignCockpitService, findCurrentChapter } from "@uwe/campaign-cockpit";
+import { createPlayerGroupService } from "@uwe/player-hub";
 import { DungeonPrepStatusBadge, QuestStatusBadge, SidebarSection, StatGrid } from "@uwe/shared-ui";
 import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { AiContextPanel } from "@/components/AiContextPanel";
 import { CampaignSidebar } from "@/src/components/wiki";
+import { CampaignCharacterCard } from "@/src/components/campaign/CampaignCharacterCard";
+import { QuestGroupAssignmentCard } from "@/src/components/radar/QuestGroupAssignmentCard";
 import { campaignCockpitBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { requireStudioWorldRead } from "@/src/lib/authz";
 import {
@@ -34,14 +37,19 @@ import {
 
 interface Props {
   params: Promise<{ worldSlug: string; campaignSlug: string }>;
-  searchParams: Promise<{ saved?: string; created?: string }>;
+  searchParams: Promise<{
+    saved?: string;
+    created?: string;
+    zugewiesen?: string;
+    zugeordnet?: string;
+  }>;
 }
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
 
 export default async function CampaignCockpitPage({ params, searchParams }: Props) {
   const { worldSlug, campaignSlug } = await params;
-  const { saved, created } = await searchParams;
+  const { saved, created, zugewiesen, zugeordnet } = await searchParams;
   const repo = getAppRepository();
   const world = await repo.getWorldBySlug(worldSlug);
   if (!world) notFound();
@@ -54,6 +62,25 @@ export default async function CampaignCockpitPage({ params, searchParams }: Prop
   if (!overview) notFound();
 
   const campaigns = await repo.listCampaignsByWorld(worldSlug);
+  // Charaktere entstehen im Portal; hier wird nur die Kampagne vergeben.
+  const characters = await createCharacterService(prisma).listForWorld(world.id);
+  // Quest-Zuordnung an Tischrunden — vom aufgelösten Radar hierher gezogen.
+  // Bewusst ALLE Quests der Kampagne, nicht nur offene: auch eine
+  // abgeschlossene Quest lässt sich nachträglich einer Runde zuschreiben.
+  const groups = await createPlayerGroupService(prisma).listForWorld(world.id);
+  const questPages = await prisma.page.findMany({
+    where: { worldId: world.id, type: "quest", campaignId: overview.campaign.id },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      type: true,
+      questStatus: true,
+      questGroupId: true,
+      portalReleased: true,
+    },
+    orderBy: [{ title: "asc" }],
+  });
   const base = `/worlds/${worldSlug}`;
   const cockpitPath = `${base}/kampagnen/${campaignSlug}`;
   const { campaign, chapters, unassignedQuests, factions, dungeons, progress } = overview;
@@ -154,6 +181,16 @@ export default async function CampaignCockpitPage({ params, searchParams }: Prop
       {created === "1" ? (
         <Alert tone="success" className="mb-4">
           Kapitel angelegt.
+        </Alert>
+      ) : null}
+      {zugewiesen === "1" ? (
+        <Alert tone="success" className="mb-4">
+          Charakter-Zuordnung gespeichert.
+        </Alert>
+      ) : null}
+      {zugeordnet ? (
+        <Alert tone="success" className="mb-4">
+          Quest-Zuordnung gespeichert.
         </Alert>
       ) : null}
       {overview.canonConflicts > 0 ? (
@@ -318,6 +355,34 @@ export default async function CampaignCockpitPage({ params, searchParams }: Prop
             </p>
           </CardContent>
         </Card>
+
+        <CampaignCharacterCard
+          worldSlug={worldSlug}
+          campaignId={campaign.id}
+          campaignName={campaign.name}
+          returnTo={cockpitPath}
+          characters={characters.map((character) => ({
+            id: character.id,
+            displayName: character.displayName,
+            ownerDisplayName: character.owner?.displayName ?? "—",
+            level: character.level,
+            campaignId: character.campaignId,
+          }))}
+        />
+
+        <QuestGroupAssignmentCard
+          worldSlug={worldSlug}
+          returnTo={cockpitPath}
+          groups={groups.map((group) => ({ id: group.id, name: group.name }))}
+          quests={questPages.map((page) => ({
+            id: page.id,
+            title: page.title,
+            href: buildPageUrl(worldSlug, page.type, page.slug),
+            questStatus: page.questStatus,
+            questGroupId: page.questGroupId,
+            portalReleased: page.portalReleased,
+          }))}
+        />
 
         <Card id="cockpit-fraktionen">
           <CardHeader>

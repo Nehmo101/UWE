@@ -51,8 +51,9 @@ export default async function PortalTerraKartePage({ params }: Props) {
   const darfZurueckziehen = canWithdrawTerraKarte(ctx, karte);
   const darfLoeschen = canDeleteTerraKarte(ctx, karte);
 
-  const zusammenfassung =
-    karte.status === "freigegeben"
+  const zusammenfassung = karte.gesperrt
+    ? "Vom Spielleiter gesperrt — nur ansehen."
+    : karte.status === "freigegeben"
       ? "Karte — nur ansehen"
       : karte.status === "eingereicht"
         ? "Dein Entwurf liegt beim Spielleiter zur Abnahme."

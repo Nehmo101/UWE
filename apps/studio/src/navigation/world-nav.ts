@@ -91,6 +91,16 @@ export function worldNav(worldSlug: string): NavGroup[] {
           "homebrewery",
           "seltenheit",
         ]),
+        // Templates standen als globaler Studio-Eintrag „Inhalte & Medien" —
+        // benutzt werden sie aber beim Anlegen einer Seite, und das passiert
+        // immer in einer Welt. Die Vorlagen selbst bleiben global (ein NPC-
+        // Gerüst ist in jeder Welt dasselbe), der Einstieg liegt in der Welt.
+        item("world-templates", "Seiten-Templates", `${base}/templates`, "layout-template", "Wiki", [
+          "templates",
+          "vorlagen",
+          "seiten-templates",
+          "quick create",
+        ]),
       ],
     },
     {
@@ -134,6 +144,12 @@ export function worldNav(worldSlug: string): NavGroup[] {
           "quests",
           "open",
         ]),
+        item("world-groups", "Spielergruppen", `${base}/gruppen`, "users-round", "Spiel", [
+          "gruppen",
+          "spielergruppen",
+          "tischrunde",
+          "party",
+        ]),
         item("world-treasury", "Gruppenschatz", `${base}/treasury`, "coins", "Spiel", [
           "gruppenschatz",
           "treasury",
@@ -151,12 +167,6 @@ export function worldNav(worldSlug: string): NavGroup[] {
         item("world-notes", "Spielernotizen", `${base}/notes`, "sticky-note", "Spiel", [
           "notizen",
           "notes",
-        ]),
-        item("world-questions", "Spielerfragen", `${base}/questions`, "message-circle", "Spiel", [
-          "fragen",
-          "spielerfragen",
-          "questions",
-          "dm",
         ]),
         item("world-dungeons", "Dungeons", `${base}/dungeons`, "castle", "Spiel", [
           "dungeons",
@@ -214,6 +224,26 @@ export function worldNav(worldSlug: string): NavGroup[] {
           "import",
           "konvertierung",
           "knoteforge",
+        ]),
+        // Die Import-Zentrale hing global unter „Inhalte & Medien" und ließ die
+        // Zielwelt aus einer Liste wählen. In der Welt geöffnet ist die Welt
+        // bereits gewählt — der Verlauf zeigt nur noch deren Importe.
+        item("world-import-central", "Import-Zentrale", `${base}/import-central`, "file-input", "Wissen & KI", [
+          "import",
+          "zentrale",
+          "markdown",
+          "obsidian",
+          "pdf",
+          "kampagne",
+        ]),
+        // Hintergrund-Jobs waren global unter „Automatisierung". Fast jeder Job
+        // trägt ohnehin eine `worldSlug` — die Liste gehört dorthin, wo der Job
+        // ausgelöst wurde.
+        item("world-jobs", "Hintergrund-Jobs", `${base}/jobs`, "list-checks", "Wissen & KI", [
+          "jobs",
+          "queue",
+          "warteschlange",
+          "hintergrund",
         ]),
       ],
     },

@@ -5,6 +5,7 @@ import {
   canCreateTerraKarte,
   canDeleteTerraKarte,
   canEditTerraKarte,
+  canSubmitTerraKarte,
   canViewTerraKarte,
   canWithdrawTerraKarte,
   type TerraKarteAccessInfo,
@@ -144,5 +145,15 @@ describe("canWithdrawTerraKarte und canDeleteTerraKarte", () => {
     // Danach gehört die Karte der Welt — nur das Studio räumt Weltinhalt weg.
     assert.equal(canDeleteTerraKarte(spielerA, karte({ status: "freigegeben" })), false);
     assert.equal(canDeleteTerraKarte(spielerB, karte({ status: "entwurf" })), false);
+  });
+
+  it("Sperre des Spielleiters: gesperrte Karten sind im Portal nur noch lesbar", () => {
+    const gesperrt = karte({ gesperrt: true });
+    assert.equal(canEditTerraKarte(spielerA, gesperrt), false);
+    assert.equal(canSubmitTerraKarte(spielerA, gesperrt), false);
+    assert.equal(canWithdrawTerraKarte(spielerA, karte({ status: "eingereicht", gesperrt: true })), false);
+    assert.equal(canDeleteTerraKarte(spielerA, gesperrt), false);
+    // Ansehen bleibt: die Sperre nimmt den Stift, nicht die Karte.
+    assert.equal(canViewTerraKarte(spielerA, gesperrt), true);
   });
 });

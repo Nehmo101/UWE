@@ -153,8 +153,14 @@ fest — die Assets allein sagen darüber nichts.
 - Neue Seite: kein Wrapper, kein Layout, keine Sidebar. Inhalt zurückgeben.
 - Neuer Einstieg, der die Bühne tragen soll: in `src/lib/studio-scene.ts`
   eintragen, nicht im Seiteninhalt einbauen.
-- Neues Navigationsziel: in `src/navigation/studio-nav.ts` bzw. `world-nav.ts`.
-  Seitenleiste, Schublade, Suche, Palette und Brotkrumen ziehen von dort.
+- Neues Navigationsziel: in `src/navigation/world-nav.ts`. Seitenleiste,
+  Schublade, Suche, Palette und Brotkrumen ziehen von dort. `studio-nav.ts`
+  trägt nur noch die drei welt-losen Bereiche (Start · Welten · System) und
+  wächst nicht mehr: gearbeitet wird in einer Welt, und ein globaler Eintrag
+  neben dem Welt-Eintrag wäre ein zweiter Weg zum selben Ziel ohne
+  Welt-Kontext. Eine Route, die keine Seitenleiste bekommen soll, aber
+  auffindbar bleiben muss, gehört in `STUDIO_PALETTE_EXTRA`
+  (`src/lib/studio-navigation.ts`).
 - Bereichs-Unternavigation im Inhalt (`SettingsShell`-Tabs, Filterleisten,
   `CampaignSidebar`) bleibt erlaubt — das ist Inhalt, keine IA.
 - Kit-Komponenten aus `src/components/ui/*`. Die Widgets in

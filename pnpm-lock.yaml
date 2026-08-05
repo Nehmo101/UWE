@@ -1400,9 +1400,15 @@ importers:
 
   packages/player-hub:
     dependencies:
+      '@uwe/auth':
+        specifier: workspace:*
+        version: link:../auth
       '@uwe/database':
         specifier: workspace:*
         version: link:../database
+      '@uwe/shared-utils':
+        specifier: workspace:*
+        version: link:../shared-utils
     devDependencies:
       '@types/node':
         specifier: ^22.15.32

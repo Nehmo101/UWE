@@ -1320,6 +1320,9 @@ export class AuthService {
     input: {
       campaignId: string;
       content: string;
+      title?: string | null;
+      category?: import("./player-note-service").PlayerNoteCategory;
+      sessionDate?: Date | null;
       pageId?: string | null;
       gameSessionId?: string | null;
       /** Offline vergebene Kennung; verhindert Duplikate beim Nachsyncen. */
@@ -1335,8 +1338,7 @@ export class AuthService {
     }
 
     // Session-Bezug: nur Sessions DIESER Welt; die Kampagne folgt der Session,
-    // damit Notizen nie in der falschen Kampagne landen (Formular und
-    // Offline-Sync laufen beide hier durch).
+    // damit Notizen nie in der falschen Kampagne landen.
     let campaignId = input.campaignId;
     let gameSessionId = input.gameSessionId ?? null;
     if (gameSessionId) {
@@ -1356,6 +1358,9 @@ export class AuthService {
       campaignId,
       userId: ctx.user.id,
       content: input.content,
+      title: input.title,
+      category: input.category,
+      sessionDate: input.sessionDate,
       pageId: input.pageId,
       gameSessionId,
       clientRef: input.clientRef,
@@ -1369,13 +1374,18 @@ export class AuthService {
     noteId: string,
     ctx: AccessContext,
     content: string,
+    extras?: {
+      title?: string | null;
+      category?: import("./player-note-service").PlayerNoteCategory;
+      sessionDate?: Date | null;
+    },
   ): Promise<PortalPlayerNoteView | null> {
     const note = await this.playerNotes.getByIdForWorld(worldSlug, noteId);
     if (!note || !canEditPlayerNote(ctx, note)) {
       return null;
     }
 
-    const updated = await this.playerNotes.update(noteId, { content });
+    const updated = await this.playerNotes.update(noteId, { content, ...extras });
     return toPortalPlayerNoteView(updated);
   }
 

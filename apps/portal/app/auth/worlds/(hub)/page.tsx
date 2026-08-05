@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/src/components/ui/card";
 import { EmptyState } from "@/src/components/ui/states";
 import { canAccessStudio, resolveStudioPublicBaseUrl } from "@uwe/auth";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 /**
@@ -23,9 +24,29 @@ function emptyStateDescription(hasUser: boolean, hasStudio: boolean): string {
   return "Du hast noch keinen Zugriff auf Welten. Bitte einen Owner/Admin um Freigabe.";
 }
 
-export default async function AuthWorldsPage() {
+interface Props {
+  searchParams: Promise<{ alle?: string }>;
+}
+
+export default async function AuthWorldsPage({ searchParams }: Props) {
+  const { alle } = await searchParams;
   const user = await getCurrentUser();
   const worlds = await listAuthWorlds();
+
+  /*
+    Wer genau einer Welt zugeordnet ist, hat hier nichts zu wählen. Die
+    Zwischenseite kostete dann bei jedem Einstieg einen Klick und ließ die
+    Seitenleiste ohne Welt-Navigation dastehen — die Taskleiste sah anders aus
+    als überall sonst. Bei mehreren Welten bleibt die Auswahl, weil es dann
+    wirklich etwas zu entscheiden gibt.
+
+    `?alle=1` hebt die Weiterleitung auf — für den, der die Übersicht bewusst
+    sehen will (etwa nachdem der Owner eine zweite Welt zugeordnet hat und der
+    Link aus einer alten Sitzung noch auf die erste zeigt).
+  */
+  if (worlds.length === 1 && alle !== "1") {
+    redirect(`/auth/worlds/${worlds[0]!.slug}`);
+  }
 
   if (worlds.length === 0) {
     const hasStudio = user ? canAccessStudio(user) : false;

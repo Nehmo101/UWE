@@ -317,7 +317,6 @@ Inventar. Die sichere Zielentscheidung steht in Abschnitt 6.
 | `PlayerNote` | `portal_player` | `player_visible` | `uwe.db` | — | — |
 | `ShareLink` | `portal_player` | `dm_only` | `uwe.db` | — | — |
 | `ShareAccessLog` | `portal_player` | `dm_only` | `uwe.db` | — | — |
-| `PlayerQuestion` | `portal_player` | `player_visible` | `uwe.db` | — | — |
 | `DndApiCacheEntry` | `shared_reference` | `public` | `uwe.db` | — | — |
 | `World` | `dnd_world` | `dm_only` | `uwe.db` | — | — |
 | `Campaign` | `dnd_world` | `dm_only` | `uwe.db` | — | — |
@@ -602,7 +601,6 @@ export const PRISMA_MODEL_BOUNDARIES = {
   ShoppingListItem: B("admin_life"),
   BringConnection: B("admin_life"),
   StructuredItem: U("dnd_world", "dm_only"),
-  PlayerQuestion: U("portal_player", "player_visible"),
   ScanDocument: B("admin_life", "brain_scan_files", "G9"),
   PromptTemplate: U("ai_control", "dm_only"),
   MaintenanceTask: B("admin_life"),

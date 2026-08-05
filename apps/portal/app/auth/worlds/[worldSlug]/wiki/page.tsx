@@ -1,15 +1,22 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { GlobalSearchForm, PageTypeBadge } from "@uwe/shared-ui";
-import { NAV_CATEGORY_LABELS, navCategoryForPageType, type NavCategory } from "@uwe/database/server";
+import {
+  NAV_CATEGORIES,
+  NAV_CATEGORY_LABELS,
+  navCategoryForPageType,
+  type NavCategory,
+} from "@uwe/database/server";
 import { createAuthService, createPrismaClient } from "@uwe/database/server";
 import { getAccessContextForWorld } from "@/src/lib/auth";
 import { PortalEmptyState } from "@/src/components/PortalEmptyState";
 import { PageHeader } from "@/src/components/shell";
+import { cn } from "@/src/components/ui/cn";
+import { badgeVariants } from "@/src/components/ui/badge";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; typ?: string }>;
 }
 
 const NAV_ORDER: NavCategory[] = [
@@ -22,14 +29,20 @@ const NAV_ORDER: NavCategory[] = [
   "karten",
 ];
 
+function parseTypeFilter(raw: string | undefined): NavCategory | null {
+  return raw && (NAV_CATEGORIES as readonly string[]).includes(raw) ? (raw as NavCategory) : null;
+}
+
 export default async function AuthWorldWikiPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
-  const { q } = await searchParams;
+  const { q, typ } = await searchParams;
   const ctx = await getAccessContextForWorld(worldSlug);
 
   if (!ctx) {
     notFound();
   }
+
+  const typeFilter = parseTypeFilter(typ);
 
   const db = createPrismaClient();
   const auth = createAuthService(db);
@@ -42,14 +55,15 @@ export default async function AuthWorldWikiPage({ params, searchParams }: Props)
   }
 
   const query = q?.trim().toLocaleLowerCase("de") ?? "";
-  const filtered = query
-    ? pages.filter((page) => {
-        const haystack = [page.title, page.slug, page.summary ?? ""]
-          .join(" ")
-          .toLocaleLowerCase("de");
-        return haystack.includes(query);
-      })
-    : pages;
+  const filtered = pages
+    .filter((page) => !typeFilter || navCategoryForPageType(page.type) === typeFilter)
+    .filter((page) => {
+      if (!query) return true;
+      const haystack = [page.title, page.slug, page.summary ?? ""]
+        .join(" ")
+        .toLocaleLowerCase("de");
+      return haystack.includes(query);
+    });
 
   const grouped = new Map<NavCategory, typeof filtered>();
   for (const page of filtered) {
@@ -59,6 +73,12 @@ export default async function AuthWorldWikiPage({ params, searchParams }: Props)
     grouped.set(category, bucket);
   }
 
+  const wikiBase = `/auth/worlds/${worldSlug}/wiki`;
+
+  // Nur Gruppen anbieten, in denen es freigegebene Seiten gibt — ein Filter,
+  // hinter dem garantiert nichts steht, ist eine Sackgasse mit Klick.
+  const availableCategories = new Set(pages.map((page) => navCategoryForPageType(page.type)));
+
   return (
     <>
       <PageHeader
@@ -67,10 +87,36 @@ export default async function AuthWorldWikiPage({ params, searchParams }: Props)
       />
 
       <GlobalSearchForm
-        action={`/auth/worlds/${worldSlug}/wiki`}
+        action={wikiBase}
         query={q ?? ""}
         placeholder="Wiki durchsuchen…"
       />
+
+      {/*
+        Dieselbe Vorgruppierung wie im Studio unter Wiki/Seiten: eine Reihe
+        Typ-Filter über der Liste. Die Suche reist im Link mit, damit ein
+        Filterwechsel sie nicht verwirft.
+      */}
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Link
+          href={`${wikiBase}${query ? `?q=${encodeURIComponent(q!.trim())}` : ""}`}
+          className={cn(badgeVariants({ variant: !typeFilter ? "accent" : "default" }))}
+        >
+          Alle Typen
+        </Link>
+        {NAV_ORDER.filter((category) => availableCategories.has(category)).map((category) => (
+          <Link
+            key={category}
+            href={`${wikiBase}?${new URLSearchParams({
+              typ: category,
+              ...(query ? { q: q!.trim() } : {}),
+            }).toString()}`}
+            className={cn(badgeVariants({ variant: typeFilter === category ? "accent" : "default" }))}
+          >
+            {NAV_CATEGORY_LABELS[category]}
+          </Link>
+        ))}
+      </div>
 
       {NAV_ORDER.map((category) => {
         const items = grouped.get(category);
@@ -105,8 +151,12 @@ export default async function AuthWorldWikiPage({ params, searchParams }: Props)
 
       {filtered.length === 0 ? (
         <PortalEmptyState
-          title={query ? "Keine passenden Wiki-Seiten gefunden" : "Keine Wiki-Seiten freigegeben"}
-          description={query ? "Probiere einen anderen Suchbegriff." : undefined}
+          title={
+            query || typeFilter
+              ? "Keine passenden Wiki-Seiten gefunden"
+              : "Keine Wiki-Seiten freigegeben"
+          }
+          description={query || typeFilter ? "Probiere einen anderen Filter oder Suchbegriff." : undefined}
           icon="book-open"
         />
       ) : null}

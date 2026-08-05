@@ -8,11 +8,7 @@ import { PlayerCharacterEditPanel } from "@/src/components/PlayerCharacterEditPa
 import { PlayerNotesPanel } from "@/src/components/PlayerNotesPanel";
 import { getAccessContextForWorld, getCurrentUser } from "@/src/lib/auth";
 import { canCreatePlayerNote, canEditPlayerCharacterBlock } from "@uwe/auth";
-import {
-  BLOCK_TYPE_LABELS,
-  PageTypeBadge,
-  WikiContent,
-} from "@uwe/shared-ui";
+import { PageTypeBadge, WikiContent } from "@uwe/shared-ui";
 import {
   createAuthService,
   createCharacterService,
@@ -30,11 +26,6 @@ import {
   type QuestLifecycleStatus,
 } from "@uwe/database/server";
 import { Badge } from "@/src/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from "@/src/components/ui/card";
 
 interface Props {
   params: Promise<{ worldSlug: string; slug: string }>;
@@ -166,36 +157,39 @@ export default async function AuthWorldPageDetail({ params }: Props) {
         {page.summary ? <p className="text-sm text-muted-foreground">{page.summary}</p> : null}
       </header>
 
-      <div className="grid gap-4">
-        {page.contentBlocks.map((block, index) => (
-          <Card key={block.id}>
-            <CardHeader className="pb-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="secondary">{BLOCK_TYPE_LABELS[block.type]}</Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {block.type === "image" && block.assetId ? (
-                <figure className="overflow-hidden rounded-[var(--radius)] border border-border">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={`/api/assets/${block.assetId}/file?world=${encodeURIComponent(worldSlug)}`}
-                    alt={block.content?.trim() || page.title}
-                    loading="lazy"
-                    className="h-auto w-full"
-                  />
-                  {block.content?.trim() ? (
-                    <figcaption className="border-t border-border px-3 py-2 text-sm text-muted-foreground">
-                      {block.content}
-                    </figcaption>
-                  ) : null}
-                </figure>
-              ) : (
-                <WikiContent html={blockHtml[index] ?? ""} />
-              )}
-            </CardContent>
-          </Card>
-        ))}
+      {/*
+        Fließtext statt Kartenstapel. Vorher steckte jeder Textblock in einer
+        eigenen Card mit Typ-Badge und Innenabstand — auf einer Seite aus fünf
+        Absätzen ergab das fünf Rahmen mit Leerraum dazwischen, und der Text
+        las sich wie ein Formular. Ein Wiki-Artikel ist EIN Text: die Blöcke
+        fließen jetzt ohne Rahmen ineinander, nur Bilder behalten ihre Figur.
+        Die Typ-Badges sind DM-Werkzeug und gehören ins Studio, nicht vor
+        Spieleraugen.
+      */}
+      <div className="wiki-content grid gap-4">
+        {page.contentBlocks.map((block, index) =>
+          block.type === "image" && block.assetId ? (
+            <figure
+              key={block.id}
+              className="overflow-hidden rounded-[var(--radius)] border border-border"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/api/assets/${block.assetId}/file?world=${encodeURIComponent(worldSlug)}`}
+                alt={block.content?.trim() || page.title}
+                loading="lazy"
+                className="h-auto w-full"
+              />
+              {block.content?.trim() ? (
+                <figcaption className="border-t border-border px-3 py-2 text-sm text-muted-foreground">
+                  {block.content}
+                </figcaption>
+              ) : null}
+            </figure>
+          ) : (
+            <WikiContent key={block.id} html={blockHtml[index] ?? ""} />
+          ),
+        )}
       </div>
 
       <PortalPageNeighborhoodGraph worldSlug={worldSlug} pageId={page.id} />

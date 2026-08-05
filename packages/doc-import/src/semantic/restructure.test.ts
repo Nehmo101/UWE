@@ -158,6 +158,52 @@ describe("restructureDocument", () => {
   });
 });
 
+const KAMPAGNENBUCH = [
+  "# HIMMELSROUTEN",
+  "Eine Kampagne für Stufe 3–14.",
+  "## Die Welt von Aernis",
+  "Wolken, Inseln, Luftschiffe.",
+  "### Die Freien Höhen",
+  "Ein Landstrich mit eigener Geschichte.",
+  "## DER ZAUNKÖNIG (Stufe 3)",
+  "Das erste Kapitel.",
+  "### Szene 1 — Der Auftrag",
+  "Die Gruppe wird angeheuert.",
+  "### Szene 2 — Der Überfall",
+  "Drei Luftpiraten entern. **RK** 13 · **TP** 22",
+  "## Bestiarium",
+  "Werteblöcke.",
+  "### Luftpirat",
+  "**RK** 13 · **TP** 22",
+].join("\n\n");
+
+describe("restructureDocument — Kapitel eines Kampagnenbuchs", () => {
+  const { tree } = build(KAMPAGNENBUCH, "campaign_book");
+  const root = tree.nodes[0];
+  const byTitle = (title: string) =>
+    root.children.find((child) => child.title.startsWith(title));
+
+  it("macht aus einem Abschnitt mit Szenen einen Story-Bogen", () => {
+    // Vorher kam jedes Kapitel als `lore` an und musste im Cockpit von Hand
+    // umgestellt werden, bevor die Kampagne überhaupt sichtbar wurde.
+    assert.equal(byTitle("DER ZAUNKÖNIG")?.typeHint, "story_arc");
+  });
+
+  it("lässt Abschnitte ohne Szenen in Ruhe", () => {
+    assert.notEqual(byTitle("Die Welt von Aernis")?.typeHint, "story_arc");
+  });
+
+  it("macht aus einer Werteblock-Sammlung keinen Story-Bogen", () => {
+    assert.notEqual(byTitle("Bestiarium")?.typeHint, "story_arc");
+  });
+
+  it("lässt Dungeon-Ebenen mit Begegnungen unberührt", () => {
+    const dungeon = build(DUNGEON).tree.nodes[0];
+    const level = dungeon.children.find((child) => child.role === "level");
+    assert.equal(level?.typeHint, "dungeon_level");
+  });
+});
+
 describe("shiftHeadings", () => {
   it("verschiebt Überschriften, aber nicht in Codeblöcken", () => {
     assert.equal(

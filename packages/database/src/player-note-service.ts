@@ -1,8 +1,14 @@
-import type { Prisma, PlayerNoteStatus, PlayerNoteVisibility } from "./generated/prisma/client";
+import type {
+  Prisma,
+  PlayerNoteCategory,
+  PlayerNoteStatus,
+  PlayerNoteVisibility,
+} from "./generated/prisma/client";
 import { createPrismaClient, type PrismaClient } from "./client";
 
 export type {
   PlayerNote,
+  PlayerNoteCategory,
   PlayerNoteStatus,
   PlayerNoteVisibility,
 } from "./generated/prisma/client";
@@ -26,6 +32,34 @@ export const PLAYER_NOTE_VISIBILITY_LABELS: Record<PlayerNoteVisibility, string>
   party: "Gruppe",
 };
 
+/** Reihenfolge fuer Auswahlfelder — haeufigstes zuerst. */
+export const PLAYER_NOTE_CATEGORIES: PlayerNoteCategory[] = [
+  "session",
+  "npc",
+  "ort",
+  "quest",
+  "beute",
+  "idee",
+  "sonstiges",
+];
+
+export const PLAYER_NOTE_CATEGORY_LABELS: Record<PlayerNoteCategory, string> = {
+  session: "Spielabend",
+  npc: "NPC / Person",
+  ort: "Ort",
+  quest: "Quest",
+  beute: "Beute",
+  idee: "Idee / Plan",
+  sonstiges: "Sonstiges",
+};
+
+export function normalizePlayerNoteCategory(raw: string | null | undefined): PlayerNoteCategory {
+  const value = raw?.trim().toLowerCase();
+  return (PLAYER_NOTE_CATEGORIES as readonly string[]).includes(value ?? "")
+    ? (value as PlayerNoteCategory)
+    : "sonstiges";
+}
+
 export interface CreatePlayerNoteInput {
   worldId: string;
   campaignId: string;
@@ -35,6 +69,15 @@ export interface CreatePlayerNoteInput {
   gameSessionId?: string | null;
   visibility?: PlayerNoteVisibility;
   status?: PlayerNoteStatus;
+  /** Kurze Ueberschrift; leer = die erste Zeile des Inhalts vertritt sie. */
+  title?: string | null;
+  category?: PlayerNoteCategory;
+  /**
+   * Datum des Spielabends. Fehlt es und haengt die Notiz an einer Session,
+   * uebernimmt `create` deren Datum — nachgetragene Notizen sortieren sich so
+   * unter ihren Abend statt unter den Tag des Nachtragens.
+   */
+  sessionDate?: Date | null;
   /**
    * Vom Client vergebene Kennung für offline entstandene Notizen. Ist sie
    * gesetzt und schon bekannt, wird die vorhandene Notiz zurückgegeben statt
@@ -47,6 +90,9 @@ export interface UpdatePlayerNoteInput {
   content?: string;
   visibility?: PlayerNoteVisibility;
   status?: PlayerNoteStatus;
+  title?: string | null;
+  category?: PlayerNoteCategory;
+  sessionDate?: Date | null;
 }
 
 export type PlayerNoteWithRelations = Prisma.PlayerNoteGetPayload<{
@@ -69,6 +115,9 @@ export interface PortalPlayerNoteView {
   content: string;
   visibility: PlayerNoteVisibility;
   status: PlayerNoteStatus;
+  title: string | null;
+  category: PlayerNoteCategory;
+  sessionDate: Date | null;
   pageTitle: string | null;
   pageSlug: string | null;
   sessionTitle: string | null;
@@ -103,6 +152,9 @@ export function toPortalPlayerNoteView(note: PlayerNoteWithRelations): PortalPla
     content: note.content,
     visibility: note.visibility,
     status: note.status,
+    title: note.title,
+    category: note.category,
+    sessionDate: note.sessionDate,
     pageTitle: note.page?.title ?? null,
     pageSlug: note.page?.slug ?? null,
     sessionTitle: note.gameSession?.title ?? null,
@@ -256,12 +308,25 @@ export class PlayerNoteService {
       }
     }
 
+    // Ohne eigenes Datum erbt die Notiz das Datum ihrer Session.
+    let sessionDate = input.sessionDate ?? null;
+    if (!sessionDate && input.gameSessionId) {
+      const session = await this.db.gameSession.findUnique({
+        where: { id: input.gameSessionId },
+        select: { date: true },
+      });
+      sessionDate = session?.date ?? null;
+    }
+
     return this.db.playerNote.create({
       data: {
         worldId: input.worldId,
         campaignId: input.campaignId,
         userId: input.userId,
         content: input.content,
+        title: input.title?.trim() || null,
+        category: input.category ?? "sonstiges",
+        sessionDate,
         pageId: input.pageId ?? null,
         gameSessionId: input.gameSessionId ?? null,
         visibility: input.visibility ?? "private",
@@ -279,6 +344,9 @@ export class PlayerNoteService {
         content: input.content,
         visibility: input.visibility,
         status: input.status,
+        title: input.title === undefined ? undefined : input.title?.trim() || null,
+        category: input.category,
+        sessionDate: input.sessionDate,
       },
       include: noteInclude(),
     });
