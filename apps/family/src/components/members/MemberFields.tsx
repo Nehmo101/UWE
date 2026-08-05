@@ -86,16 +86,5 @@ export function MemberFields({
   );
 }
 
-/** Farbpunkt einer Person — im Kalender und in Listen. */
-export function MemberDot({ colour, title }: { colour: string; title?: string }) {
-  return (
-    <span
-      className="family-member-dot"
-      style={{ backgroundColor: colour }}
-      title={title}
-      aria-hidden={title ? undefined : true}
-      role={title ? "img" : undefined}
-      aria-label={title}
-    />
-  );
-}
+/** Liegt in einer eigenen Datei — Bestandsimporte bleiben trotzdem gültig. */
+export { MemberDot } from "./MemberDot";

@@ -76,7 +76,8 @@ Wahrheiten. Geändert und gelöscht wird darum nur in der Akte; die Liste im Kal
 verlinkt dorthin und bietet selbst kein Bearbeiten an.
 
 Der Personenfilter greift auch hier — anders als bei Terminen gibt es keine Akte „ohne
-Zuordnung", jeder Eintrag gehört genau einem Mitglied.
+Zuordnung", jeder Eintrag gehört mindestens einer Person. Er darf aber mehreren gehören:
+die Grippeimpfung steht dann in Linos **und** in Mimis gefiltertem Monat, mit beiden Namen.
 
 **Das ICS-Abo bleibt bei den Fälligkeiten** — es liest weiterhin `listDueUntil`. Ein
 frisch eingerichtetes Abo soll nicht rückwirkend Jahre an Arztbesuchen aufs Telefon
@@ -159,8 +160,10 @@ In iOS: *Einstellungen → Apps → Kalender → Accounts → Account hinzufüge
 Kalenderabo hinzufügen.*
 
 Im Abo landen Termine (ein Jahr zurück, zwei nach vorn), Geburtstage und Jahrestage sowie
-fällige Einträge der Gesundheitsakte. Ein an eine Person gebundenes Abo zeigt nur deren
-Termine plus die des ganzen Haushalts.
+fällige Einträge der Gesundheitsakte. Ein auf Personen eingeschränktes Abo zeigt nur deren
+Termine plus die des ganzen Haushalts. Die Einschränkung darf **mehrere** Personen
+umfassen — das Küchen-Tablet für beide Kinder ist ein Abo, nicht zwei. Kein Häkchen heisst
+weiterhin: ganzer Haushalt.
 
 ### Warum ein eigener Token-Typ
 

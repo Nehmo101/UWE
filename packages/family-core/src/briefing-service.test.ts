@@ -142,7 +142,7 @@ describe("buildBriefingContext", () => {
       input({
         healthDue: [
           {
-            memberName: "Mimi",
+            memberNames: ["Mimi"],
             kind: "vet",
             title: "Tollwut-Impfung",
             nextDueOn: utc(2026, 8, 6),

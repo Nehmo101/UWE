@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { expandHealthOccurrences, type HealthRecordWithMember } from "./health-calendar";
+import { expandHealthOccurrences, type HealthRecordWithMembers } from "./health-calendar";
 import { resolveMemberColour } from "./member-colours";
 
 const utc = (y: number, m: number, d: number) => new Date(Date.UTC(y, m - 1, d));
@@ -8,16 +8,15 @@ const utc = (y: number, m: number, d: number) => new Date(Date.UTC(y, m - 1, d))
 const cat = { id: "member-cat", displayName: "Mimi", colour: "#16a34a" };
 const child = { id: "member-child", displayName: "Lino", colour: "#2563eb" };
 
-function record(overrides: Partial<HealthRecordWithMember>): HealthRecordWithMember {
+function record(overrides: Partial<HealthRecordWithMembers>): HealthRecordWithMembers {
   return {
     id: "rec-1",
-    memberId: cat.id,
     kind: "vet",
     title: "Tollwut-Impfung",
     notes: "",
     occurredOn: null,
     nextDueOn: null,
-    member: cat,
+    members: [cat],
     ...overrides,
   };
 }
@@ -32,8 +31,8 @@ describe("expandHealthOccurrences", () => {
     assert.equal(out[0]?.occurrenceKind, "due");
     assert.equal(out[0]?.title, "Tollwut-Impfung fällig");
     assert.equal(out[0]?.kindLabel, "Tierarzt");
-    assert.equal(out[0]?.memberName, "Mimi");
-    assert.equal(out[0]?.colour, "#16a34a");
+    assert.deepEqual(out[0]?.memberNames, ["Mimi"]);
+    assert.deepEqual(out[0]?.colours, ["#16a34a"]);
     assert.deepEqual(out[0]?.date, utc(2026, 3, 12));
   });
 
@@ -97,8 +96,7 @@ describe("expandHealthOccurrences", () => {
         record({ id: "a", nextDueOn: utc(2026, 3, 5) }),
         record({
           id: "b",
-          memberId: child.id,
-          member: child,
+          members: [child],
           kind: "checkup",
           title: "U9",
           nextDueOn: utc(2026, 3, 6),
@@ -111,6 +109,29 @@ describe("expandHealthOccurrences", () => {
       out.map((o) => o.title),
       ["U9 fällig"],
     );
+  });
+
+  it("zeigt beim Filtern auch geteilte Einträge", () => {
+    const shared = [
+      record({
+        id: "geteilt",
+        members: [cat, child],
+        title: "Grippeimpfung",
+        nextDueOn: utc(2026, 3, 9),
+      }),
+    ];
+
+    // Derselbe Eintrag taucht in beiden gefilterten Ansichten auf, mit beiden
+    // Namen — sonst sähe Linos Monat aus, als sei die Impfung nur die der Katze.
+    for (const member of [cat, child]) {
+      const out = expandHealthOccurrences(shared, { ...MARCH, memberId: member.id });
+
+      assert.deepEqual(
+        out.map((o) => o.title),
+        ["Grippeimpfung fällig"],
+      );
+      assert.deepEqual(out[0]?.memberNames, ["Mimi", "Lino"]);
+    }
   });
 
   it("sortiert nach Datum und liefert stabile Kennungen", () => {

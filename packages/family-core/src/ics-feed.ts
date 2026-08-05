@@ -29,7 +29,8 @@ export interface FeedEventInput {
 
 export interface FeedHealthInput {
   id: string;
-  memberName: string;
+  /** Namen der betroffenen Personen — die Wurmkur gilt oft für beide Katzen. */
+  memberNames: readonly string[];
   kind: FamilyHealthRecordKind;
   title: string;
   nextDueOn: Date;
@@ -89,7 +90,7 @@ export function buildFamilyFeedEvents(input: BuildFeedInput): IcalExportEvent[] 
   for (const due of input.healthDue) {
     out.push({
       uid: `uwe-family-health-${due.id}`,
-      title: `${due.memberName}: ${due.title}`,
+      title: due.memberNames.length > 0 ? `${due.memberNames.join(", ")}: ${due.title}` : due.title,
       description: `${FAMILY_HEALTH_KIND_LABEL[due.kind]} — fällig`,
       location: null,
       startAt: due.nextDueOn,

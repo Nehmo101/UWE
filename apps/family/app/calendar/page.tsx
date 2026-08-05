@@ -267,8 +267,8 @@ export default async function FamilyCalendarPage({
               title: occurrence.title,
               startAt: occurrence.date.toISOString(),
               allDay: true,
-              memberColours: [occurrence.colour],
-              memberNames: [occurrence.memberName],
+              memberColours: [...occurrence.colours],
+              memberNames: [...occurrence.memberNames],
             })),
           ]}
         />
@@ -351,11 +351,17 @@ export default async function FamilyCalendarPage({
             {healthOccurrences.map((occurrence) => (
               <li key={occurrence.uid} id={`event-${occurrence.uid}`} className="family-row">
                 <div className="family-row-head">
-                  <MemberDot colour={occurrence.colour} title={occurrence.memberName} />
+                  {occurrence.memberIds.map((memberId, index) => (
+                    <MemberDot
+                      key={memberId}
+                      colour={occurrence.colours[index] ?? ""}
+                      title={occurrence.memberNames[index]}
+                    />
+                  ))}
                   <strong>{occurrence.title}</strong>
                   <span className="family-tag">{occurrence.kindLabel}</span>
                   <span className="family-muted">
-                    {occurrence.memberName} ·{" "}
+                    {occurrence.memberNames.join(", ")} ·{" "}
                     {formatWhen(occurrence.date, true)}
                     {occurrence.occurrenceKind === "due" ? " · fällig" : ""}
                   </span>

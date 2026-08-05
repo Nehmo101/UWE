@@ -13,22 +13,48 @@
 import { randomBytes } from "node:crypto";
 import { hashApiToken, verifyApiTokenHash } from "@uwe/auth/server";
 import type { FamilyPrismaClient } from "@uwe/database/family-client";
+import { resolveMemberColour } from "./member-colours";
+import {
+  normaliseMemberIds,
+  setMemberLinks,
+  sortMemberBadges,
+  type FamilyMemberBadge,
+} from "./member-links";
 
 /** Eigenes Präfix, damit ein Feed-Token nie mit einem API-Token verwechselt wird. */
 export const FAMILY_CALENDAR_TOKEN_PREFIX = "uwecal_";
 
 export interface CreateSubscriptionInput {
   label: string;
-  /** Leer = alle Termine des Haushalts; gesetzt = nur die dieser Person. */
-  memberId?: string | null;
+  /**
+   * Leer = alle Termine des Haushalts; gesetzt = nur die dieser Personen. Ein
+   * Abo darf auf mehrere lauten — ein Gerät, zwei Kinder.
+   */
+  memberIds?: readonly string[];
 }
 
 export interface CreatedSubscription {
   id: string;
   label: string;
-  memberId: string | null;
+  memberIds: string[];
   /** Nur hier im Klartext — danach nie wieder abrufbar. */
   token: string;
+}
+
+const MEMBER_LINK_SELECT = {
+  select: { member: { select: { id: true, displayName: true, colour: true } } },
+} as const;
+
+function badgesOf(
+  links: readonly { member: { id: string; displayName: string; colour: string } }[],
+): FamilyMemberBadge[] {
+  return sortMemberBadges(
+    links.map((link) => ({
+      id: link.member.id,
+      displayName: link.member.displayName,
+      colour: resolveMemberColour(link.member),
+    })),
+  );
 }
 
 function generateSubscriptionToken(): string {
@@ -52,26 +78,63 @@ export class FamilyCalendarSubscriptionService {
 
   /** Alle Abos für die Verwaltungsansicht — ohne Klartext-Token. */
   async listSubscriptions() {
-    return this.db.familyCalendarSubscription.findMany({
+    const rows = await this.db.familyCalendarSubscription.findMany({
       orderBy: [{ isActive: "desc" }, { createdAt: "desc" }],
-      include: { member: { select: { id: true, displayName: true, colour: true } } },
+      include: { memberLinks: MEMBER_LINK_SELECT },
     });
+
+    return rows.map(({ memberLinks, ...rest }) => ({ ...rest, members: badgesOf(memberLinks) }));
   }
 
   async createSubscription(input: CreateSubscriptionInput): Promise<CreatedSubscription> {
     const label = input.label.trim() || "Kalender-Abo";
     const token = generateSubscriptionToken();
+    const memberIds = normaliseMemberIds(input.memberIds ?? []);
 
     const row = await this.db.familyCalendarSubscription.create({
       data: {
         label: label.slice(0, 120),
         tokenHash: hashApiToken(token),
         tokenPrefix: tokenPrefixOf(token),
-        memberId: input.memberId ?? null,
+        memberLinks: { create: memberIds.map((memberId) => ({ memberId })) },
       },
     });
 
-    return { id: row.id, label: row.label, memberId: row.memberId, token };
+    return { id: row.id, label: row.label, memberIds, token };
+  }
+
+  /**
+   * Setzt die Personen eines Abos auf genau diese Menge. Leer heisst wieder
+   * „ganzer Haushalt" — das ist die Ausweitung, die der Aufrufer bewusst
+   * treffen muss.
+   */
+  async setSubscriptionMembers(id: string, memberIds: readonly string[]): Promise<string[]> {
+    return setMemberLinks(
+      {
+        listMemberIds: async (subscriptionId) =>
+          (
+            await this.db.familyCalendarSubscriptionMember.findMany({
+              where: { subscriptionId },
+              select: { memberId: true },
+            })
+          ).map((link) => link.memberId),
+        removeExcept: async (subscriptionId, keep) => {
+          await this.db.familyCalendarSubscriptionMember.deleteMany({
+            where:
+              keep.length > 0
+                ? { subscriptionId, memberId: { notIn: [...keep] } }
+                : { subscriptionId },
+          });
+        },
+        add: async (subscriptionId, ids) => {
+          await this.db.familyCalendarSubscriptionMember.createMany({
+            data: ids.map((memberId) => ({ subscriptionId, memberId })),
+          });
+        },
+      },
+      id,
+      memberIds,
+    );
   }
 
   /**
@@ -84,6 +147,7 @@ export class FamilyCalendarSubscriptionService {
 
     const candidate = await this.db.familyCalendarSubscription.findUnique({
       where: { tokenHash: hashApiToken(token) },
+      include: { memberLinks: { select: { memberId: true } } },
     });
     if (!candidate || !candidate.isActive || candidate.revokedAt !== null) return null;
 
@@ -92,7 +156,9 @@ export class FamilyCalendarSubscriptionService {
     // kuenftige Aenderungen am Speicherweg.
     if (!verifyApiTokenHash(token, candidate.tokenHash)) return null;
 
-    return candidate;
+    const { memberLinks, ...rest } = candidate;
+    // Leer heisst „ganzer Haushalt" — der Feed filtert dann nichts weg.
+    return { ...rest, memberIds: memberLinks.map((link) => link.memberId) };
   }
 
   /** Nutzung vermerken, damit ungenutzte Abos erkennbar sind. */

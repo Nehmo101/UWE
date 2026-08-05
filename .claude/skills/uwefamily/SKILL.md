@@ -46,8 +46,14 @@ gibt es keinen Endpunkt, nicht nur kein Tool.
 - **Mitglieder können ohne Konto existieren** — Kleinkind, Gast, Haustier. Die
   haben absichtlich kein Login. Bei jedem Personenbezug zuerst `family_members`,
   denn Termine, Akte und Filter arbeiten mit den dortigen Kennungen.
-- **Termine gehören keiner, einer oder mehreren Personen.** Ohne Zuordnung
-  betreffen sie den ganzen Haushalt.
+- **Wo ein Mitglied hinterlegt wird, dürfen es mehrere sein.** Termin,
+  Akten-Eintrag und Kalender-Abo hängen alle an einer eigenen
+  Verknüpfungstabelle, nie an einer `member_id`-Spalte; im Schreib-Weg heisst
+  das Feld überall `memberIds`, in der Antwort `members`. Ohne Zuordnung
+  betrifft ein Termin den ganzen Haushalt und ein Abo zeigt ihn ganz — ein
+  Akten-Eintrag ohne Person wird abgelehnt. Gesetzt wird überall über
+  `setMemberLinks` (`packages/family-core/src/member-links.ts`), in der
+  Oberfläche über die Kästchenliste `MemberChecklist`.
 - **Ein Termin ohne eigenes Ende dauert eine Stunde.** `resolveEventEnd`
   (`packages/family-core/src/event-duration.ts`) belegt vor — im Formular, über
   `POST /api/v1/calendar/events`, über `family_calendar_add_event` und beim
@@ -62,7 +68,8 @@ gibt es keinen Endpunkt, nicht nur kein Tool.
 - **Geburtstage und Jahrestage sind keine gespeicherten Termine.**
   `family_calendar_upcoming` spannt sie mit `includeAnniversaries` auf.
 - **Die Gesundheitsakte gilt auch für Tiere** — `family_health_due` liefert
-  Impfungen und Vorsorge für Menschen und Katze gleichermaßen.
+  Impfungen und Vorsorge für Menschen und Katze gleichermaßen; ein Eintrag darf
+  auf mehrere lauten (Wurmkur für beide Katzen).
 - **Akteneinträge sind keine gespeicherten Termine, stehen aber im Kalender.**
   `expandHealthOccurrences` spannt sie wie Geburtstage für den Zeitraum auf:
   `nextDueOn` als „… fällig", `occurredOn` als Notiz. Geändert wird nur in der
@@ -128,7 +135,7 @@ nicht in den Route Handlers.
 | „Was steht diese Woche an?" | `family_members`, dann `family_calendar_upcoming` mit `includeAnniversaries`, dazu `family_health_due` |
 | Einkauf | `family_shopping_list` ohne `listId`, dann mit |
 | Essensplanung | `family_recipes` gegen `family_shopping_list` abgleichen; Wochenplan/KI/Einkaufs-Split: `docs/family/essensplan.md` |
-| Ganze Akte einer Person | `family_health_due` mit `memberId` |
+| Ganze Akte einer Person | `family_health_due` mit `memberId` — auch geteilte Einträge |
 | Termin anlegen | `family_calendar_add_event` — nur mit `UWE_MCP_ALLOW_WRITES=true` |
 | ICS-Datei einlesen | `/calendar/import` in der App; Fachlogik `@uwe/family-core` → `ics-import.ts` |
 | Family alleine starten | `pnpm dev:family` |

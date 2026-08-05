@@ -21,25 +21,27 @@ import {
 /** Fälligkeit (`nextDueOn`) oder Vergangenes (`occurredOn`). */
 export type HealthOccurrenceKind = "due" | "logged";
 
-export interface HealthRecordWithMember {
+export interface HealthRecordWithMembers {
   id: string;
-  memberId: string;
   /** Roh aus der Datenbank; SQLite liefert den Enum als Text. */
   kind: string;
   title: string;
   notes: string;
   occurredOn: Date | null;
   nextDueOn: Date | null;
-  member: { id: string; displayName: string; colour: string };
+  /** Eine oder mehrere Personen — die Wurmkur betrifft beide Katzen. */
+  members: readonly { id: string; displayName: string; colour: string }[];
 }
 
 export interface HealthOccurrence {
   /** Stabile Kennung, auch über Abrufe hinweg — Anker und ICS brauchen das. */
   uid: string;
   recordId: string;
-  memberId: string;
-  memberName: string;
-  colour: string;
+  /** Wie beim Termin: ein Eintrag kann mehrere Personen betreffen. */
+  memberIds: readonly string[];
+  memberNames: readonly string[];
+  /** Farben in derselben Reihenfolge wie `memberNames`. */
+  colours: readonly string[];
   /** Art des Akteneintrags (Impfung, Vorsorge, …). */
   recordKind: FamilyHealthRecordKind;
   /** Ob dieses Vorkommen die Fälligkeit oder das Vergangene ist. */
@@ -66,7 +68,10 @@ export interface ExpandHealthOptions {
    * Jahre an Arztbesuchen aufs Telefon schiebt.
    */
   includeLogged?: boolean;
-  /** Nur die Akte einer Person — wie der Personenfilter im Kalender. */
+  /**
+   * Nur Einträge, an denen diese Person beteiligt ist — wie der Personenfilter
+   * im Kalender. Geteilte Einträge bleiben dabei sichtbar.
+   */
   memberId?: string | undefined;
 }
 
@@ -80,7 +85,7 @@ function inRange(date: Date, from: Date, to: Date): boolean {
  * liefern (Vergangenes und Fälligkeit), wenn beide Daten im Zeitraum liegen.
  */
 export function expandHealthOccurrences(
-  records: readonly HealthRecordWithMember[],
+  records: readonly HealthRecordWithMembers[],
   options: ExpandHealthOptions,
 ): HealthOccurrence[] {
   const { from, to, colourOf, includeLogged = true, memberId } = options;
@@ -90,13 +95,13 @@ export function expandHealthOccurrences(
   const out: HealthOccurrence[] = [];
 
   for (const record of records) {
-    if (memberId && record.memberId !== memberId) continue;
+    if (memberId && !record.members.some((member) => member.id === memberId)) continue;
 
     const recordKind: FamilyHealthRecordKind = isFamilyHealthRecordKind(record.kind)
       ? record.kind
       : "other";
     const kindLabel = FAMILY_HEALTH_KIND_LABEL[recordKind];
-    const colour = colourOf(record.member);
+    const colours = record.members.map(colourOf);
 
     const sources: { occurrenceKind: HealthOccurrenceKind; on: Date | null }[] = [
       { occurrenceKind: "due", on: record.nextDueOn },
@@ -110,9 +115,9 @@ export function expandHealthOccurrences(
       out.push({
         uid: `uwe-family-health-${record.id}-${occurrenceKind}`,
         recordId: record.id,
-        memberId: record.memberId,
-        memberName: record.member.displayName,
-        colour,
+        memberIds: record.members.map((member) => member.id),
+        memberNames: record.members.map((member) => member.displayName),
+        colours,
         recordKind,
         occurrenceKind,
         title: occurrenceKind === "due" ? `${record.title} fällig` : record.title,

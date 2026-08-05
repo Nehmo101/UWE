@@ -93,8 +93,8 @@ describe("buildFamilyDayBrief", () => {
         healthDue: [
           {
             id: "h1",
-            memberId: "m2",
-            memberName: "Mimi",
+            memberIds: ["m2"],
+            memberNames: ["Mimi"],
             kind: "vet",
             title: "Impfung",
             nextDueOn: utcMidnight(2026, 8, 3),

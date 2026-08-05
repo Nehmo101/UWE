@@ -133,9 +133,15 @@ export class FamilyMemberService {
   }
 
   /**
-   * Löscht ein Mitglied samt Terminzuordnungen, Akte und Abos (Kaskade im
-   * Schema). Ein Mitglied mit Konto wird nicht gelöscht, sondern deaktiviert —
-   * sonst legt der nächste Besuch es sofort wieder an.
+   * Löscht ein Mitglied samt Terminzuordnungen, Akte und Abos. Ein Mitglied mit
+   * Konto wird nicht gelöscht, sondern deaktiviert — sonst legt der nächste
+   * Besuch es sofort wieder an.
+   *
+   * Die Kaskade räumt nur die Verknüpfungen ab. Was danach ohne Person
+   * dasteht, muss mit: ein Akten-Eintrag ohne Zuordnung gehört niemandem, und
+   * ein auf Personen eingeschränktes Abo würde sonst stillschweigend zu einem
+   * für den ganzen Haushalt. Beides betrifft ausschließlich Einträge und Abos,
+   * die es mit diesem Mitglied geteilt haben — gemeinsame bleiben stehen.
    */
   async removeMember(id: string) {
     const member = await this.getMember(id);
@@ -148,7 +154,33 @@ export class FamilyMemberService {
       });
     }
 
+    const [recordLinks, subscriptionLinks] = await Promise.all([
+      this.db.familyHealthRecordMember.findMany({
+        where: { memberId: id },
+        select: { recordId: true },
+      }),
+      this.db.familyCalendarSubscriptionMember.findMany({
+        where: { memberId: id },
+        select: { subscriptionId: true },
+      }),
+    ]);
+
     await this.db.familyMemberProfile.delete({ where: { id } });
+
+    const recordIds = recordLinks.map((link) => link.recordId);
+    if (recordIds.length > 0) {
+      await this.db.familyHealthRecord.deleteMany({
+        where: { id: { in: recordIds }, memberLinks: { none: {} } },
+      });
+    }
+
+    const subscriptionIds = subscriptionLinks.map((link) => link.subscriptionId);
+    if (subscriptionIds.length > 0) {
+      await this.db.familyCalendarSubscription.deleteMany({
+        where: { id: { in: subscriptionIds }, memberLinks: { none: {} } },
+      });
+    }
+
     return null;
   }
 

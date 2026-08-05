@@ -19,7 +19,8 @@ export const FAMILY_EXPORT_MODEL_KEYS = [
   "ShoppingList", "ShoppingListItem", "BringConnection",
   "ScanDocument", "MaintenanceTask", "PantryItem",
   "FamilyChatConversation", "FamilyChatMessage", "FamilyBrainFact", "FamilyMemberProfile",
-  "CalendarEventMember", "FamilyHealthRecord", "FamilyCalendarSubscription",
+  "CalendarEventMember", "FamilyHealthRecord", "FamilyHealthRecordMember",
+  "FamilyCalendarSubscription", "FamilyCalendarSubscriptionMember",
 ] as const;
 
 export type FamilyExportModelKey = (typeof FAMILY_EXPORT_MODEL_KEYS)[number];
@@ -48,9 +49,13 @@ function familyModelReaders(db: FamilyPrismaClient): FamilyModelReaders {
     FamilyMemberProfile: () => db.familyMemberProfile.findMany(),
     CalendarEventMember: () => db.calendarEventMember.findMany(),
     FamilyHealthRecord: () => db.familyHealthRecord.findMany(),
+    FamilyHealthRecordMember: () => db.familyHealthRecordMember.findMany(),
     // Enthält nur Hashes, keine Klartext-Tokens — ein Restore stellt die Abos
     // wieder her, ohne dass ein Geheimnis im Backup liegt.
     FamilyCalendarSubscription: () => db.familyCalendarSubscription.findMany(),
+    // Ohne die Zuordnung würde ein auf Personen eingeschränktes Abo nach dem
+    // Restore für den ganzen Haushalt gelten.
+    FamilyCalendarSubscriptionMember: () => db.familyCalendarSubscriptionMember.findMany(),
   };
 }
 

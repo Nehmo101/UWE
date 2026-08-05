@@ -25,7 +25,7 @@ export async function GET(request: Request) {
       id: row.id,
       label: row.label,
       tokenPrefix: row.tokenPrefix,
-      member: row.member,
+      members: row.members,
       isActive: row.isActive,
       lastUsedAt: row.lastUsedAt,
       createdAt: row.createdAt,
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   const denied = await requireFamilyApiAuth(request, { scopes: ["family_calendar"] });
   if (denied) return denied;
 
-  let body: { label?: unknown; memberId?: unknown };
+  let body: { label?: unknown; memberId?: unknown; memberIds?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -45,18 +45,24 @@ export async function POST(request: Request) {
   }
 
   const label = typeof body.label === "string" ? body.label : "";
-  const memberId = typeof body.memberId === "string" && body.memberId !== "" ? body.memberId : null;
+  // `memberId` bleibt als Einzelform gültig; leer heisst weiterhin „ganzer Haushalt".
+  const memberIds = [
+    ...(Array.isArray(body.memberIds)
+      ? body.memberIds.filter((id): id is string => typeof id === "string")
+      : []),
+    ...(typeof body.memberId === "string" ? [body.memberId] : []),
+  ];
 
   const created = await createFamilyCalendarSubscriptionService(familyPrisma).createSubscription({
     label,
-    memberId,
+    memberIds,
   });
 
   return NextResponse.json(
     {
       id: created.id,
       label: created.label,
-      memberId: created.memberId,
+      memberIds: created.memberIds,
       // Einmalig. Wer ihn verliert, legt ein neues Abo an.
       token: created.token,
     },
