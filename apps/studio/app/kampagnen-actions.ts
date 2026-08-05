@@ -15,7 +15,11 @@ import {
   type QuestLifecycleStatus,
 } from "@uwe/database/server";
 import type { WorldEventEntityRole } from "@uwe/database/enums";
-import { createCampaignCockpitService, createSessionWrapUpService } from "@uwe/campaign-cockpit";
+import {
+  createCampaignCockpitService,
+  createSessionWrapUpService,
+  createStoryArcPinService,
+} from "@uwe/campaign-cockpit";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireStudioContentEdit, requireStudioWorldEdit } from "@/src/lib/authz";
@@ -36,7 +40,7 @@ function repo() {
  * der alte Weg über den Quest-Editor warf den DM aus dem Radar (und landete
  * wegen der falschen Nav-Kategorie sogar auf einer 404).
  */
-const returnTargetSchema = z.enum(["radar", "cockpit", "kapitel", "abschluss"]);
+const returnTargetSchema = z.enum(["radar", "cockpit", "kapitel", "abschluss", "live"]);
 
 function resolveReturnPath(
   target: z.infer<typeof returnTargetSchema>,
@@ -57,6 +61,9 @@ function resolveReturnPath(
       const suffix = sessionId ? `?session=${encodeURIComponent(sessionId)}` : "";
       return `${base}/kampagnen/${campaignSlug ?? ""}/abschluss${suffix}`;
     }
+    // Spielabend: Quest-Status direkt aus der Akt-Tafel des Live-Modus setzen.
+    case "live":
+      return `${base}/sessions/${sessionId ?? ""}/live`;
   }
 }
 
@@ -228,6 +235,43 @@ export async function assignQuestToArcAction(formData: FormData) {
     : cockpitPath(worldSlug, campaignSlug);
   revalidatePath(returnPath);
   redirect(`${returnPath}?saved=1`);
+}
+
+/**
+ * Seite an ein Kapitel pinnen (Akt-Tafel). Die Rolle leitet der Service aus
+ * dem Seitentyp ab; erlaubt sind NSC-, Orts-, Fraktions- und Handout-Seiten.
+ */
+export async function pinPageToStoryArcAction(formData: FormData) {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  const campaignSlug = String(formData.get("campaignSlug"));
+  const kapitelSlug = String(formData.get("kapitelSlug"));
+  const chapterId = String(formData.get("chapterId"));
+  const pageId = String(formData.get("pageId"));
+  await requireStudioContentEdit(worldSlug, chapterId);
+
+  const campaign = await requireCampaign(worldSlug, campaignSlug);
+  await createStoryArcPinService(prisma).pin(campaign.worldId, chapterId, pageId);
+
+  const kapitelPath = `${cockpitPath(worldSlug, campaignSlug)}/kapitel/${kapitelSlug}`;
+  revalidatePath(kapitelPath);
+  redirect(`${kapitelPath}?saved=1#kapitel-akt-tafel`);
+}
+
+export async function unpinPageFromStoryArcAction(formData: FormData) {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  const campaignSlug = String(formData.get("campaignSlug"));
+  const kapitelSlug = String(formData.get("kapitelSlug"));
+  const linkId = String(formData.get("linkId"));
+  await requireStudioWorldEdit(worldSlug);
+
+  const campaign = await requireCampaign(worldSlug, campaignSlug);
+  await createStoryArcPinService(prisma).unpin(campaign.worldId, linkId);
+
+  const kapitelPath = `${cockpitPath(worldSlug, campaignSlug)}/kapitel/${kapitelSlug}`;
+  revalidatePath(kapitelPath);
+  redirect(`${kapitelPath}?saved=1#kapitel-akt-tafel`);
 }
 
 /* ── Session-Abschluss-Flow ─────────────────────────────────────────────── */

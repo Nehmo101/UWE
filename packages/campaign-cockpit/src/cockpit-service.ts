@@ -127,11 +127,16 @@ export interface ChapterView {
   /** Kampagnen-Quests außerhalb dieses Kapitels — fürs „Quest zuordnen"-Select. */
   assignableQuests: Array<{ id: string; title: string }>;
   /**
-   * NSC-Tafel des ganzen Akts: [[Wiki-Links]] aus dem Kapiteltext selbst
-   * plus alle Quest-Texte, dedupliziert. Der Kapiteltext zählte früher nicht
-   * mit — wer den Bösewicht nur im Akt-Text erwähnte, sah ihn nirgends.
+   * NSC-Tafel des ganzen Akts: explizit gepinnte Seiten zuerst, dann
+   * [[Wiki-Links]] aus dem Kapiteltext selbst plus alle Quest-Texte,
+   * dedupliziert. Der Kapiteltext zählte früher nicht mit — wer den
+   * Bösewicht nur im Akt-Text erwähnte, sah ihn nirgends.
    */
   actRelations: QuestRelations;
+  /** Explizit gepinnte Seiten (StoryArcEntityLink) — für die Pin-Verwaltung. */
+  pins: Array<{ id: string; role: string; target: QuestRelationTarget }>;
+  /** Dungeons, die per parentPageId an diesem Kapitel hängen. */
+  dungeons: CockpitDungeon[];
 }
 
 const EVENT_ROLE_LABELS: Record<string, string> = {
@@ -456,7 +461,7 @@ export class CampaignCockpitService {
     });
     if (!chapter) return null;
 
-    const [quests, campaignQuests] = await Promise.all([
+    const [quests, campaignQuests, pinLinks, chapterDungeons] = await Promise.all([
       this.db.page.findMany({
         where: { worldId: campaign.worldId, parentPageId: chapter.id, type: "quest" },
         include: { contentBlocks: { orderBy: { sortOrder: "asc" } }, campaign: true },
@@ -470,6 +475,16 @@ export class CampaignCockpitService {
           NOT: { parentPageId: chapter.id },
         },
         select: { id: true, title: true },
+        orderBy: { title: "asc" },
+      }),
+      this.db.storyArcEntityLink.findMany({
+        where: { storyArcPageId: chapter.id },
+        include: { page: { select: { id: true, title: true, slug: true, type: true } } },
+        orderBy: [{ sortIndex: "asc" }, { createdAt: "asc" }],
+      }),
+      this.db.page.findMany({
+        where: { worldId: campaign.worldId, parentPageId: chapter.id, type: "dungeon" },
+        select: { id: true, title: true, slug: true, summary: true, prepStatus: true },
         orderBy: { title: "asc" },
       }),
     ]);
@@ -513,6 +528,26 @@ export class CampaignCockpitService {
       ? deriveQuestRelations(worldSlug, chapter, context.graph)
       : emptyRelations;
 
+    // Explizit gepinnte Seiten (Rolle wurde beim Pinnen aus dem Typ abgeleitet).
+    const pins = pinLinks.map((link) => ({
+      id: link.id,
+      role: link.role as string,
+      target: {
+        id: link.page.id,
+        title: link.page.title,
+        slug: link.page.slug,
+        type: link.page.type,
+        href: buildPageUrl(worldSlug, link.page.type, link.page.slug),
+      },
+    }));
+    const pinnedRelations: QuestRelations = { npcs: [], locations: [], factions: [] };
+    for (const pin of pins) {
+      if (pin.role === "npc") pinnedRelations.npcs.push(pin.target);
+      else if (pin.role === "location") pinnedRelations.locations.push(pin.target);
+      else if (pin.role === "faction") pinnedRelations.factions.push(pin.target);
+      // handout-Pins erscheinen nur in der Pin-Liste, nicht in den drei Gruppen.
+    }
+
     return {
       campaign,
       chapter: {
@@ -529,7 +564,20 @@ export class CampaignCockpitService {
         ? deriveQuestBacklinks(worldSlug, chapter.id, context.graph)
         : [],
       assignableQuests: campaignQuests,
-      actRelations: mergeQuestRelations(chapterRelations, ...questViews.map((q) => q.relations)),
+      actRelations: mergeQuestRelations(
+        pinnedRelations,
+        chapterRelations,
+        ...questViews.map((q) => q.relations),
+      ),
+      pins,
+      dungeons: chapterDungeons.map((dungeon) => ({
+        id: dungeon.id,
+        title: dungeon.title,
+        slug: dungeon.slug,
+        href: `/worlds/${worldSlug}/dungeons/${dungeon.slug}`,
+        summary: dungeon.summary,
+        prepStatus: dungeon.prepStatus,
+      })),
     };
   }
 

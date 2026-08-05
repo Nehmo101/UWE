@@ -15,7 +15,9 @@ import { campaignCockpitBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { requireStudioWorldRead } from "@/src/lib/authz";
 import {
   assignQuestToArcAction,
+  pinPageToStoryArcAction,
   preparePrintListFromChapterAction,
+  unpinPageFromStoryArcAction,
   updateQuestStatusInPlaceAction,
   updateStoryArcAction,
 } from "../../../../../../kampagnen-actions";
@@ -69,6 +71,22 @@ export default async function ChapterCockpitPage({ params, searchParams }: Props
   const cockpitPath = `${base}/kampagnen/${campaignSlug}`;
   const kapitelPath = `${cockpitPath}/kapitel/${kapitelSlug}`;
   const { campaign, chapter, quests } = view;
+
+  // Kandidaten fürs Pinnen: NSC-, Orts-, Fraktions- und Handout-Seiten der
+  // Welt, die noch nicht an diesem Kapitel hängen.
+  const pinnedIds = new Set(view.pins.map((pin) => pin.target.id));
+  const pinnableTypes = new Set([
+    "npc",
+    "player_character",
+    "monster",
+    "location",
+    "region",
+    "faction",
+    "handout",
+  ]);
+  const pinCandidates = wikiIndex
+    .filter((node) => pinnableTypes.has(node.type) && !pinnedIds.has(node.id))
+    .sort((a, b) => a.title.localeCompare(b.title, "de"));
 
   return (
     <>
@@ -231,8 +249,62 @@ export default async function ChapterCockpitPage({ params, searchParams }: Props
               </dl>
             )}
             <p className="mt-2 text-sm text-muted-foreground">
-              Abgeleitet aus dem Kapiteltext und allen Quest-Texten dieses Akts.
+              Abgeleitet aus dem Kapiteltext und allen Quest-Texten dieses Akts — plus
+              gepinnte Seiten.
             </p>
+
+            <div className="mt-4 flex flex-col gap-3 border-t border-border pt-3">
+              {view.pins.length > 0 ? (
+                <ul className="flex flex-wrap gap-2 text-sm">
+                  {view.pins.map((pin) => (
+                    <li
+                      key={pin.id}
+                      className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1"
+                    >
+                      <span aria-hidden>📌</span>
+                      <Link href={pin.target.href}>{pin.target.title}</Link>
+                      <form action={unpinPageFromStoryArcAction} className="inline">
+                        <input type="hidden" name="worldSlug" value={worldSlug} />
+                        <input type="hidden" name="campaignSlug" value={campaignSlug} />
+                        <input type="hidden" name="kapitelSlug" value={kapitelSlug} />
+                        <input type="hidden" name="linkId" value={pin.id} />
+                        <Button
+                          type="submit"
+                          variant="ghost"
+                          size="sm"
+                          aria-label={`${pin.target.title} lösen`}
+                        >
+                          ×
+                        </Button>
+                      </form>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {pinCandidates.length > 0 ? (
+                <form
+                  action={pinPageToStoryArcAction}
+                  className="flex flex-wrap items-center gap-2"
+                >
+                  <input type="hidden" name="worldSlug" value={worldSlug} />
+                  <input type="hidden" name="campaignSlug" value={campaignSlug} />
+                  <input type="hidden" name="kapitelSlug" value={kapitelSlug} />
+                  <input type="hidden" name="chapterId" value={chapter.id} />
+                  {/* TODO(design-kit): natives Select — Leerwert nötig. */}
+                  <select name="pageId" required className={NATIVE_SELECT_CLASS}>
+                    <option value="">Seite an den Akt pinnen…</option>
+                    {pinCandidates.map((candidate) => (
+                      <option key={candidate.id} value={candidate.id}>
+                        {candidate.title} ({candidate.type})
+                      </option>
+                    ))}
+                  </select>
+                  <Button type="submit" variant="ghost" size="sm">
+                    Pinnen
+                  </Button>
+                </form>
+              ) : null}
+            </div>
           </CardContent>
         </Card>
 

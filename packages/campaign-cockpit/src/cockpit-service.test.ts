@@ -4,6 +4,7 @@ import { createPrismaClient } from "@uwe/database/client";
 import { createUweRepository } from "@uwe/database/server";
 import { createTestDatabaseUrl } from "@uwe/database/test-helpers";
 import { createCampaignCockpitService } from "./cockpit-service";
+import { createStoryArcPinService } from "./act-board";
 import { createSessionWrapUpService } from "./wrap-up-service";
 
 describe("campaign cockpit (integration)", () => {
@@ -178,6 +179,47 @@ describe("campaign cockpit (integration)", () => {
     assert.ok(overview.dungeons[0].href.endsWith("/dungeons/magisterturm"));
     assert.equal(overview.npcSummary.total, 1);
     assert.equal(overview.npcSummary.flagged, 1);
+  });
+
+  it("pins pages to a chapter and merges them into the act board", async () => {
+    const service = createCampaignCockpitService(db);
+    const pins = createStoryArcPinService(db);
+    const overview = await service.getCampaignOverview(worldSlug, "himmelsrouten");
+    assert.ok(overview);
+    const chapter = overview.chapters[0];
+
+    const npc = await db.page.findFirst({ where: { worldId, slug: "grimm" } });
+    assert.ok(npc);
+
+    const pin = await pins.pin(worldId, chapter.id, npc.id);
+    assert.equal(pin.role, "npc");
+    // Doppelt pinnen ist idempotent (upsert auf die Unique-Kante).
+    await pins.pin(worldId, chapter.id, npc.id);
+
+    // Quests (type quest) lassen sich nicht pinnen — Rolle nicht ableitbar.
+    const quest = await db.page.findFirst({ where: { worldId, type: "quest" } });
+    assert.ok(quest);
+    await assert.rejects(pins.pin(worldId, chapter.id, quest.id), /nicht.*pinnen/);
+
+    // Ohne Graph (keine [[Wiki-Links]] aufgelöst) trägt allein der Pin die Tafel.
+    const view = await service.getChapterView(worldSlug, "himmelsrouten", chapter.slug, {
+      wikiIndex: [],
+      graph: null,
+    });
+    assert.ok(view);
+    assert.equal(view.pins.length, 1);
+    assert.equal(view.pins[0].target.id, npc.id);
+    assert.deepEqual(
+      view.actRelations.npcs.map((target) => target.id),
+      [npc.id],
+    );
+
+    await pins.unpin(worldId, view.pins[0].id);
+    const after = await service.getChapterView(worldSlug, "himmelsrouten", chapter.slug, {
+      wikiIndex: [],
+      graph: null,
+    });
+    assert.equal(after?.pins.length, 0);
   });
 
   it("derives the act board from the chapter text itself", async () => {

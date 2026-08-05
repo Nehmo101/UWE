@@ -282,4 +282,43 @@ describe("UWE game session management", () => {
     await db.$disconnect();
   });
 
+  it("links a session to a story arc chapter and guards the world boundary", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const service = createGameSessionService(databaseUrl);
+    const repo = createUweRepository(databaseUrl);
+
+    const chapter = await repo.createPage({
+      worldId,
+      campaignId,
+      title: "Akt I",
+      slug: "akt-i",
+      type: "story_arc",
+    });
+
+    const nextNumber = await service.getNextSessionNumber(worldId, campaignId);
+    const session = await service.create({
+      worldId,
+      campaignId,
+      title: "Kapitel-Session",
+      sessionNumber: nextNumber,
+      storyArcPageId: chapter.id,
+    });
+    assert.equal(session.storyArcPageId, chapter.id);
+    assert.equal(session.storyArcPage?.title, "Akt I");
+
+    // Keine story_arc-Seite → abgelehnt (Tenant-/Typ-Guard).
+    await assert.rejects(
+      service.update(session.id, { storyArcPageId: npcPageId }),
+      /Kapitel nicht gefunden/,
+    );
+
+    // Kapitel löschen → Session bleibt, Bezug fällt auf null (SetNull).
+    await db.page.delete({ where: { id: chapter.id } });
+    const after = await service.getById(session.id);
+    assert.ok(after);
+    assert.equal(after.storyArcPageId, null);
+
+    await db.$disconnect();
+  });
+
 });

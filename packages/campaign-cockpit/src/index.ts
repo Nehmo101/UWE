@@ -27,6 +27,12 @@ export {
   type CockpitQuest,
   type CockpitSessionRef,
 } from "./cockpit-service";
+export {
+  createStoryArcPinService,
+  pinRoleForPageType,
+  StoryArcPinService,
+  type StoryArcPin,
+} from "./act-board";
 export { buildCampaignAiDigest } from "./campaign-ai-digest";
 export {
   buildChapterPrintHtml,
