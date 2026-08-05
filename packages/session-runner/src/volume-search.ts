@@ -295,6 +295,36 @@ const INLINE_TAGS = new Set([
 ]);
 
 /**
+ * Entfernt HTML-Kommentare — von Hand, nicht per Regex.
+ *
+ * `/<!--[\s\S]*?-->/` sieht harmlos aus, ist aber quadratisch: fehlt das
+ * schließende `-->`, scannt der Ausdruck von **jedem** `<!--` bis zum Textende.
+ * Wiki-Inhalt schreibt der Spielleiter selbst, ein Text aus tausend `<!--`
+ * wäre also erreichbar. Dieser Durchlauf setzt den Zeiger nur vorwärts und
+ * bleibt damit linear.
+ *
+ * Ein unabgeschlossener Kommentar verschluckt den Rest — genau wie im Browser.
+ */
+function stripHtmlComments(html: string): string {
+  if (!html.includes("<!--")) return html;
+
+  let result = "";
+  let cursor = 0;
+
+  for (;;) {
+    const open = html.indexOf("<!--", cursor);
+    if (open === -1) break;
+
+    result += `${html.slice(cursor, open)} `;
+    const close = html.indexOf("-->", open + 4);
+    if (close === -1) return result;
+    cursor = close + 3;
+  }
+
+  return result + html.slice(cursor);
+}
+
+/**
  * Der reine Text eines HTML-Abschnitts.
  *
  * Für Trefferlisten und Ausschnitte: Tags weg, die vom Sanitizer erzeugten
@@ -307,8 +337,7 @@ export function plainTextFromHtml(html: string): string {
   // nie markiert werden darf. Hier sollen sie im Gegenteil zurückübersetzt
   // werden — ein Ausschnitt mit „&amp;" darin liest sich falsch.
   return (
-    html
-      .replace(/<!--[\s\S]*?-->/g, " ")
+    stripHtmlComments(html)
       .replace(/<\/?([a-zA-Z][a-zA-Z0-9-]*)[^>]*>/g, (_tag, name: string) =>
         INLINE_TAGS.has(name.toLowerCase()) ? "" : " ",
       )

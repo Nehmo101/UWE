@@ -109,6 +109,21 @@ describe("plainTextFromHtml", () => {
     assert.deepEqual(findMatchRanges(plainTextFromHtml("<p>Tor</p><p>Der</p>"), "torder"), []);
   });
 
+  it("wirft Kommentare weg, auch unabgeschlossene", () => {
+    assert.equal(plainTextFromHtml("<p>Vor<!-- versteckt -->nach</p>"), "Vor nach");
+    assert.equal(plainTextFromHtml("<p>Vor<!-- ohne Ende</p>"), "Vor");
+  });
+
+  it("bleibt bei vielen offenen Kommentaren schnell", () => {
+    // Regressionsschutz gegen den quadratischen Regex-Vorgänger: derselbe Text
+    // brauchte dort Sekunden statt Millisekunden (CodeQL js/polynomial-redos).
+    const html = `<p>${"<!--".repeat(20_000)}</p>`;
+    const started = process.hrtime.bigint();
+    plainTextFromHtml(html);
+    const millis = Number(process.hrtime.bigint() - started) / 1e6;
+    assert.ok(millis < 500, `plainTextFromHtml brauchte ${millis.toFixed(0)} ms`);
+  });
+
   it("übersetzt maskierte Entities nicht doppelt", () => {
     assert.equal(plainTextFromHtml("<p>&amp;lt;dm&amp;gt;</p>"), "&lt;dm&gt;");
   });
