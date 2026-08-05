@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "assetId": "atlas-druckmodus",
+  "type": "runtime-cartography",
+  "rendering": "deterministic-canvas",
+  "intent": {
+    "character": ["alte Fantasy-Chronik", "handgezeichnet", "druckbar", "klar hierarchisch"],
+    "palette": ["elfenbeinfarbenes Papier", "Graphit-Schwarz", "rostrote Beschriftung"],
+    "focus": "Gebirgsketten, Waelder, Kuestenlinien und Namen werden als gezeichnete Kartensignaturen lesbar"
+  },
+  "avoid": [
+    "vollflaechige moderne Reliefkarte",
+    "Dashboard-Look im Ausdruck",
+    "fotorealistische Texturen",
+    "Kopien fremder Kartennamen oder konkreter Geografie"
+  ],
+  "preserve": [
+    "deterministischer Export",
+    "alte Karten",
+    "Strassen- und Namenschalter",
+    "A4-Druck und PNG",
+    "pausierte 3D-Schleife im Atlasmodus"
+  ],
+  "candidateCount": 3,
+  "selectedCandidate": "b",
+  "candidates": [
+    { "id": "a", "label": "Rot und Graphit", "use": "heller alternativer Chronikdruck" },
+    { "id": "b", "label": "Sepia und Zinnober", "use": "ausgewaehlter Standard fuer gealterte Spieler-Handouts" },
+    { "id": "c", "label": "Reine Tinte", "use": "tonersparender Schwarzweissdruck" }
+  ],
+  "runtimeScenes": ["atlas-default", "atlas-detail", "atlas-print"]
+}

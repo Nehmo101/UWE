@@ -7,6 +7,7 @@
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="./src/ui/storybook.css">
 <link rel="stylesheet" href="./src/ui/style.css">
+<link rel="stylesheet" href="./src/ui/kartenmodus.css">
 <!--
   J1 — three liegt seit Runde J MIT im Baum (terra/vendor/three/, Fassung
   0.185.1, unveraendert von jsdelivr geholt).
@@ -140,6 +141,8 @@
     </label>
     <button id="loadBtn" title="Karte aus einer JSON-Datei laden">Laden</button>
     <button id="pngBtn" title="Aktuelle Ansicht als PNG-Bild exportieren">PNG</button>
+    <button id="kartenmodusBtn" class="atlasStart"
+            title="Die Welt als druckbare, handgezeichnete Chronikkarte oeffnen">Atlas</button>
     <div class="sep"></div>
     <!-- D2 — Höhenbild-Import. Steht jetzt statisch hier statt in io.js
          erzeugt zu werden: die Leiste gehört ins Dokument, nicht in den
