@@ -44,12 +44,17 @@ export async function GET(request: Request) {
   const limit = Math.min(Number(url.searchParams.get("limit")) || 100, MAX_LIMIT);
 
   const calendar = createCalendarService(familyPrisma, prisma);
-  const raw = await calendar.listEvents({ from, to, limit });
+  // Mit Personenfilter erst breit lesen und nach dem Filtern kappen — sonst
+  // schneidet das DB-Limit Termine der gesuchten Person weg, obwohl das
+  // angefragte Limit gar nicht erreicht ist.
+  const raw = await calendar.listEvents({ from, to, limit: memberId ? MAX_LIMIT : limit });
   const enriched = await attachMembersToEvents(familyPrisma, raw);
 
-  const events = memberId
-    ? enriched.filter((event) => event.members.some((m) => m.id === memberId))
-    : enriched;
+  const events = (
+    memberId
+      ? enriched.filter((event) => event.members.some((m) => m.id === memberId))
+      : enriched
+  ).slice(0, limit);
 
   const payload: Record<string, unknown> = {
     events: events.map((event) => ({
