@@ -12,7 +12,7 @@ export interface EnvValidationIssue {
 
 
 const WEAK_AUTH_SECRET_PATTERNS = [
-  /^change[-_]?me$/i,
+  /^change[-_]?me/i,
   /^changeme$/i,
   /^generate-a-random-secret-for-production$/i,
   /^super-secret$/i,
@@ -103,9 +103,10 @@ export function validateUweEnvironment(env: NodeJS.ProcessEnv = process.env): En
   if (runtime.isProduction && !runtime.authRequired && publicExposure) {
     issues.push({
       id: "env:auth-required",
-      severity: "warning",
+      severity: "error",
       envKey: "AUTH_REQUIRED",
-      message: "AUTH_REQUIRED=true empfohlen, wenn das Portal öffentlich erreichbar ist.",
+      message:
+        "AUTH_REQUIRED=false bei öffentlicher Erreichbarkeit macht jeden Anonymen zum Owner (Studio-Dev-Bypass) — auf true setzen.",
     });
   }
 

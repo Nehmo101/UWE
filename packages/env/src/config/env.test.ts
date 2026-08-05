@@ -44,6 +44,8 @@ describe("env validation", () => {
   it("rejects weak or short secrets", () => {
     assert.equal(isWeakSecret(undefined), true);
     assert.equal(isWeakSecret("change-me"), true);
+    // Shipped .env.production.example / setup-uwe-host.sh placeholder.
+    assert.equal(isWeakSecret("CHANGE_ME_generate_with_openssl_rand_base64_32"), true);
     assert.equal(isWeakSecret("short"), true);
     assert.equal(isWeakSecret("uwe-dev"), true);
     assert.equal(isWeakSecret(STRONG_SECRET), false);

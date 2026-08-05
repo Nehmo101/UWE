@@ -13,7 +13,32 @@ describe("env validation", () => {
     assert.equal(isWeakAuthSecretValue(undefined), true);
     assert.equal(isWeakAuthSecretValue("change-me"), true);
     assert.equal(isWeakAuthSecretValue("short"), true);
+    // Shipped .env.production.example placeholder — must be rejected even though
+    // it is 44 chars long and looks random.
+    assert.equal(
+      isWeakAuthSecretValue("CHANGE_ME_generate_with_openssl_rand_base64_32"),
+      true,
+    );
     assert.equal(isWeakAuthSecretValue("a-strong-random-secret-value-here"), false);
+  });
+
+  it("blocks boot when AUTH_REQUIRED=false and publicly exposed", () => {
+    const issues = validateUweEnvironment({
+      NODE_ENV: "production",
+      PUBLIC_APP_URL: "https://uwe.example.com",
+      AUTH_SECRET: "a-strong-random-secret-value-here",
+      RUN_DB_SEED: "false",
+      STUDIO_API_TOKEN: "studio-token-value-here",
+      TRUST_PROXY: "true",
+      CLOUDFLARE_TUNNEL: "true",
+      SESSION_COOKIE_SECURE: "true",
+      AUTH_REQUIRED: "false",
+    });
+
+    const issue = issues.find((entry) => entry.id === "env:auth-required");
+    assert.ok(issue);
+    assert.equal(issue.severity, "error");
+    assert.equal(hasBlockingEnvIssues(issues), true);
   });
 
   it("requires production hardening when publicly exposed", () => {
