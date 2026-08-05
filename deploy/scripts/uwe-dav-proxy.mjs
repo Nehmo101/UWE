@@ -113,10 +113,19 @@ function main() {
     delete headers[DAV_METHOD_HEADER];
 
     let method = req.method ?? "GET";
-    const pathname = (req.url ?? "/").split("?")[0];
-    if (DAV_METHODS.has(method) && isDavPath(pathname)) {
-      headers[DAV_METHOD_HEADER] = method;
-      method = "POST";
+    let requestUrl = req.url ?? "/";
+    const [pathname = "/", query] = requestUrl.split("?");
+    if (isDavPath(pathname)) {
+      if (DAV_METHODS.has(method)) {
+        headers[DAV_METHOD_HEADER] = method;
+        method = "POST";
+      }
+      // Trailing Slash entfernen, sonst antwortet Next mit einem 308-Redirect
+      // auf jeden Collection-PROPFIND (/api/dav/cal/familie/ → …/familie).
+      if (pathname.length > 1 && pathname.endsWith("/")) {
+        const stripped = pathname.replace(/\/+$/, "");
+        requestUrl = query != null ? `${stripped}?${query}` : stripped;
+      }
     }
 
     const upstreamReq = http.request(
@@ -124,7 +133,7 @@ function main() {
         host: "127.0.0.1",
         port: options.upstream,
         method,
-        path: req.url,
+        path: requestUrl,
         headers,
         timeout: UPSTREAM_TIMEOUT_MS,
       },

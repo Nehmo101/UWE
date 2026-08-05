@@ -26,10 +26,17 @@ export const FAMILY_AUTH_GUARD_PATTERN = /requireFamilyApiAuth/;
  *   kann, einzeln widerrufbar ist und nur als Hash gespeichert wird. Ein
  *   unbekannter oder widerrufener Token bekommt 404, damit die Antwort nichts
  *   über die Existenz eines Tokens verrät.
+ * - `dav/[[...segments]]/route.ts` — CalDAV-Server für den iPhone-Kalender
+ *   (lesen und schreiben). Der Client authentifiziert per HTTP Basic mit einem
+ *   eigenen Token-Typ (`uwedav_…`, Modell `FamilyCalDavAccount`), nur als Hash
+ *   gespeichert und einzeln widerrufbar; geprüft im Handler. Cookies werden
+ *   nie ausgewertet — CSRF greift deshalb nicht. Ohne gültigen Token: 401 mit
+ *   `WWW-Authenticate`, wie es das Basic-Schema verlangt.
  */
 export const FAMILY_PUBLIC_API_ALLOWLIST = new Set([
   "health/route.ts",
   "calendar/feed/[token]/route.ts",
+  "dav/[[...segments]]/route.ts",
 ]);
 
 /**

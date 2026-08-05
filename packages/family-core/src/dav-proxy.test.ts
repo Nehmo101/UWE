@@ -99,9 +99,11 @@ describe("uwe-dav-proxy", () => {
       method: "PROPFIND",
       headers: { depth: "0" },
     });
-    const body = (await response.json()) as { method: string; davHeader: string | null };
+    const body = (await response.json()) as { method: string; url: string; davHeader: string | null };
     assert.equal(body.method, "POST");
     assert.equal(body.davHeader, "PROPFIND");
+    // Trailing Slash wird entfernt, damit Next nicht mit 308 umleitet.
+    assert.equal(body.url, "/api/dav/cal/familie");
   });
 
   it("übersetzt PROPFIND auch für /.well-known/caldav", async () => {
