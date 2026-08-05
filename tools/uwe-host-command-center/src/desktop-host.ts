@@ -35,6 +35,11 @@ import {
   stopProcess,
   waitForHealth,
 } from "./desktop-host-system.ts";
+import {
+  familyDavUpstreamPort,
+  shouldUseFamilyDavProxy,
+  wrapSpawnWithFamilyDavProxy,
+} from "./family-dav-proxy.ts";
 import { readLongRunLock } from "./long-run-lock.ts";
 
 export { deriveOwnedServiceState } from "./desktop-host-system.ts";
@@ -421,12 +426,16 @@ function spawnService(paths: HostPaths, service: ServiceDefinition): number {
   // 2. `next start` im App-Root: der Weg der Bundle-Installation. Deren
   //    node_modules ist flach (hoisted, ohne Symlinks), dort löst Next 16 die
   //    externalisierten Pakete auf.
+  // Family: DAV-Proxy davor (PROPFIND/REPORT fürs iPhone) — siehe family-dav-proxy.ts.
+  const useDavProxy = shouldUseFamilyDavProxy(paths.root, service.id);
+  const listenPort = useDavProxy ? familyDavUpstreamPort(service.port) : service.port;
+
   const standaloneDir = path.join(appRoot, ".next", "standalone");
   const standaloneServer = path.join(standaloneDir, "apps", service.id, "server.js");
   let spawnArgs: string[];
   let spawnCwd: string;
   if (fs.existsSync(standaloneServer)) {
-    env.PORT = String(service.port);
+    env.PORT = String(listenPort);
     env.HOSTNAME = loopbackOnly ? "127.0.0.1" : "0.0.0.0";
     spawnArgs = [path.join("apps", service.id, "server.js")];
     spawnCwd = standaloneDir;
@@ -437,9 +446,20 @@ function spawnService(paths: HostPaths, service: ServiceDefinition): number {
         `Startdateien für ${service.label} fehlen: weder ${standaloneServer} noch ${nextCli}.`,
       );
     }
-    spawnArgs = [nextCli, "start", "--port", String(service.port)];
+    spawnArgs = [nextCli, "start", "--port", String(listenPort)];
     if (loopbackOnly) spawnArgs.push("--hostname", "127.0.0.1");
     spawnCwd = appRoot;
+  }
+
+  if (useDavProxy) {
+    ({ spawnArgs, spawnCwd } = wrapSpawnWithFamilyDavProxy({
+      root: paths.root,
+      servicePort: service.port,
+      spawnArgs,
+      spawnCwd,
+      nodeBin: process.execPath,
+      env,
+    }));
   }
 
   const child = spawn(process.execPath, spawnArgs, {

@@ -14,6 +14,10 @@ export interface ParsedIcalEvent {
   startAt: Date;
   endAt?: Date;
   allDay: boolean;
+  /** RRULE vorhanden — der Parser expandiert nicht, er markiert nur. */
+  hasRecurrence?: boolean;
+  /** Gesetzt bei Ausnahme-VEVENTs einer Serie (RECURRENCE-ID). */
+  recurrenceId?: string;
 }
 
 function unfoldIcalLines(content: string): string[] {
@@ -158,6 +162,8 @@ export function parseIcalEvents(content: string): ParsedIcalEvent[] {
           startAt: start.date,
           endAt: end,
           allDay: start.allDay,
+          ...(current.hasRecurrence ? { hasRecurrence: true } : {}),
+          ...(current.recurrenceId ? { recurrenceId: current.recurrenceId } : {}),
         });
       }
       continue;
@@ -191,12 +197,27 @@ export function parseIcalEvents(content: string): ParsedIcalEvent[] {
         current.dtEnd = keyPart.includes("VALUE=DATE") ? value.slice(0, 8) : value;
         current.dtEndTz = timeZoneOf(keyPart);
         break;
+      case "RRULE":
+        current.hasRecurrence = true;
+        break;
+      case "RECURRENCE-ID":
+        current.recurrenceId = value;
+        break;
       default:
         break;
     }
   }
 
   return events;
+}
+
+/**
+ * Das Master-VEVENT eines VCALENDAR: bei Serien schickt iOS Ausnahmen als
+ * eigene VEVENTs mit RECURRENCE-ID im selben Kalender — massgeblich für
+ * Titel/Zeit ist das VEVENT ohne RECURRENCE-ID.
+ */
+export function pickMasterEvent(events: readonly ParsedIcalEvent[]): ParsedIcalEvent | null {
+  return events.find((event) => !event.recurrenceId) ?? events[0] ?? null;
 }
 
 function formatIcalDate(date: Date, allDay: boolean): string {
@@ -303,10 +324,15 @@ export {
 } from "./caldav-sync";
 
 export {
-  putCalDavEvent,
-  deleteCalDavEvent,
-  buildCalDavEventHref,
-  eventToIcalBody,
-  type CalDavWriteOptions,
-  type CalDavAuth,
-} from "./caldav-write";
+  DAV_NS,
+  CALDAV_NS,
+  CALENDARSERVER_NS,
+  APPLE_ICAL_NS,
+  escapeXml,
+  buildMultistatus,
+  parsePropfindProps,
+  parseMultigetHrefs,
+  parseCalendarQueryTimeRange,
+  type DavProp,
+  type MultistatusResponse,
+} from "./dav-xml";

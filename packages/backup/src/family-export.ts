@@ -21,6 +21,7 @@ export const FAMILY_EXPORT_MODEL_KEYS = [
   "FamilyChatConversation", "FamilyChatMessage", "FamilyBrainFact", "FamilyMemberProfile",
   "CalendarEventMember", "FamilyHealthRecord", "FamilyHealthRecordMember",
   "FamilyCalendarSubscription", "FamilyCalendarSubscriptionMember",
+  "FamilyCalDavAccount",
 ] as const;
 
 export type FamilyExportModelKey = (typeof FAMILY_EXPORT_MODEL_KEYS)[number];
@@ -56,6 +57,7 @@ function familyModelReaders(db: FamilyPrismaClient): FamilyModelReaders {
     // Ohne die Zuordnung würde ein auf Personen eingeschränktes Abo nach dem
     // Restore für den ganzen Haushalt gelten.
     FamilyCalendarSubscriptionMember: () => db.familyCalendarSubscriptionMember.findMany(),
+    FamilyCalDavAccount: () => db.familyCalDavAccount.findMany(),
   };
 }
 

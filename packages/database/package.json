@@ -38,6 +38,7 @@
     "./mail-settings": "./src/mail-settings.ts",
     "./mail-smtp-settings": "./src/mail-smtp-settings.ts",
     "./token-crypto": "./src/token-crypto.ts",
+    "./calendar-service": "./src/calendar-service.ts",
     "./label-print-queue": "./src/label-print-queue-service.ts",
     "./mail-log-service": "./src/mail-log-service.ts",
     "./mail-account-service": "./src/mail-account-service.ts",

@@ -1,5 +1,6 @@
 import { familyPrisma } from "@uwe/database/family-client";
 import {
+  createFamilyCalDavAccountService,
   createFamilyCalendarSubscriptionService,
   createFamilyMemberService,
   resolveMemberColour,
@@ -7,15 +8,19 @@ import {
 import { getFamilyUser } from "@/src/lib/page-family";
 import { FamilyShell, FamilyDenied } from "@/src/components/FamilyShell";
 import { SubscriptionManager } from "@/src/components/calendar/SubscriptionManager";
+import { CalDavAccountManager } from "@/src/components/calendar/CalDavAccountManager";
 
 /**
  * Kalender-Abo — den Haushalts-Kalender auf dem Handy abonnieren.
  *
- * Ein Abo ist eine URL mit einem eigenen, nur lesenden Token. Sie zeigt
- * Termine, Geburtstage und fällige Einträge der Gesundheitsakte; ein auf
- * Personen eingeschränktes Abo zeigt nur deren Termine plus die des ganzen
- * Haushalts. Die Einschränkung darf mehrere Personen umfassen — ein Tablet für
- * beide Kinder ist ein Abo, nicht zwei.
+ * Zwei Wege aufs Handy:
+ * 1. Abo (ICS): eine URL mit eigenem, nur lesendem Token. Zeigt Termine,
+ *    Geburtstage und fällige Einträge der Gesundheitsakte; ein auf Personen
+ *    eingeschränktes Abo zeigt nur deren Termine plus die des ganzen
+ *    Haushalts. Die Einschränkung darf mehrere Personen umfassen — ein Tablet
+ *    für beide Kinder ist ein Abo, nicht zwei.
+ * 2. CalDAV-Account: lesen UND schreiben — Termine auf dem iPhone anlegen,
+ *    ändern und löschen. Haushalts-Zugang mit eigenem Token als Passwort.
  */
 
 export const dynamic = "force-dynamic";
@@ -30,9 +35,10 @@ export default async function FamilyCalendarSubscriptionPage() {
     );
   }
 
-  const [subscriptions, members] = await Promise.all([
+  const [subscriptions, members, calDavAccounts] = await Promise.all([
     createFamilyCalendarSubscriptionService(familyPrisma).listSubscriptions(),
     createFamilyMemberService(familyPrisma).listMembers(),
+    createFamilyCalDavAccountService(familyPrisma).listAccounts(),
   ]);
 
   // Die öffentliche Adresse steht in der Umgebung — auf dem Handy muss die URL
@@ -78,6 +84,27 @@ export default async function FamilyCalendarSubscriptionPage() {
           Das Abo kann nur lesen. Es kommt an keinen Chat, keine Dokumente und keine Verträge heran —
           und es kann nichts ändern. Wer die Adresse verliert, widerruft das Abo und legt ein neues an.
         </p>
+      </section>
+
+      <section className="family-section">
+        <h2>iPhone-Kalender (CalDAV, lesen &amp; schreiben)</h2>
+        <p className="family-muted">
+          Ein CalDAV-Account macht den Haushalts-Kalender auf dem iPhone beschreibbar: Termine
+          anlegen, ändern und löschen — direkt in der Kalender-App, für den ganzen Haushalt. Das
+          Token ist das Account-Passwort und lässt sich einzeln widerrufen. Tipp: wer Abo und
+          CalDAV-Account auf demselben Gerät nutzt, sieht Termine doppelt — dann im Abo-Kalender
+          die Terminanzeige ausblenden oder nur einen der beiden Wege verwenden.
+        </p>
+        <CalDavAccountManager
+          initial={calDavAccounts.map((row) => ({
+            id: row.id,
+            label: row.label,
+            tokenPrefix: row.tokenPrefix,
+            isActive: row.isActive,
+            lastUsedAt: row.lastUsedAt?.toISOString() ?? null,
+          }))}
+          serverHost={baseUrl.replace(/^https?:\/\//, "")}
+        />
       </section>
     </FamilyShell>
   );

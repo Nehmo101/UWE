@@ -48,9 +48,12 @@ Lokaler UWE-Kalender mit CalDAV/iCal-Sync, Session-Terminplanung und FamilyWall 
 | **Lokal** | read/write | Standard-Feed `UWE Kalender` |
 | **iCal Export** | Export | `/api/calendar/events?export=ics` |
 | **iCal URL / FamilyWall** | read-only Import | `calendar_sync` Job |
-| **CalDAV** | read-only oder write-back | `CALENDAR_CALDAV_ENABLED=true`, per-Feed Credentials |
+| **CalDAV (Import)** | read-only Import | `CALENDAR_CALDAV_ENABLED=true`, per-Feed Credentials |
+| **CalDAV-Server (Family)** | bidirektional (iPhone ↔ lokaler Feed) | `/api/dav`, Token `uwedav_`, siehe `docs/family/kalender.md` |
 
-FamilyWall und iCloud public feeds werden als `personal`/`external` importiert — keine Rücksync.
+FamilyWall und iCloud public feeds werden als `personal`/`external` importiert — kein Rücksync.
+Der frühere Write-back an fremde CalDAV-Server ist entfernt: bidirektional geht über den
+Family-CalDAV-Server, fremde Abos sind strukturell read-only.
 
 ## Admin-UI
 
@@ -64,15 +67,15 @@ FamilyWall und iCloud public feeds werden als `personal`/`external` importiert �
 
 ## Risiken
 
-- CalDAV-Vollsync (PROPFIND/REPORT) implementiert; UI legt externe Feeds weiterhin standardmäßig als `read_only` an
+- CalDAV-Vollsync (PROPFIND/REPORT) implementiert; externe Feeds sind strukturell read-only
 - iCloud erfordert oft app-spezifisches Passwort
-- Timezone-Handling vereinfacht (UTC in iCal)
+- Timezone-Handling beim Import vereinfacht (UTC in iCal); TZID-Lokalzeiten werden seit dem CalDAV-Server korrekt umgerechnet (`ical-timezones.ts`)
 - Feed-URLs werden gegen SSRF geprüft (kein Fetch auf localhost/private IPs)
 - `CALENDAR_CALDAV_ENABLED` und `CALENDAR_FAMILYWALL_ENABLED` werden in API und Server Actions enforced
 
 ## Phase 2 TODO
 
 - Optionale Spiegelung virtueller `/today`-Fristen in lokale CalendarEvents
-- Delete-Sync (`deleteCalDavEvent`) wo Provider es unterstützen
+- sync-collection-REPORT für den Family-CalDAV-Server (Sync-Token statt ctag-Polling)
 
-**Erledigt:** Bidirektionaler Write-back (`putCalDavEvent`), CalDAV PROPFIND/REPORT-Vollsync (`syncCalDavCollection`), Session ↔ `CalendarEvent` (`syncSessionToCalendar`), Kalender auf `/today`.
+**Erledigt:** CalDAV PROPFIND/REPORT-Vollsync (`syncCalDavCollection`), Session ↔ `CalendarEvent` (`syncSessionToCalendar`), Kalender auf `/today`, CalDAV-Server fürs iPhone (`/api/dav`, `docs/family/kalender.md`) — der frühere Write-back (`putCalDavEvent`) ist damit ersetzt und entfernt.

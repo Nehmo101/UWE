@@ -11,9 +11,9 @@ import { requireFamilyActionAuth } from "@/src/lib/family-action-auth";
  * Bisher ging das nur über die Kalender-API von Studio. Wer nur Family nutzt,
  * konnte den Kalender der Schule oder des Vereins also gar nicht eintragen.
  *
- * Abos sind bewusst `read_only`: was von aussen kommt, wird hier nicht
- * geändert — eine Änderung würde beim nächsten Abgleich überschrieben. Den
- * bestehenden `read_write`-Pfad rührt das nicht an.
+ * Abos sind strukturell read-only: was von aussen kommt, wird hier nicht
+ * geändert — eine Änderung würde beim nächsten Abgleich überschrieben.
+ * Schreibbar ist nur der lokale Feed (auch über den CalDAV-Server fürs iPhone).
  */
 
 function calendar() {
@@ -43,7 +43,6 @@ export async function createFeedAction(formData: FormData) {
     await calendar().createFeed({
       name,
       type: "caldav",
-      direction: "read_only",
       caldavUrl,
       username: str(formData.get("username")) || null,
       password: str(formData.get("password")) || null,
@@ -56,7 +55,6 @@ export async function createFeedAction(formData: FormData) {
     await calendar().createFeed({
       name,
       type: "ical_url",
-      direction: "read_only",
       url,
       color: str(formData.get("color")) || null,
     });

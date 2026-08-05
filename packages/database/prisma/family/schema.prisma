@@ -19,11 +19,6 @@ enum CalendarEventKind {
   dnd
 }
 
-enum CalendarFeedDirection {
-  read_only
-  read_write
-}
-
 enum CalendarFeedType {
   local
   caldav
@@ -203,7 +198,6 @@ model CalendarEvent {
   externalUid String?           @map("external_uid")
   remoteHref  String?           @map("remote_href")
   remoteEtag  String?           @map("remote_etag")
-  caldavPending Boolean         @default(false) @map("caldav_pending")
   metadata    Json?
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @updatedAt @map("updated_at")
@@ -318,6 +312,24 @@ model FamilyCalendarSubscription {
   @@map("family_calendar_subscriptions")
 }
 
+model FamilyCalDavAccount {
+  id    String @id @default(cuid())
+  label String
+
+  tokenHash   String @unique @map("token_hash")
+  tokenPrefix String @map("token_prefix")
+
+  isActive   Boolean   @default(true) @map("is_active")
+  lastUsedAt DateTime? @map("last_used_at")
+  revokedAt  DateTime? @map("revoked_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@map("family_caldav_accounts")
+}
+
 model FamilyCalendarSubscriptionMember {
   subscriptionId String @map("subscription_id")
   memberId       String @map("member_id")
@@ -365,7 +377,6 @@ model CalendarFeed {
   id          String                @id @default(cuid())
   name        String
   type        CalendarFeedType
-  direction   CalendarFeedDirection @default(read_only)
   url         String?
   caldavUrl   String?               @map("caldav_url")
   username    String?

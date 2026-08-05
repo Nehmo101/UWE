@@ -40,7 +40,6 @@ function makeEvent(overrides: Partial<CalendarEvent> & { feed?: { name: string; 
     externalUid: null,
     remoteHref: null,
     remoteEtag: null,
-    caldavPending: false,
     metadata: null,
     createdAt: NOW,
     updatedAt: NOW,
@@ -265,7 +264,6 @@ describe("calendar-aggregation-service integration", () => {
     const feed = await calendar.createFeed({
       name: "iCal Feed",
       type: "ical_url",
-      direction: "read_only",
     });
 
     await calendar.createEvent({

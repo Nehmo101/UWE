@@ -22,7 +22,7 @@ function calendarTarget(db: FamilyPrismaClient): IcsImportCalendarTarget {
       const existing = await db.calendarFeed.findFirst({ where: { type: "local" } });
       if (existing) return { id: existing.id };
       return db.calendarFeed.create({
-        data: { name: "UWE Kalender", type: "local", direction: "read_write" },
+        data: { name: "UWE Kalender", type: "local" },
       });
     },
     async createEvent(input) {

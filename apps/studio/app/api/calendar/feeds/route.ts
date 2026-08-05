@@ -62,7 +62,6 @@ export async function POST(request: Request) {
     caldavUrl: body.caldavUrl ?? null,
     username: body.username ?? null,
     enabled: body.enabled ?? true,
-    direction: body.type === "local" ? "read_write" : "read_only",
   });
 
   if (body.sync && body.type !== "local") {
