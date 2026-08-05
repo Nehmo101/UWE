@@ -19,11 +19,6 @@ enum CalendarEventKind {
   dnd
 }
 
-enum CalendarFeedDirection {
-  read_only
-  read_write
-}
-
 enum CalendarFeedType {
   local
   caldav
@@ -203,7 +198,6 @@ model CalendarEvent {
   externalUid String?           @map("external_uid")
   remoteHref  String?           @map("remote_href")
   remoteEtag  String?           @map("remote_etag")
-  caldavPending Boolean         @default(false) @map("caldav_pending")
   metadata    Json?
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @updatedAt @map("updated_at")
@@ -340,7 +334,6 @@ model CalendarFeed {
   id          String                @id @default(cuid())
   name        String
   type        CalendarFeedType
-  direction   CalendarFeedDirection @default(read_only)
   url         String?
   caldavUrl   String?               @map("caldav_url")
   username    String?

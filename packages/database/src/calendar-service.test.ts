@@ -76,7 +76,6 @@ describe("calendar-service", () => {
     const feed = await calendar.createFeed({
       name: "FamilyWall Test",
       type: "familywall",
-      direction: "read_only",
     });
 
     const feedEvent = await calendar.createEvent({

@@ -232,12 +232,3 @@ export {
   type CalDavSyncResult,
   type CalDavRemoteEvent,
 } from "./caldav-sync";
-
-export {
-  putCalDavEvent,
-  deleteCalDavEvent,
-  buildCalDavEventHref,
-  eventToIcalBody,
-  type CalDavWriteOptions,
-  type CalDavAuth,
-} from "./caldav-write";

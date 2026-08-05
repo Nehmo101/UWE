@@ -1748,7 +1748,6 @@ export {
   CALENDAR_FEED_TYPE_LABELS,
   CalendarEventKindEnum,
   CalendarFeedTypeEnum,
-  CalendarFeedDirectionEnum,
 } from "./calendar-service";
 
 export type {
@@ -1760,7 +1759,6 @@ export type {
   CalendarFeed,
   CalendarEventKind,
   CalendarFeedType,
-  CalendarFeedDirection,
 } from "./calendar-service";
 
 export {

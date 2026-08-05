@@ -1947,11 +1947,6 @@ enum CalendarFeedType {
   familywall
 }
 
-enum CalendarFeedDirection {
-  read_only
-  read_write
-}
-
 enum DndApiProvider {
   open5e
   dnd5e_srd

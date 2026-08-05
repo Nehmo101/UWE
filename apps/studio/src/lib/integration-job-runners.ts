@@ -17,7 +17,7 @@ import {
 } from "@uwe/database/server";
 import { brainPrisma } from "@uwe/database/brain-client";
 import { familyPrisma } from "@uwe/database/family-client";
-import { fetchIcalFeed, parseIcalEvents, putCalDavEvent, syncCalDavCollection } from "@uwe/calendar";
+import { fetchIcalFeed, parseIcalEvents, syncCalDavCollection } from "@uwe/calendar";
 import {
   executeAiGatewayImageRequest,
   executeAiGatewayResearchJob,
@@ -332,38 +332,6 @@ export async function runCalendarSyncJob(ctx: JobRunnerContext): Promise<Record<
   await assertNotCancelled(ctx.jobs, ctx.jobId);
 
   try {
-    let pushed = 0;
-    if (feed.type === "caldav" && feed.direction !== "read_only" && feed.caldavUrl) {
-      const password = calendar.resolveFeedCredentials(feed) ?? process.env.CALDAV_PASSWORD?.trim();
-      const pending = await calendar.listPendingWriteBackEvents(feed.id);
-      for (const event of pending) {
-        const uid = event.externalUid ?? `uwe-event-${event.id}`;
-        const result = await putCalDavEvent(
-          {
-            caldavUrl: feed.caldavUrl,
-            username: feed.username ?? undefined,
-            password,
-          },
-          {
-            uid,
-            title: event.title,
-            description: event.description,
-            location: event.location,
-            startAt: event.startAt,
-            endAt: event.endAt,
-            allDay: event.allDay,
-          },
-          event.remoteHref ?? undefined,
-          event.remoteEtag ?? undefined,
-        );
-        await calendar.markEventSynced(event.id, {
-          remoteHref: result.href,
-          remoteEtag: result.etag,
-        });
-        pushed += 1;
-      }
-    }
-
     await ctx.jobs.updateProgress(ctx.jobId, 40, "Externe Events laden");
     let imported = 0;
     let pruned = 0;
@@ -431,7 +399,6 @@ export async function runCalendarSyncJob(ctx: JobRunnerContext): Promise<Record<
     return {
       feedId: feed.id,
       imported,
-      pushed,
       sessionsSynced,
       contractDeadlinesSynced: contractSync.synced,
       pruned,

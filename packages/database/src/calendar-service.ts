@@ -1,6 +1,5 @@
 import type {
   CalendarEventKind,
-  CalendarFeedDirection,
   CalendarFeedType,
   Prisma,
 } from "./generated/prisma-family/client";
@@ -14,13 +13,11 @@ export type {
   CalendarFeed,
   CalendarEventKind,
   CalendarFeedType,
-  CalendarFeedDirection,
 } from "./generated/prisma-family/client";
 
 export {
   CalendarEventKind as CalendarEventKindEnum,
   CalendarFeedType as CalendarFeedTypeEnum,
-  CalendarFeedDirection as CalendarFeedDirectionEnum,
 } from "./generated/prisma-family/client";
 
 export const CALENDAR_EVENT_KIND_LABELS: Record<CalendarEventKind, string> = {
@@ -41,7 +38,6 @@ export const CALENDAR_FEED_TYPE_LABELS: Record<CalendarFeedType, string> = {
 export interface CreateCalendarFeedInput {
   name: string;
   type: CalendarFeedType;
-  direction?: CalendarFeedDirection;
   url?: string | null;
   caldavUrl?: string | null;
   username?: string | null;
@@ -64,8 +60,6 @@ export interface CreateCalendarEventInput {
   kind?: CalendarEventKind;
   externalUid?: string | null;
   metadata?: Record<string, unknown> | null;
-  /** When false, imported external events do not enter CalDAV write-back queue. */
-  caldavPending?: boolean;
   remoteHref?: string | null;
   remoteEtag?: string | null;
 }
@@ -111,7 +105,6 @@ export class CalendarService {
       data: {
         name: input.name.trim(),
         type: input.type,
-        direction: input.direction ?? "read_only",
         url: input.url?.trim() || null,
         caldavUrl: input.caldavUrl?.trim() || null,
         username: input.username?.trim() || null,
@@ -131,7 +124,6 @@ export class CalendarService {
       data: {
         ...(input.name != null ? { name: input.name.trim() } : {}),
         ...(input.type != null ? { type: input.type } : {}),
-        ...(input.direction != null ? { direction: input.direction } : {}),
         ...(input.url !== undefined ? { url: input.url?.trim() || null } : {}),
         ...(input.caldavUrl !== undefined ? { caldavUrl: input.caldavUrl?.trim() || null } : {}),
         ...(input.username !== undefined ? { username: input.username?.trim() || null } : {}),
@@ -202,10 +194,6 @@ export class CalendarService {
   }
 
   async createEvent(input: CreateCalendarEventInput) {
-    const feed = input.feedId
-      ? await this.familyDb.calendarFeed.findUnique({ where: { id: input.feedId } })
-      : null;
-
     return this.familyDb.calendarEvent.create({
       data: {
         feedId: input.feedId ?? null,
@@ -220,11 +208,6 @@ export class CalendarService {
         kind: input.kind ?? "personal",
         externalUid: input.externalUid ?? null,
         metadata: toPrismaJsonValue(input.metadata),
-        caldavPending:
-          input.caldavPending ??
-          (input.kind !== "external" &&
-            feed?.type === "caldav" &&
-            feed.direction !== "read_only"),
         ...(input.remoteHref !== undefined ? { remoteHref: input.remoteHref } : {}),
         ...(input.remoteEtag !== undefined ? { remoteEtag: input.remoteEtag } : {}),
       },
@@ -234,17 +217,11 @@ export class CalendarService {
   async updateEvent(id: string, input: Partial<CreateCalendarEventInput>) {
     const existing = await this.familyDb.calendarEvent.findUnique({
       where: { id },
-      include: { feed: true },
+      select: { id: true },
     });
     if (!existing) {
       throw new Error("Kalender-Event nicht gefunden.");
     }
-
-    const feedId = input.feedId !== undefined ? input.feedId : existing.feedId;
-    const feed = feedId
-      ? await this.familyDb.calendarFeed.findUnique({ where: { id: feedId } })
-      : existing.feed;
-    const effectiveKind = input.kind ?? existing.kind;
 
     return this.familyDb.calendarEvent.update({
       where: { id },
@@ -263,11 +240,6 @@ export class CalendarService {
         ...(input.metadata !== undefined ? { metadata: toPrismaJsonValue(input.metadata) } : {}),
         ...(input.remoteHref !== undefined ? { remoteHref: input.remoteHref } : {}),
         ...(input.remoteEtag !== undefined ? { remoteEtag: input.remoteEtag } : {}),
-        caldavPending:
-          input.caldavPending ??
-          (effectiveKind !== "external" &&
-            feed?.type === "caldav" &&
-            feed.direction !== "read_only"),
       },
     });
   }
@@ -289,7 +261,6 @@ export class CalendarService {
       externalUid,
       feedId,
       kind: input.kind ?? "external",
-      caldavPending: false,
     };
     if (existing) {
       return this.updateEvent(existing.id, payload);
@@ -357,38 +328,9 @@ export class CalendarService {
     const feed = await this.createFeed({
       name: "UWE Kalender",
       type: "local",
-      direction: "read_write",
       enabled: true,
     });
     return { id: feed.id };
-  }
-
-  async listPendingWriteBackEvents(feedId: string) {
-    return this.familyDb.calendarEvent.findMany({
-      where: { feedId, caldavPending: true },
-      orderBy: { updatedAt: "asc" },
-    });
-  }
-
-  async markEventSynced(
-    eventId: string,
-    remote: { remoteHref: string; remoteEtag?: string | null },
-  ) {
-    return this.familyDb.calendarEvent.update({
-      where: { id: eventId },
-      data: {
-        remoteHref: remote.remoteHref,
-        remoteEtag: remote.remoteEtag ?? null,
-        caldavPending: false,
-      },
-    });
-  }
-
-  async markEventPendingWrite(eventId: string) {
-    return this.familyDb.calendarEvent.update({
-      where: { id: eventId },
-      data: { caldavPending: true },
-    });
   }
 
   resolveFeedCredentials(feed: { credentialsEnc: string | null }) {
