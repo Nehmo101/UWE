@@ -16,12 +16,24 @@ export async function loginStudioForShellTests(page: Page): Promise<void> {
   expect(response.ok()).toBeTruthy();
 }
 
+/**
+ * Der Spieler `aman` ist genau einer Welt zugeordnet. Seit dem Portal-Umbau
+ * schickt `/auth/worlds` solche Spieler direkt in ihre Welt weiter, die
+ * Anmeldung endet also nach ZWEI Sprüngen: `/login` → `/auth/worlds` →
+ * `/auth/worlds/terra`.
+ *
+ * Auf das Zwischenziel zu warten reicht deshalb nicht: der zweite Sprung war
+ * noch unterwegs, während der Test schon sein eigenes `page.goto()` absetzte —
+ * Playwright brach dann die eine oder andere Navigation mit `ERR_ABORTED` ab.
+ * Wir warten hier auf die Zielwelt, damit die Sitzung steht und keine
+ * Navigation mehr offen ist.
+ */
 export async function loginPortalPlayer(page: Page): Promise<void> {
   await page.goto("/login");
   await page.getByLabel("E-Mail").fill("aman@uwe.local");
   await page.getByLabel("Passwort").fill("uwe-dev");
   await page.getByRole("button", { name: "Anmelden" }).click();
-  await expect(page).toHaveURL(/\/auth\/worlds/);
+  await page.waitForURL(/\/auth\/worlds\/[^/?#]+/);
 }
 
 /**
