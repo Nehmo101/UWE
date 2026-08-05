@@ -98,7 +98,12 @@ private erreichen den Flow nie). Kapitel-Druck (DM-/Spieler-Variante, Markdown)
 über `/api/worlds/[w]/kampagnen/kapitel-druck`; Fachlogik in
 `packages/campaign-cockpit`, Actions in `apps/studio/app/kampagnen-actions.ts`.
 Das Kampagnen-Radar (`/radar`) bleibt die kampagnenübergreifende Übersicht und
-verlinkt in die Cockpits.
+verlinkt in die Cockpits. Die KI-Werkstatt des Cockpits (AiContextPanel
+`kind="campaign"`) bietet zwei Brain-Aktionen mit `requiresCampaign`:
+`campaign_chapter_draft` (Apply → neue `story_arc`-Seite) und
+`campaign_session_hooks` (Apply → `openPlots` der nächsten geplanten Session);
+Kontext ist der Kompakt-Digest aus `buildCampaignAiDigest`
+(`@uwe/campaign-cockpit`) — DM-Material, nie player-safe.
 
 ## Fallen
 
