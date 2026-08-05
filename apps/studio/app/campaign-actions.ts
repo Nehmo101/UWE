@@ -20,7 +20,7 @@ function campaigns() {
 }
 
 function campaignsPath(worldSlug: string) {
-  return `/worlds/${worldSlug}/campaigns`;
+  return `/worlds/${worldSlug}/kampagnen`;
 }
 
 /** Kampagnen-Slugs stecken in Filter-Links quer durch das Welt-Cockpit. */

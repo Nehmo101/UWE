@@ -40,7 +40,7 @@ export function worldNav(worldSlug: string): NavGroup[] {
         ]),
         // Die Kampagne war überall ein Filter (Kontextspalte, Import-Ziel,
         // Backup-Formular) und nirgends etwas, das man anlegen konnte.
-        item("world-campaigns", "Kampagnen", `${base}/campaigns`, "swords", "Übersicht", [
+        item("world-campaigns", "Kampagnen", `${base}/kampagnen`, "swords", "Übersicht", [
           "kampagne",
           "kampagnen",
           "campaign",

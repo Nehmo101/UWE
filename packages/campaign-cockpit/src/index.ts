@@ -15,6 +15,7 @@ export {
   CampaignCockpitService,
   createCampaignCockpitService,
   STORY_ARC_TYPE,
+  type CampaignCockpitSummary,
   type CampaignOverview,
   type ChapterQuest,
   type ChapterSummary,

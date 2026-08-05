@@ -128,6 +128,13 @@ function questStatus(value: string | null): QuestLifecycleStatus {
   return (value ?? "open") as QuestLifecycleStatus;
 }
 
+export interface CampaignCockpitSummary {
+  campaignId: string;
+  progress: ChapterProgress;
+  openQuests: number;
+  lastSession: { sessionNumber: number; title: string } | null;
+}
+
 export class CampaignCockpitService {
   constructor(private readonly db: PrismaClient) {}
 
@@ -135,6 +142,72 @@ export class CampaignCockpitService {
     return this.db.campaign.findFirst({
       where: { slug: campaignSlug, world: { slug: worldSlug } },
     });
+  }
+
+  /** Kompakte Cockpit-Kennzahlen je Kampagne für die Kampagnen-Liste. */
+  async listCampaignSummaries(worldSlug: string): Promise<Map<string, CampaignCockpitSummary>> {
+    const world = await this.db.world.findUnique({ where: { slug: worldSlug } });
+    if (!world) return new Map();
+
+    const [chapters, quests, sessions] = await Promise.all([
+      this.db.page.findMany({
+        where: { worldId: world.id, type: STORY_ARC_TYPE, campaignId: { not: null } },
+        select: { campaignId: true, prepStatus: true },
+      }),
+      this.db.page.findMany({
+        where: {
+          worldId: world.id,
+          type: "quest",
+          campaignId: { not: null },
+          OR: [{ questStatus: null }, { questStatus: "open" }],
+        },
+        select: { campaignId: true },
+      }),
+      this.db.gameSession.findMany({
+        where: {
+          worldId: world.id,
+          campaignId: { not: null },
+          status: { in: ["played", "summarized", "archived"] },
+        },
+        select: { campaignId: true, sessionNumber: true, title: true },
+        orderBy: [{ sessionNumber: "desc" }],
+      }),
+    ]);
+
+    const summaries = new Map<string, CampaignCockpitSummary>();
+    const ensure = (campaignId: string): CampaignCockpitSummary => {
+      let summary = summaries.get(campaignId);
+      if (!summary) {
+        summary = {
+          campaignId,
+          progress: chapterProgress([]),
+          openQuests: 0,
+          lastSession: null,
+        };
+        summaries.set(campaignId, summary);
+      }
+      return summary;
+    };
+
+    const chaptersByCampaign = new Map<string, Array<{ prepStatus: DungeonPrepStatus | null }>>();
+    for (const chapter of chapters) {
+      const list = chaptersByCampaign.get(chapter.campaignId as string) ?? [];
+      list.push({ prepStatus: chapter.prepStatus });
+      chaptersByCampaign.set(chapter.campaignId as string, list);
+    }
+    for (const [campaignId, list] of chaptersByCampaign) {
+      ensure(campaignId).progress = chapterProgress(list);
+    }
+    for (const quest of quests) {
+      ensure(quest.campaignId as string).openQuests += 1;
+    }
+    for (const session of sessions) {
+      const summary = ensure(session.campaignId as string);
+      if (!summary.lastSession) {
+        summary.lastSession = { sessionNumber: session.sessionNumber, title: session.title };
+      }
+    }
+    return summaries;
   }
 
   async getCampaignOverview(
