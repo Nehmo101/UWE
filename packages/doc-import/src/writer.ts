@@ -23,6 +23,7 @@
 
 import type { PageType, Prisma, UweRepository } from "@uwe/database/server";
 import { normalizeLookupKey, pickUniqueSlug } from "@uwe/shared-utils/slug";
+import { extractMagicItemData } from "./semantic/item-extract";
 import type { PageDraft, RelationDraft } from "./types";
 
 export interface WriteDocImportOptions {
@@ -52,6 +53,8 @@ export interface WriteDocImportResult {
   created: number;
   failed: number;
   linksCreated: number;
+  /** Gegenstandsseiten, für die Werkbank-Daten aus dem Text entstanden sind. */
+  itemsStructured: number;
   pages: WrittenPage[];
   warnings: string[];
   /** Für den Rückbau über das Aktivitätsprotokoll. */
@@ -119,6 +122,7 @@ export async function writeDocImport(
     created: 0,
     failed: 0,
     linksCreated: 0,
+    itemsStructured: 0,
     pages: [],
     warnings: [],
     undo: { createdPageIds: [], createdLinkIds: [] },
@@ -141,6 +145,8 @@ export async function writeDocImport(
         );
       }
 
+      const pageType = options.typeOverrides?.[draft.key] ?? draft.type;
+
       const page = await repo.createPage({
         worldId: world.id,
         campaignId,
@@ -148,9 +154,12 @@ export async function writeDocImport(
         sortIndex: draft.sortIndex,
         title: draft.title,
         slug,
-        type: options.typeOverrides?.[draft.key] ?? draft.type,
+        type: pageType,
         summary: draft.summary,
         canonicalStatus: draft.canonicalStatus ?? undefined,
+        // Ein frisch importiertes Kapitel ist noch nicht vorbereitet. Ohne
+        // Status zeigt das Kampagnen-Cockpit den Bogen ohne Fortschrittsangabe.
+        prepStatus: pageType === "story_arc" ? "unprepared" : undefined,
         tags: draft.tags,
         aliases: draft.aliases,
         contentBlocks: draft.html
@@ -164,6 +173,31 @@ export async function writeDocImport(
             ]
           : [],
       });
+
+      // Gegenstände bringen ihre Werkbank-Daten gleich mit. Ohne diesen Schritt
+      // landete ein importiertes Kampagnenbuch zwar vollständig im Wiki, die
+      // Magic-Item-Werkbank blieb aber leer — sie kannte nur das Studio-Formular.
+      if (pageType === "item" && draft.html) {
+        try {
+          const itemData = extractMagicItemData(draft.title, draft.html);
+          if (itemData) {
+            await repo.upsertStructuredItem({
+              worldId: world.id,
+              pageId: page.id,
+              data: itemData as unknown as Prisma.InputJsonValue,
+            });
+            result.itemsStructured += 1;
+          }
+        } catch (error) {
+          // Die Seite selbst steht schon — ein Fehler hier darf den Import nicht
+          // scheitern lassen, nur die Werkbank dieser einen Seite leer lassen.
+          result.warnings.push(
+            `Werkbank-Daten für „${draft.title}" konnten nicht erzeugt werden: ${
+              error instanceof Error ? error.message : "unbekannter Fehler"
+            }.`,
+          );
+        }
+      }
 
       takenSlugs.add(page.slug);
       keyToPageId.set(draft.key, page.id);
