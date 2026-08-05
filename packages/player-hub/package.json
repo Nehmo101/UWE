@@ -13,7 +13,9 @@
     "test": "node ../../scripts/run-node-tests.mjs"
   },
   "dependencies": {
-    "@uwe/database": "workspace:*"
+    "@uwe/auth": "workspace:*",
+    "@uwe/database": "workspace:*",
+    "@uwe/shared-utils": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.15.32",

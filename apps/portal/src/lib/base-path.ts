@@ -1,10 +1,9 @@
 /**
  * Basispfad des Portals.
  *
- * Läuft das Portal unter einem Unterpfad (`PORTAL_PATH=/portal`), müssen
- * Manifest, Service Worker und deren Registrierung denselben Präfix tragen —
- * sonst registriert der Browser einen Worker mit falschem Geltungsbereich und
- * der Tischmodus bleibt offline leer.
+ * Läuft das Portal unter einem Unterpfad (`PORTAL_PATH=/portal`), muss das
+ * Manifest denselben Präfix tragen — sonst zeigen `start_url`, `scope` und
+ * Icon-Pfad ins Leere.
  *
  * Bewusst dieselbe Ableitung wie in `next.config.ts`: die Konfiguration wird
  * von Node vor dem Alias-Setup geladen und kann diese Datei nicht importieren.

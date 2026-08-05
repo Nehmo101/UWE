@@ -8,6 +8,7 @@ import {
   erstelleTerraKarteAction,
   gibTerraKarteFreiAction,
   loescheTerraKarteAction,
+  setzeTerraKarteSperreAction,
   weiseTerraKarteZurueckAction,
 } from "@/app/terra-actions";
 
@@ -35,6 +36,8 @@ export interface TerraKartenListeEintrag {
   /** `null` = im Studio entstanden. */
   autorName: string | null;
   eingereichtAm: string | null;
+  /** Gesperrt = im Portal nur noch lesbar, auch fuer den Autor. */
+  gesperrt: boolean;
 }
 
 export interface TerraKartenListeProps {
@@ -96,6 +99,14 @@ export function TerraKartenListe({ worldSlug, karten }: TerraKartenListeProps) {
     fuehreAus(gibTerraKarteFreiAction, { karteId }, "Freigeben fehlgeschlagen");
   }
 
+  function sperren(karteId: string, gesperrt: boolean) {
+    fuehreAus(
+      setzeTerraKarteSperreAction,
+      { karteId, gesperrt: String(gesperrt) },
+      gesperrt ? "Sperren fehlgeschlagen" : "Entsperren fehlgeschlagen",
+    );
+  }
+
   function zurueckgeben(karteId: string, titel: string) {
     const rueckmeldung = window.prompt(`Was soll an „${titel}" noch geändert werden?`, "");
     if (rueckmeldung === null) return;
@@ -123,6 +134,21 @@ export function TerraKartenListe({ worldSlug, karten }: TerraKartenListeProps) {
           {karte.autorName ? `von ${karte.autorName} · ` : ""}
           Fassung {karte.version} · {karte.eingereichtAm ?? karte.updatedAt}
         </span>
+        {/*
+          Der Sperren-Haken. Er hat nichts mit der Abnahme zu tun und steht
+          deshalb daneben, nicht dahinter: gesperrt wird eine Karte, die am
+          Tisch gilt — im Entwurf ebenso wie nach der Abnahme.
+        */}
+        <label className="flex items-center gap-1 text-xs text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={karte.gesperrt}
+            disabled={laeuft}
+            onChange={(event) => sperren(karte.id, event.currentTarget.checked)}
+            data-testid="terra-karte-sperren"
+          />
+          Sperren
+        </label>
         {karte.status !== "freigegeben" ? (
           <button
             type="button"

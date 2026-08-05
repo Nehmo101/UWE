@@ -791,6 +791,31 @@ body {
   resize: vertical;
 }
 
+/* Titel-, Kategorie- und Datumsfelder des Notiz-Logbuchs — gleiche Optik wie
+   das Textfeld darunter. */
+.auth-note-form input[type="text"],
+.auth-note-form input[type="date"],
+.auth-note-form select {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--uwe-border) 233%, var(--uwe-muted) 0%);
+  background: color-mix(in srgb, var(--uwe-panel) 100%, var(--uwe-bg) 25%);
+  color: var(--uwe-fg);
+  font: inherit;
+}
+
+.auth-note-form-row {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.auth-note-form-row label {
+  display: grid;
+  gap: 0.25rem;
+}
+
 .auth-btn {
   padding: 0.65rem 1rem;
   border-radius: 0.5rem;

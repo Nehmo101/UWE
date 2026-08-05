@@ -129,6 +129,16 @@ enum PlayerNoteVisibility {
   party
 }
 
+enum PlayerNoteCategory {
+  session
+  npc
+  ort
+  quest
+  beute
+  idee
+  sonstiges
+}
+
 enum AiRunStatus {
   pending
   running
@@ -441,54 +451,55 @@ enum AdminLinkTargetType {
 }
 
 model User {
-  id                  String     @id @default(cuid())
-  displayName         String     @map("display_name")
-  email               String?    @unique
-  passwordHash        String?    @map("password_hash")
-  isOwner             Boolean    @default(false) @map("is_owner")
-  portalAccess        Boolean    @default(false) @map("portal_access")
-  studioAccess        Boolean    @default(false) @map("studio_access")
-  brainAccess         Boolean    @default(false) @map("brain_access")
-  familyAccess        Boolean    @default(false) @map("family_access")
+  id                   String     @id @default(cuid())
+  displayName          String     @map("display_name")
+  email                String?    @unique
+  passwordHash         String?    @map("password_hash")
+  isOwner              Boolean    @default(false) @map("is_owner")
+  portalAccess         Boolean    @default(false) @map("portal_access")
+  studioAccess         Boolean    @default(false) @map("studio_access")
+  brainAccess          Boolean    @default(false) @map("brain_access")
+  familyAccess         Boolean    @default(false) @map("family_access")
   /// Darf die Maschinenraum-KI benutzen (G-KI). KEIN fuenftes App-Haekchen: die vier
   /// oben sagen, welche App diese Adresse betreten darf, dieses Feld sagt, ob
   /// sie darin die lokale Inferenz ausloesen darf. Der Owner braucht es nicht
   /// — `isOwner` geht immer vor.
-  aiAccess            Boolean    @default(false) @map("ai_access")
-  status              UserStatus @default(active)
-  emailVerifiedAt     DateTime?  @map("email_verified_at")
-  lastLoginAt         DateTime?  @map("last_login_at")
+  aiAccess             Boolean    @default(false) @map("ai_access")
+  status               UserStatus @default(active)
+  emailVerifiedAt      DateTime?  @map("email_verified_at")
+  lastLoginAt          DateTime?  @map("last_login_at")
   /// Fehlgeschlagene Login-Versuche seit dem letzten Erfolg. Kontobasiert (nicht
   /// IP-gekeyt), damit ein Angreifer die Sperre nicht durch IP-Rotation umgeht.
-  failedLoginCount    Int        @default(0) @map("failed_login_count")
+  failedLoginCount     Int        @default(0) @map("failed_login_count")
   /// Gesetzt, solange das Konto nach zu vielen Fehlversuchen gesperrt ist.
-  lockedUntil         DateTime?  @map("locked_until")
-  forcePasswordChange Boolean    @default(false) @map("force_password_change")
-  resetTokenHash      String?    @map("reset_token_hash")
-  resetTokenExpiresAt DateTime?  @map("reset_token_expires_at")
-  inviteTokenHash     String?    @map("invite_token_hash")
-  inviteTokenExpiresAt DateTime? @map("invite_token_expires_at")
-  createdAt           DateTime   @default(now()) @map("created_at")
-  updatedAt           DateTime   @updatedAt @map("updated_at")
+  lockedUntil          DateTime?  @map("locked_until")
+  forcePasswordChange  Boolean    @default(false) @map("force_password_change")
+  resetTokenHash       String?    @map("reset_token_hash")
+  resetTokenExpiresAt  DateTime?  @map("reset_token_expires_at")
+  inviteTokenHash      String?    @map("invite_token_hash")
+  inviteTokenExpiresAt DateTime?  @map("invite_token_expires_at")
+  createdAt            DateTime   @default(now()) @map("created_at")
+  updatedAt            DateTime   @updatedAt @map("updated_at")
 
-  sessions            Session[]
-  worldMemberships    WorldMembership[]
-  playerQuestFlags      PlayerQuestFlag[]
-  sessionAvailabilities SessionAvailability[]
-  playerNotes         PlayerNote[]
-  aiRuns              AiRun[]
-  jobs                Job[]
-  apiTokens           ApiToken[]
-  twoFactorSecret     TwoFactorSecret?
-  twoFactorChallenges TwoFactorChallenge[]
-  authIdentities      AuthIdentity[]
-  webAuthnCredentials WebAuthnCredential[]
-  aiUsageLogs          AiUsageLog[]
+  sessions               Session[]
+  worldMemberships       WorldMembership[]
+  playerQuestFlags       PlayerQuestFlag[]
+  sessionAvailabilities  SessionAvailability[]
+  playerNotes            PlayerNote[]
+  aiRuns                 AiRun[]
+  jobs                   Job[]
+  apiTokens              ApiToken[]
+  twoFactorSecret        TwoFactorSecret?
+  twoFactorChallenges    TwoFactorChallenge[]
+  authIdentities         AuthIdentity[]
+  webAuthnCredentials    WebAuthnCredential[]
+  aiUsageLogs            AiUsageLog[]
   dashboardLayouts       DashboardLayout[]
   ownedCharacters        Character[]
   bugReports             BugReport[]
   importJobs             ImportJob[]
   terraKarten            TerraKarte[]          @relation("TerraKarteAutor")
+  playerGroupMemberships PlayerGroupMember[]
 
   @@map("users")
 }
@@ -540,12 +551,12 @@ model Session {
 }
 
 model WorldMembership {
-  id            String          @id @default(cuid())
-  userId        String          @map("user_id")
-  worldId       String          @map("world_id")
-  characterName String?         @map("character_name")
-  createdAt     DateTime        @default(now()) @map("created_at")
-  updatedAt     DateTime        @updatedAt @map("updated_at")
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  worldId       String   @map("world_id")
+  characterName String?  @map("character_name")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
@@ -570,6 +581,44 @@ model PlayerQuestFlag {
   @@map("player_quest_flags")
 }
 
+model PlayerGroup {
+  id          String   @id @default(cuid())
+  worldId     String   @map("world_id")
+  /// Optionale Kampagnen-Bindung. Eine Gruppe kann quer ueber Kampagnen
+  /// bestehen bleiben; wer sie an eine Kampagne haengt, sortiert sie nur ein.
+  campaignId  String?  @map("campaign_id")
+  name        String
+  slug        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  world      World               @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign   Campaign?           @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  members    PlayerGroupMember[]
+  treasury   PartyTreasury?
+  questPages Page[]              @relation("PageQuestGroup")
+
+  @@unique([worldId, slug])
+  @@index([worldId])
+  @@index([campaignId])
+  @@map("player_groups")
+}
+
+model PlayerGroupMember {
+  id        String   @id @default(cuid())
+  groupId   String   @map("group_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  group PlayerGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+  @@map("player_group_members")
+}
+
 model SessionAvailability {
   id        String   @id @default(cuid())
   sessionId String   @map("session_id")
@@ -587,46 +636,46 @@ model SessionAvailability {
 }
 
 model World {
-  id               String   @id @default(cuid())
-  name             String
-  slug             String   @unique
-  description      String?
-  isSandbox            Boolean  @default(false) @map("is_sandbox")
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  isSandbox   Boolean  @default(false) @map("is_sandbox")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
-  campaigns        Campaign[]
-  pages            Page[]
-  assets           Asset[]
-  assetAlbums      AssetAlbum[]
-  worldMemberships WorldMembership[]
-  gameSessions     GameSession[]
-  labelTemplates    LabelTemplate[]
-  labels            Label[]
-  printLists        PrintList[]
-  soundboardButtons SoundboardButton[]
-  playerNotes       PlayerNote[]
-  spotifyConnection SpotifyConnection?
-  brainDocuments    BrainDocument[]
-  brainFacts        BrainFact[]
-  brainLinks        BrainLink[]
-  aiRuns            AiRun[]
-  generatorPresets    GeneratorPreset[]
-  generatorOutputs    GeneratorOutput[]
-  imageStudioProjects ImageStudioProject[]
-  dndBeyondReferences DndBeyondReference[]
-  terraKarten         TerraKarte[]
-  worldCalendar       WorldCalendar?
-  worldEvents         WorldEvent[]
-  factionStates       FactionState[]
-  characters          Character[]
-  partyTreasury       PartyTreasury?
-  inventoryItems      InventoryItem[]
+  campaigns            Campaign[]
+  pages                Page[]
+  assets               Asset[]
+  assetAlbums          AssetAlbum[]
+  worldMemberships     WorldMembership[]
+  gameSessions         GameSession[]
+  labelTemplates       LabelTemplate[]
+  labels               Label[]
+  printLists           PrintList[]
+  soundboardButtons    SoundboardButton[]
+  playerNotes          PlayerNote[]
+  spotifyConnection    SpotifyConnection?
+  brainDocuments       BrainDocument[]
+  brainFacts           BrainFact[]
+  brainLinks           BrainLink[]
+  aiRuns               AiRun[]
+  generatorPresets     GeneratorPreset[]
+  generatorOutputs     GeneratorOutput[]
+  imageStudioProjects  ImageStudioProject[]
+  dndBeyondReferences  DndBeyondReference[]
+  terraKarten          TerraKarte[]
+  worldCalendar        WorldCalendar?
+  worldEvents          WorldEvent[]
+  factionStates        FactionState[]
+  characters           Character[]
+  partyTreasuries      PartyTreasury[]
+  inventoryItems       InventoryItem[]
   structuredStatblocks StructuredStatblock[]
   structuredItems      StructuredItem[]
-  playerQuestions      PlayerQuestion[]
   importJobs           ImportJob[]
   rollTables           RollTable[]
+  playerGroups         PlayerGroup[]
 
   @@map("worlds")
 }
@@ -640,7 +689,7 @@ model Campaign {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  world        World         @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  world             World              @relation(fields: [worldId], references: [id], onDelete: Cascade)
   pages             Page[]
   assets            Asset[]
   gameSessions      GameSession[]
@@ -651,22 +700,23 @@ model Campaign {
   brainDocuments    BrainDocument[]
   brainFacts        BrainFact[]
   characters        Character[]
+  playerGroups      PlayerGroup[]
 
   @@unique([worldId, slug])
   @@map("campaigns")
 }
 
 model Page {
-  id              String             @id @default(cuid())
-  worldId         String             @map("world_id")
-  campaignId      String?            @map("campaign_id")
-  parentPageId    String?            @map("parent_page_id")
-  sortIndex       Int?               @map("sort_index")
+  id              String                @id @default(cuid())
+  worldId         String                @map("world_id")
+  campaignId      String?               @map("campaign_id")
+  parentPageId    String?               @map("parent_page_id")
+  sortIndex       Int?                  @map("sort_index")
   title           String
   slug            String
   type            PageType
   summary         String?
-  canonicalStatus CanonicalStatus    @default(draft) @map("canonical_status")
+  canonicalStatus CanonicalStatus       @default(draft) @map("canonical_status")
   /// Freigegeben fuer das Portal.
   ///
   /// Die Welt-Zuordnung sagt, WELCHE Welt jemand sieht; dieses Haekchen sagt,
@@ -678,58 +728,67 @@ model Page {
   /// Vorgabe `false`, weil das die fail-closed Richtung ist: Eine neu angelegte
   /// oder frisch importierte Seite ist erst einmal DM-Material, bis jemand sie
   /// ausdruecklich freigibt. Das Studio-Haekchen geht immer vor.
-  portalReleased  Boolean            @default(false) @map("portal_released")
-  prepStatus      DungeonPrepStatus? @map("prep_status")
+  portalReleased  Boolean               @default(false) @map("portal_released")
+  prepStatus      DungeonPrepStatus?    @map("prep_status")
   questStatus     QuestLifecycleStatus? @map("quest_status")
+  /// Nur fuer `type = quest`: welcher Tischrunde diese Quest gehoert.
+  ///
+  /// Das Questlog im Portal zeigt ausschliesslich Quests mit gesetzter
+  /// Gruppe, und nur die der eigenen. `null` heisst: noch nicht vergeben —
+  /// im Studio sichtbar, im Portal nicht. Der Wert ersetzt keine
+  /// Sichtbarkeitsregel; `portalReleased` gilt zusaetzlich weiter.
+  questGroupId    String?               @map("quest_group_id")
   tags            Json?
   aliases         Json?
-  aiReviewedAt    DateTime?          @map("ai_reviewed_at")
-  createdAt       DateTime           @default(now()) @map("created_at")
-  updatedAt       DateTime           @updatedAt @map("updated_at")
+  aiReviewedAt    DateTime?             @map("ai_reviewed_at")
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
 
-  world            World              @relation(fields: [worldId], references: [id], onDelete: Cascade)
-  campaign         Campaign?          @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-  parentPage       Page?              @relation("PageHierarchy", fields: [parentPageId], references: [id], onDelete: SetNull)
-  childPages       Page[]             @relation("PageHierarchy")
-  contentBlocks    ContentBlock[]
-  outgoingLinks    PageLink[]         @relation("SourcePage")
-  incomingLinks    PageLink[]         @relation("TargetPage")
-  playerQuestFlags    PlayerQuestFlag[]
-  gameSessionLinks       GameSessionPageLink[]
-  soundboardButtonLinks  SoundboardButtonPageLink[]
-  assetPageLinks         AssetPageLink[]
-  playerNotes            PlayerNote[]
-  brainDocuments         BrainDocument[]
-  brainFacts             BrainFact[]
-  aiRuns                 AiRun[]
-  generatorOutputs       GeneratorOutput[]
-  dndBeyondReferences    DndBeyondReference[]
-  versions               PageVersion[]
-  worldEventLinks        WorldEventEntityLink[]
-  factionState           FactionState?
-  character              Character?
-  inventoryItems         InventoryItem[]
-  structuredStatblock    StructuredStatblock?
-  structuredItem         StructuredItem?
+  world                 World                      @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign              Campaign?                  @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  questGroup            PlayerGroup?               @relation("PageQuestGroup", fields: [questGroupId], references: [id], onDelete: SetNull)
+  parentPage            Page?                      @relation("PageHierarchy", fields: [parentPageId], references: [id], onDelete: SetNull)
+  childPages            Page[]                     @relation("PageHierarchy")
+  contentBlocks         ContentBlock[]
+  outgoingLinks         PageLink[]                 @relation("SourcePage")
+  incomingLinks         PageLink[]                 @relation("TargetPage")
+  playerQuestFlags      PlayerQuestFlag[]
+  gameSessionLinks      GameSessionPageLink[]
+  soundboardButtonLinks SoundboardButtonPageLink[]
+  assetPageLinks        AssetPageLink[]
+  playerNotes           PlayerNote[]
+  brainDocuments        BrainDocument[]
+  brainFacts            BrainFact[]
+  aiRuns                AiRun[]
+  generatorOutputs      GeneratorOutput[]
+  dndBeyondReferences   DndBeyondReference[]
+  versions              PageVersion[]
+  worldEventLinks       WorldEventEntityLink[]
+  factionState          FactionState?
+  character             Character?
+  inventoryItems        InventoryItem[]
+  structuredStatblock   StructuredStatblock?
+  structuredItem        StructuredItem?
 
   @@unique([worldId, slug])
   @@index([parentPageId])
   @@index([parentPageId, sortIndex])
+  @@index([questGroupId])
   @@map("pages")
 }
 
 model WorldCalendar {
-  id           String   @id @default(cuid())
-  worldId      String   @unique @map("world_id")
-  name         String   @default("Weltkalender")
-  months       Json
-  daysPerWeek  Int      @default(7) @map("days_per_week")
-  dayNames     Json?    @map("day_names")
-  currentDate  Json     @map("current_date")
-  epochLabel   String?  @map("epoch_label")
-  settings     Json?
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id          String   @id @default(cuid())
+  worldId     String   @unique @map("world_id")
+  name        String   @default("Weltkalender")
+  months      Json
+  daysPerWeek Int      @default(7) @map("days_per_week")
+  dayNames    Json?    @map("day_names")
+  currentDate Json     @map("current_date")
+  epochLabel  String?  @map("epoch_label")
+  settings    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   world  World        @relation(fields: [worldId], references: [id], onDelete: Cascade)
   events WorldEvent[]
@@ -852,7 +911,11 @@ model CharacterSpell {
 
 model PartyTreasury {
   id         String   @id @default(cuid())
-  worldId    String   @unique @map("world_id")
+  worldId    String   @map("world_id")
+  /// Gehoert dieser Schatz einer Tischrunde? `null` = der alte welt-weite
+  /// Schatz. Beide Formen bestehen nebeneinander: Welten ohne Gruppen
+  /// behalten ihren Schatz, jede Gruppe bekommt einen eigenen.
+  groupId    String?  @unique @map("group_id")
   name       String   @default("Gruppenschatz")
   currencies Json
   notes      String   @default("")
@@ -860,8 +923,14 @@ model PartyTreasury {
   updatedAt  DateTime @updatedAt @map("updated_at")
 
   world World           @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  group PlayerGroup?    @relation(fields: [groupId], references: [id], onDelete: Cascade)
   items InventoryItem[]
 
+  /// Den welt-weiten Schatz (groupId = null) erzwingt diese Regel NICHT —
+  /// beide Datenbanken behandeln NULL als verschieden. Der Service liest
+  /// deshalb vor dem Anlegen und faengt das Wettrennen ab.
+  @@unique([worldId, groupId])
+  @@index([worldId])
   @@map("party_treasuries")
 }
 
@@ -909,27 +978,27 @@ model StructuredStatblock {
 }
 
 model GameSession {
-  id              String            @id @default(cuid())
-  worldId         String            @map("world_id")
-  campaignId      String?           @map("campaign_id")
-  title           String
-  sessionNumber   Int               @map("session_number")
-  date            DateTime?         @map("date")
-  status          GameSessionStatus @default(planned)
-  summaryDm       String?           @map("summary_dm")
-  summaryPlayer   String?           @map("summary_player")
-  notes           String?
-  openPlots       String?           @map("open_plots")
-  playerDecisions String?           @map("player_decisions")
-  recapPublished         Boolean           @default(false) @map("recap_published")
-  playerVisibleSchedule  Boolean           @default(false) @map("player_visible_schedule")
-  createdAt              DateTime          @default(now()) @map("created_at")
-  updatedAt              DateTime          @updatedAt @map("updated_at")
+  id                    String            @id @default(cuid())
+  worldId               String            @map("world_id")
+  campaignId            String?           @map("campaign_id")
+  title                 String
+  sessionNumber         Int               @map("session_number")
+  date                  DateTime?         @map("date")
+  status                GameSessionStatus @default(planned)
+  summaryDm             String?           @map("summary_dm")
+  summaryPlayer         String?           @map("summary_player")
+  notes                 String?
+  openPlots             String?           @map("open_plots")
+  playerDecisions       String?           @map("player_decisions")
+  recapPublished        Boolean           @default(false) @map("recap_published")
+  playerVisibleSchedule Boolean           @default(false) @map("player_visible_schedule")
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
 
-  world        World                 @relation(fields: [worldId], references: [id], onDelete: Cascade)
-  campaign     Campaign?             @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-  linkedPages  GameSessionPageLink[]
-  playerNotes  PlayerNote[]
+  world          World                 @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign       Campaign?             @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  linkedPages    GameSessionPageLink[]
+  playerNotes    PlayerNote[]
   brainDocuments BrainDocument[]
   brainFacts     BrainFact[]
   aiRuns         AiRun[]
@@ -955,15 +1024,15 @@ model GameSessionPageLink {
 }
 
 model ContentBlock {
-  id         String           @id @default(cuid())
-  pageId     String           @map("page_id")
-  assetId    String?          @map("asset_id")
-  type       ContentBlockType
-  sortOrder  Int              @map("sort_order")
-  content     String           @default("")
-  metadata    Json?
-  createdAt  DateTime         @default(now()) @map("created_at")
-  updatedAt  DateTime         @updatedAt @map("updated_at")
+  id        String           @id @default(cuid())
+  pageId    String           @map("page_id")
+  assetId   String?          @map("asset_id")
+  type      ContentBlockType
+  sortOrder Int              @map("sort_order")
+  content   String           @default("")
+  metadata  Json?
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
 
   page  Page   @relation(fields: [pageId], references: [id], onDelete: Cascade)
   asset Asset? @relation(fields: [assetId], references: [id], onDelete: SetNull)
@@ -974,27 +1043,27 @@ model ContentBlock {
 }
 
 model Asset {
-  id          String     @id @default(cuid())
-  worldId     String     @map("world_id")
-  campaignId  String?    @map("campaign_id")
+  id          String    @id @default(cuid())
+  worldId     String    @map("world_id")
+  campaignId  String?   @map("campaign_id")
   title       String
   description String?
   type        AssetType
-  storageKey  String     @map("storage_key")
-  mimeType    String?    @map("mime_type")
-  size        Int        @default(0)
+  storageKey  String    @map("storage_key")
+  mimeType    String?   @map("mime_type")
+  size        Int       @default(0)
   tags        Json?
   metadata    Json?
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  world         World           @relation(fields: [worldId], references: [id], onDelete: Cascade)
-  campaign      Campaign?       @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-  pageLinks         AssetPageLink[]
-  contentBlocks     ContentBlock[]
-  soundboardButtons SoundboardButton[]
+  world               World                @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign            Campaign?            @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  pageLinks           AssetPageLink[]
+  contentBlocks       ContentBlock[]
+  soundboardButtons   SoundboardButton[]
   imageStudioVersions ImageStudioVersion[]
-  albumItems           AssetAlbumItem[]
+  albumItems          AssetAlbumItem[]
 
   @@index([worldId, type])
   @@map("assets")
@@ -1061,15 +1130,15 @@ model PageLink {
 }
 
 model LabelTemplate {
-  id              String   @id @default(cuid())
-  worldId         String?  @map("world_id")
-  name            String
-  slug            String
-  description     String?
-  layoutSettings  Json     @map("layout_settings")
-  isSystem        Boolean  @default(false) @map("is_system")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(cuid())
+  worldId        String?  @map("world_id")
+  name           String
+  slug           String
+  description    String?
+  layoutSettings Json     @map("layout_settings")
+  isSystem       Boolean  @default(false) @map("is_system")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   world  World?  @relation(fields: [worldId], references: [id], onDelete: Cascade)
   labels Label[]
@@ -1092,9 +1161,9 @@ model Label {
   createdAt      DateTime         @default(now()) @map("created_at")
   updatedAt      DateTime         @updatedAt @map("updated_at")
 
-  world          World            @relation(fields: [worldId], references: [id], onDelete: Cascade)
-  campaign       Campaign?        @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-  template       LabelTemplate    @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  world          World           @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign       Campaign?       @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  template       LabelTemplate   @relation(fields: [templateId], references: [id], onDelete: Restrict)
   printListItems PrintListItem[]
 
   @@index([worldId, updatedAt])
@@ -1137,25 +1206,25 @@ model PrintListItem {
 }
 
 model SoundboardButton {
-  id          String           @id @default(cuid())
-  worldId     String           @map("world_id")
-  campaignId  String?          @map("campaign_id")
-  title       String
-  sourceType  SoundSourceType  @map("source_type")
-  sourceUrl   String?          @map("source_url")
-  assetId     String?          @map("asset_id")
-  thumbnail   String?
-  volume      Float            @default(1.0)
-  loop        Boolean          @default(false)
-  tags        Json?
-  sortOrder   Int              @default(0) @map("sort_order")
-  createdAt   DateTime         @default(now()) @map("created_at")
-  updatedAt   DateTime         @updatedAt @map("updated_at")
+  id         String          @id @default(cuid())
+  worldId    String          @map("world_id")
+  campaignId String?         @map("campaign_id")
+  title      String
+  sourceType SoundSourceType @map("source_type")
+  sourceUrl  String?         @map("source_url")
+  assetId    String?         @map("asset_id")
+  thumbnail  String?
+  volume     Float           @default(1.0)
+  loop       Boolean         @default(false)
+  tags       Json?
+  sortOrder  Int             @default(0) @map("sort_order")
+  createdAt  DateTime        @default(now()) @map("created_at")
+  updatedAt  DateTime        @updatedAt @map("updated_at")
 
-  world        World                       @relation(fields: [worldId], references: [id], onDelete: Cascade)
-  campaign     Campaign?                   @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-  asset        Asset?                      @relation(fields: [assetId], references: [id], onDelete: SetNull)
-  linkedPages  SoundboardButtonPageLink[]
+  world       World                      @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign    Campaign?                  @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  asset       Asset?                     @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  linkedPages SoundboardButtonPageLink[]
 
   @@index([worldId, campaignId])
   @@index([assetId])
@@ -1183,7 +1252,16 @@ model PlayerNote {
   pageId        String?              @map("page_id")
   gameSessionId String?              @map("game_session_id")
   userId        String               @map("user_id")
+  /// Kurze Ueberschrift. Leer erlaubt — dann steht die erste Zeile des
+  /// Inhalts als Titel in der Liste.
+  title         String?
   content       String
+  category      PlayerNoteCategory   @default(sonstiges)
+  /// Wann das Geschehene am Tisch passiert ist. Bewusst getrennt von
+  /// `createdAt`: nachgetragene Notizen sollen unter ihrem Spielabend
+  /// stehen, nicht unter dem Tag des Nachtragens. Haengt die Notiz an
+  /// einer GameSession, uebernimmt das Portal deren Datum.
+  sessionDate   DateTime?            @map("session_date")
   visibility    PlayerNoteVisibility @default(private)
   status        PlayerNoteStatus     @default(draft)
   /// Kennung, die der Tischmodus offline vergibt. Bricht die Verbindung nach
@@ -1205,6 +1283,7 @@ model PlayerNote {
   @@index([userId, worldId])
   @@index([pageId])
   @@index([gameSessionId])
+  @@index([worldId, sessionDate])
   @@map("player_notes")
 }
 
@@ -1395,16 +1474,16 @@ enum SecurityWarningSeverity {
 }
 
 model AuditLog {
-  id             String          @id @default(cuid())
-  timestamp      DateTime        @default(now())
-  actorUserId    String?         @map("actor_user_id")
-  action         AuditAction
-  targetType     AuditTargetType @map("target_type")
-  targetId       String?         @map("target_id")
-  worldId        String?         @map("world_id")
-  ipHash         String?         @map("ip_hash")
-  userAgentHash  String?         @map("user_agent_hash")
-  metadataJson   Json?           @map("metadata_json")
+  id            String          @id @default(cuid())
+  timestamp     DateTime        @default(now())
+  actorUserId   String?         @map("actor_user_id")
+  action        AuditAction
+  targetType    AuditTargetType @map("target_type")
+  targetId      String?         @map("target_id")
+  worldId       String?         @map("world_id")
+  ipHash        String?         @map("ip_hash")
+  userAgentHash String?         @map("user_agent_hash")
+  metadataJson  Json?           @map("metadata_json")
 
   @@index([action, timestamp])
   @@index([actorUserId, timestamp])
@@ -1431,17 +1510,17 @@ model UndoEntry {
 }
 
 model PageTemplate {
-  id                String     @id @default(cuid())
-  slug              String     @unique
-  name              String
-  description       String     @default("")
-  pageType          PageType   @map("page_type")
-  titlePlaceholder  String     @default("") @map("title_placeholder")
-  blocks            Json
-  isSystem          Boolean    @default(false) @map("is_system")
-  isActive          Boolean    @default(true) @map("is_active")
-  createdAt         DateTime   @default(now()) @map("created_at")
-  updatedAt         DateTime   @updatedAt @map("updated_at")
+  id               String   @id @default(cuid())
+  slug             String   @unique
+  name             String
+  description      String   @default("")
+  pageType         PageType @map("page_type")
+  titlePlaceholder String   @default("") @map("title_placeholder")
+  blocks           Json
+  isSystem         Boolean  @default(false) @map("is_system")
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   @@map("page_templates")
 }
@@ -1589,20 +1668,20 @@ model BrainChunk {
 }
 
 model BrainFact {
-  id            String          @id @default(cuid())
-  worldId       String          @map("world_id")
-  campaignId    String?         @map("campaign_id")
-  gameSessionId String?         @map("game_session_id")
-  pageId        String?         @map("page_id")
-  factType      BrainFactType   @default(custom) @map("fact_type")
+  id            String        @id @default(cuid())
+  worldId       String        @map("world_id")
+  campaignId    String?       @map("campaign_id")
+  gameSessionId String?       @map("game_session_id")
+  pageId        String?       @map("page_id")
+  factType      BrainFactType @default(custom) @map("fact_type")
   title         String
-  content       String          @default("")
-  source        BrainSource     @default(manual)
-  status        BrainStatus     @default(draft)
+  content       String        @default("")
+  source        BrainSource   @default(manual)
+  status        BrainStatus   @default(draft)
   confidence    Float?
   metadata      Json?
-  createdAt     DateTime        @default(now()) @map("created_at")
-  updatedAt     DateTime        @updatedAt @map("updated_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
 
   world       World        @relation(fields: [worldId], references: [id], onDelete: Cascade)
   campaign    Campaign?    @relation(fields: [campaignId], references: [id], onDelete: SetNull)
@@ -1901,9 +1980,9 @@ model GeneratorOutput {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  world   World?           @relation(fields: [worldId], references: [id], onDelete: SetNull)
-  page    Page?            @relation(fields: [pageId], references: [id], onDelete: SetNull)
-  preset  GeneratorPreset? @relation(fields: [presetId], references: [id], onDelete: SetNull)
+  world  World?           @relation(fields: [worldId], references: [id], onDelete: SetNull)
+  page   Page?            @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  preset GeneratorPreset? @relation(fields: [presetId], references: [id], onDelete: SetNull)
 
   @@index([worldId, pageId])
   @@index([contextType, contextId])
@@ -1961,14 +2040,14 @@ enum DndApiProvider {
 }
 
 model ImageStudioProject {
-  id          String             @id @default(cuid())
-  worldId     String?            @map("world_id")
-  title       String
-  prompt      String?
-  status      ImageStudioStatus  @default(draft)
-  metadata    Json?
-  createdAt   DateTime           @default(now()) @map("created_at")
-  updatedAt   DateTime           @updatedAt @map("updated_at")
+  id        String            @id @default(cuid())
+  worldId   String?           @map("world_id")
+  title     String
+  prompt    String?
+  status    ImageStudioStatus @default(draft)
+  metadata  Json?
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
 
   world    World?               @relation(fields: [worldId], references: [id], onDelete: SetNull)
   versions ImageStudioVersion[]
@@ -2125,20 +2204,20 @@ model BugReport {
 }
 
 model ImportJob {
-  id             String           @id @default(cuid())
-  sourceType     ImportSourceType @map("source_type")
-  targetType     ImportTargetType @map("target_type")
-  targetWorldId  String?          @map("target_world_id")
-  status         ImportJobStatus  @default(pending)
-  fileName       String?          @map("file_name")
-  previewPayload Json?            @map("preview_payload")
-  resultSummary  Json?            @map("result_summary")
-  undoToken      String?          @map("undo_token")
-  errorMessage   String?          @map("error_message")
-  createdByUserId String?         @map("created_by_user_id")
-  metadata       Json?
-  createdAt      DateTime         @default(now()) @map("created_at")
-  updatedAt      DateTime         @updatedAt @map("updated_at")
+  id              String           @id @default(cuid())
+  sourceType      ImportSourceType @map("source_type")
+  targetType      ImportTargetType @map("target_type")
+  targetWorldId   String?          @map("target_world_id")
+  status          ImportJobStatus  @default(pending)
+  fileName        String?          @map("file_name")
+  previewPayload  Json?            @map("preview_payload")
+  resultSummary   Json?            @map("result_summary")
+  undoToken       String?          @map("undo_token")
+  errorMessage    String?          @map("error_message")
+  createdByUserId String?          @map("created_by_user_id")
+  metadata        Json?
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
 
   targetWorld World? @relation(fields: [targetWorldId], references: [id], onDelete: SetNull)
   createdBy   User?  @relation(fields: [createdByUserId], references: [id], onDelete: SetNull)
@@ -2180,19 +2259,19 @@ model DndApiCacheEntry {
 }
 
 model ApiToken {
-  id            String   @id @default(cuid())
-  userId        String   @map("user_id")
+  id            String    @id @default(cuid())
+  userId        String    @map("user_id")
   name          String
-  tokenHash     String   @unique @map("token_hash")
-  tokenPrefix   String   @map("token_prefix")
-  isActive      Boolean  @default(true) @map("is_active")
+  tokenHash     String    @unique @map("token_hash")
+  tokenPrefix   String    @map("token_prefix")
+  isActive      Boolean   @default(true) @map("is_active")
   expiresAt     DateTime? @map("expires_at")
   lastUsedAt    DateTime? @map("last_used_at")
-  rotatedFromId String?  @map("rotated_from_id")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  rotatedFromId String?   @map("rotated_from_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   scopes    ApiTokenScope[]
   usageLogs ApiTokenUsageLog[]
 
@@ -2228,17 +2307,17 @@ model ApiTokenUsageLog {
 }
 
 model WebhookEndpoint {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   name            String
   url             String
-  secretEncrypted String   @map("secret_encrypted")
-  secretPrefix    String   @map("secret_prefix")
-  eventsJson      String   @map("events_json")
-  isActive        Boolean  @default(true) @map("is_active")
-  createdById     String?  @map("created_by_id")
+  secretEncrypted String    @map("secret_encrypted")
+  secretPrefix    String    @map("secret_prefix")
+  eventsJson      String    @map("events_json")
+  isActive        Boolean   @default(true) @map("is_active")
+  createdById     String?   @map("created_by_id")
   lastTriggeredAt DateTime? @map("last_triggered_at")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   deliveries WebhookDelivery[]
 
@@ -2247,15 +2326,15 @@ model WebhookEndpoint {
 }
 
 model WebhookDelivery {
-  id           String   @id @default(cuid())
-  endpointId   String   @map("endpoint_id")
+  id           String    @id @default(cuid())
+  endpointId   String    @map("endpoint_id")
   event        String
-  statusCode   Int?     @map("status_code")
-  success      Boolean  @default(false)
-  errorMessage String?  @map("error_message")
-  attemptCount Int      @default(1) @map("attempt_count")
-  payloadHash  String?  @map("payload_hash")
-  createdAt    DateTime @default(now()) @map("created_at")
+  statusCode   Int?      @map("status_code")
+  success      Boolean   @default(false)
+  errorMessage String?   @map("error_message")
+  attemptCount Int       @default(1) @map("attempt_count")
+  payloadHash  String?   @map("payload_hash")
+  createdAt    DateTime  @default(now()) @map("created_at")
   completedAt  DateTime? @map("completed_at")
 
   endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
@@ -2352,17 +2431,17 @@ enum InferenceProvider {
 }
 
 model InferenceEndpoint {
-  id            String             @id @default(cuid())
-  name          String
-  baseUrl       String             @map("base_url")
-  apiKeyEnc     String?            @map("api_key_enc")
-  provider      InferenceProvider  @default(ollama)
-  isEnabled     Boolean            @default(true) @map("is_enabled")
-  lastProbeAt   DateTime?          @map("last_probe_at")
-  probeStatus   String?            @map("probe_status")
-  cachedModels  Json?              @map("cached_models")
-  createdAt     DateTime           @default(now()) @map("created_at")
-  updatedAt     DateTime           @updatedAt @map("updated_at")
+  id           String            @id @default(cuid())
+  name         String
+  baseUrl      String            @map("base_url")
+  apiKeyEnc    String?           @map("api_key_enc")
+  provider     InferenceProvider @default(ollama)
+  isEnabled    Boolean           @default(true) @map("is_enabled")
+  lastProbeAt  DateTime?         @map("last_probe_at")
+  probeStatus  String?           @map("probe_status")
+  cachedModels Json?             @map("cached_models")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
 
   @@index([isEnabled])
   @@map("inference_endpoints")
@@ -2437,15 +2516,15 @@ enum AiFeatureCategory {
 }
 
 model AiGatewayConfig {
-  id                   String        @id @default("default")
-  routingMode          AiRoutingMode @default(LOCAL_THEN_CLOUD) @map("routing_mode")
-  cloudFallbackEnabled Boolean       @default(false) @map("cloud_fallback_enabled")
-  privacyRules         Json          @default("{}") @map("privacy_rules")
-  featureModels        Json          @default("{}") @map("feature_models")
-  dailyBudgetUsd       Float?        @map("daily_budget_usd")
-  monthlyBudgetUsd     Float?        @map("monthly_budget_usd")
-  perUserDailyBudgetUsd Float?       @map("per_user_daily_budget_usd")
-  updatedAt            DateTime      @updatedAt @map("updated_at")
+  id                    String        @id @default("default")
+  routingMode           AiRoutingMode @default(LOCAL_THEN_CLOUD) @map("routing_mode")
+  cloudFallbackEnabled  Boolean       @default(false) @map("cloud_fallback_enabled")
+  privacyRules          Json          @default("{}") @map("privacy_rules")
+  featureModels         Json          @default("{}") @map("feature_models")
+  dailyBudgetUsd        Float?        @map("daily_budget_usd")
+  monthlyBudgetUsd      Float?        @map("monthly_budget_usd")
+  perUserDailyBudgetUsd Float?        @map("per_user_daily_budget_usd")
+  updatedAt             DateTime      @updatedAt @map("updated_at")
 
   @@map("ai_gateway_config")
 }
@@ -2573,42 +2652,18 @@ enum MealEntryType {
 }
 
 model StructuredItem {
-  id           String   @id @default(cuid())
-  worldId      String   @map("world_id")
-  pageId       String   @unique @map("page_id")
-  data         Json
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id        String   @id @default(cuid())
+  worldId   String   @map("world_id")
+  pageId    String   @unique @map("page_id")
+  data      Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
   page  Page  @relation(fields: [pageId], references: [id], onDelete: Cascade)
 
   @@index([worldId])
   @@map("structured_items")
-}
-
-enum PlayerQuestionStatus {
-  open
-  answered
-  archived
-}
-
-model PlayerQuestion {
-  id           String               @id @default(cuid())
-  worldId      String               @map("world_id")
-  campaignId   String?              @map("campaign_id")
-  authorUserId String?              @map("author_user_id")
-  authorName   String               @map("author_name")
-  question     String
-  answer       String?
-  status       PlayerQuestionStatus @default(open)
-  createdAt    DateTime             @default(now()) @map("created_at")
-  answeredAt   DateTime?            @map("answered_at")
-
-  world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
-
-  @@index([worldId, status])
-  @@map("player_questions")
 }
 
 enum ScanDocumentStatus {
@@ -2651,15 +2706,15 @@ enum PromptTemplateCategory {
 }
 
 model PromptTemplate {
-  id          String                  @id @default(cuid())
+  id          String                 @id @default(cuid())
   title       String
-  category    PromptTemplateCategory  @default(other)
-  description String                  @default("")
+  category    PromptTemplateCategory @default(other)
+  description String                 @default("")
   body        String
   variables   Json?
   tags        Json?
-  createdAt   DateTime                @default(now()) @map("created_at")
-  updatedAt   DateTime                @updatedAt @map("updated_at")
+  createdAt   DateTime               @default(now()) @map("created_at")
+  updatedAt   DateTime               @updatedAt @map("updated_at")
 
   @@index([category])
   @@map("prompt_templates")
@@ -2694,34 +2749,39 @@ enum TerraKarteStatus {
 }
 
 model TerraKarte {
-  id      String @id @default(cuid())
-  worldId String @map("world_id")
-  titel   String @default("Karte")
+  id                   String           @id @default(cuid())
+  worldId              String           @map("world_id")
+  titel                String           @default("Karte")
   /// Kartenbaum im Terra-Format v5: { format, version, wurzel, karten[] }.
-  daten   Json
+  daten                Json
   /// Konflikterkennung. Die Version reist ueber die postMessage-Bruecke in
   /// beide Richtungen mit; jede erfolgreiche Speicherung erhoeht sie um 1.
   /// Ein Schreiben mit veralteter Version wird abgelehnt statt zu
   /// ueberschreiben — zwei offene Reiter loeschen sich so nicht gegenseitig.
-  version Int              @default(1)
-  status  TerraKarteStatus @default(freigegeben)
+  version              Int              @default(1)
+  status               TerraKarteStatus @default(freigegeben)
   /// Wer die Karte im Portal angelegt hat. `null` = im Studio entstanden.
   /// Dieses Feld ist der Besitznachweis: der Schreibweg im Portal vergleicht
   /// es im `where`, nicht davor.
-  autorUserId String? @map("autor_user_id")
+  autorUserId          String?          @map("autor_user_id")
   /// Anzeigename zum Zeitpunkt des Anlegens (Charaktername der Welt, sonst
   /// Anzeigename). Denormalisiert wie bei den Spielerfragen — die Abnahmeliste
   /// im Studio soll ohne Join lesbar sein und einen spaeteren Namenswechsel
   /// nicht rueckwirkend umschreiben.
-  autorName            String?   @map("autor_name")
-  eingereichtAm        DateTime? @map("eingereicht_am")
-  entschiedenAm        DateTime? @map("entschieden_am")
-  entschiedenVonUserId String?   @map("entschieden_von_user_id")
+  autorName            String?          @map("autor_name")
+  eingereichtAm        DateTime?        @map("eingereicht_am")
+  entschiedenAm        DateTime?        @map("entschieden_am")
+  entschiedenVonUserId String?          @map("entschieden_von_user_id")
   /// Rueckmeldung des Spielleiters beim Zurueckgeben. Der Spieler liest sie
   /// im Portal ueber seinem Entwurf.
-  rueckmeldung String?
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  rueckmeldung         String?
+  /// Sperre des Spielleiters. Eine gesperrte Karte ist im Portal nur noch
+  /// lesbar — auch fuer ihren Autor, auch im Entwurf. Gedacht fuer den
+  /// Moment, in dem eine Karte am Tisch gilt und niemand mehr daran
+  /// schieben soll. Das Studio schreibt weiter.
+  gesperrt             Boolean          @default(false)
+  createdAt            DateTime         @default(now()) @map("created_at")
+  updatedAt            DateTime         @updatedAt @map("updated_at")
 
   world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
   autor User? @relation("TerraKarteAutor", fields: [autorUserId], references: [id], onDelete: SetNull)

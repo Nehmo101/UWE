@@ -9,6 +9,19 @@
   overflow-y: auto;
 }
 
+/* Wiki-Seiten bestehen aus mehreren Textblöcken, die untereinander gerendert
+   werden (grid + gap). Der letzte Absatz eines Blocks trägt 1rem Außenabstand,
+   eine Überschrift am Blockanfang bis zu 2rem — zusammen mit dem gap ergab das
+   sichtbar ungleiche Lücken zwischen den Blöcken. Erste und letzte Kinder
+   eines Blocks geben ihre Außenabstände ab; den Rhythmus macht allein das gap. */
+.wiki-content .uwe-v2-wiki-content > :first-child {
+  margin-top: 0;
+}
+
+.wiki-content .uwe-v2-wiki-content > :last-child {
+  margin-bottom: 0;
+}
+
 .wiki-content a.wiki-link {
   color: var(--uwe-wiki-link, #c4b5fd);
   text-decoration: none;

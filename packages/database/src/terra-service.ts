@@ -63,6 +63,8 @@ export interface TerraKarteKopf {
   autorName: string | null;
   eingereichtAm: Date | null;
   rueckmeldung: string | null;
+  /** Sperre des Spielleiters — im Portal ist die Karte dann nur noch lesbar. */
+  gesperrt: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -77,6 +79,7 @@ const KOPF_AUSWAHL = {
   autorName: true,
   eingereichtAm: true,
   rueckmeldung: true,
+  gesperrt: true,
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -84,6 +87,7 @@ const KOPF_AUSWAHL = {
 export type TerraSpeicherErgebnis =
   | { ok: true; version: number }
   | { ok: false; grund: "konflikt"; version: number }
+  | { ok: false; grund: "gesperrt" }
   | { ok: false; grund: "unbekannt" };
 
 function titelGeputzt(roh: unknown, ersatz = "Karte"): string {
@@ -236,7 +240,7 @@ export function createTerraService(db: PrismaClient) {
     // die Karte gehört gar nicht zu dieser Welt / gibt es nicht mehr.
     const aktuell = await db.terraKarte.findUnique({
       where: { id: karteId },
-      select: { worldId: true, version: true, status: true, autorUserId: true },
+      select: { worldId: true, version: true, status: true, autorUserId: true, gesperrt: true },
     });
     if (!aktuell || aktuell.worldId !== world.id) return { ok: false, grund: "unbekannt" };
     // Autor- oder Zustandsgrenze verfehlt: das ist kein Konflikt, sondern
@@ -248,6 +252,9 @@ export function createTerraService(db: PrismaClient) {
     }
     if (zusatz.autorUserId !== undefined && aktuell.autorUserId !== zusatz.autorUserId) {
       return { ok: false, grund: "unbekannt" };
+    }
+    if (zusatz.gesperrt !== undefined && aktuell.gesperrt !== zusatz.gesperrt) {
+      return { ok: false, grund: "gesperrt" };
     }
     return { ok: false, grund: "konflikt", version: aktuell.version };
   }
@@ -308,6 +315,7 @@ export function createTerraService(db: PrismaClient) {
     return schreibeBaum(worldSlug, karteId, eingabe, {
       autorUserId: eingabe.autorUserId,
       status: "entwurf",
+      gesperrt: false,
     });
   }
 
@@ -320,7 +328,7 @@ export function createTerraService(db: PrismaClient) {
   ): Promise<boolean> {
     const world = await requireWorldBySlug(worldSlug);
     const geaendert = await db.terraKarte.updateMany({
-      where: { id: karteId, worldId: world.id, autorUserId, status: "entwurf" },
+      where: { id: karteId, worldId: world.id, autorUserId, status: "entwurf", gesperrt: false },
       data: { titel: titelGeputzt(titel) },
     });
     return geaendert.count === 1;
@@ -337,7 +345,7 @@ export function createTerraService(db: PrismaClient) {
   async function reicheEin(worldSlug: string, karteId: string, autorUserId: string): Promise<boolean> {
     const world = await requireWorldBySlug(worldSlug);
     const geaendert = await db.terraKarte.updateMany({
-      where: { id: karteId, worldId: world.id, autorUserId, status: "entwurf" },
+      where: { id: karteId, worldId: world.id, autorUserId, status: "entwurf", gesperrt: false },
       data: { status: "eingereicht", eingereichtAm: new Date(), rueckmeldung: null },
     });
     return geaendert.count === 1;
@@ -347,7 +355,7 @@ export function createTerraService(db: PrismaClient) {
   async function ziehZurueck(worldSlug: string, karteId: string, autorUserId: string): Promise<boolean> {
     const world = await requireWorldBySlug(worldSlug);
     const geaendert = await db.terraKarte.updateMany({
-      where: { id: karteId, worldId: world.id, autorUserId, status: "eingereicht" },
+      where: { id: karteId, worldId: world.id, autorUserId, status: "eingereicht", gesperrt: false },
       data: { status: "entwurf", eingereichtAm: null },
     });
     return geaendert.count === 1;
@@ -371,12 +379,34 @@ export function createTerraService(db: PrismaClient) {
         worldId: world.id,
         autorUserId,
         status: { in: ["entwurf", "eingereicht"] },
+        gesperrt: false,
       },
     });
     return entfernt.count === 1;
   }
 
   /* --- J5: die Abnahme im Studio --------------------------------------- */
+
+  /**
+   * Sperre setzen oder loesen — der Haken im Studio.
+   *
+   * Eine gesperrte Karte ist im Portal nur noch lesbar: der Autor kann weder
+   * speichern noch umbenennen, einreichen, zurueckziehen oder loeschen. Das
+   * Studio schreibt weiter, denn die Sperre richtet sich an den Tisch, nicht
+   * an den Spielleiter.
+   *
+   * Bewusst unabhaengig vom Zustand: auch ein Entwurf laesst sich sperren
+   * („so bleibt sie jetzt stehen"), und eine abgenommene Karte laesst sich
+   * entsperren, ohne sie zurueckzugeben.
+   */
+  async function setzeSperre(worldSlug: string, karteId: string, gesperrt: boolean): Promise<boolean> {
+    const world = await requireWorldBySlug(worldSlug);
+    const geaendert = await db.terraKarte.updateMany({
+      where: { id: karteId, worldId: world.id },
+      data: { gesperrt },
+    });
+    return geaendert.count === 1;
+  }
 
   /**
    * Der Spielleiter nimmt eine Karte ab. Sie wird damit Weltinhalt wie jede
@@ -448,6 +478,7 @@ export function createTerraService(db: PrismaClient) {
     loescheEigenenEntwurf,
     gibFrei,
     weiseZurueck,
+    setzeSperre,
   };
 }
 

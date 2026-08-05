@@ -1320,6 +1320,9 @@ export class AuthService {
     input: {
       campaignId: string;
       content: string;
+      title?: string | null;
+      category?: import("./player-note-service").PlayerNoteCategory;
+      sessionDate?: Date | null;
       pageId?: string | null;
       gameSessionId?: string | null;
       /** Offline vergebene Kennung; verhindert Duplikate beim Nachsyncen. */
@@ -1339,6 +1342,9 @@ export class AuthService {
       campaignId: input.campaignId,
       userId: ctx.user.id,
       content: input.content,
+      title: input.title,
+      category: input.category,
+      sessionDate: input.sessionDate,
       pageId: input.pageId,
       gameSessionId: input.gameSessionId,
       clientRef: input.clientRef,
@@ -1352,13 +1358,18 @@ export class AuthService {
     noteId: string,
     ctx: AccessContext,
     content: string,
+    extras?: {
+      title?: string | null;
+      category?: import("./player-note-service").PlayerNoteCategory;
+      sessionDate?: Date | null;
+    },
   ): Promise<PortalPlayerNoteView | null> {
     const note = await this.playerNotes.getByIdForWorld(worldSlug, noteId);
     if (!note || !canEditPlayerNote(ctx, note)) {
       return null;
     }
 
-    const updated = await this.playerNotes.update(noteId, { content });
+    const updated = await this.playerNotes.update(noteId, { content, ...extras });
     return toPortalPlayerNoteView(updated);
   }
 

@@ -29,6 +29,12 @@ export interface TerraKarteAccessInfo {
   /** `null` = im Studio entstanden; ein Spieler fasst sie nie an. */
   autorUserId: string | null;
   status: "entwurf" | "eingereicht" | "freigegeben";
+  /**
+   * Sperre des Spielleiters. Gesperrt heißt: im Portal nur noch ansehen —
+   * auch für den Autor, auch am Entwurf. Optional, damit ältere Aufrufer
+   * ohne das Feld weiter funktionieren; fehlend zählt als nicht gesperrt.
+   */
+  gesperrt?: boolean;
 }
 
 /** Wer der Welt zugeordnet ist, darf darin Karten anlegen. */
@@ -60,7 +66,7 @@ export function canViewTerraKarte(ctx: AccessContext, karte: TerraKarteAccessInf
  * zwischen Frage und Antwort keine Abnahme dazwischenkommen kann.
  */
 export function canEditTerraKarte(ctx: AccessContext, karte: TerraKarteAccessInfo): boolean {
-  if (!canCreateTerraKarte(ctx)) {
+  if (!canCreateTerraKarte(ctx) || karte.gesperrt === true) {
     return false;
   }
   return karte.status === "entwurf" && karte.autorUserId !== null && ctx.user?.id === karte.autorUserId;
@@ -74,7 +80,7 @@ export function canSubmitTerraKarte(ctx: AccessContext, karte: TerraKarteAccessI
 }
 
 export function canWithdrawTerraKarte(ctx: AccessContext, karte: TerraKarteAccessInfo): boolean {
-  if (!canCreateTerraKarte(ctx)) {
+  if (!canCreateTerraKarte(ctx) || karte.gesperrt === true) {
     return false;
   }
   return (
@@ -84,7 +90,7 @@ export function canWithdrawTerraKarte(ctx: AccessContext, karte: TerraKarteAcces
 
 /** Löschen darf der Autor, solange die Karte nicht abgenommen ist. */
 export function canDeleteTerraKarte(ctx: AccessContext, karte: TerraKarteAccessInfo): boolean {
-  if (!canCreateTerraKarte(ctx)) {
+  if (!canCreateTerraKarte(ctx) || karte.gesperrt === true) {
     return false;
   }
   return karte.status !== "freigegeben" && karte.autorUserId !== null && ctx.user?.id === karte.autorUserId;
