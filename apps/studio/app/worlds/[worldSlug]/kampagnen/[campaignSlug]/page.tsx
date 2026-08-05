@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAppRepository, prisma } from "@uwe/database/server";
-import { createCampaignCockpitService } from "@uwe/campaign-cockpit";
+import { createCampaignCockpitService, findCurrentChapter } from "@uwe/campaign-cockpit";
 import { DungeonPrepStatusBadge, QuestStatusBadge, SidebarSection, StatGrid } from "@uwe/shared-ui";
 import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { CampaignSidebar } from "@/src/components/wiki";
@@ -56,6 +56,15 @@ export default async function CampaignCockpitPage({ params, searchParams }: Prop
   const base = `/worlds/${worldSlug}`;
   const cockpitPath = `${base}/kampagnen/${campaignSlug}`;
   const { campaign, chapters, unassignedQuests, factions, progress } = overview;
+  // Das erste noch nicht gespielte Kapitel in Lesereihenfolge — Druck-Einstieg.
+  const currentChapter = findCurrentChapter(
+    chapters.map((chapter) => ({
+      id: chapter.id,
+      title: chapter.title,
+      sortIndex: chapter.sortIndex,
+      prepStatus: chapter.prepStatus,
+    })),
+  );
 
   return (
     <>
@@ -114,9 +123,20 @@ export default async function CampaignCockpitPage({ params, searchParams }: Prop
           "Kampagnen-Cockpit: Story-Bögen, Quests, Fraktionen, Sessions und Chronik dieser Kampagne."
         }
         actions={
-          <Link href={`${cockpitPath}/abschluss`} className={buttonVariants()}>
-            Session abschließen
-          </Link>
+          <span className="inline-flex flex-wrap gap-2">
+            {currentChapter ? (
+              <Link
+                href={`/api/worlds/${worldSlug}/kampagnen/kapitel-druck?kapitelId=${currentChapter.id}&variante=dm`}
+                target="_blank"
+                className={buttonVariants({ variant: "outline" })}
+              >
+                Aktuelles Kapitel drucken
+              </Link>
+            ) : null}
+            <Link href={`${cockpitPath}/abschluss`} className={buttonVariants()}>
+              Session abschließen
+            </Link>
+          </span>
         }
       />
 

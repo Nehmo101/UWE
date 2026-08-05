@@ -26,6 +26,14 @@ export {
   type CockpitSessionRef,
 } from "./cockpit-service";
 export {
+  buildChapterPrintHtml,
+  buildChapterPrintMarkdown,
+  getChapterPrintData,
+  type ChapterPrintData,
+  type ChapterPrintQuest,
+  type ChapterPrintVariant,
+} from "./chapter-print";
+export {
   createSessionWrapUpService,
   SessionWrapUpService,
   type SessionWrapUp,

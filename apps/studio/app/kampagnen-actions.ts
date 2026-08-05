@@ -5,6 +5,7 @@ import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
   createAuthService,
   createGameSessionService,
+  createPrintListService,
   createPrismaClient,
   createQuestLifecycleService,
   createWorldEventService,
@@ -388,6 +389,40 @@ export async function ignoreNoteInWrapUpAction(formData: FormData) {
   const path = abschlussPath(worldSlug, campaignSlug, sessionId);
   revalidatePath(path);
   redirect(`${path}&note=1#schritt-notizen`);
+}
+
+/**
+ * Brücke zur Handout-Pipeline: Kapitel + zugehörige Quest-Seiten als
+ * Druckliste ins Print-Center (analog preparePrintListFromSessionAction).
+ */
+export async function preparePrintListFromChapterAction(formData: FormData) {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  const campaignSlug = String(formData.get("campaignSlug"));
+  const chapterId = String(formData.get("chapterId"));
+  await requireStudioWorldEdit(worldSlug);
+
+  const campaign = await requireCampaign(worldSlug, campaignSlug);
+  const chapter = await prisma.page.findFirst({
+    where: { id: chapterId, worldId: campaign.worldId, type: "story_arc" },
+    select: { id: true, title: true },
+  });
+  if (!chapter) throw new Error("Kapitel nicht gefunden.");
+
+  const quests = await prisma.page.findMany({
+    where: { worldId: campaign.worldId, parentPageId: chapter.id, type: "quest" },
+    select: { id: true },
+  });
+
+  const list = await createPrintListService().createFromPageIds(
+    campaign.worldId,
+    `Kapitel: ${chapter.title}`,
+    [chapter.id, ...quests.map((quest) => quest.id)],
+    { forNextSession: formData.get("forNextSession") === "on" },
+  );
+
+  revalidatePath(`/worlds/${worldSlug}/labels`);
+  redirect(`/worlds/${worldSlug}/labels/print-lists/${list.id}?created=1`);
 }
 
 /** Session als ausgewertet markieren (Status summarized). */

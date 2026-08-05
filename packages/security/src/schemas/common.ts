@@ -540,6 +540,13 @@ export const characterSheetPrintQuerySchema = z.object({
   layout: z.enum(["full", "compact"]).optional(),
 });
 
+/** Studio: Kapitel-Druck aus dem Kampagnen-Cockpit. */
+export const chapterPrintQuerySchema = z.object({
+  kapitelId: idSchema,
+  format: z.enum(["html", "markdown"]).optional(),
+  variante: z.enum(["dm", "spieler"]).optional(),
+});
+
 /** Portal: Treasury-Item einem eigenen Charakter zuweisen. */
 export const treasuryItemAssignSchema = z.object({
   worldSlug: slugSchema,

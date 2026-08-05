@@ -15,6 +15,7 @@ import { campaignCockpitBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { requireStudioWorldRead } from "@/src/lib/authz";
 import {
   assignQuestToArcAction,
+  preparePrintListFromChapterAction,
   updateQuestStatusInPlaceAction,
   updateStoryArcAction,
 } from "../../../../../../kampagnen-actions";
@@ -106,13 +107,29 @@ export default async function ChapterCockpitPage({ params, searchParams }: Props
         title={chapter.title}
         summary={chapter.summary ?? `Kapitel der Kampagne „${campaign.name}".`}
         actions={
-          <Link
-            href={`/api/worlds/${worldSlug}/kampagnen/kapitel-druck?kapitelId=${chapter.id}&variante=dm`}
-            target="_blank"
-            className={buttonVariants({ variant: "outline" })}
-          >
-            Druckversion
-          </Link>
+          <span className="inline-flex flex-wrap gap-2">
+            <Link
+              href={`/api/worlds/${worldSlug}/kampagnen/kapitel-druck?kapitelId=${chapter.id}&variante=dm`}
+              target="_blank"
+              className={buttonVariants({ variant: "outline" })}
+            >
+              Druck (DM)
+            </Link>
+            <Link
+              href={`/api/worlds/${worldSlug}/kampagnen/kapitel-druck?kapitelId=${chapter.id}&variante=spieler`}
+              target="_blank"
+              className={buttonVariants({ variant: "outline" })}
+            >
+              Druck (Spieler)
+            </Link>
+            <Link
+              href={`/api/worlds/${worldSlug}/kampagnen/kapitel-druck?kapitelId=${chapter.id}&format=markdown&variante=dm`}
+              target="_blank"
+              className={buttonVariants({ variant: "ghost" })}
+            >
+              Markdown
+            </Link>
+          </span>
         }
       />
 
@@ -336,6 +353,33 @@ export default async function ChapterCockpitPage({ params, searchParams }: Props
                 </form>
               )}
             </details>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Papier für den Spieltisch</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3">
+            <p className="text-sm text-muted-foreground">
+              Die Druckversion oben rendert Kapiteltext und Quests als A4-Dokument (DM mit
+              gestrichelten DM-Kästen, Spieler-Variante ohne DM-Bereiche). Zusätzlich lässt sich
+              das Kapitel als Druckliste ins Print-Center legen — für 6×4-Handouts und Karten.
+            </p>
+            <form
+              action={preparePrintListFromChapterAction}
+              className="flex flex-wrap items-center gap-3"
+            >
+              <input type="hidden" name="worldSlug" value={worldSlug} />
+              <input type="hidden" name="campaignSlug" value={campaignSlug} />
+              <input type="hidden" name="chapterId" value={chapter.id} />
+              <label className="inline-flex items-center gap-2 text-sm">
+                <input type="checkbox" name="forNextSession" /> für die nächste Session
+              </label>
+              <Button type="submit" variant="outline" size="sm">
+                Druckliste vorbereiten
+              </Button>
+            </form>
           </CardContent>
         </Card>
 
