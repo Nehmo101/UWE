@@ -26,10 +26,19 @@ test.describe("Portal authenticated player flows", () => {
   });
 
   test("auth worlds hub lists accessible worlds", async ({ page }) => {
-    await page.goto("/auth/worlds");
+    // `?alle=1` ist der vorgesehene Weg zur Übersicht: Ohne den Zusatz springt
+    // das Portal bei genau einer Welt direkt hinein, statt eine Auswahl mit
+    // einem einzigen Eintrag zu zeigen.
+    await page.goto("/auth/worlds?alle=1");
 
     await expect(page.getByRole("heading", { name: "Meine Welten" })).toBeVisible();
     await expect(page.getByRole("link", { name: /^Terra/ })).toBeVisible();
+  });
+
+  test("auth worlds springt bei genau einer Welt direkt hinein", async ({ page }) => {
+    await page.goto("/auth/worlds");
+
+    await expect(page).toHaveURL(/\/auth\/worlds\/terra/);
   });
 
   test("auth world detail dashboard loads", async ({ page }) => {
