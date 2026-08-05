@@ -25,6 +25,7 @@ export {
   type CockpitQuest,
   type CockpitSessionRef,
 } from "./cockpit-service";
+export { buildCampaignAiDigest } from "./campaign-ai-digest";
 export {
   buildChapterPrintHtml,
   buildChapterPrintMarkdown,

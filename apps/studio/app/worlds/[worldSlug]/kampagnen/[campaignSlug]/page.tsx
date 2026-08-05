@@ -4,6 +4,7 @@ import { getAppRepository, prisma } from "@uwe/database/server";
 import { createCampaignCockpitService, findCurrentChapter } from "@uwe/campaign-cockpit";
 import { DungeonPrepStatusBadge, QuestStatusBadge, SidebarSection, StatGrid } from "@uwe/shared-ui";
 import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
+import { AiContextPanel } from "@/components/AiContextPanel";
 import { CampaignSidebar } from "@/src/components/wiki";
 import { campaignCockpitBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { requireStudioWorldRead } from "@/src/lib/authz";
@@ -99,6 +100,9 @@ export default async function CampaignCockpitPage({ params, searchParams }: Prop
             }))}
           manageHref={`${base}/kampagnen`}
         />
+        <SidebarSection title="KI-Werkstatt">
+          <AiContextPanel kind="campaign" worldSlug={worldSlug} campaignSlug={campaignSlug} />
+        </SidebarSection>
         <SidebarSection title="Werkzeuge">
           <ul className="flex flex-col gap-2 text-sm">
             <li>

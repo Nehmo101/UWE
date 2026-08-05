@@ -27,6 +27,7 @@ import {
   isCampaignPdfAnalysisPayload,
   runCampaignPdfAnalysisJob,
 } from "./campaign-import-job";
+import { buildCampaignAiDigest, createCampaignCockpitService } from "@uwe/campaign-cockpit";
 import { brainPrisma, createBrainPrismaClient } from "@uwe/database/brain-client";
 import { createFamilyPrismaClient } from "@uwe/database/family-client";
 import {
@@ -262,6 +263,22 @@ export async function runBrainActionJob(ctx: JobRunnerContext): Promise<Record<s
 
   const gatewayUser = await resolveGatewayUserById(ctx.job.userId);
 
+  // Kampagnen-Aktionen: Kompakt-Digest aus dem Cockpit-Overview bauen und als
+  // extraPromptContext durchreichen — ai-brain kennt das Feature-Package nicht.
+  let campaignId: string | undefined;
+  let extraPromptContext: string | undefined;
+  if (payload.campaignSlug) {
+    const overview = await createCampaignCockpitService(prisma).getCampaignOverview(
+      payload.worldSlug,
+      payload.campaignSlug,
+    );
+    if (!overview) {
+      throw new Error(`Kampagne ${payload.campaignSlug} nicht gefunden.`);
+    }
+    campaignId = overview.campaign.id;
+    extraPromptContext = buildCampaignAiDigest(overview);
+  }
+
   const result = await runBrainAction(deps, {
     actionId: payload.actionId,
     worldSlug: payload.worldSlug,
@@ -270,6 +287,9 @@ export async function runBrainActionJob(ctx: JobRunnerContext): Promise<Record<s
     model: payload.model,
     userPrompt: payload.userPrompt,
     sessionId: payload.sessionId,
+    campaignSlug: payload.campaignSlug,
+    campaignId,
+    extraPromptContext,
     userId: ctx.job.userId ?? undefined,
     gatewayUser: gatewayUser ?? undefined,
     useMock,
@@ -315,6 +335,8 @@ export interface BrainActionJobPayload {
   model: string;
   userPrompt?: string;
   sessionId?: string;
+  /** Kampagnen-Aktionen: Ziel-Kampagne — löst den Digest-Bau aus. */
+  campaignSlug?: string;
   useMock?: boolean;
 }
 
