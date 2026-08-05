@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
-import { createAuthService } from "./auth";
+import { verifyPassword } from "@uwe/auth/server";
+import { createAuthService, DUMMY_PASSWORD_HASH } from "./auth";
 import { createPrismaClient } from "./client";
 import { createTestDatabaseUrl } from "./test-helpers";
 
@@ -76,5 +77,32 @@ describe("owner bootstrap setup", () => {
     assert.equal(bad, null);
 
     await db.$disconnect();
+  });
+
+  it("returns null for unknown and disabled accounts (timing-equalized)", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+
+    // Unknown e-mail must not short-circuit before the scrypt cost is paid.
+    assert.equal(await auth.authenticate("nobody@uwe.local", "whatever"), null);
+
+    await db.user.update({
+      where: { email: "owner@uwe.local" },
+      data: { status: "disabled" },
+    });
+    assert.equal(await auth.authenticate("owner@uwe.local", "secure-password-1"), null);
+    await db.user.update({
+      where: { email: "owner@uwe.local" },
+      data: { status: "active" },
+    });
+
+    await db.$disconnect();
+  });
+
+  it("keeps the dummy hash in valid scrypt format so verifyPassword runs the KDF", async () => {
+    // A malformed hash would make verifyPassword return false *before* scrypt,
+    // silently reintroducing the enumeration timing oracle. Pin the shape.
+    assert.match(DUMMY_PASSWORD_HASH, /^scrypt:v1:[0-9a-f]{32}:[0-9a-f]{128}$/);
+    assert.equal(await verifyPassword("any-password", DUMMY_PASSWORD_HASH), false);
   });
 });

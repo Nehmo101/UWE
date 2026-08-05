@@ -85,6 +85,15 @@ import { USER_SAFE_SELECT } from "./user-service";
 const SESSION_ACTIVITY_TOUCH_THROTTLE_MS = 60_000;
 
 /**
+ * A valid-format scrypt hash used only to equalize timing in `authenticate`.
+ * When the e-mail is unknown or the account is inactive we still run one
+ * `verifyPassword` against this constant so the scrypt cost is paid on every
+ * path — otherwise the missing-scrypt shortcut is a user-enumeration timing
+ * oracle. The value never matches any password (it is not derived from one).
+ */
+export const DUMMY_PASSWORD_HASH = `scrypt:v1:${"0".repeat(32)}:${"0".repeat(128)}`;
+
+/**
  * Die vier Häkchen plus das KI-Flag, alle optional. `aiAccess` ist kein
  * fünftes Häkchen — siehe `packages/auth/src/area-access.ts`.
  */
@@ -570,10 +579,14 @@ export class AuthService {
       where: { email: email.trim().toLowerCase() },
     });
     if (!user?.passwordHash) {
+      // Pay the scrypt cost anyway so an unknown e-mail is not distinguishable
+      // from a wrong password by response time (user-enumeration oracle).
+      await verifyPassword(password, DUMMY_PASSWORD_HASH);
       return null;
     }
 
     if (user.status !== "active") {
+      await verifyPassword(password, DUMMY_PASSWORD_HASH);
       return null;
     }
 
