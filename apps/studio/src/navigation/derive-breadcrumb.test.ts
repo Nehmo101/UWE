@@ -27,7 +27,25 @@ describe("abgeleitete Brotkrumen", () => {
 
   it("hängt die gemerkte Welt nicht an globale Routen", () => {
     assert.deepEqual(deriveShellBreadcrumb("/search", TERRA), [{ label: "Suche" }]);
-    assert.deepEqual(deriveShellBreadcrumb("/jobs", TERRA), [{ label: "Hintergrund-Jobs" }]);
+    // Früher stand hier `/jobs`. Die Job-Warteschlange ist seit dem Umbau eine
+    // Welt-Fläche — der globale Rest der IA ist Suche, Welten und das Konto.
+    assert.deepEqual(deriveShellBreadcrumb("/account/password", TERRA), [{ label: "Passwort" }]);
+  });
+
+  it("führt die zugewanderten Welt-Flächen über die Welt", () => {
+    // Templates, Import-Zentrale und Jobs kamen aus der globalen Seitenleiste;
+    // in der Welt hängen sie an Welten > Terra wie jede andere Welt-Fläche.
+    for (const [path, label] of [
+      ["/worlds/terra/templates", "Seiten-Templates"],
+      ["/worlds/terra/import-central", "Import-Zentrale"],
+      ["/worlds/terra/jobs", "Hintergrund-Jobs"],
+    ] as const) {
+      assert.deepEqual(deriveShellBreadcrumb(path, TERRA), [
+        { label: "Welten", href: "/worlds" },
+        { label: "Terra", href: "/worlds/terra/dashboard" },
+        { label },
+      ]);
+    }
   });
 
   it("verlinkt die Weltenliste nicht auf sich selbst", () => {

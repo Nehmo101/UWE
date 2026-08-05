@@ -9,11 +9,8 @@ import {
 import { importSourceRegistry } from "@uwe/knoteforge-import";
 import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { requireStudioAccess } from "@/src/lib/auth";
-import {
-  ImportCentralWorkspace,
-  type ImportCentralJobRow,
-} from "./ImportCentralWorkspace";
-import { readPreviewSummary, readResultSummary } from "./import-job-summary";
+import { ImportCentralWorkspace } from "./ImportCentralWorkspace";
+import { toImportCentralJobRows } from "./import-job-summary";
 
 export default async function ImportCentralPage() {
   await requireStudioAccess();
@@ -36,31 +33,7 @@ export default async function ImportCentralPage() {
 
   const worldById = new Map(worlds.map((world) => [world.id, world]));
 
-  const initialJobs: ImportCentralJobRow[] = jobs.map((job) => {
-    const world = job.targetWorldId ? worldById.get(job.targetWorldId) : undefined;
-    const metadata =
-      job.metadata && typeof job.metadata === "object" && !Array.isArray(job.metadata)
-        ? (job.metadata as Record<string, unknown>)
-        : null;
-    const metadataSlug = typeof metadata?.worldSlug === "string" ? metadata.worldSlug : null;
-
-    return {
-      id: job.id,
-      sourceType: job.sourceType,
-      targetType: job.targetType,
-      status: job.status,
-      fileName: job.fileName,
-      targetWorldId: job.targetWorldId,
-      targetWorldName: world?.name ?? null,
-      targetWorldSlug: world?.slug ?? metadataSlug,
-      previewSummary: readPreviewSummary(job.previewPayload),
-      resultLabel: readResultSummary(job.resultSummary),
-      undoToken: job.undoToken,
-      errorMessage: job.errorMessage,
-      createdAt: job.createdAt.toISOString(),
-      updatedAt: job.updatedAt.toISOString(),
-    };
-  });
+  const initialJobs = toImportCentralJobRows(jobs, worldById);
 
   const supportedFormats = importSourceRegistry.supportedFormats();
   const plannedFormats = importSourceRegistry.plannedFormats();

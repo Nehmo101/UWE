@@ -46,6 +46,8 @@ export interface UpdateImportJobInput {
 export interface ListImportJobsOptions {
   status?: ImportJobStatus;
   targetType?: ImportTargetType;
+  /** Nur Importe in diese Welt — für die Import-Zentrale im Welt-Cockpit. */
+  targetWorldId?: string;
   limit?: number;
 }
 
@@ -57,6 +59,7 @@ export class ImportJobService {
       where: {
         ...(options.status ? { status: options.status } : {}),
         ...(options.targetType ? { targetType: options.targetType } : {}),
+        ...(options.targetWorldId ? { targetWorldId: options.targetWorldId } : {}),
       },
       orderBy: { createdAt: "desc" },
       take: options.limit ?? 100,

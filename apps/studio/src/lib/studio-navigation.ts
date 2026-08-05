@@ -38,6 +38,9 @@ export type WorldNavKey =
   | "graph"
   | "inspector"
   | "import"
+  | "import-central"
+  | "templates"
+  | "jobs"
   | "brain"
   | "ai-runs"
   | "dnd-api"
@@ -94,6 +97,7 @@ export function worldNavSections(worldSlug: string, active?: WorldNavKey): World
       items: [
         { key: "pages", label: "Seiten", href: `${base}/wiki` },
         { key: "new-page", label: "Neue Seite", href: `${base}/pages/new` },
+        { key: "templates", label: "Seiten-Templates", href: `${base}/templates` },
       ],
     },
     {
@@ -133,6 +137,8 @@ export function worldNavSections(worldSlug: string, active?: WorldNavKey): World
         { key: "quality", label: "Wiki-Pflege", href: `${base}/quality` },
         { key: "ai-runs", label: "KI-Läufe", href: `${base}/ai-runs` },
         { key: "import", label: "Import", href: `${base}/import` },
+        { key: "import-central", label: "Import-Zentrale", href: `${base}/import-central` },
+        { key: "jobs", label: "Hintergrund-Jobs", href: `${base}/jobs` },
         { key: "dnd-api", label: "DnD API", href: `${base}/dnd-api` },
         { key: "backup", label: "Backup", href: `${base}/backup` },
       ],
@@ -162,6 +168,7 @@ export function worldBottomNavKey(active: WorldNavKey, isSearching = false): Wor
     active === "graph" ||
     active === "karten" ||
     active === "magic-items" ||
+    active === "templates" ||
     isSearching
   ) {
     return "content";
@@ -186,6 +193,8 @@ export function worldBottomNavKey(active: WorldNavKey, isSearching = false): Wor
     active === "inspector" ||
     active === "ai-runs" ||
     active === "import" ||
+    active === "import-central" ||
+    active === "jobs" ||
     active === "dnd-api" ||
     active === "backup" ||
     active === "quality" ||
@@ -220,31 +229,10 @@ export function resolveStudioRailActiveId(activePath: string): string | undefine
   const normalized = activePath.split("?")[0]?.replace(/\/$/, "") || "/worlds";
   if (normalized.startsWith("/worlds") || normalized.startsWith("/search")) return "worlds";
   if (
-    normalized.startsWith("/capture") ||
-    normalized.startsWith("/templates") ||
-    normalized.startsWith("/import") ||
-    normalized.startsWith("/workshop") ||
-    normalized.startsWith("/projects") ||
-    normalized.startsWith("/ideas") ||
-    normalized.startsWith("/bugs")
-  ) {
-    return "create";
-  }
-  if (
-    normalized.startsWith("/ai") ||
-    normalized.startsWith("/image-studio") ||
-    normalized.startsWith("/mail") ||
-    normalized.startsWith("/brain") ||
-    normalized.startsWith("/life-brain")
-  ) {
-    return "media-ai";
-  }
-  if (
     normalized.startsWith("/admin") ||
-    normalized.startsWith("/jobs") ||
-    normalized.startsWith("/backup") ||
-    normalized.startsWith("/settings") ||
-    normalized.startsWith("/hardware")
+    normalized.startsWith("/command") ||
+    normalized.startsWith("/account") ||
+    normalized.startsWith("/settings")
   ) {
     return "system";
   }
@@ -289,7 +277,12 @@ export function resolveWorldNavKey(pathname: string, worldSlug: string): WorldNa
   if (normalized.startsWith(`${base}/quality`)) return "quality";
   if (normalized.startsWith(`${base}/brain`)) return "brain";
   if (normalized.startsWith(`${base}/ai-runs`)) return "ai-runs";
+  // Vor `${base}/import`: „import-central" fängt an wie „import" und ist eine
+  // andere Seite.
+  if (normalized.startsWith(`${base}/import-central`)) return "import-central";
   if (normalized.startsWith(`${base}/import`)) return "import";
+  if (normalized.startsWith(`${base}/templates`)) return "templates";
+  if (normalized.startsWith(`${base}/jobs`)) return "jobs";
   if (normalized.startsWith(`${base}/dnd-api`)) return "dnd-api";
   if (normalized.startsWith(`${base}/backup`)) return "backup";
   if (normalized.startsWith(`${base}/pages/new`)) return "new-page";
@@ -318,6 +311,15 @@ export interface StudioPaletteCommand {
  * Brain) und `/mail/compose` — letzteres existiert zwar, ruft aber `notFound()`,
  * sobald `?kind=` fehlt, und ist damit kein Sprungziel, sondern ein Ziel mit
  * Kontext (Session-Recap, Handout).
+ *
+ * Seit die Seitenleiste auf Start / Welten / System zusammengezogen ist, trägt
+ * diese Liste zusätzlich die Betriebsflächen: Admin-Hub, Verlauf, KI-Gateway,
+ * Prompt-Konsole und die NL-Befehle. Sie sind bewusst **nicht** in der
+ * Seitenleiste — dort steht nur, woran täglich gearbeitet wird — aber sie
+ * sollen auch nicht nur noch per Adresszeile erreichbar sein.
+ *
+ * „Brain Store" (`/brain`) stand hier ebenfalls und ist heraus: das Welt-Brain
+ * liegt im Welt-Cockpit, das owner-private Brain in der eigenen App.
  */
 export const STUDIO_PALETTE_EXTRA: {
   id: string;
@@ -326,8 +328,11 @@ export const STUDIO_PALETTE_EXTRA: {
   group: string;
   keywords?: string[];
 }[] = [
-  { id: "command-center", label: "NL Command Center", href: "/command", group: "System / Übersicht", keywords: ["command", "nl", "admin"] },
-  { id: "brain-store", label: "Brain Store", href: "/brain", group: "Knowledge & Brain", keywords: ["brain", "wissen", "canon"] },
+  { id: "admin-hub", label: "Admin Übersicht", href: "/admin", group: "System / Betrieb", keywords: ["admin", "betrieb", "übersicht"] },
+  { id: "admin-activity", label: "Verlauf", href: "/admin/activity", group: "System / Betrieb", keywords: ["activity", "audit", "verlauf"] },
+  { id: "admin-ai-gateway", label: "AI Gateway", href: "/admin/ai-gateway", group: "System / Betrieb", keywords: ["gateway", "provider", "model", "budget"] },
+  { id: "admin-ai-prompt", label: "Prompt-Konsole", href: "/admin/ai-prompt", group: "System / Betrieb", keywords: ["prompt", "konsole", "ollama", "engine"] },
+  { id: "command-center", label: "NL Command Center", href: "/command", group: "System / Betrieb", keywords: ["command", "nl", "admin"] },
 ];
 
 const PAGE_TEMPLATE_SHORTCUTS: {

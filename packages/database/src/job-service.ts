@@ -235,16 +235,25 @@ export class JobService {
     return jobs.map((job) => toJobView(job));
   }
 
-  async getSummary(): Promise<JobSummary> {
+  /**
+   * Zählwerk der Warteschlange, optional auf eine Welt eingegrenzt.
+   *
+   * Die Welt-Eingrenzung kam mit der Job-Liste im Welt-Cockpit
+   * (`/worlds/[worldSlug]/jobs`): dort wäre eine globale Fehlerzahl über einer
+   * gefilterten Liste eine Zahl, zu der die Zeilen fehlen. Ohne `worldSlug`
+   * bleibt das Verhalten unverändert.
+   */
+  async getSummary(options: { worldSlug?: string } = {}): Promise<JobSummary> {
+    const scope = options.worldSlug ? { worldSlug: options.worldSlug } : {};
     const [pending, running, failed, completed, cancelled, recentFailedRows] =
       await Promise.all([
-        this.db.job.count({ where: { status: "pending" } }),
-        this.db.job.count({ where: { status: "running" } }),
-        this.db.job.count({ where: { status: "failed" } }),
-        this.db.job.count({ where: { status: "completed" } }),
-        this.db.job.count({ where: { status: "cancelled" } }),
+        this.db.job.count({ where: { ...scope, status: "pending" } }),
+        this.db.job.count({ where: { ...scope, status: "running" } }),
+        this.db.job.count({ where: { ...scope, status: "failed" } }),
+        this.db.job.count({ where: { ...scope, status: "completed" } }),
+        this.db.job.count({ where: { ...scope, status: "cancelled" } }),
         this.db.job.findMany({
-          where: { status: "failed" },
+          where: { ...scope, status: "failed" },
           orderBy: { createdAt: "desc" },
           take: 5,
         }),
