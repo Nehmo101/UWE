@@ -37,6 +37,14 @@ describe("design v2 CSS bundle", () => {
     assert.match(wiki, /\.uwe-v2-wiki-content/);
   });
 
+  it("styles search highlights outside the reader scope", () => {
+    // `highlightHtml` (@uwe/session-runner) setzt genau diese Klasse in den
+    // Bandtext, die Trefferliste benutzt sie daneben. Ungestylt bliebe das
+    // Browser-Gelb übrig — und nur im Lesetext gestylt wäre die halbe Anzeige.
+    const wiki = readFileSync(path.join(designV2Dir, "wiki.css"), "utf8");
+    assert.match(wiki, /^\.uwe-treffer \{/m);
+  });
+
   it("parchment OS handoff tokens match theme preset", () => {
     const parchment = UWE_THEMES["uwe-parchment-os"].colors;
     assert.equal(parchment.fg?.toLowerCase(), "#211d17");

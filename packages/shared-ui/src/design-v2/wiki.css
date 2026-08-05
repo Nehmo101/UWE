@@ -111,3 +111,22 @@
   letter-spacing: 0.06em;
   color: var(--uwe-fg-muted);
 }
+
+/**
+ * Suchtreffer — im Lesetext eines Bandes und in den Trefferausschnitten daneben.
+ *
+ * Steht bewusst NICHT unter `.uwe-v2-wiki-content`: dieselbe Markierung erscheint
+ * auch in der Trefferliste außerhalb des Lesetexts, und beides muss gleich
+ * aussehen. Das Browser-Gelb von `<mark>` wäre auf dunklem Grund ein Fremdkörper,
+ * deshalb der Akzent aus den Tokens.
+ *
+ * Farbe allein trägt die Aussage nicht — der eingesetzte Unterstrich bleibt auch
+ * dort sichtbar, wo Hintergrund und Akzent nah beieinanderliegen.
+ */
+.uwe-treffer {
+  padding: 0 0.12em;
+  border-radius: var(--uwe-radius-sm, 0.375rem);
+  background: color-mix(in srgb, var(--uwe-accent) 28%, transparent);
+  box-shadow: inset 0 -0.12em 0 color-mix(in srgb, var(--uwe-accent) 70%, transparent);
+  color: inherit;
+}
