@@ -237,7 +237,8 @@ und Service-Arbeit, kein Datenumzug.
 | **2 — Session↔Kapitel + Spielabend** ✅ | Migration `kampagnen_session_story_arc` (GameSession.storyArcPageId + StoryArcEntityLink), Kapitel-Dropdown an Session (Default: aktuelles Kapitel), Akt-Tafel im Live-Modus (Quests mit Status-Schaltern, NSC/Orte/Fraktionen, Dungeons, offene Plots), NSC-Pinnen am Kapitel | **ja** |
 | **3 — Portal-Notizen** ✅ | Session-Auswahl im Notizen-Panel (Default: aktive Session, „Ohne Session" explizit), Kampagne folgt der Session (zentral in `createPlayerNoteForViewer`, deckt Formular UND Offline-Sync), Tischmodus hängt neue Notizen an die aktive Session des Abzugs | nein |
 | **4 — Dungeon-Flow** ✅ | Dungeon↔Kapitel-Zuordnung (parentPageId, Kampagne wandert mit), Kapitel-Seite + Akt-Tafel zeigen Kapitel-Dungeons, Dungeon-Seite verlinkt zurück ins Kapitel | nein |
-| **Rest (offen)** | Raum-Cockpit-Schnell-Protokoll in die Live-Session, zweite Nav-Quelle (`studio-navigation.ts`) konsolidieren, `campaigns/`-Stub-Rückbau, One-Shot mit Kampagne, `PlayerQuestion.campaignId` als echte FK, doc-import erzeugt story_arc | nein |
+| **Rest** ✅ | Raum-Cockpit-Schnell-Protokoll (Notiz ins Live-Protokoll der laufenden Session, `logRoomToSessionAction`), zweite Nav-Quelle abgebaut (tote Legacy-Symbole entfernt, Shim nur noch `campaignNavItems`), One-Shot mit Kampagnen-Auswahl, `PlayerQuestion.campaignId` als echte FK (Migration `player_question_campaign_fk`, Waisen bereinigt), doc-import erzeugt `story_arc` („Akt II — …"/„Kapitel 2: …" als Fallback nach den Inhaltsregeln; `typ: kapitel` im Frontmatter) | **ja** (FK) |
+| Bewusst gelassen | `/campaigns`- und `/radar`-Redirect-Stubs bleiben (Alt-Bookmarks brechen sonst) | nein |
 
 Jede Etappe zieht die Bereichs-Skills nach (`pnpm skills:sync` +
 Prosa-Teil), sonst wird der Build rot.

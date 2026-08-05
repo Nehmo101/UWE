@@ -22,6 +22,12 @@ test("supports English markers and synonyms", () => {
   assert.equal(detectPageTypeFromContent("Type: Monster"), "monster");
 });
 
+test("maps chapter labels to story_arc (Kampagnen-Modul)", () => {
+  assert.equal(detectPageTypeFromContent("Typ: Kapitel"), "story_arc");
+  assert.equal(detectPageTypeFromContent("Kategorie: Akt"), "story_arc");
+  assert.equal(detectPageTypeFromContent("Typ: Story-Bogen"), "story_arc");
+});
+
 test("takes the first word when the marker value runs into prose", () => {
   assert.equal(
     detectPageTypeFromContent("Kategorie: Ort — eine verfallene Ruine im Norden"),

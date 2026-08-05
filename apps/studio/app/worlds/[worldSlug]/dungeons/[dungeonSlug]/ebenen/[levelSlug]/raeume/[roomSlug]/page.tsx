@@ -16,11 +16,13 @@ import {
   createDungeonCockpitService,
   DungeonPrepStatusEnum,
   getAppRepository,
+  prisma,
   ROOM_CHILD_TYPES,
 } from "@uwe/database/server";
 import {
   createRoomChildAction,
   linkAssetToDungeonPageAction,
+  logRoomToSessionAction,
   updateRoomContentAction,
 } from "../../../../../../../../dungeon-actions";
 import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
@@ -47,7 +49,13 @@ interface Props {
     levelSlug: string;
     roomSlug: string;
   }>;
-  searchParams: Promise<{ created?: string; saved?: string; added?: string; assetLinked?: string }>;
+  searchParams: Promise<{
+    created?: string;
+    saved?: string;
+    added?: string;
+    assetLinked?: string;
+    logged?: string;
+  }>;
 }
 
 const SECTION_CLASS = "mb-8 flex flex-col gap-3";
@@ -56,7 +64,7 @@ const HEADING_CLASS = "m-0 text-lg font-semibold tracking-tight";
 
 export default async function StudioDungeonRoomPage({ params, searchParams }: Props) {
   const { worldSlug, dungeonSlug, levelSlug, roomSlug } = await params;
-  const { created, saved, added, assetLinked } = await searchParams;
+  const { created, saved, added, assetLinked, logged } = await searchParams;
   const repo = getAppRepository();
   const world = await repo.getWorldBySlug(worldSlug);
   if (!world) notFound();
@@ -78,6 +86,22 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
   const redirectTo = `/worlds/${worldSlug}/dungeons/${dungeonSlug}/ebenen/${levelSlug}/raeume/${roomSlug}`;
   const dungeonHref = `/worlds/${worldSlug}/dungeons/${dungeonSlug}`;
   const levelHref = `/worlds/${worldSlug}/dungeons/${dungeonSlug}/ebenen/${levelSlug}`;
+
+  // Laufende Session für das Schnell-Protokoll: jüngste noch nicht
+  // nachbereitete Session der Dungeon-Kampagne (sonst welt-weit).
+  const dungeonPage = await prisma.page.findFirst({
+    where: { worldId: world.id, slug: dungeonSlug, type: "dungeon" },
+    select: { campaignId: true },
+  });
+  const runningSession = await prisma.gameSession.findFirst({
+    where: {
+      worldId: world.id,
+      status: { in: ["planned", "prepared", "played"] },
+      ...(dungeonPage?.campaignId ? { campaignId: dungeonPage.campaignId } : {}),
+    },
+    orderBy: [{ sessionNumber: "desc" }],
+    select: { id: true, title: true, sessionNumber: true },
+  });
 
   const readAloud = cockpit.sections.readAloud.map((b) => b.content).join("\n\n");
   const playerDescription = cockpit.sections.playerDescription.map((b) => b.content).join("\n\n");
@@ -155,6 +179,42 @@ export default async function StudioDungeonRoomPage({ params, searchParams }: Pr
       {saved && <Alert tone="success" className="mb-4">Raum gespeichert.</Alert>}
       {added && <Alert tone="success" className="mb-4">Eintrag hinzugefügt.</Alert>}
       {assetLinked && <Alert tone="success" className="mb-4">Asset verknüpft.</Alert>}
+      {logged && <Alert tone="success" className="mb-4">Ins Live-Protokoll geschrieben.</Alert>}
+
+      {runningSession ? (
+        <section className={SECTION_CLASS}>
+          <h2 className={HEADING_CLASS}>Live-Protokoll</h2>
+          <p className="m-0 text-sm text-muted-foreground">
+            Schreibt in Session {runningSession.sessionNumber} „{runningSession.title}“ —
+            leer gelassen wird „Raum betreten“ notiert.
+          </p>
+          <form
+            action={logRoomToSessionAction}
+            className="flex flex-wrap items-center gap-2"
+          >
+            <input type="hidden" name="worldSlug" value={worldSlug} />
+            <input type="hidden" name="dungeonSlug" value={dungeonSlug} />
+            <input type="hidden" name="levelSlug" value={levelSlug} />
+            <input type="hidden" name="roomSlug" value={roomSlug} />
+            <input type="hidden" name="sessionId" value={runningSession.id} />
+            <input type="hidden" name="roomPageId" value={cockpit.room.id} />
+            <Input
+              name="content"
+              placeholder="Was ist hier passiert? (optional)"
+              className="min-w-64 flex-1"
+            />
+            <Button type="submit" variant="secondary">
+              Ins Protokoll
+            </Button>
+            <Link
+              href={`/worlds/${worldSlug}/sessions/${runningSession.id}/live`}
+              className={buttonVariants({ variant: "ghost" })}
+            >
+              Zum Spielabend →
+            </Link>
+          </form>
+        </section>
+      ) : null}
 
       <section className={SECTION_CLASS}>
         <h2 className={HEADING_CLASS}>Werkzeuge</h2>

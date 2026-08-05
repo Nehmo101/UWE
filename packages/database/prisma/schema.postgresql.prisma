@@ -648,6 +648,7 @@ model Campaign {
   printLists        PrintList[]
   soundboardButtons SoundboardButton[]
   playerNotes       PlayerNote[]
+  playerQuestions   PlayerQuestion[]
   brainDocuments    BrainDocument[]
   brainFacts        BrainFact[]
   characters        Character[]
@@ -2611,7 +2612,8 @@ model PlayerQuestion {
   createdAt    DateTime             @default(now()) @map("created_at")
   answeredAt   DateTime?            @map("answered_at")
 
-  world World @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  world    World     @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
 
   @@index([worldId, status])
   @@map("player_questions")
