@@ -43,6 +43,7 @@ export type LoginFlowFailureReason =
   | "human_verification_failed"
   | "invalid_credentials"
   | "account_inactive"
+  | "account_locked"
   | "studio_access_denied"
   | "two_factor_required"
   | "passkey_invalid"
@@ -131,6 +132,10 @@ export interface SessionIssuingAuthPort {
 export interface LoginAuthServicePort<TUser extends LoginFlowUser>
   extends SessionIssuingAuthPort {
   authenticate(email: string, password: string): Promise<TUser | null>;
+  /** Count a failed password attempt and lock the account past the threshold. */
+  recordFailedLogin(userId: string): Promise<void>;
+  /** Clear the failed-attempt counter and any lock after a successful login. */
+  resetFailedLogins(userId: string): Promise<void>;
 }
 
 /** The subset of the 2FA domain service the flow calls. */
@@ -143,10 +148,17 @@ export interface LoginTwoFactorServicePort {
   ): Promise<{ userId: string } | null>;
 }
 
-/** Minimal existing-user record used only for failure-reason resolution. */
+/** Minimal existing-user record for failure-reason resolution and lock check. */
 export interface ExistingLoginUser {
   id: string;
   status: string;
+  /** Account lock expiry (from a previous burst of failed logins), if any. */
+  lockedUntil?: Date | null;
+}
+
+/** True while the account is under an active lockout window. */
+export function isAccountLocked(user: ExistingLoginUser, now: number = Date.now()): boolean {
+  return user.lockedUntil != null && user.lockedUntil.getTime() > now;
 }
 
 function jsonResponse(body: unknown, status: number, headers?: HeadersInit): Response {
@@ -341,6 +353,24 @@ export async function performLoginFlow<
     const twoFactor = createTwoFactorService(db);
 
     const existingUser = await findExistingUser(db, normalizedEmail);
+
+    // Account-level lockout survives IP rotation (unlike the IP rate limit).
+    // Neutral 401 so a locked account is not distinguishable from a wrong
+    // password, and skip the scrypt work entirely while locked.
+    if (existingUser && isAccountLocked(existingUser)) {
+      await logLoginAttempt({
+        db,
+        surface,
+        request: auditRequest,
+        email: normalizedEmail,
+        actorUserId: existingUser.id,
+        reason: "account_locked",
+        httpStatus: 401,
+        errorMessage: "Ungültige Anmeldedaten.",
+      });
+      return errorResponse("Ungültige Anmeldedaten.", 401);
+    }
+
     const user = await auth.authenticate(email, password);
     const authUser = user ? auth.toAuthUser(user) : null;
 
@@ -366,10 +396,17 @@ export async function performLoginFlow<
         errorMessage: "Ungültige Anmeldedaten.",
       });
 
+      // Count only genuine password failures (existing account, wrong secret) —
+      // a valid password on the wrong surface must not lock the account out.
+      if (existingUser && !user) {
+        await auth.recordFailedLogin(existingUser.id);
+      }
+
       return errorResponse("Ungültige Anmeldedaten.", 401);
     }
 
     await resetRateLimitAsync(rateKey);
+    await auth.resetFailedLogins(user.id);
 
     if (await twoFactor.isEnabled(user.id)) {
       const challenge = await twoFactor.createLoginChallenge(user.id);
@@ -517,7 +554,12 @@ export async function completeTwoFactorLogin<
   } = deps;
 
   const ip = clientIpFromHeaders(request.headers);
-  const rateKey = `${rateKeyPrefix}:${ip}:${challengeToken.slice(0, 8)}`;
+  // Key on the IP, not the challenge token. Keying on the token gave every fresh
+  // challenge a new attempt budget, so an attacker who knew the password could
+  // loop "password login → new challenge → 8 TOTP guesses" without ever
+  // saturating the limiter. The per-challenge attemptCount burn (5) bounds a
+  // single challenge; this IP bucket bounds the total across challenges.
+  const rateKey = `${rateKeyPrefix}:${ip}`;
   const rate = await checkRateLimitAsync(rateKey, rateLimitOptions);
   if (!rate.allowed) {
     return rateLimitedResponse(

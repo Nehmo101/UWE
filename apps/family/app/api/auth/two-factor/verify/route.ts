@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     request,
     challengeToken,
     code,
-    rateKeyPrefix: "portal-2fa",
+    rateKeyPrefix: "family-2fa",
     createDb: createPrismaClient,
     createAuthService,
     createTwoFactorService,

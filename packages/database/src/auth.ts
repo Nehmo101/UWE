@@ -94,6 +94,15 @@ const SESSION_ACTIVITY_TOUCH_THROTTLE_MS = 60_000;
 export const DUMMY_PASSWORD_HASH = `scrypt:v1:${"0".repeat(32)}:${"0".repeat(128)}`;
 
 /**
+ * Account-lockout policy. Deliberately loose (10 tries / 15 min) so a
+ * fat-fingered legitimate user is not locked out, while password spraying —
+ * which the account-keyed counter catches across rotating IPs — cannot make
+ * meaningful progress. The owner is not code-exempt; the window auto-expires.
+ */
+export const MAX_FAILED_LOGINS = 10;
+export const LOCKOUT_MS = 15 * 60_000;
+
+/**
  * Die vier Häkchen plus das KI-Flag, alle optional. `aiAccess` ist kein
  * fünftes Häkchen — siehe `packages/auth/src/area-access.ts`.
  */
@@ -571,6 +580,34 @@ export class AuthService {
     await this.db.user.update({
       where: { id: userId },
       data: { lastLoginAt: new Date() },
+    });
+  }
+
+  /**
+   * Count a failed password attempt for this account. Once it reaches
+   * MAX_FAILED_LOGINS the account is locked for LOCKOUT_MS. This is keyed on the
+   * account, not the IP, so an attacker rotating source IPs (which the spoofable
+   * X-Forwarded-For made trivial) still runs into the same wall. The window
+   * auto-expires; a successful login clears the counter.
+   */
+  async recordFailedLogin(userId: string) {
+    const updated = await this.db.user.update({
+      where: { id: userId },
+      data: { failedLoginCount: { increment: 1 } },
+      select: { failedLoginCount: true },
+    });
+    if (updated.failedLoginCount >= MAX_FAILED_LOGINS) {
+      await this.db.user.update({
+        where: { id: userId },
+        data: { lockedUntil: new Date(Date.now() + LOCKOUT_MS) },
+      });
+    }
+  }
+
+  async resetFailedLogins(userId: string) {
+    await this.db.user.update({
+      where: { id: userId },
+      data: { failedLoginCount: 0, lockedUntil: null },
     });
   }
 

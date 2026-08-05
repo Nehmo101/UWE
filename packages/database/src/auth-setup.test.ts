@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import { verifyPassword } from "@uwe/auth/server";
-import { createAuthService, DUMMY_PASSWORD_HASH } from "./auth";
+import { createAuthService, DUMMY_PASSWORD_HASH, MAX_FAILED_LOGINS } from "./auth";
 import { createPrismaClient } from "./client";
 import { createTestDatabaseUrl } from "./test-helpers";
 
@@ -95,6 +95,27 @@ describe("owner bootstrap setup", () => {
       where: { email: "owner@uwe.local" },
       data: { status: "active" },
     });
+
+    await db.$disconnect();
+  });
+
+  it("locks the account after MAX_FAILED_LOGINS and clears on reset", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+    const user = await db.user.findUniqueOrThrow({ where: { email: "owner@uwe.local" } });
+
+    for (let i = 0; i < MAX_FAILED_LOGINS; i += 1) {
+      await auth.recordFailedLogin(user.id);
+    }
+
+    const locked = await db.user.findUniqueOrThrow({ where: { id: user.id } });
+    assert.equal(locked.failedLoginCount, MAX_FAILED_LOGINS);
+    assert.ok(locked.lockedUntil && locked.lockedUntil.getTime() > Date.now());
+
+    await auth.resetFailedLogins(user.id);
+    const cleared = await db.user.findUniqueOrThrow({ where: { id: user.id } });
+    assert.equal(cleared.failedLoginCount, 0);
+    assert.equal(cleared.lockedUntil, null);
 
     await db.$disconnect();
   });
