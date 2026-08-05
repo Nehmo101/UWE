@@ -153,23 +153,22 @@ export class FamilyMemberService {
   }
 
   /**
-   * Legt beim ersten Besuch ein Mitglied für das Konto an und hält den
-   * Anzeigenamen aktuell. Löst `FamilyService.ensureMemberProfile` ab, vergibt
-   * aber zusätzlich eine Farbe.
+   * Legt beim ersten Besuch ein Mitglied für das Konto an. Löst
+   * `FamilyService.ensureMemberProfile` ab, vergibt aber zusätzlich eine Farbe.
+   *
+   * Der Anzeigename aus dem Konto ist nur der **Startwert**: gepflegt wird er
+   * danach im Haushalt auf `/members`. Würde jeder Besuch den Kontonamen
+   * zurückschreiben, verlöre jede dort gespeicherte Änderung beim nächsten
+   * Seitenaufruf ihre Wirkung.
    */
   async ensureMemberForUser(input: { userId: string; displayName: string }) {
     const existing = await this.getMemberByUserId(input.userId);
-    const displayName = normaliseDisplayName(input.displayName);
+    if (existing) return existing;
 
-    if (existing) {
-      if (existing.displayName === displayName) return existing;
-      return this.db.familyMemberProfile.update({
-        where: { id: existing.id },
-        data: { displayName },
-      });
-    }
-
-    return this.createMember({ userId: input.userId, displayName });
+    return this.createMember({
+      userId: input.userId,
+      displayName: normaliseDisplayName(input.displayName),
+    });
   }
 
   /** Verknüpft ein bestehendes Mitglied ohne Konto mit einer Benutzer-ID. */
