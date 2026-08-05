@@ -20,6 +20,7 @@ export const FAMILY_EXPORT_MODEL_KEYS = [
   "ScanDocument", "MaintenanceTask", "PantryItem",
   "FamilyChatConversation", "FamilyChatMessage", "FamilyBrainFact", "FamilyMemberProfile",
   "CalendarEventMember", "FamilyHealthRecord", "FamilyCalendarSubscription",
+  "FamilyCalDavAccount",
 ] as const;
 
 export type FamilyExportModelKey = (typeof FAMILY_EXPORT_MODEL_KEYS)[number];
@@ -51,6 +52,7 @@ function familyModelReaders(db: FamilyPrismaClient): FamilyModelReaders {
     // Enthält nur Hashes, keine Klartext-Tokens — ein Restore stellt die Abos
     // wieder her, ohne dass ein Geheimnis im Backup liegt.
     FamilyCalendarSubscription: () => db.familyCalendarSubscription.findMany(),
+    FamilyCalDavAccount: () => db.familyCalDavAccount.findMany(),
   };
 }
 

@@ -5,6 +5,7 @@
 
 import { assertUserProvidedFetchUrlAllowed } from "@uwe/security";
 import { fetchCalDavEventsViaGet } from "./caldav-sync";
+import { zonedTimeToUtc } from "./ical-timezones";
 
 export interface ParsedIcalEvent {
   uid: string;
@@ -14,6 +15,10 @@ export interface ParsedIcalEvent {
   startAt: Date;
   endAt?: Date;
   allDay: boolean;
+  /** RRULE vorhanden — der Parser expandiert nicht, er markiert nur. */
+  hasRecurrence?: boolean;
+  /** Gesetzt bei Ausnahme-VEVENTs einer Serie (RECURRENCE-ID). */
+  recurrenceId?: string;
 }
 
 function unfoldIcalLines(content: string): string[] {
@@ -31,7 +36,7 @@ function unfoldIcalLines(content: string): string[] {
   return lines;
 }
 
-function parseIcalDate(value: string): { date: Date; allDay: boolean } {
+function parseIcalDate(value: string, tzid?: string): { date: Date; allDay: boolean } {
   const trimmed = value.trim();
   if (/^\d{8}$/.test(trimmed)) {
     const y = Number(trimmed.slice(0, 4));
@@ -39,23 +44,40 @@ function parseIcalDate(value: string): { date: Date; allDay: boolean } {
     const d = Number(trimmed.slice(6, 8));
     return { date: new Date(Date.UTC(y, m, d)), allDay: true };
   }
-  const match = trimmed.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z?$/);
+  const match = trimmed.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(Z?)$/);
   if (match) {
-    const [, ys, ms, ds, hs, mins, ss] = match;
-    const date = new Date(
-      Date.UTC(
-        Number(ys),
-        Number(ms) - 1,
-        Number(ds),
-        Number(hs),
-        Number(mins),
-        Number(ss),
-      ),
-    );
+    const [, ys, ms, ds, hs, mins, ss, zulu] = match;
+    // Lokalzeit mit TZID (so schickt es der iOS-Kalender) wird über die Zone
+    // umgerechnet; Zulu-Zeiten und Zeiten ohne TZID bleiben wie bisher UTC.
+    const date =
+      !zulu && tzid
+        ? zonedTimeToUtc(
+            Number(ys),
+            Number(ms),
+            Number(ds),
+            Number(hs),
+            Number(mins),
+            Number(ss),
+            tzid,
+          )
+        : new Date(
+            Date.UTC(
+              Number(ys),
+              Number(ms) - 1,
+              Number(ds),
+              Number(hs),
+              Number(mins),
+              Number(ss),
+            ),
+          );
     return { date, allDay: false };
   }
   const parsed = new Date(trimmed);
   return { date: parsed, allDay: false };
+}
+
+function tzidOf(keyPart: string): string | undefined {
+  return keyPart.match(/;TZID=([^;:]+)/i)?.[1];
 }
 
 function unescapeIcalText(value: string): string {
@@ -70,7 +92,12 @@ export function parseIcalEvents(content: string): ParsedIcalEvent[] {
   const lines = unfoldIcalLines(content);
   const events: ParsedIcalEvent[] = [];
   let inEvent = false;
-  let current: Partial<ParsedIcalEvent> & { dtStart?: string; dtEnd?: string } = {};
+  let current: Partial<ParsedIcalEvent> & {
+    dtStart?: string;
+    dtStartTzid?: string;
+    dtEnd?: string;
+    dtEndTzid?: string;
+  } = {};
 
   for (const line of lines) {
     if (line === "BEGIN:VEVENT") {
@@ -81,8 +108,10 @@ export function parseIcalEvents(content: string): ParsedIcalEvent[] {
     if (line === "END:VEVENT") {
       inEvent = false;
       if (current.uid && current.title && current.dtStart) {
-        const start = parseIcalDate(current.dtStart);
-        const end = current.dtEnd ? parseIcalDate(current.dtEnd).date : undefined;
+        const start = parseIcalDate(current.dtStart, current.dtStartTzid);
+        const end = current.dtEnd
+          ? parseIcalDate(current.dtEnd, current.dtEndTzid).date
+          : undefined;
         events.push({
           uid: current.uid,
           title: current.title,
@@ -91,6 +120,8 @@ export function parseIcalEvents(content: string): ParsedIcalEvent[] {
           startAt: start.date,
           endAt: end,
           allDay: start.allDay,
+          ...(current.hasRecurrence ? { hasRecurrence: true } : {}),
+          ...(current.recurrenceId ? { recurrenceId: current.recurrenceId } : {}),
         });
       }
       continue;
@@ -118,9 +149,17 @@ export function parseIcalEvents(content: string): ParsedIcalEvent[] {
         break;
       case "DTSTART":
         current.dtStart = keyPart.includes("VALUE=DATE") ? value.slice(0, 8) : value;
+        current.dtStartTzid = tzidOf(keyPart);
         break;
       case "DTEND":
         current.dtEnd = keyPart.includes("VALUE=DATE") ? value.slice(0, 8) : value;
+        current.dtEndTzid = tzidOf(keyPart);
+        break;
+      case "RRULE":
+        current.hasRecurrence = true;
+        break;
+      case "RECURRENCE-ID":
+        current.recurrenceId = value;
         break;
       default:
         break;
@@ -128,6 +167,15 @@ export function parseIcalEvents(content: string): ParsedIcalEvent[] {
   }
 
   return events;
+}
+
+/**
+ * Das Master-VEVENT eines VCALENDAR: bei Serien schickt iOS Ausnahmen als
+ * eigene VEVENTs mit RECURRENCE-ID im selben Kalender — massgeblich für
+ * Titel/Zeit ist das VEVENT ohne RECURRENCE-ID.
+ */
+export function pickMasterEvent(events: readonly ParsedIcalEvent[]): ParsedIcalEvent | null {
+  return events.find((event) => !event.recurrenceId) ?? events[0] ?? null;
 }
 
 function formatIcalDate(date: Date, allDay: boolean): string {
@@ -232,3 +280,19 @@ export {
   type CalDavSyncResult,
   type CalDavRemoteEvent,
 } from "./caldav-sync";
+
+export { resolveTimezone, zonedTimeToUtc } from "./ical-timezones";
+
+export {
+  DAV_NS,
+  CALDAV_NS,
+  CALENDARSERVER_NS,
+  APPLE_ICAL_NS,
+  escapeXml,
+  buildMultistatus,
+  parsePropfindProps,
+  parseMultigetHrefs,
+  parseCalendarQueryTimeRange,
+  type DavProp,
+  type MultistatusResponse,
+} from "./dav-xml";

@@ -201,6 +201,7 @@ export const PRISMA_MODEL_BOUNDARIES = {
   CalendarEventMember: F("family"),
   FamilyHealthRecord: F("family"),
   FamilyCalendarSubscription: F("family"),
+  FamilyCalDavAccount: F("family"),
 } as const satisfies Record<string, PrismaModelBoundary>;
 
 export type PrismaModelName = keyof typeof PRISMA_MODEL_BOUNDARIES;
