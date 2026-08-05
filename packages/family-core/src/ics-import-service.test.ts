@@ -142,6 +142,37 @@ describe("ICS-Import in den Haushalts-Kalender", () => {
     assert.equal(await db.calendarEvent.count(), 2);
   });
 
+  it("gibt einem Termin ohne DTEND die Haushalts-Stunde, ganztägig bleibt ohne Ende", async () => {
+    const file = [
+      "BEGIN:VCALENDAR",
+      "BEGIN:VEVENT",
+      "UID:ohne-ende",
+      "SUMMARY:Kurzer Anruf",
+      "DTSTART:20261015T090000Z",
+      "END:VEVENT",
+      "BEGIN:VEVENT",
+      "UID:ganztags",
+      "SUMMARY:Brückentag",
+      "DTSTART;VALUE=DATE:20261016",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
+
+    const preview = await previewIcsImport(db, file);
+    await applyIcsImport({
+      familyDb: db,
+      calendar,
+      text: file,
+      selectedUids: preview.items.map((item) => item.event.importUid),
+    });
+
+    const anruf = await db.calendarEvent.findFirst({ where: { title: "Kurzer Anruf" } });
+    assert.equal(anruf?.endAt?.toISOString(), "2026-10-15T10:00:00.000Z");
+
+    const brueckentag = await db.calendarEvent.findFirst({ where: { title: "Brückentag" } });
+    assert.equal(brueckentag?.endAt, null);
+  });
+
   it("erkennt einen von Hand eingetragenen Zwilling und hakt ihn nicht an", async () => {
     const file = [
       "BEGIN:VCALENDAR",

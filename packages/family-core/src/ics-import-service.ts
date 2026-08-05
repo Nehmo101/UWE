@@ -11,6 +11,7 @@
  * zweites Mal eingelesen werden kann, ohne alles zu verdoppeln.
  */
 import type { FamilyPrismaClient } from "@uwe/database/family-client";
+import { resolveEventEnd } from "./event-duration";
 import { setEventMembers } from "./event-members";
 import {
   buildIcsImportPlan,
@@ -160,7 +161,12 @@ export async function applyIcsImport(options: ApplyIcsImportOptions): Promise<Ic
       description: event.description,
       location: event.location,
       startAt: event.startAt,
-      endAt: event.endAt,
+      // Ein Importierter ist danach ein eigener Haushalts-Termin, kein Gast aus
+      // einem Feed — also gilt die Haushalts-Regel: ohne eigenes Ende eine
+      // Stunde. Ohne sie stünde er im Monatsraster als Strich statt als Block,
+      // und das Abo aufs Handy bekäme einen Termin ohne DTEND. Ganztägig bleibt
+      // ohne Ende, ein Ende aus der Datei bleibt unangetastet.
+      endAt: resolveEventEnd(event.startAt, event.endAt, { allDay: event.allDay }),
       allDay: event.allDay,
     };
 

@@ -67,13 +67,22 @@ describe("FamilyMemberService", () => {
     assert.equal(again.id, created.id, "kein zweites Mitglied für dasselbe Konto");
   });
 
-  it("hält den Anzeigenamen des Kontos aktuell", async () => {
-    await service.ensureMemberForUser({ userId: "usr_rename", displayName: "Alt" });
-    const updated = await service.ensureMemberForUser({
+  it("lässt den im Haushalt gepflegten Namen stehen", async () => {
+    const created = await service.ensureMemberForUser({
       userId: "usr_rename",
-      displayName: "Neu",
+      displayName: "Alt",
     });
-    assert.equal(updated.displayName, "Neu");
+    await service.updateMember(created.id, { displayName: "Im Haushalt geändert" });
+
+    const again = await service.ensureMemberForUser({
+      userId: "usr_rename",
+      displayName: "Alt",
+    });
+    assert.equal(
+      again.displayName,
+      "Im Haushalt geändert",
+      "der Kontoname ist nur der Startwert, kein Rückschreiber",
+    );
   });
 
   it("verknüpft ein Mitglied ohne Konto nachträglich mit einer Benutzer-ID", async () => {

@@ -19,12 +19,26 @@ flowchart LR
 |---|---|---|
 | Anmelden | ja | nie |
 | Entsteht durch | ersten Besuch | Anlegen auf `/members` |
-| Profil pflegt | die Person selbst | der Haushalt gemeinsam |
+| Profil pflegt | der Haushalt gemeinsam | der Haushalt gemeinsam |
 | Entfernen | wird deaktiviert | wird gelöscht |
 | Beispiele | Erwachsene | Kleinkind, Gast, Katze |
 
 Ein Mitglied **mit** Konto wird beim Entfernen nur deaktiviert. Sonst legt der nächste
-Besuch es sofort wieder an — und alte Beiträge verlören ihren Namen.
+Besuch es sofort wieder an — und alte Beiträge verlören ihren Namen. Auf `/members` heisst
+der Knopf deshalb „Deaktivieren"; „Wieder aktivieren" holt es zurück.
+
+## Bearbeiten darf jeder jeden
+
+Auf `/members` ist **jedes** Mitglied bearbeitbar, nicht nur die ohne Konto. Family kennt
+keine Rollen und keine Sichtbarkeitsstufen: Farbe, Geburtstag und Jahrestag stehen im
+Kalender aller, also pflegt sie auch der Haushalt gemeinsam. Das eigene Profil steht
+zusätzlich oben auf der Seite — derselbe Datensatz, nur der kürzere Weg.
+
+Daraus folgt eine Regel im Dienst: der Anzeigename aus dem Konto ist nur der **Startwert**
+beim ersten Besuch. `ensureMemberForUser` schreibt ihn danach nicht mehr zurück — sonst
+hätte der nächste Seitenaufruf jede im Haushalt gespeicherte Umbenennung wieder verworfen.
+
+Zugänge ändert das nicht: siehe unten.
 
 ## Farben
 

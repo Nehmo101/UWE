@@ -48,6 +48,11 @@ gibt es keinen Endpunkt, nicht nur kein Tool.
   denn Termine, Akte und Filter arbeiten mit den dortigen Kennungen.
 - **Termine gehören keiner, einer oder mehreren Personen.** Ohne Zuordnung
   betreffen sie den ganzen Haushalt.
+- **Ein Termin ohne eigenes Ende dauert eine Stunde.** `resolveEventEnd`
+  (`packages/family-core/src/event-duration.ts`) belegt vor — im Formular, über
+  `POST /api/v1/calendar/events`, über `family_calendar_add_event` und beim
+  ICS-Import gleichermaßen. Ein angegebenes Ende bleibt stehen, ganztägig bleibt
+  ohne Ende, und Nacharbeiten geht immer. Fremde Feeds fasst die Regel nicht an.
 - **Import und Abo sind zwei Wege, keine Varianten.** `/calendar/import` liest
   eine `.ics`-**Datei** einmalig ein: die Termine gehören danach dem Haushalt
   (lokaler Feed, `kind: personal`, wiedererkannt an `externalUid` mit Präfix
