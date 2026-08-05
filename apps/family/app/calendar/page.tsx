@@ -204,6 +204,9 @@ export default async function FamilyCalendarPage({
       lede={`${events.length} Termin(e) im ${monthLabel}. Eigene Termine sind änderbar, synchronisierte nur sichtbar.`}
       actions={
         <span className="family-head-actions">
+          <Link href="/calendar/import" className="family-btn family-btn-ghost family-btn-sm">
+            ICS einlesen
+          </Link>
           <Link
             href={monthHref(new Date(focus.getFullYear(), focus.getMonth() - 1, 1))}
             className="family-btn family-btn-ghost family-btn-sm"

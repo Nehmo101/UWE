@@ -48,6 +48,12 @@ gibt es keinen Endpunkt, nicht nur kein Tool.
   denn Termine, Akte und Filter arbeiten mit den dortigen Kennungen.
 - **Termine gehören keiner, einer oder mehreren Personen.** Ohne Zuordnung
   betreffen sie den ganzen Haushalt.
+- **Import und Abo sind zwei Wege, keine Varianten.** `/calendar/import` liest
+  eine `.ics`-**Datei** einmalig ein: die Termine gehören danach dem Haushalt
+  (lokaler Feed, `kind: personal`, wiedererkannt an `externalUid` mit Präfix
+  `ics-import:`). `/calendar/feeds` abonniert eine **Adresse**, die fremd und
+  schreibgeschützt bleibt. Erst Vorschau, dann Übernahme — nie automatisch.
+  Serien werden nicht aufgespannt, nur der erste Termin kommt mit.
 - **Geburtstage und Jahrestage sind keine gespeicherten Termine.**
   `family_calendar_upcoming` spannt sie mit `includeAnniversaries` auf.
 - **Die Gesundheitsakte gilt auch für Tiere** — `family_health_due` liefert
@@ -77,7 +83,7 @@ Navigation in `apps/family/src/navigation/family-nav.ts`, vier Abschnitte:
 | Abschnitt | Seiten |
 |---|---|
 | Überblick | `/` · `/briefing` · `/chat` · `/chat/privat` |
-| Haushalt | `/contracts` · `/documents` · `/calendar` (+ `/feeds`, `/abo`) |
+| Haushalt | `/contracts` · `/documents` · `/calendar` (+ `/feeds`, `/import`, `/abo`) |
 | Alltag | `/kitchen` · `/household` · `/scan-inbox` |
 | Verwaltung | `/members` · `/health` · `/account` |
 
@@ -115,6 +121,7 @@ nicht in den Route Handlers.
 | Essensplanung | `family_recipes` gegen `family_shopping_list` abgleichen; Wochenplan/KI/Einkaufs-Split: `docs/family/essensplan.md` |
 | Ganze Akte einer Person | `family_health_due` mit `memberId` |
 | Termin anlegen | `family_calendar_add_event` — nur mit `UWE_MCP_ALLOW_WRITES=true` |
+| ICS-Datei einlesen | `/calendar/import` in der App; Fachlogik `@uwe/family-core` → `ics-import.ts` |
 | Family alleine starten | `pnpm dev:family` |
 
 Karte: `references/karte.md` · Depth: `docs/family/README.md`, `docs/family/api.md`,

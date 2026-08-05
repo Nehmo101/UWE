@@ -14,6 +14,8 @@ export * from "./member-service";
 export * from "./event-members";
 export * from "./subscription-service";
 export * from "./ics-feed";
+export * from "./ics-import";
+export * from "./ics-import-service";
 export * from "./health-service";
 export * from "./briefing-service";
 export * from "./briefing-loader";
