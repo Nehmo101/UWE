@@ -52,6 +52,14 @@ export interface RouteProtectionPolicy {
   /** Routes intentionally public — must NOT reference a guard. */
   publicAllowlist: ReadonlySet<string>;
   /**
+   * Public routes that legitimately reference a guard to soft-gate response
+   * *verbosity* (not access): anonymous callers still get a response, but a
+   * valid token unlocks extra detail. `/api/health` is the canonical case — it
+   * serves liveness to everyone and operational detail only with the bearer.
+   * These are exempt from the "public allowlist must not import a guard" rule.
+   */
+  softGatedPublicRoutes?: ReadonlySet<string>;
+  /**
    * Optional groups of routes that delegate their guard to a shared helper
    * module (one group per helper, e.g. two-factor-routes.ts, passkey-routes.ts).
    */
@@ -72,7 +80,7 @@ export function assertRouteProtected(
   const content = fs.readFileSync(path.join(apiRoot, relativeRoute), "utf8");
 
   if (policy.publicAllowlist.has(relativeRoute)) {
-    if (policy.guardPattern.test(content)) {
+    if (policy.guardPattern.test(content) && !policy.softGatedPublicRoutes?.has(relativeRoute)) {
       throw new Error(`${relativeRoute} is public allowlist — must not import auth guard`);
     }
     return;

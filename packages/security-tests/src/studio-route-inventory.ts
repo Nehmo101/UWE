@@ -28,6 +28,15 @@ export const STUDIO_PUBLIC_API_ALLOWLIST = new Set([
   "spotify/callback/route.ts",
 ]);
 
+/**
+ * Public routes that soft-gate response verbosity behind the API token: the
+ * fat /api/health serves liveness to anonymous callers and operational detail
+ * (commit, migrations, proxy/mail) only with STUDIO_API_TOKEN.
+ */
+export const STUDIO_SOFT_GATED_PUBLIC_ROUTES = new Set([
+  "health/route.ts",
+]);
+
 export const STUDIO_TWO_FACTOR_DELEGATED_ROUTES = new Set([
   "auth/two-factor/route.ts",
   "auth/two-factor/setup/route.ts",
@@ -83,6 +92,7 @@ function studioPolicy(
   return {
     guardPattern: STUDIO_AUTH_GUARD_PATTERN,
     publicAllowlist: STUDIO_PUBLIC_API_ALLOWLIST,
+    softGatedPublicRoutes: STUDIO_SOFT_GATED_PUBLIC_ROUTES,
     delegatedGroups: [
       { routes: STUDIO_TWO_FACTOR_DELEGATED_ROUTES, helperPath: twoFactorHelperPath },
       { routes: STUDIO_PASSKEY_DELEGATED_ROUTES, helperPath: passkeyHelperPath },
