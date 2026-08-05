@@ -31,23 +31,20 @@ export function worldNav(worldSlug: string): NavGroup[] {
           "dashboard",
           "cockpit",
         ]),
-        item("world-radar", "Kampagnen-Radar", `${base}/radar`, "radar", "Übersicht", [
-          "radar",
-          "kampagne",
-          "fraktionen",
-          "was passiert",
-          "world clock",
-        ]),
-        // Seit dem Cockpit-Umbau die Kampagnen-Wurzel: Liste + Verwaltung +
-        // Einstieg in die Kampagnen-Cockpits (Kapitel, Quests, Abschluss).
-        item("world-campaigns", "Kampagnen-Cockpit", `${base}/kampagnen`, "swords", "Übersicht", [
+        // Die eine Kampagnen-Wurzel: Liste + Verwaltung + Kampagnen-Überblick
+        // (Kapitel, Quests, Fraktionen, Dungeons, Abschluss). Der frühere
+        // Kampagnen-Radar ist hier aufgegangen; /radar leitet nur noch weiter.
+        item("world-campaigns", "Kampagnen", `${base}/kampagnen`, "swords", "Übersicht", [
           "kampagne",
           "kampagnen",
           "campaign",
           "cockpit",
+          "radar",
           "kapitel",
           "story-bogen",
           "session-abschluss",
+          "fraktionen",
+          "was passiert",
           "anlegen",
           "umbenennen",
           "verwalten",

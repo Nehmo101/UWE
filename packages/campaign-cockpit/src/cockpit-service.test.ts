@@ -138,6 +138,83 @@ describe("campaign cockpit (integration)", () => {
     assert.equal(withEvents.quests[0].linkedEvents[0].roleLabel, "Auslöser");
     assert.ok(event.id);
   });
+
+  // Vom aufgelösten Kampagnen-Radar hierher gezogen: Dungeons + NSC-Stand
+  // gehören jetzt zum Kampagnen-Überblick, gefiltert wie im Dungeon-Cockpit.
+  it("lists campaign dungeons and the NPC summary in the overview", async () => {
+    const service = createCampaignCockpitService(db);
+    await db.page.create({
+      data: {
+        worldId,
+        campaignId,
+        title: "Magisterturm",
+        slug: "magisterturm",
+        type: "dungeon",
+        prepStatus: "ready",
+      },
+    });
+    await db.page.create({
+      data: { worldId, title: "Alte Mine", slug: "alte-mine", type: "dungeon" },
+    });
+    await db.page.create({
+      data: {
+        worldId,
+        campaignId,
+        title: "Grimm",
+        slug: "grimm",
+        type: "npc",
+        canonicalStatus: "contradictory",
+      },
+    });
+    await db.page.create({
+      data: { worldId, title: "Fremder", slug: "fremder", type: "npc" },
+    });
+
+    const overview = await service.getCampaignOverview(worldSlug, "himmelsrouten");
+    assert.ok(overview);
+    assert.equal(overview.dungeons.length, 1);
+    assert.equal(overview.dungeons[0].title, "Magisterturm");
+    assert.equal(overview.dungeons[0].prepStatus, "ready");
+    assert.ok(overview.dungeons[0].href.endsWith("/dungeons/magisterturm"));
+    assert.equal(overview.npcSummary.total, 1);
+    assert.equal(overview.npcSummary.flagged, 1);
+  });
+
+  it("derives the act board from the chapter text itself", async () => {
+    const service = createCampaignCockpitService(db);
+    const created = await service.createChapter({
+      worldId,
+      campaignId,
+      title: "Akt der Tafel",
+      content: "Der [[Grimm]] wartet im Turm.",
+    });
+    const chapterPage = await db.page.findUnique({
+      where: { id: created.id },
+      include: { contentBlocks: true },
+    });
+    assert.ok(chapterPage);
+    const npc = await db.page.findFirst({ where: { worldId, slug: "grimm" } });
+    assert.ok(npc);
+
+    // Handgebautes Graph-Fragment: der Kapitel-Block löst auf den NSC auf.
+    const graph = {
+      pageIndex: [{ id: npc.id, title: npc.title, slug: npc.slug, type: npc.type }],
+      blockTargets: new Map(
+        chapterPage.contentBlocks.map((block) => [block.id, [npc.id]]),
+      ),
+      pages: [],
+    };
+    const view = await service.getChapterView(worldSlug, "himmelsrouten", created.slug, {
+      wikiIndex: [],
+      graph: graph as never,
+    });
+    assert.ok(view);
+    // Kein Quest-Text im Spiel — der Treffer kommt allein aus dem Kapiteltext.
+    assert.deepEqual(
+      view.actRelations.npcs.map((target) => target.id),
+      [npc.id],
+    );
+  });
 });
 
 describe("session wrap-up privacy (integration)", () => {

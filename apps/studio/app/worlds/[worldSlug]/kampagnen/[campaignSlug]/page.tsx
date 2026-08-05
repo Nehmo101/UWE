@@ -56,7 +56,7 @@ export default async function CampaignCockpitPage({ params, searchParams }: Prop
   const campaigns = await repo.listCampaignsByWorld(worldSlug);
   const base = `/worlds/${worldSlug}`;
   const cockpitPath = `${base}/kampagnen/${campaignSlug}`;
-  const { campaign, chapters, unassignedQuests, factions, progress } = overview;
+  const { campaign, chapters, unassignedQuests, factions, dungeons, progress } = overview;
   // Das erste noch nicht gespielte Kapitel in Lesereihenfolge — Druck-Einstieg.
   const currentChapter = findCurrentChapter(
     chapters.map((chapter) => ({
@@ -106,10 +106,12 @@ export default async function CampaignCockpitPage({ params, searchParams }: Prop
         <SidebarSection title="Werkzeuge">
           <ul className="flex flex-col gap-2 text-sm">
             <li>
-              <Link href={`${base}/radar?campaign=${campaignSlug}`}>Kampagnen-Radar →</Link>
+              <Link href={`${base}/prepare-session?campaign=${campaignSlug}`}>
+                Session vorbereiten →
+              </Link>
             </li>
             <li>
-              <Link href={`${base}/prepare-session`}>Session vorbereiten →</Link>
+              <Link href={`${base}/dungeons?campaign=${campaignSlug}`}>Dungeons →</Link>
             </li>
             <li>
               <Link href={`${base}/lesen`}>Lesemodus →</Link>
@@ -177,6 +179,15 @@ export default async function CampaignCockpitPage({ params, searchParams }: Prop
             href: "#cockpit-quests",
           },
           { label: "Fraktionen", value: factions.length, href: "#cockpit-fraktionen" },
+          {
+            label: "NSCs",
+            value: overview.npcSummary.total,
+            hint:
+              overview.npcSummary.flagged > 0
+                ? `${overview.npcSummary.flagged} mit Kanon-Markierung`
+                : undefined,
+            href: `${base}/wiki?type=npc&campaign=${campaignSlug}`,
+          },
           {
             label: "Spielernotizen",
             value: overview.noteQueueCount,
@@ -332,6 +343,37 @@ export default async function CampaignCockpitPage({ params, searchParams }: Prop
                 ))}
               </ul>
             )}
+          </CardContent>
+        </Card>
+
+        <Card id="cockpit-dungeons">
+          <CardHeader>
+            <CardTitle>Dungeons dieser Kampagne</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {dungeons.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Keine Dungeons in dieser Kampagne.{" "}
+                <Link href={`${base}/dungeons/new?campaign=${campaignSlug}`}>
+                  Dungeon anlegen →
+                </Link>
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-2 text-sm">
+                {dungeons.map((dungeon) => (
+                  <li key={dungeon.id} className="flex flex-wrap items-center gap-2">
+                    <Link href={dungeon.href}>{dungeon.title}</Link>
+                    <DungeonPrepStatusBadge status={dungeon.prepStatus} />
+                    {dungeon.summary ? (
+                      <span className="text-muted-foreground"> — {dungeon.summary}</span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-2 text-sm">
+              <Link href={`${base}/dungeons?campaign=${campaignSlug}`}>Zum Dungeon-Cockpit →</Link>
+            </p>
           </CardContent>
         </Card>
 

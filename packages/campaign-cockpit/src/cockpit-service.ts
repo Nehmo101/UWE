@@ -20,6 +20,7 @@ import { chapterProgress, compareChapterOrder, type ChapterProgress } from "./ch
 import {
   deriveQuestBacklinks,
   deriveQuestRelations,
+  mergeQuestRelations,
   type QuestRelations,
   type QuestRelationTarget,
 } from "./quest-relations";
@@ -79,6 +80,16 @@ export interface CockpitEvent {
   dateLabel: string;
 }
 
+/** Dungeon dieser Kampagne — vom aufgelösten Kampagnen-Radar hierher gezogen. */
+export interface CockpitDungeon {
+  id: string;
+  title: string;
+  slug: string;
+  href: string;
+  summary: string | null;
+  prepStatus: DungeonPrepStatus | null;
+}
+
 export interface CampaignOverview {
   campaign: Campaign;
   worldId: string;
@@ -91,6 +102,8 @@ export interface CampaignOverview {
   noteQueueCount: number;
   canonConflicts: number;
   progress: ChapterProgress;
+  dungeons: CockpitDungeon[];
+  npcSummary: { total: number; flagged: number };
 }
 
 export interface ChapterQuest extends CockpitQuest {
@@ -113,6 +126,12 @@ export interface ChapterView {
   backlinks: QuestRelationTarget[];
   /** Kampagnen-Quests außerhalb dieses Kapitels — fürs „Quest zuordnen"-Select. */
   assignableQuests: Array<{ id: string; title: string }>;
+  /**
+   * NSC-Tafel des ganzen Akts: [[Wiki-Links]] aus dem Kapiteltext selbst
+   * plus alle Quest-Texte, dedupliziert. Der Kapiteltext zählte früher nicht
+   * mit — wer den Bösewicht nur im Akt-Text erwähnte, sah ihn nirgends.
+   */
+  actRelations: QuestRelations;
 }
 
 const EVENT_ROLE_LABELS: Record<string, string> = {
@@ -219,8 +238,20 @@ export class CampaignCockpitService {
     const { worldId } = campaign;
     const base = `/worlds/${worldSlug}`;
 
-    const [chapters, quests, factions, lastSession, nextSession, events, noteQueueCount, canonConflicts, calendar] =
-      await Promise.all([
+    const [
+      chapters,
+      quests,
+      factions,
+      lastSession,
+      nextSession,
+      events,
+      noteQueueCount,
+      canonConflicts,
+      calendar,
+      dungeons,
+      npcTotal,
+      npcFlagged,
+    ] = await Promise.all([
         this.db.page.findMany({
           where: { worldId, campaignId: campaign.id, type: STORY_ARC_TYPE },
           select: {
@@ -290,6 +321,20 @@ export class CampaignCockpitService {
           where: { worldId, campaignId: campaign.id, canonicalStatus: "contradictory" },
         }),
         this.db.worldCalendar.findUnique({ where: { worldId }, select: { months: true } }),
+        this.db.page.findMany({
+          where: { worldId, campaignId: campaign.id, type: "dungeon" },
+          select: { id: true, title: true, slug: true, summary: true, prepStatus: true },
+          orderBy: { title: "asc" },
+        }),
+        this.db.page.count({ where: { worldId, campaignId: campaign.id, type: "npc" } }),
+        this.db.page.count({
+          where: {
+            worldId,
+            campaignId: campaign.id,
+            type: "npc",
+            canonicalStatus: { in: ["contradictory", "deprecated"] },
+          },
+        }),
       ]);
 
     const chapterIds = new Set(chapters.map((chapter) => chapter.id));
@@ -379,6 +424,15 @@ export class CampaignCockpitService {
       noteQueueCount,
       canonConflicts,
       progress: chapterProgress(chapters),
+      dungeons: dungeons.map((dungeon) => ({
+        id: dungeon.id,
+        title: dungeon.title,
+        slug: dungeon.slug,
+        href: `${base}/dungeons/${dungeon.slug}`,
+        summary: dungeon.summary,
+        prepStatus: dungeon.prepStatus,
+      })),
+      npcSummary: { total: npcTotal, flagged: npcFlagged },
     };
   }
 
@@ -441,6 +495,24 @@ export class CampaignCockpitService {
 
     const emptyRelations: QuestRelations = { npcs: [], locations: [], factions: [] };
 
+    const questViews = quests.map((quest) => ({
+      id: quest.id,
+      title: quest.title,
+      slug: quest.slug,
+      href: buildPageUrl(worldSlug, quest.type, quest.slug),
+      status: questStatus(quest.questStatus),
+      chapterId: chapter.id,
+      relations: context.graph
+        ? deriveQuestRelations(worldSlug, quest, context.graph)
+        : emptyRelations,
+      linkedEvents: eventsByQuest.get(quest.id) ?? [],
+    }));
+
+    // Kapiteltext + Quest-Texte: die abgeleiteten Beziehungen des ganzen Akts.
+    const chapterRelations = context.graph
+      ? deriveQuestRelations(worldSlug, chapter, context.graph)
+      : emptyRelations;
+
     return {
       campaign,
       chapter: {
@@ -452,22 +524,12 @@ export class CampaignCockpitService {
         sortIndex: chapter.sortIndex,
       },
       html: renderPageContentHtml(chapter, context.wikiIndex),
-      quests: quests.map((quest) => ({
-        id: quest.id,
-        title: quest.title,
-        slug: quest.slug,
-        href: buildPageUrl(worldSlug, quest.type, quest.slug),
-        status: questStatus(quest.questStatus),
-        chapterId: chapter.id,
-        relations: context.graph
-          ? deriveQuestRelations(worldSlug, quest, context.graph)
-          : emptyRelations,
-        linkedEvents: eventsByQuest.get(quest.id) ?? [],
-      })),
+      quests: questViews,
       backlinks: context.graph
         ? deriveQuestBacklinks(worldSlug, chapter.id, context.graph)
         : [],
       assignableQuests: campaignQuests,
+      actRelations: mergeQuestRelations(chapterRelations, ...questViews.map((q) => q.relations)),
     };
   }
 

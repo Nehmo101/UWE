@@ -1,6 +1,7 @@
 # Das eine Kampagnen-Modul — Konzept & Migrationsplan
 
-Stand: 2026-08-05 · Status: **Entwurf, wartet auf Entscheidungen** (siehe [Offene Fragen](#offene-fragen-bitte-entscheiden))
+Stand: 2026-08-05 · Status: **Entschieden, in Umsetzung** — Etappe 0 und 1 sind gebaut,
+die Antworten auf die offenen Fragen stehen [unten](#offene-fragen-bitte-entscheiden) bei den Fragen.
 
 Anlass: Kampagnen-Radar, Kampagnen-Cockpit und Sessions sind drei getrennte
 Flächen mit großer Überlappung. „Session vorbereiten" kennt keine Kampagne,
@@ -231,8 +232,8 @@ und Service-Arbeit, kein Datenumzug.
 
 | Etappe | Inhalt | Schema? |
 |---|---|---|
-| **0 — Bugfixes** *(dieser Branch)* | Druck-Buttons (Route-Allowlist + Matcher-Fix), Session-Löschung, RBAC-Guards für Radar/Dungeons/Open-Items | nein |
-| **1 — Zusammenlegen** | Radar-Karten in den Kampagnen-Überblick, `/radar`-Redirect, Nav auf einen Eintrag, `campaign-radar-service` → `@uwe/campaign-cockpit`, „Vorbereiten" kampagnen-bewusst, NSC-Ableitung auch aus Kapiteltext | nein |
+| **0 — Bugfixes** ✅ | Druck-Buttons (Route-Allowlist + Matcher-Fix), Session-Löschung, RBAC-Guards für Radar/Dungeons/Open-Items | nein |
+| **1 — Zusammenlegen** ✅ | Radar-Karten (Dungeons, NSC-Stand) in den Kampagnen-Überblick, `/radar`-Redirect, Nav auf einen Eintrag „Kampagnen", Radar-Service aufgelöst (Overview erweitert, `formatClockLabel` → Kalender-Helfer), Weltuhr-Widget im Welt-Dashboard, „Vorbereiten" kampagnen-bewusst (`?campaign=` + `?sessionId=` echt), Akt-Tafel „Im Akt wichtig" aus Kapitel- + Quest-Texten | nein |
 | **2 — Session↔Kapitel + Spielabend** | Migration (oben), Kapitel-Dropdown an Session, Spielabend-Ansicht v1 (Akt-Tafel + Lesefläche + Protokoll), NSC-Pinnen | **ja** |
 | **3 — Portal-Notizen** | Session-Auswahl im Notizen-Panel, `take:1`-Kampagnen-Bug beheben, Tischmodus mit aktiver Session (Abschnitt 6) | nein |
 | **4 — Dungeon-Flow + Aufräumen** | Dungeon↔Kapitel-UI, Raum-Cockpit-Rückweg + Schnell-Protokoll, tote Radar-Links, zweite Nav-Quelle (`studio-navigation.ts`) konsolidieren, `campaigns/`-Stub entfernen | nein |
@@ -292,7 +293,11 @@ Offen (in den Etappen verplant):
 
 ## Offene Fragen (bitte entscheiden)
 
-Jede Frage hat eine Empfehlung — bei „einfach machen" wird genau die umgesetzt.
+Entschieden am 2026-08-05: **F1 ja** (Dashboard + Redirect) · **F2 flach** ·
+**F3 ja** (Kapitel-Vorschlag beim Anlegen) · **F4 beides** (Ableitung + Pinnen) ·
+**F5 frei wählbar, ohne Auswahl automatisch** · **F6 eigenes Werkzeug, aber
+bessere Verbindung** · **F7 Reihenfolge wie geplant**. Der Wortlaut der Fragen
+bleibt unten als Begründungs-Archiv stehen.
 
 **F1 — Wohin mit dem Welt-Blick des Radars?**
 Der Radar ist heute der einzige Ort, der Weltuhr + Chronik + Fraktionen

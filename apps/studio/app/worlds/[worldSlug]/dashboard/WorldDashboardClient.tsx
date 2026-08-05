@@ -62,6 +62,7 @@ export interface WorldDashboardClientProps {
       type: PageType;
       updatedAt: string;
     }>;
+    worldClockLabel: string | null;
   };
 }
 
@@ -188,6 +189,32 @@ export function WorldDashboardClient({
               </Link>
               <Link className={cn(buttonVariants({ variant: "ghost" }))} href={`/worlds/${worldSlug}/ai-runs`}>
                 KI-Läufe →
+              </Link>
+            </div>
+          </WorldCockpitCard>
+        );
+      case "world-clock":
+        return (
+          <WorldCockpitCard title="Weltuhr">
+            {overview.worldClockLabel ? (
+              <p className="text-base font-semibold">{overview.worldClockLabel}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Noch kein Weltkalender eingerichtet.
+              </p>
+            )}
+            <div className="flex flex-wrap gap-1.5">
+              <Link
+                className={cn(buttonVariants({ variant: "ghost" }))}
+                href={`/worlds/${worldSlug}/calendar`}
+              >
+                Weltuhr →
+              </Link>
+              <Link
+                className={cn(buttonVariants({ variant: "ghost" }))}
+                href={`/worlds/${worldSlug}/chronicle`}
+              >
+                Chronik →
               </Link>
             </div>
           </WorldCockpitCard>

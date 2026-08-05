@@ -5,6 +5,7 @@ import type {
 } from "./generated/prisma/client";
 import { navCategoryForPageType, type NavCategory } from "./page-types";
 import { SettingsService } from "./settings-service";
+import { formatClockLabel } from "./world-calendar-service";
 
 /**
  * World Overview: aggregates everything a DM needs at a glance for one world.
@@ -56,6 +57,8 @@ export interface WorldOverviewData {
   openPlots: WorldOverviewOpenPlot[];
   recentPages: WorldOverviewPage[];
   playerNotesForReview: number;
+  /** Weltuhr-Label (aus dem aufgelösten Kampagnen-Radar hierher gezogen). */
+  worldClockLabel: string | null;
 }
 
 const EMPTY_CATEGORY_COUNTS: Record<NavCategory, number> = {
@@ -77,7 +80,7 @@ export class WorldOverviewService {
 
     const settings = await new SettingsService(this.db).getSettings();
 
-    const [pages, campaignCount, assetCount, gameSessions, notesForReview] =
+    const [pages, campaignCount, assetCount, gameSessions, notesForReview, calendar] =
       await Promise.all([
         this.db.page.findMany({
           where: { worldId: world.id },
@@ -105,6 +108,10 @@ export class WorldOverviewService {
         }),
         this.db.playerNote.count({
           where: { worldId: world.id, status: "visible_to_dm" },
+        }),
+        this.db.worldCalendar.findUnique({
+          where: { worldId: world.id },
+          select: { name: true, currentDate: true, epochLabel: true },
         }),
       ]);
 
@@ -164,6 +171,9 @@ export class WorldOverviewService {
       openPlots,
       recentPages,
       playerNotesForReview: notesForReview,
+      worldClockLabel: calendar
+        ? formatClockLabel(calendar.name, calendar.currentDate, calendar.epochLabel)
+        : null,
     };
   }
 }

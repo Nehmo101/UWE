@@ -8,6 +8,7 @@ export {
 export {
   deriveQuestBacklinks,
   deriveQuestRelations,
+  mergeQuestRelations,
   type QuestRelations,
   type QuestRelationTarget,
 } from "./quest-relations";
@@ -20,6 +21,7 @@ export {
   type ChapterQuest,
   type ChapterSummary,
   type ChapterView,
+  type CockpitDungeon,
   type CockpitEvent,
   type CockpitFaction,
   type CockpitQuest,

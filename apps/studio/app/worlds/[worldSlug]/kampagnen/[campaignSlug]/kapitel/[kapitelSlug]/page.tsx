@@ -193,6 +193,49 @@ export default async function ChapterCockpitPage({ params, searchParams }: Props
           </Card>
         ) : null}
 
+        <Card id="kapitel-akt-tafel">
+          <CardHeader>
+            <CardTitle>Im Akt wichtig</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {view.actRelations.npcs.length === 0 &&
+            view.actRelations.locations.length === 0 &&
+            view.actRelations.factions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Keine [[Wiki-Links]] im Kapitel- oder Quest-Text — NSCs, Orte und Fraktionen
+                erscheinen hier automatisch, sobald sie verlinkt sind.
+              </p>
+            ) : (
+              <dl className="flex flex-col gap-2 text-sm">
+                {(
+                  [
+                    ["NSCs", view.actRelations.npcs],
+                    ["Orte", view.actRelations.locations],
+                    ["Fraktionen", view.actRelations.factions],
+                  ] as const
+                ).map(([label, targets]) =>
+                  targets.length > 0 ? (
+                    <div key={label} className="flex flex-wrap gap-2">
+                      <dt className="font-medium text-muted-foreground">{label}:</dt>
+                      <dd className="flex flex-wrap gap-2">
+                        {targets.map((target, index) => (
+                          <span key={target.id}>
+                            {index > 0 ? "· " : null}
+                            <Link href={target.href}>{target.title}</Link>
+                          </span>
+                        ))}
+                      </dd>
+                    </div>
+                  ) : null,
+                )}
+              </dl>
+            )}
+            <p className="mt-2 text-sm text-muted-foreground">
+              Abgeleitet aus dem Kapiteltext und allen Quest-Texten dieses Akts.
+            </p>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Quests</CardTitle>

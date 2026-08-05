@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { deriveQuestBacklinks, deriveQuestRelations } from "./quest-relations";
+import {
+  deriveQuestBacklinks,
+  deriveQuestRelations,
+  mergeQuestRelations,
+  type QuestRelations,
+} from "./quest-relations";
 
 /*
  * Pure Tests gegen handgebaute Graph-Fragmente — der echte Graph kommt aus
@@ -43,6 +48,42 @@ describe("deriveQuestRelations (pure)", () => {
       ["f1"],
     );
     assert.ok(relations.npcs[0].href.includes("/worlds/welt/"));
+  });
+});
+
+describe("mergeQuestRelations (pure)", () => {
+  const target = (id: string) =>
+    ({ id, title: id, slug: id, type: "npc", href: `/worlds/welt/npcs/${id}` }) as never;
+
+  it("merges sets in order and dedupes across groups by page id", () => {
+    const chapterSet: QuestRelations = {
+      npcs: [target("n1")],
+      locations: [target("l1")],
+      factions: [],
+    };
+    const questSet: QuestRelations = {
+      npcs: [target("n2"), target("n1")],
+      locations: [],
+      factions: [target("f1")],
+    };
+
+    const merged = mergeQuestRelations(chapterSet, questSet);
+    assert.deepEqual(
+      merged.npcs.map((entry: { id: string }) => entry.id),
+      ["n1", "n2"],
+    );
+    assert.deepEqual(
+      merged.locations.map((entry: { id: string }) => entry.id),
+      ["l1"],
+    );
+    assert.deepEqual(
+      merged.factions.map((entry: { id: string }) => entry.id),
+      ["f1"],
+    );
+  });
+
+  it("returns empty groups for no input", () => {
+    assert.deepEqual(mergeQuestRelations(), { npcs: [], locations: [], factions: [] });
   });
 });
 

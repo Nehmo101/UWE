@@ -5,7 +5,6 @@ import { worldNavItems as canonicalWorldNavItems } from "../navigation/world-nav
 /** DM tools surfaced on the world dashboard for discoverability (canonical world IA). */
 export function worldDmToolQuickLinks(worldSlug: string): { label: string; href: string }[] {
   const highlightIds = new Set([
-    "world-radar",
     "world-campaigns",
     "world-prepare-session",
     "world-one-shot",

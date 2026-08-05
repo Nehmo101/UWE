@@ -134,6 +134,7 @@ export default async function WorldDashboardPage({ params }: Props) {
             type: page.type,
             updatedAt: page.updatedAt.toISOString(),
           })),
+          worldClockLabel: overview.worldClockLabel,
         }}
       />
     </>
