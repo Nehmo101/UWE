@@ -37,6 +37,29 @@ CalDAV- und ICS-Abgleich merkt von der ganzen Personenzuordnung nichts.
 Der Filter steht in der URL (`/calendar?member=…`), damit ein gefilterter Monat teilbar und
 über Vor- und Zurück erreichbar bleibt.
 
+## Standarddauer: eine Stunde
+
+Wer eine Startzeit einträgt, meint fast immer einen Termin **mit** Dauer. Ein Termin ohne
+Ende ist im Monatsraster ein Strich statt eines Blocks, und im ICS-Feed fehlt das `DTEND` —
+Kalender-Apps machen daraus, was sie wollen.
+
+Deshalb bekommt jeder Termin ohne eigenes Ende **eine Stunde**:
+
+- Im Formular füllt sich das Ende sichtbar mit, sobald der Beginn steht
+  (`apps/family/src/components/calendar/EventTimeFields.tsx`).
+- Serverseitig entscheidet `resolveEventEnd` (`packages/family-core/src/event-duration.ts`) —
+  dieselbe Regel gilt damit für Formular, `POST /api/v1/calendar/events` und das MCP-Tool
+  `family_calendar_add_event`.
+
+Es ist eine **Vorbelegung, kein Zwang**: ein mitgegebenes Ende bleibt unangetastet, auch ein
+kürzeres, und Nacharbeiten geht immer. Wer beim Bearbeiten das Ende leert, bekommt wieder
+die Stunde — ein Termin ohne Ende entsteht in Family nicht aus Versehen.
+
+**Ganztägig bleibt ohne Ende.** Das Häkchen blendet das Ende-Feld aus; den Tag spannt der
+ICS-Feed auf (`ics-feed.ts`, `DTEND` ist dort der Folgetag). Eine Stunde wäre hier falsch.
+
+Termine aus fremden Feeds fasst die Regel nicht an — deren Zeiten gehören der Quelle.
+
 ## Fremde Kalender abonnieren
 
 Unter **Kalender → Fremde Kalender** lassen sich iCal-Adressen und CalDAV-Kalender
