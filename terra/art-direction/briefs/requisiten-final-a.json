@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "assetId": "requisiten-final-a",
+  "type": "procedural-pool-family",
+  "intent": {
+    "character": [
+      "handgebaute alltaegliche Gegenstaende mit klarer Funktion",
+      "Waldsaeule-A-Silhouetten mit warmen Ghibli-nahen Gebrauchsspuren",
+      "kompakte zusammenhaengende Formen statt verstreuter Einzelteile"
+    ],
+    "palette": [
+      "warmes Holz, weiches Metall und gebrochenes Leinen",
+      "gezielte farbige Markt- und Lichtakzente",
+      "bestehende Terra-Materialwirkung ohne neue Texturen"
+    ],
+    "focus": "Alle 51 Pools der Galerie-Familie Handwerk, Markt und Requisiten ohne Auslassung auf Final-Art-Niveau pruefen und sichtbar schwaechelnde Formen gezielt reparieren"
+  },
+  "avoid": [
+    "duenne unlesbare Drahtformen",
+    "schwebende Dekoration ohne konstruktive Verbindung",
+    "identische generische Aufsaetze auf semantisch verschiedenen Assets",
+    "unnoetige neue Vertices auf bereits starken Assets",
+    "neue Runtime-Draw-Calls oder Texturen"
+  ],
+  "preserve": [
+    "exakt 51 Pool-IDs der Requisiten-Galerie",
+    "InstancedMesh- und statischen Galerie-Merge-Pfad",
+    "bestehende Groessen, Kollisionsradien und Bodenkontakt",
+    "deterministische Geometrie und alte Karten",
+    "bereits freigegebene Tierwesen- und Baumqualitaet"
+  ],
+  "poolIds": [
+    "bank", "bildstock", "brunnen", "brunnentrog", "dreimaster",
+    "faerbergestell", "fass", "fensterlicht", "feuerschale", "feuerstelle",
+    "findling", "fischtrockner", "gaube", "gebetsband", "geweihgestell",
+    "gewoelbekeller", "hochschlot", "holzstapel", "huetersaeule", "irrlicht",
+    "kalkofen", "kamin", "karren", "kiste", "kochkessel", "koehlermeiler",
+    "kran", "kutsche", "laterne", "marktkorb", "marktstand", "moewe",
+    "oasenbecken", "pfahlgoetze", "rosette", "sackstapel", "saegewerk",
+    "saeule", "schlitten", "schubkarre", "seilerbahn", "steinmetzhof",
+    "sturzwurzel", "tisch", "tontoepfe", "waescheleine", "wagenrad",
+    "wappenstein", "wasserbottich", "windfaenger", "zwergentor"
+  ],
+  "candidateCount": 1,
+  "candidates": [
+    {
+      "id": "a",
+      "label": "Waldsaeule",
+      "use": "bereits global ausgewaehlte organisch facettierte Terra-Formensprache"
+    }
+  ],
+  "scenes": [
+    "catalog-requisiten",
+    "requisiten-focus-laterne",
+    "requisiten-focus-dreimaster",
+    "requisiten-focus-marktstand",
+    "requisiten-focus-schubkarre",
+    "requisiten-focus-marktkorb",
+    "requisiten-focus-zwergentor"
+  ]
+}

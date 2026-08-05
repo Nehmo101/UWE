@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "assetId": "baum",
+  "type": "normal-instanced-pool",
+  "intent": {
+    "character": ["malerischer Ghibli-Laubbaum", "natuerliche Asymmetrie", "klare Fernsilhouette"],
+    "palette": ["warme Rinde", "moosiges Mittelgruen", "kuehle Schatten", "sonnige Blattspitzen"],
+    "focus": "Ein haeufig instanzierter Standardbaum, der aus der Naehe handgebaut und aus der Region als weiche Krone lesbar bleibt"
+  },
+  "avoid": [
+    "Kugelkrone auf geradem Pfahl",
+    "fotorealistische Einzelblaetter",
+    "Plastikglanz",
+    "symmetrische Weihnachtsbaumform",
+    "mehrere Runtime-Draw-Calls pro Instanz"
+  ],
+  "preserve": [
+    "Pool-ID baum",
+    "InstancedMesh-Laufzeitpfad",
+    "Windbewegung ueber UV-Gewichtung",
+    "prozeduraler Fallback",
+    "deterministische Geometrie",
+    "alte Karten und bestehende Objektgeneratoren"
+  ],
+  "candidateCount": 3,
+  "candidates": [
+    { "id": "a", "label": "Wolkenkrone", "use": "ruhiger, runder Standardbaum" },
+    { "id": "b", "label": "Windweide", "use": "asymmetrische, gerichtete Silhouette" },
+    { "id": "c", "label": "Alter Hueter", "use": "breite Krone, geteilter Stamm und starke Wurzeln" }
+  ],
+  "scenes": ["tree-detail", "tree-family"]
+}

@@ -127,6 +127,47 @@ function nietReihe(parts, f, y, z, breite, anzahl) {
   }
 }
 
+/* Die Waldsaeule-A-Schicht macht aus der Maschine einen bewohnten Ort:
+   Fenster, Deckreling und Navigationslichter sitzen konstruktiv am Rumpf.
+   Alle Teile werden in dieselbe Poolgeometrie gemerged und kosten daher
+   weder Instanzen noch Draw Calls. */
+function waldsaeuleFlugdetails(parts, fraktion, f, zug) {
+  var start = parts.length;
+  var seite = zug ? 1.74 : 1.56;
+  var vorne = zug ? 6.30 : 3.78;
+  var mitte = zug ? -0.45 : 0.18;
+  var deckLaenge = zug ? 9.40 : 4.45;
+  var fenster = zug ? 4 : 3;
+  for (var s = -1; s <= 1; s += 2) {
+    box(parts, 0.10, 0.11, deckLaenge, s * seite, 2.63, mitte,
+      s > 0 ? f.messing : f.rost);
+    for (var i = 0; i < fenster; i++) {
+      var z = mitte - deckLaenge * 0.36
+        + i * deckLaenge * 0.72 / Math.max(1, fenster - 1);
+      box(parts, 0.09, 0.34, 0.46, s * (seite + 0.015), 2.18, z,
+        i % 2 ? f.leuchten : f.metallHell, 0, s * 0.02, 0);
+      box(parts, 0.08, 0.38, 0.08, s * seite, 2.48, z,
+        f.schwarz, 0, 0, s * 0.04);
+    }
+    box(parts, 0.46, 0.34, 0.09, s * 0.62, 2.20,
+      vorne - (zug ? 0.24 : 1.06), f.leuchten, 0, 0, s * 0.025);
+  }
+  box(parts, 0.09, 0.46, 0.10, 0, 2.20,
+    vorne - (zug ? 0.23 : 1.05), f.messing);
+  box(parts, 0.16, 0.12, deckLaenge * 0.72, 0, 3.02, mitte,
+    fraktion.form === 'sichel' ? f.metallHell : f.holzHell);
+  if (fraktion.form === 'pluenderer') {
+    box(parts, 0.52, 0.08, zug ? 2.8 : 1.9, seite * 0.62, 3.08,
+      mitte - 0.45, f.rost, 0.06, -0.12, 0.08);
+  } else if (fraktion.form === 'panzer') {
+    for (var p = -1; p <= 1; p += 2) {
+      zylinder(parts, 0.25, 1.15, 0.25, p * seite * 0.62, 3.16,
+        mitte - deckLaenge * 0.27, f.dunkel, 7, 0, 0, p * 0.08, 0.72);
+    }
+  }
+  return parts.length - start;
+}
+
 /* Diagonalstreben lesen sich aus der Distanz als tragendes Fachwerk statt
    als beliebige duenne Linien. Die vier Balken bleiben Teil derselben
    Poolgeometrie und erzeugen daher keine zusaetzlichen Draw Calls. */
@@ -450,13 +491,18 @@ export function erstelleSteampunkLuftfahrzeug(eingabe) {
   var parts = asset.typ === 'luftschiff'
     ? baueLuftschiff(fraktion, f)
     : baueLuftzug(fraktion, f);
+  var formDetails = waldsaeuleFlugdetails(
+    parts, fraktion, f, asset.typ === 'luftzug'
+  );
   var geometrie = mergeGeos(parts);
   geometrie.userData = {
     steampunkFraktion: fraktion.id,
     steampunkTyp: asset.typ,
     steampunkTeile: parts.length,
     steampunkArtPass: 'final-hart',
-    steampunkMaterialZonen: 10
+    steampunkMaterialZonen: 10,
+    steampunkFormensprache: 'waldsaeule-a',
+    steampunkFormDetails: formDetails
   };
   return geometrie;
 }

@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "assetId": "luftwelt-waldsaeule-a",
+  "type": "procedural-pool-family",
+  "intent": {
+    "character": [
+      "maerchenhafte bewohnte Luftwelt",
+      "handgebaute Waldsaeule-A-Formensprache",
+      "klare Silhouetten fuer Maschine, Insel und Pflanze"
+    ],
+    "palette": [
+      "bestehende Fraktions- und Naturpaletten",
+      "warme Materialschichtung",
+      "sparsame leuchtende Navigationsakzente"
+    ],
+    "focus": "Alle 17 Luftwelt- und Hochbambus-Pools ohne Auslassung auf das freigegebene Normal-Asset-Niveau heben"
+  },
+  "avoid": [
+    "kleinteilige technische Unruhe",
+    "schwebende Details ohne konstruktiven Anschluss",
+    "identische Dekoration ueber alle Fraktionen",
+    "neue Runtime-Draw-Calls",
+    "Verlust der Pool- und Generatorvertraege"
+  ],
+  "preserve": [
+    "alle 17 Pool-IDs",
+    "fuenf Fraktionspaletten und zwei Fahrzeugtypen",
+    "vier Insel- und drei Bambus-Silhouetten",
+    "InstancedMesh-Laufzeitpfad",
+    "deterministische Geometrie und alte Karten"
+  ],
+  "candidateCount": 1,
+  "candidates": [
+    {
+      "id": "a",
+      "label": "Waldsaeule",
+      "use": "bereits global ausgewaehlte, natuerlich gestaffelte Terra-Formensprache"
+    }
+  ],
+  "scenes": [
+    "air-assets-overview",
+    "air-world",
+    "air-focus-luftschiff-menschenbund",
+    "air-focus-luftzug-menschenbund",
+    "air-focus-luftschiff-mondelfen",
+    "air-focus-luftzug-mondelfen",
+    "air-focus-luftschiff-tiefenzwerge",
+    "air-focus-luftzug-tiefenzwerge",
+    "air-focus-luftschiff-goblinzunft",
+    "air-focus-luftzug-goblinzunft",
+    "air-focus-luftschiff-orklegion",
+    "air-focus-luftzug-orklegion",
+    "air-focus-luftinsel-fels",
+    "air-focus-luftinsel-scherbe",
+    "air-focus-luftinsel-tafel",
+    "air-focus-luftinsel-archipel",
+    "air-focus-bambus-hoch",
+    "air-focus-bambus-kronendach",
+    "air-focus-bambus-jung"
+  ]
+}

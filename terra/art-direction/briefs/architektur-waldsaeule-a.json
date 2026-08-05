@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "assetId": "architektur-waldsaeule-a",
+  "type": "procedural-pool-family",
+  "intent": {
+    "character": [
+      "bewohnte maerchenhafte Architektur",
+      "handgebaute Waldsaeule-A-Formensprache",
+      "klare Kultur- und Bautyp-Silhouetten"
+    ],
+    "palette": [
+      "bestehende Kulturpaletten",
+      "warme Materialschichtung",
+      "sparsame leuchtende Akzente"
+    ],
+    "focus": "Alle 216 Architektur-Pools auf das freigegebene Niveau der normalen Terra-Assets heben"
+  },
+  "avoid": [
+    "gleichfoermige Kistenfassaden",
+    "schwebende Details",
+    "identische Dekoration ueber alle Kulturen",
+    "neue Runtime-Draw-Calls",
+    "Verlust der 12x18-Katalogmatrix"
+  ],
+  "preserve": [
+    "alle 216 Pool-IDs",
+    "bestehende Kulturpaletten und Bautypen",
+    "InstancedMesh-Laufzeitpfad",
+    "deterministische Geometrie",
+    "alte Karten und Generatorgewichte"
+  ],
+  "candidateCount": 1,
+  "candidates": [
+    {
+      "id": "a",
+      "label": "Waldsaeule",
+      "use": "bereits global ausgewaehlte, natuerlich gestaffelte Terra-Formensprache"
+    }
+  ],
+  "scenes": [
+    "architecture",
+    "arch-culture-board",
+    "arch-focus-mondelfen-palast",
+    "arch-focus-tiefenzwerge-schmiede",
+    "arch-focus-korallenhoefe-tempel",
+    "arch-focus-wurzelbund-wohnhaus",
+    "arch-focus-drachenbasalt-wehrturm",
+    "arch-focus-windweiden-windmuehle"
+  ]
+}

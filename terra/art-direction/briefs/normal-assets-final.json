@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "assetId": "normal-assets-final",
+  "type": "procedural-pool-family",
+  "intent": {
+    "character": [
+      "einheitliche Waldsaeule-A-Qualitaet ueber alle normalen Terra-Assets",
+      "klare handgebaute Silhouetten und warmer Ghibli-naher Detailrhythmus",
+      "lesbare Familien mit eigenstaendigen Material- und Formakzenten"
+    ],
+    "palette": [
+      "bestehende Terra-Kulturpaletten",
+      "warme Naturmaterialien mit gezielten Farbakzenten",
+      "weiche facettierte Schattierung ohne neue Texturen"
+    ],
+    "focus": "Abschliessender visueller Gesamtueberflug ueber alle 505 normalen Asset-Pools"
+  },
+  "avoid": [
+    "unscharfe oder austauschbare Silhouetten",
+    "schwebende Details und unverbundene Kleinteile",
+    "neue Runtime-Draw-Calls oder Texturen",
+    "Abweichungen von bestehenden Karten und Generatorgewichten"
+  ],
+  "preserve": [
+    "alle 505 physischen Pool-IDs",
+    "InstancedMesh- und statische Merge-Pfade",
+    "deterministische Geometrie",
+    "Bodenkontakt, Kollisionsradien und alte Karten"
+  ],
+  "candidateCount": 1,
+  "candidates": [
+    {
+      "id": "a",
+      "label": "Waldsaeule",
+      "use": "freigegebene organisch facettierte Terra-Formensprache"
+    }
+  ],
+  "scenes": [
+    "tree-family",
+    "catalog-arbor",
+    "catalog-landleben",
+    "catalog-requisiten",
+    "bau-wehr",
+    "bau-hafen",
+    "bau-infrastruktur",
+    "bau-siedlung",
+    "architecture",
+    "arch-culture-board",
+    "air-assets-overview",
+    "air-world",
+    "turtle-region"
+  ]
+}

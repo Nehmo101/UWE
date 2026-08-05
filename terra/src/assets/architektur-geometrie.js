@@ -6,7 +6,10 @@ import {
   ARCHITEKTUR_VARIANTEN
 } from "./architektur-katalog.js";
 import { M, farbton, mergeGeos, part } from "./geometrie-hilfen.js";
-import { veredleArchitektur } from "./architektur-details.js";
+import {
+  gestalteArchitekturFormensprache,
+  veredleArchitektur
+} from "./architektur-details.js";
 import { gestalteArchitekturFassade } from "./architektur-fassaden.js";
 
 var PI = Math.PI, TAU = Math.PI * 2;
@@ -463,9 +466,19 @@ function baueProfil(parts, stil, variante, f, si, vi) {
       spitze = baueDach(parts, stil, f, w, d, h * 0.78, 0, 0, vi);
       zylinder(parts, w * 0.14, d * 0.30, w * 0.14, 0, h * 0.62,
         d * 0.60, f.akzent, 8, 1, PI / 2);
+      var fluegelY = h * 0.62;
       for (var fl = 0; fl < 4; fl++) {
-        box(parts, w * 0.12, h * 0.72, d * 0.07, 0, h * 0.62,
-          d * 0.67, f.holz, 0, 0, fl * PI / 4);
+        var winkel = fl * PI / 2 + PI / 4;
+        var sin = Math.sin(winkel), cos = Math.cos(winkel);
+        var innen = h * 0.25, aussen = h * 0.21;
+        var innenAbstand = innen * 0.5;
+        var aussenAbstand = innen + aussen * 0.5;
+        box(parts, w * 0.055, innen, d * 0.050,
+          -sin * innenAbstand, fluegelY + cos * innenAbstand,
+          d * 0.67, f.holz, 0, 0, winkel);
+        box(parts, w * 0.12, aussen, d * 0.055,
+          -sin * aussenAbstand, fluegelY + cos * aussenAbstand,
+          d * 0.67, fl % 2 ? f.akzent : f.holz, 0, 0, winkel);
       }
       break;
     case "observatorium":
@@ -534,11 +547,16 @@ export function erstelleArchitekturGeometrie(stilEingabe, variantenEingabe) {
   };
   gestalteArchitekturFassade(parts, stil, variante, farben, veredelungsMasse);
   veredleArchitektur(parts, stil, variante, farben, veredelungsMasse);
+  var formDetails = gestalteArchitekturFormensprache(
+    parts, stil, variante, farben, veredelungsMasse
+  );
   var geometrie = mergeGeos(parts);
   geometrie.userData = {
     architekturStil: stil.id,
     architekturVariante: variante.id,
-    architekturTeile: parts.length
+    architekturTeile: parts.length,
+    architekturFormensprache: "waldsaeule-a",
+    architekturFormDetails: formDetails
   };
   return geometrie;
 }

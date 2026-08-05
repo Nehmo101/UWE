@@ -11,8 +11,13 @@ import { registriereSteampunkLuftflotte } from '../assets/steampunk-luftflotte.j
 import { registriereLuftinselPools } from '../assets/luftinsel-assets.js';
 import { registriereHochbambusPools } from '../assets/hochbambus-assets.js';
 import { veredleUmweltGeometrie } from '../assets/umwelt-geometrie.js';
+import { veredleUmweltFormensprache } from '../assets/umwelt-formensprache.js';
 import { veredleBestandBau } from '../assets/bestand-bau-veredelung.js';
+import { veredleBestandBauFormensprache } from '../assets/bestand-bau-formensprache.js';
+import { veredleRequisitenFinal } from '../assets/requisiten-final-formensprache.js';
+import { veredleTierwesenFormensprache } from '../assets/tierwesen-formensprache.js';
 import { veredleBestandKatalog } from '../assets/bestand-katalog-veredelung.js';
+import { veredleBestandKatalogFormensprache } from '../assets/bestand-katalog-formensprache.js';
 // I1: die Kartenzeichen. Umgekehrter Weg waere ein Zyklus — siehe unten.
 import { registriereSignaturPools } from '../render/signaturen.js';
 import { terrainColor, heightAt } from '../world/terrain.js';
@@ -48,8 +53,13 @@ const DRIFT_BROCKEN = 0.28;
  */
 function definePool(name, geo, opts) {
   geo = veredleUmweltGeometrie(name, geo);
+  geo = veredleUmweltFormensprache(name, geo);
   geo = veredleBestandBau(name, geo);
+  geo = veredleBestandBauFormensprache(name, geo);
   geo = veredleBestandKatalog(name, geo);
+  geo = veredleBestandKatalogFormensprache(name, geo);
+  geo = veredleTierwesenFormensprache(name, geo);
+  geo = veredleRequisitenFinal(name, geo);
   poolDefinieren(name, geo, opts);
 }
 /** Fügt Geometrien (position/normal/color/uv, indiziert oder nicht) zu einer zusammen. */
@@ -1774,7 +1784,6 @@ function geoBergfried() {
   sockel(parts, 4.0, 4.0, WB_DUNKEL);
   parts.push(part(new BX(4.0, 7.4, 4.0), M(0, 4.0, 0), WB_STEIN));
   parts.push(part(new BX(4.3, 0.24, 4.3), M(0, 7.55, 0), WB_HELL));    // Kranzgesims
-  zinnen(parts, 4.3, 4.3, 7.67, WB_HELL, 4);
   // Walmspitze statt prismGeo: der Bergfried hat vier gleich lange Traufen,
   // ein Giebelprisma bekaeme zwei Giebelwaende, die es dort nie gibt.
   parts.push(part(walmGeo(3.0, 2.2, 3.0, 0.2), M(0, 8.11, 0), WB_DACH));

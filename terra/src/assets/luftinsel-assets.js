@@ -46,6 +46,12 @@ const FARBE_ADER = 0x8a7249;
 const FARBE_MINERAL = 0x66746f;
 const FARBE_SCHATTEN = 0x2d3234;
 
+function transformiereMitEigenfarben(geometrie, matrix) {
+  var teil = geometrie.clone();
+  teil.applyMatrix4(matrix);
+  return vollstaendigeAttribute(teil);
+}
+
 function punkt(cfg, ring, segment, seed) {
   var a = segment / cfg.segmente * Math.PI * 2;
   var basis = ring.radius;
@@ -173,6 +179,31 @@ function gratplatten(cfg, seed) {
   return teile;
 }
 
+function plateauDetails(cfg, seed, form) {
+  if (form === 'archipel') return [];
+  var teile = [];
+  for (var i = 0; i < 5; i++) {
+    var a = i / 5 * Math.PI * 2 + hashi(i, 107, seed) * 0.38;
+    var dist = cfg.radius * (0.38 + hashi(i, 109, seed) * 0.24);
+    teile.push(part(new THREE.ConeGeometry(0.5, 1, 4),
+      M(Math.cos(a) * dist * cfg.x, 0.13,
+        Math.sin(a) * dist * cfg.z, 0, -a,
+        (hashi(i, 113, seed) - 0.5) * 0.18,
+        cfg.radius * 0.075, 0.30, cfg.radius * 0.040),
+      i % 2 ? 0x536449 : 0x78815a));
+  }
+  for (i = 0; i < 3; i++) {
+    a = -0.62 + i * 0.48;
+    teile.push(part(new THREE.IcosahedronGeometry(0.5, 0),
+      M(Math.sin(a) * cfg.radius * 0.26, 0.12,
+        Math.cos(a) * cfg.radius * 0.22,
+        i * 0.19, -a, i * 0.11,
+        cfg.radius * 0.10, 0.22, cfg.radius * 0.07),
+      i === 1 ? FARBE_ADER : FARBE_KANTE.getHex()));
+  }
+  return teile;
+}
+
 function strebeZwischen(a, b, breite, farbe) {
   var start = new THREE.Vector3(a[0], a[1], a[2]);
   var ende = new THREE.Vector3(b[0], b[1], b[2]);
@@ -258,7 +289,8 @@ function kernMitDetails(cfg, seed, form) {
     ...schichtbaender(cfg, seed),
     ...gratplatten(cfg, seed),
     ...erdsaum(cfg, seed),
-    ...unterseitenStrebewerk(cfg, form, seed)
+    ...unterseitenStrebewerk(cfg, form, seed),
+    ...plateauDetails(cfg, seed, form)
   ]);
 }
 
@@ -272,8 +304,10 @@ function archipelGeometrie() {
   ];
   for (var i = 0; i < satelliten.length; i++) {
     var s = satelliten[i];
-    teile.push(part(facettenKern(cfg, cfg.seed + 101 + i * 17),
-      M(s[0], s[1], s[2], 0, i * 0.8, 0, s[3], s[4], s[5])));
+    teile.push(transformiereMitEigenfarben(
+      facettenKern(cfg, cfg.seed + 101 + i * 17),
+      M(s[0], s[1], s[2], 0, i * 0.8, 0, s[3], s[4], s[5])
+    ));
   }
   // Mineralische Zugbaender halten die groessten Satelliten optisch
   // zusammen, ohne die Negativraeume des Archipels zu schliessen.
@@ -302,6 +336,8 @@ export function erzeugeLuftinselGeometrie(form) {
   geometrie.computeBoundingBox();
   geometrie.userData.terraUnterseite = 'facetten-streben-mineral';
   geometrie.userData.terraMaterialZonen = 8;
+  geometrie.userData.terraLuftweltFormensprache = 'waldsaeule-a';
+  geometrie.userData.terraLuftweltFormDetails = id === 'archipel' ? 3 : 8;
   geometrie.computeBoundingSphere();
   return geometrie;
 }

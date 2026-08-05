@@ -1,7 +1,7 @@
 // Einstieg: verdrahtet Module, baut die Startkarte, treibt die Renderschleife.
 import { DEG, hashi } from './core/rng.js';
 import { S, HALF, VW, setScene, mkElement, nextSeed } from './core/store.js';
-import { scene, initPipeline, resizePipeline, renderFrame, tickLeistung, setPalette, setMultiplane, PALETTE_STANDARD } from './render/pipeline.js';
+import { scene, initPipeline, resizePipeline, renderFrame, getRenderInfo, tickLeistung, setPalette, setMultiplane, PALETTE_STANDARD } from './render/pipeline.js';
 import { camera, cam, initKeys, updateCamera, moveFocus } from './editor/camera.js';
 import { base, genBase, initTerrain, heightAt, slopeAt, refreshTerrainFull, basisGeaendert } from './world/terrain.js';
 import './generators/geometry.js';        // registriert alle Objekt-Pools
@@ -36,11 +36,15 @@ import { ARCHITEKTUR_STILE, architekturAssetId } from './assets/architektur-kata
 import { erstelleLuftschauPlan } from './generators/luftschau.js';
 import {
   ASSET_SCHAU_KARTENGROESSE,
+  baueAssetSchauLayout,
   erzeugeAssetSchau
 } from './generators/asset-schau.js';
 
-var SCHAU_MODUS = new URLSearchParams(window.location.search).get("schau");
-var SCHAU_BLICK = new URLSearchParams(window.location.search).get("blick");
+var SCHAU_PARAM = new URLSearchParams(window.location.search);
+var SCHAU_MODUS = SCHAU_PARAM.get("schau");
+var SCHAU_BLICK = SCHAU_PARAM.get("blick");
+var SCHAU_FOKUS = SCHAU_PARAM.get("terraFocus") ||
+  (SCHAU_BLICK === "baum" ? "baum" : null);
 
 /* ==========================================================================
    Startkarte (unveraendert portiert — gleiche Seed, gleiche Karte)
@@ -125,6 +129,16 @@ function assetSchauGelaende() {
   basisGeaendert(0, VW - 1, 0, VW - 1);
 }
 
+function setzeAssetSchauLegende(legende, titel, details) {
+  legende.replaceChildren();
+  var kopf = document.createElement("strong");
+  var zeile = document.createElement("span");
+  kopf.textContent = titel;
+  zeile.textContent = details;
+  legende.append(kopf, zeile);
+}
+
+
 /**
  * Museumskarte fuer die Abnahme: jeder der 505 physischen Pools genau einmal,
  * die animierte Landschildkroete als zusaetzliche Hero-Landmarke daneben.
@@ -134,9 +148,38 @@ function assetSchauMap() {
   document.title = "terra - vollstaendige Asset-Schau (505/505)";
   var legende = document.createElement("aside");
   legende.className = "assetSchauLegende";
-  legende.innerHTML = "<strong>Asset-Schau &middot; 505 / 505</strong>"
-    + "<span>12 &times; 18 Architektur &middot; 289 Umwelt-, Kultur- und Weltassets</span>";
+  setzeAssetSchauLegende(legende, "Asset-Schau \u00b7 505 / 505",
+    "12 \u00d7 18 Architektur \u00b7 289 Umwelt-, Kultur- und Weltassets");
   document.body.appendChild(legende);
+  if (SCHAU_FOKUS) {
+    // Der Fokusmodus erzeugt nur das Zielasset. Dadurch wird weder Geometrie
+    // der 504 Nachbarn gepackt noch ein riesiges Galerie-Terrain benoetigt.
+    var ganzesLayout = baueAssetSchauLayout();
+    var fokusQuelle = ganzesLayout.placements.find(function (p) {
+      return p.name === SCHAU_FOKUS;
+    });
+    if (!fokusQuelle) throw new Error("Unbekanntes Fokusasset: " + SCHAU_FOKUS);
+    var fokusPlatz = Object.assign({}, fokusQuelle, { x: 0, y: 0, z: 0 });
+    erzeugeAssetSchau({ hoeheAn: heightAt, markiere: false, layout: {
+      version: ganzesLayout.version,
+      placements: [fokusPlatz],
+      blocks: [],
+      bounds: { minX: -8, maxX: 8, minZ: -8, maxZ: 8 },
+      counts: { physical: 1, architecture: 0, other: 1 }
+    } });
+    setzeAssetSchauLegende(legende, "Asset-Fokus \u00b7 " + SCHAU_FOKUS,
+      "Silhouette \u00b7 Formaufbau \u00b7 Material \u00b7 Laufzeit");
+    var fokusPool = POOLS[SCHAU_FOKUS];
+    fokusPool.geo.computeBoundingBox();
+    var fokusBox = fokusPool.geo.boundingBox;
+    var fokusBreite = (fokusBox.max.x - fokusBox.min.x) * fokusPlatz.scale;
+    var fokusHoehe = (fokusBox.max.y - fokusBox.min.y) * fokusPlatz.scale;
+    var fokusTiefe = (fokusBox.max.z - fokusBox.min.z) * fokusPlatz.scale;
+    var fokusSpanne = Math.max(fokusBreite, fokusHoehe * 1.12, fokusTiefe * 0.72);
+    return { x: 0, z: 0, dist: Math.max(5.8, fokusSpanne * 2.35),
+      pitch: 18 * DEG, yaw: 0.48, fov: 30,
+      hebung: Math.max(0.8, fokusHoehe * 0.48) };
+  }
   var schau = erzeugeAssetSchau({ hoeheAn: heightAt, markiere: false });
   var archBlock = schau.layout.blocks[0];
   var heroX = archBlock.minX - 40;
@@ -146,6 +189,17 @@ function assetSchauMap() {
     drehung: 112,
     kopfbewegung: 0.78
   });
+  var familienBlock = SCHAU_BLICK !== "architektur" &&
+    schau.layout.blocks.find(function (b) { return b.id === SCHAU_BLICK; });
+  if (familienBlock) {
+    setzeAssetSchauLegende(legende, "Asset-Familie \u00b7 " + familienBlock.label,
+      familienBlock.count + " Pools \u00b7 identische Abnahmekamera");
+    return { x: (familienBlock.minX + familienBlock.maxX) / 2,
+      z: (familienBlock.minZ + familienBlock.maxZ) / 2,
+      dist: Math.max(familienBlock.maxX - familienBlock.minX,
+        familienBlock.maxZ - familienBlock.minZ) * 1.32,
+      pitch: 48 * DEG, yaw: 0.08, fov: 31 };
+  }
   if (SCHAU_BLICK === "architektur") {
     return { x: 0, z: -82, dist: 255, pitch: 50 * DEG, yaw: 0, fov: 31 };
   }
@@ -277,7 +331,7 @@ const renderer = initPipeline(camera);
 setMultiplane(SCHAU_MODUS === "assets" ? 0.12 : 0.42);
 // Die Farbrampe kommt aus dem Biom (palettePassend in io.js) — die
 // Standardrampe hier waere biomblind und zoege dunkle Biome Richtung Creme.
-setPalette(PALETTE_STANDARD, 0.26);
+setPalette(PALETTE_STANDARD, 0.20);
 initTerrain(scene);
 initWater(scene);
 initSky(scene);
@@ -296,7 +350,8 @@ if (SCHAU_MODUS === "luft") {
   var biomSelect = document.getElementById("biomSel");
   if (biomSelect) biomSelect.value = S.biom;
 }
-if (SCHAU_MODUS === "assets") setzeKartenGroesseFuerSchau(ASSET_SCHAU_KARTENGROESSE);
+if (SCHAU_MODUS === "assets") setzeKartenGroesseFuerSchau(
+  SCHAU_FOKUS ? 128 : ASSET_SCHAU_KARTENGROESSE);
 // Farbrampe des Startbioms setzen (F1) — muss nach initIO stehen, weil die
 // Funktion dort lebt und BIOME liest.
 palettePassend();
@@ -406,7 +461,8 @@ function animate() {
   // Adaptive Aufloesung: die ECHTE Bildzeit melden (raw, nicht das geklammerte
   // dt) — der Regler senkt bei anhaltend zaehen Bildern die Renderskala und
   // hebt sie wieder, sobald die Rate traegt.
-  tickLeistung(raw);
+  // Art-Sichten bleiben pixelgenau; Headless-Last ist kein Asset-Signal.
+  if (!SCHAU_MODUS) tickLeistung(raw);
   renderFrame(camera, now * 0.001);
 
   frameCount++; fpsAcc += raw;
@@ -415,4 +471,4 @@ function animate() {
 
 animate();
 window.__terraOk = true;
-window.__terraDebug = { POOLS: POOLS, S: S };
+window.__terraDebug = { POOLS: POOLS, S: S, getRenderInfo: getRenderInfo };
