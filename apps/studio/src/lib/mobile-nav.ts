@@ -16,7 +16,10 @@ export type StudioGlobalBottomNavKey =
   | "more";
 
 function normalizeGlobalKey(active: StudioGlobalBottomNavKey) {
-  if (active === "ai") return "media-ai";
+  // „Medien & KI" gibt es global nicht mehr — KI, Brain und Medien liegen in
+  // der Welt. Die alten Schlüssel landen auf der Welten-Liste, statt auf einen
+  // Tab zu zeigen, den es nicht mehr gibt.
+  if (active === "ai" || active === "media-ai") return "worlds";
   if (active === "more") return "system";
   return active;
 }
@@ -26,14 +29,16 @@ function normalizeGlobalKey(active: StudioGlobalBottomNavKey) {
  *
  * Es gibt nur noch diese eine Variante: die zweite war die des Daily Admin OS,
  * und das liegt in Brain (Abschnitt H1). Studio startet auf der Welten-Liste.
+ *
+ * Die drei Einträge sind genau die drei Bereiche der Studio-IA (Start, Welten,
+ * System) — `mobile-nav.test.ts` hält sie dagegen.
  */
 export function studioGlobalBottomNav(active: StudioGlobalBottomNavKey): StudioBottomNavItem[] {
   const activeKey = normalizeGlobalKey(active);
   return [
     { label: "Welten", href: "/worlds", icon: "◎", active: activeKey === "worlds" },
     { label: "Suche", href: "/search", icon: "🔍", active: activeKey === "search" },
-    { label: "Medien & KI", href: "/ai", icon: "✦", active: activeKey === "media-ai" },
-    { label: "Admin", href: "/admin", icon: "⚙", active: activeKey === "system" },
+    { label: "Konto", href: "/account/password", icon: "⚙", active: activeKey === "system" },
   ];
 }
 
@@ -45,13 +50,14 @@ function resolveGlobalNavActive(pathname: string): StudioGlobalBottomNavKey {
     return "worlds";
   }
   if (
-    pathname.startsWith("/ai") ||
-    pathname.startsWith("/image-studio") ||
-    pathname.startsWith("/brain")
+    pathname.startsWith("/account") ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/command") ||
+    pathname.startsWith("/settings")
   ) {
-    return "ai";
+    return "system";
   }
-  return "system";
+  return "worlds";
 }
 
 /** Bottom nav for the current pathname. */

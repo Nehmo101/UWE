@@ -6,6 +6,47 @@
  * strings cross the boundary.
  */
 
+import type { ImportJob } from "@uwe/database/server";
+import type { ImportCentralJobRow } from "./ImportCentralWorkspace";
+
+/**
+ * Job-Zeilen für die Import-Zentrale — global (`/import`) wie welt-eingegrenzt
+ * (`/worlds/[worldSlug]/import-central`).
+ *
+ * Die Welt kommt bevorzugt aus `targetWorldId`; ältere Jobs tragen sie nur in
+ * den Metadaten als `worldSlug`, deshalb der Rückfall.
+ */
+export function toImportCentralJobRows(
+  jobs: ImportJob[],
+  worldsById: Map<string, { name: string; slug: string }>,
+): ImportCentralJobRow[] {
+  return jobs.map((job) => {
+    const world = job.targetWorldId ? worldsById.get(job.targetWorldId) : undefined;
+    const metadata =
+      job.metadata && typeof job.metadata === "object" && !Array.isArray(job.metadata)
+        ? (job.metadata as Record<string, unknown>)
+        : null;
+    const metadataSlug = typeof metadata?.worldSlug === "string" ? metadata.worldSlug : null;
+
+    return {
+      id: job.id,
+      sourceType: job.sourceType,
+      targetType: job.targetType,
+      status: job.status,
+      fileName: job.fileName,
+      targetWorldId: job.targetWorldId,
+      targetWorldName: world?.name ?? null,
+      targetWorldSlug: world?.slug ?? metadataSlug,
+      previewSummary: readPreviewSummary(job.previewPayload),
+      resultLabel: readResultSummary(job.resultSummary),
+      undoToken: job.undoToken,
+      errorMessage: job.errorMessage,
+      createdAt: job.createdAt.toISOString(),
+      updatedAt: job.updatedAt.toISOString(),
+    };
+  });
+}
+
 export function readPreviewSummary(previewPayload: unknown): string | null {
   if (!previewPayload || typeof previewPayload !== "object" || Array.isArray(previewPayload)) {
     return null;

@@ -30,7 +30,9 @@ export async function getJobsList(request: Request) {
     offset: Number.isFinite(offset) ? offset : 0,
   });
 
-  const summary = await getJobs().getSummary();
+  // Mit `worldSlug` ist die Liste eingegrenzt — ein globales Zählwerk darüber
+  // wäre eine Zahl, zu der die Zeilen fehlen.
+  const summary = await getJobs().getSummary({ worldSlug });
 
   return NextResponse.json({
     jobs,

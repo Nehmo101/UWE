@@ -6,8 +6,12 @@
  * Migrationen, Tokens, Webhooks, Einstellungen und Backups laufen über die
  * Kommandozentrale auf dem UWE-Host (Notiz Lasse, Abschnitt D).
  *
- * Was hier bleibt, sind die Studio-eigenen Flächen: KI-Governance, der Verlauf,
- * Design und das eigene Konto. Tags liegen im Welt-Cockpit (D30).
+ * Übrig bleibt das eigene Konto. Die Gruppe „Übersicht" (Admin-Hub, Verlauf,
+ * NL-Befehle) und „Design & Theme" standen hier noch — beides ist aus der
+ * Seitenleiste gefallen: der Admin-Hub ist eine Betriebsfläche und keine
+ * Arbeitsfläche, das Erscheinungsbild stellt man einmal ein und nicht täglich.
+ * Die Routen bleiben und sind über die Befehlspalette erreichbar
+ * (`STUDIO_PALETTE_EXTRA`). Tags liegen im Welt-Cockpit (D30).
  *
  * Part of the central navigation contract (see ./types.ts).
  */
@@ -36,66 +40,9 @@ export const ADMIN_HUB_SECTIONS = [
 
 export const SYSTEM_NAV: NavGroup[] = [
   {
-    id: "system-overview",
-    title: "Übersicht",
-    items: [
-      {
-        id: "system-admin",
-        label: "Admin Übersicht",
-        href: "/admin",
-        icon: "layout-dashboard",
-        group: "Übersicht",
-        section: SECTION,
-        permission: ["owner", "admin"],
-        status: "active",
-        source: "system",
-        keywords: ["admin"],
-      },
-      {
-        id: "system-activity",
-        label: "Verlauf",
-        href: "/admin/activity",
-        // Dasselbe Glyph wie das fruehere "history" — Lucide 1.27 hat es im
-        // Registry auf "rotate-ccw-clock" umbenannt, "History" ist nur noch ein
-        // Alias auf dem Direktexport und faellt aus `icons` heraus.
-        icon: "rotate-ccw-clock",
-        group: "Übersicht",
-        section: SECTION,
-        permission: ["owner", "admin"],
-        status: "active",
-        source: "system",
-        keywords: ["activity", "audit", "verlauf"],
-      },
-      {
-        id: "system-command-center",
-        label: "NL-Befehle",
-        href: "/command",
-        icon: "terminal",
-        group: "Übersicht",
-        section: SECTION,
-        permission: ["owner", "admin"],
-        status: "active",
-        source: "system",
-        keywords: ["command", "nl", "befehl", "intent", "admin", "nl-befehle"],
-      },
-    ],
-  },
-  {
     id: "system-settings",
     title: "Einstellungen",
     items: [
-      {
-        id: "system-settings",
-        label: "Design & Theme",
-        href: "/settings",
-        icon: "settings",
-        group: "Einstellungen",
-        section: SECTION,
-        permission: ["owner", "admin", "dm"],
-        status: "active",
-        source: "system",
-        keywords: ["settings", "einstellungen", "erscheinungsbild", "theme", "design"],
-      },
       {
         id: "system-account-password",
         label: "Passwort",

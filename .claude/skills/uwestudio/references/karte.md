@@ -15,12 +15,12 @@ und ob etwas Neues dazugekommen ist. Für das Warum die `SKILL.md` von /uwestudi
 | Häkchen | `studio` |
 | Datenbank | uwe.db |
 | MCP-Server | `uwe-studio` |
-| Seiten | 94 |
+| Seiten | 97 |
 | API-Routen | 147 |
 
 **Seiten-Bereiche** (Top-Level unter `app/`, Zahl = Seiten darunter)
 
-`account` (2) · `admin` (4) · `ai` (1) · `brain` (1) · `bugs` (1) · `command` (1) · `continue` (1) · `forgot-password` (1) · `ideas` (1) · `image-studio` (3) · `import` (1) · `jobs` (1) · `knowledge` (1) · `login` (1) · `logout` (1) · `mail` (1) · `maintenance` (1) · `portal` (1) · `prompts` (2) · `reset-password` (1) · `search` (1) · `settings` (1) · `studio` (1) · `templates` (3) · `worlds` (60)
+`account` (2) · `admin` (4) · `ai` (1) · `brain` (1) · `bugs` (1) · `command` (1) · `continue` (1) · `forgot-password` (1) · `ideas` (1) · `image-studio` (3) · `import` (1) · `jobs` (1) · `knowledge` (1) · `login` (1) · `logout` (1) · `mail` (1) · `maintenance` (1) · `portal` (1) · `prompts` (2) · `reset-password` (1) · `search` (1) · `settings` (1) · `studio` (1) · `templates` (3) · `worlds` (63)
 
 **API-Bereiche** (Top-Level unter `app/api/`, Zahl = Route-Handler darunter)
 

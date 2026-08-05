@@ -16,18 +16,17 @@ function worldNavHrefExists(worldSlug: string, href: string): boolean {
 }
 
 describe("studio mobile nav", () => {
-  it("uses exactly the four primary Studio areas", () => {
+  it("uses exactly the three primary Studio areas", () => {
     const nav = studioGlobalBottomNav("worlds");
     assert.deepEqual(
       nav.map((item) => item.label),
-      ["Welten", "Suche", "Medien & KI", "Admin"],
+      ["Welten", "Suche", "Konto"],
     );
-    assert.equal(nav.length, 4);
+    assert.equal(nav.length, 3);
     assert.equal(nav[0]?.active, true);
     assert.equal(nav[0]?.href, "/worlds");
     assert.equal(nav[1]?.href, "/search");
-    assert.equal(nav[2]?.href, "/ai");
-    assert.equal(nav[3]?.href, "/admin");
+    assert.equal(nav[2]?.href, "/account/password");
   });
 
   it("maps global bottom nav hrefs into the central Studio IA", () => {
@@ -40,8 +39,11 @@ describe("studio mobile nav", () => {
 
   it("keeps legacy active keys mapped into the reduced global nav", () => {
     assert.equal(studioGlobalBottomNav("search")[1]?.active, true);
-    assert.equal(studioGlobalBottomNav("ai")[2]?.active, true);
-    assert.equal(studioGlobalBottomNav("more")[3]?.active, true);
+    assert.equal(studioGlobalBottomNav("more")[2]?.active, true);
+    // „Medien & KI" gibt es global nicht mehr — KI und Brain liegen in der
+    // Welt. Der alte Schlüssel darf keinen Tab hervorheben, den es nicht gibt.
+    assert.equal(studioGlobalBottomNav("ai")[0]?.active, true);
+    assert.equal(studioGlobalBottomNav("media-ai")[0]?.active, true);
   });
 
   it("uses world-scoped bottom nav with sidebar fallback", () => {
@@ -83,13 +85,13 @@ describe("studio mobile nav", () => {
     const worldNav = resolveStudioBottomNav("/worlds/terra/dashboard");
     assert.deepEqual(
       worldNav.map((item) => item.label),
-      ["Welten", "Suche", "Medien & KI", "Admin"],
+      ["Welten", "Suche", "Konto"],
     );
     assert.equal(worldNav[0]?.active, true);
 
     assert.equal(resolveStudioBottomNav("/search?scope=admin")[1]?.active, true);
-    assert.equal(resolveStudioBottomNav("/ai")[2]?.active, true);
-    assert.equal(resolveStudioBottomNav("/admin")[3]?.active, true);
+    assert.equal(resolveStudioBottomNav("/account/password")[2]?.active, true);
+    assert.equal(resolveStudioBottomNav("/admin")[2]?.active, true);
   });
 });
 
