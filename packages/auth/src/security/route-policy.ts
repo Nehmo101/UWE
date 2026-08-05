@@ -40,6 +40,16 @@ export const FAMILY_PUBLIC_ROUTES = [
   "/.well-known/caldav",
 ] as const;
 
+/**
+ * Family-API v1: die token-authentifizierte Außenseite (`Authorization: Bearer
+ * uwe_…`). Die Middleware validiert das Token nicht (kein DB-Zugriff im
+ * Edge-Layer) — sie lässt Requests mit Bearer-Header durch, Scope- und
+ * Token-Prüfung macht der Route Handler (`requireFamilyApiAuth`), wie beim
+ * CalDAV-Precedent. Ohne Session und ohne Token antwortet die Fläche mit 401
+ * statt 404: die API ist in docs/family/api.md öffentlich dokumentiert.
+ */
+export const FAMILY_TOKEN_API_ROUTES = ["/api/v1", "/api/v1/*"] as const;
+
 export type RouteAccess = "public" | "protected" | "protected-session";
 
 export interface RouteClassification {
@@ -350,8 +360,10 @@ function classifyApiRoute(resolved: string, surface: UweAppSurface): RouteClassi
       return { access: "public", unknownApi: false, pathname: resolved };
     }
     // Checkbox-gated surface: every other API is protected; unknown APIs
-    // deny-by-default.
-    const known = matchesAny(resolved, PROTECTED_ROUTE_PREFIXES);
+    // deny-by-default. Die Family-API v1 zählt als bekannt (401 statt 404).
+    const known =
+      matchesAny(resolved, PROTECTED_ROUTE_PREFIXES) ||
+      (surface === "family" && matchesAny(resolved, FAMILY_TOKEN_API_ROUTES));
     return { access: "protected", unknownApi: !known, pathname: resolved };
   }
 

@@ -1,13 +1,17 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { classifyRoute, isPublicRoute, isUnknownProtectedApi } from "./route-policy";
-import { evaluateFamilyMiddleware } from "./middleware";
+import { evaluateBrainMiddleware, evaluateFamilyMiddleware } from "./middleware";
 
-function makeRequest(pathname: string, options: { session?: string } = {}) {
+function makeRequest(pathname: string, options: { session?: string; bearer?: string } = {}) {
+  const headers = new Headers({ host: "family.uwe.example" });
+  if (options.bearer) {
+    headers.set("authorization", `Bearer ${options.bearer}`);
+  }
   return {
     pathname,
     url: `https://family.uwe.example${pathname}`,
-    headers: new Headers({ host: "family.uwe.example" }),
+    headers,
     cookies: {
       get(name: string) {
         return name === "uwe_session" && options.session ? { value: options.session } : undefined;
@@ -50,6 +54,14 @@ describe("family route policy (checkbox-gated, deny-by-default)", () => {
     assert.equal(isUnknownProtectedApi("/api/calendar/feed/uwecal_x", "family"), false);
     assert.equal(isUnknownProtectedApi("/api/dav/cal/familie/x.ics", "family"), false);
   });
+
+  it("treats the token API v1 as known-protected on family, unknown on brain", () => {
+    // Family: dokumentierte Bearer-Fläche → 401 statt 404 ohne Auth.
+    assert.equal(isUnknownProtectedApi("/api/v1/day-brief", "family"), false);
+    assert.equal(classifyRoute("/api/v1/day-brief", "family").access, "protected");
+    // Brain kennt keine v1-Token-API — bleibt deny-by-default versteckt.
+    assert.equal(isUnknownProtectedApi("/api/v1/day-brief", "brain"), true);
+  });
 });
 
 describe("evaluateFamilyMiddleware", () => {
@@ -82,5 +94,29 @@ describe("evaluateFamilyMiddleware", () => {
     const known = evaluateFamilyMiddleware(makeRequest("/api/calendar/events"), prodFamilyEnv);
     assert.equal(known.action, "block");
     assert.equal(known.status, 401);
+  });
+
+  it("lets Bearer requests through to the v1 handlers in production", () => {
+    const withToken = evaluateFamilyMiddleware(
+      makeRequest("/api/v1/day-brief", { bearer: "uwe_test123" }),
+      prodFamilyEnv,
+    );
+    assert.equal(withToken.action, "allow");
+  });
+
+  it("blocks v1 without token or session with 401, not 404", () => {
+    const bare = evaluateFamilyMiddleware(makeRequest("/api/v1/day-brief"), prodFamilyEnv);
+    assert.equal(bare.action, "block");
+    assert.equal(bare.status, 401);
+  });
+
+  it("does not open v1 with a Bearer header outside the family surface", () => {
+    // Brain nutzt dieselbe Checkbox-Middleware — dort bleibt v1 unbekannt (404).
+    const brain = evaluateBrainMiddleware(
+      makeRequest("/api/v1/day-brief", { bearer: "uwe_test123" }),
+      prodFamilyEnv,
+    );
+    assert.equal(brain.action, "block");
+    assert.equal(brain.status, 404);
   });
 });

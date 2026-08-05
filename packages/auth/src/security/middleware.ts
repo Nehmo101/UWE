@@ -3,8 +3,10 @@ import { SESSION_COOKIE_NAME } from "../session";
 import { authorizeForSurface } from "./authorize";
 import {
   classifyRoute,
+  FAMILY_TOKEN_API_ROUTES,
   isApiRoute,
   isUnknownProtectedApi,
+  matchesRoutePattern,
   type UweAppSurface,
 } from "./route-policy";
 
@@ -134,6 +136,16 @@ function evaluateCheckboxSurfaceMiddleware(
 
   if (isApiRoute(pathname)) {
     if (hasSession) {
+      return { action: "allow" };
+    }
+    // Family-API v1: externe Clients authentifizieren per Bearer-Token. Das
+    // Token selbst prüft der Route Handler (`requireFamilyApiAuth`) — die
+    // Middleware reicht nur durch, sie hat keinen DB-Zugriff.
+    if (
+      surface === "family" &&
+      FAMILY_TOKEN_API_ROUTES.some((pattern) => matchesRoutePattern(pathname, pattern)) &&
+      request.headers.get("authorization")?.startsWith("Bearer ")
+    ) {
       return { action: "allow" };
     }
     if (classification.unknownApi) {
