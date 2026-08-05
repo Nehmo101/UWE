@@ -358,7 +358,15 @@ export async function routeAiRequest(
 
   }
 
-  
+  if (request.extraPromptContext?.trim()) {
+    // Vorserialisierter Zusatz-Kontext (z. B. Kampagnen-Digest). Vor der
+    // Budget-Prüfung anhängen, damit ein zu großer Digest genauso hart
+    // abgewiesen wird wie zu großer Seiten-Kontext — und im Cache-Hash landet.
+    context = {
+      ...context,
+      promptContext: `${context.promptContext}\n\n${request.extraPromptContext.trim()}\n`,
+    };
+  }
 
   const safeContext = context;
 

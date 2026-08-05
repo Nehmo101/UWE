@@ -160,6 +160,10 @@ export const aiSaveBodySchema = z.object({
 export const brainRunBodySchema = z.object({
   actionId: idSchema,
   worldSlug: slugSchema,
+  /* Kampagnen-Aktionen (campaign_chapter_draft, campaign_session_hooks)
+     tragen die Ziel-Kampagne — zod strippt Unbekanntes, also MUSS das Feld
+     hier stehen, sonst kommt es nie im Job an. */
+  campaignSlug: slugSchema.optional(),
   /* Optional since J4: not every Brain action hangs on a wiki page. Terra's
      map draft has none, and `runBrainAction` already resolves an anchor page
      itself (`resolveAnchorPageSlug`) when the field is missing. Required, it

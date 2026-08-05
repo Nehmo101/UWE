@@ -362,4 +362,78 @@ describe("Brain Actions — end-to-end with mock provider", () => {
     const run = await aiRuns.getById(runId);
     assert.equal(run?.status, "discarded");
   });
+
+  it("anchors campaign actions on the first chapter and tags the run with the campaign", async () => {
+    const repo = createUweRepository(databaseUrl);
+    const seeded = await seedTerraWorld(repo);
+    const aiRuns = createAiRunService(databaseUrl);
+    const brainStore = createBrainStoreService(databaseUrl);
+
+    const chapterTwo = await repo.createPage({
+      worldId: seeded.world.id,
+      campaignId: seeded.campaign.id,
+      title: "Akt II",
+      slug: "akt-ii",
+      type: "story_arc",
+      sortIndex: 2,
+    });
+    const chapterOne = await repo.createPage({
+      worldId: seeded.world.id,
+      campaignId: seeded.campaign.id,
+      title: "Akt I",
+      slug: "akt-i",
+      type: "story_arc",
+      sortIndex: 1,
+    });
+
+    const { runId, proposals } = await runBrainAction(
+      { repo, aiRuns, brainStore, databaseUrl },
+      {
+        actionId: "campaign_chapter_draft",
+        worldSlug: seeded.world.slug,
+        campaignSlug: seeded.campaign.slug,
+        campaignId: seeded.campaign.id,
+        extraPromptContext: "# Kampagnen-Cockpit (Digest)\nOffene Quests: Testquest",
+        providerId: "ollama",
+        model: "mock-model",
+        useMock: true,
+        options: { localOnly: true },
+      },
+    );
+
+    const run = await aiRuns.getById(runId);
+    assert.ok(run);
+    // Anker = erstes Kapitel in Lesereihenfolge, nicht das zuerst angelegte.
+    assert.equal(run?.pageId, chapterOne.id);
+    assert.notEqual(run?.pageId, chapterTwo.id);
+    const meta = run?.resultMeta as { campaignId?: string | null } | null;
+    assert.equal(meta?.campaignId, seeded.campaign.id);
+
+    const proposal = proposals[0];
+    assert.ok(proposal);
+    assert.equal(proposal.targetType, "campaign_chapter_page");
+    assert.equal(proposal.metadata?.campaignId, seeded.campaign.id);
+  });
+
+  it("refuses campaign actions without a campaign", async () => {
+    const repo = createUweRepository(databaseUrl);
+    const seeded = await seedTerraWorld(repo);
+    const aiRuns = createAiRunService(databaseUrl);
+    const brainStore = createBrainStoreService(databaseUrl);
+
+    await assert.rejects(
+      runBrainAction(
+        { repo, aiRuns, brainStore, databaseUrl },
+        {
+          actionId: "campaign_session_hooks",
+          worldSlug: seeded.world.slug,
+          providerId: "ollama",
+          model: "mock-model",
+          useMock: true,
+          options: { localOnly: true },
+        },
+      ),
+      /erfordert eine Kampagne/,
+    );
+  });
 });
