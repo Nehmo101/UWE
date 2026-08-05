@@ -26,19 +26,23 @@ export type CampaignApplyOutcome =
     }
   | { ok: false; message: string };
 
-/** Erste `# `-Überschrift wird Seitentitel; sie fliegt aus dem Seitentext. */
+/**
+ * Erste `# `-Überschrift wird Seitentitel; sie fliegt aus dem Seitentext.
+ * Bewusst zeilenbasiert ohne Regex-Quantoren: die Modell-Antwort ist
+ * unkontrollierte Eingabe, und jede `[ \t]+(.+)`-Variante backtrackt auf
+ * Whitespace-Fluten polynomiell (CodeQL js/polynomial-redos, Alerts 96/97).
+ */
 export function splitChapterTitle(content: string): { title: string | null; body: string } {
-  // Bewusst [ \t] statt \s und ohne \s*$-Suffix: \s würde den Zeilenumbruch
-  // nach dem # schlucken, und `(.+)\s*$` backtrackt polynomiell (CodeQL js/
-  // polynomial-redos). Getrimmt wird die Capture ohnehin darunter.
-  const match = content.match(/^#[ \t]+(.+)$/m);
-  if (!match || typeof match.index !== "number") {
+  const lines = content.split("\n");
+  const index = lines.findIndex((line) => {
+    if (!line.startsWith("# ") && !line.startsWith("#\t")) return false;
+    return line.slice(1).trim().length > 0;
+  });
+  if (index < 0) {
     return { title: null, body: content.trim() };
   }
-  const title = match[1]?.trim() || null;
-  const body = (
-    content.slice(0, match.index) + content.slice(match.index + match[0].length)
-  ).trim();
+  const title = lines[index].slice(1).trim();
+  const body = [...lines.slice(0, index), ...lines.slice(index + 1)].join("\n").trim();
   return { title, body };
 }
 

@@ -31,10 +31,13 @@ describe("splitChapterTitle (pure)", () => {
   });
 
   it("stays fast on hostile whitespace input (ReDoS guard)", () => {
-    const hostile = `# a${" ".repeat(50_000)}b`;
+    const hostileSpaces = `# a${" ".repeat(50_000)}b`;
+    const hostileTabs = `#\t${"\t\t".repeat(25_000)}x`;
     const started = Date.now();
-    const { title } = splitChapterTitle(hostile);
-    assert.ok(Date.now() - started < 1000, "regex must run in linear time");
-    assert.ok(title?.startsWith("a"));
+    const spaces = splitChapterTitle(hostileSpaces);
+    const tabs = splitChapterTitle(hostileTabs);
+    assert.ok(Date.now() - started < 1000, "title split must run in linear time");
+    assert.ok(spaces.title?.startsWith("a"));
+    assert.equal(tabs.title, "x");
   });
 });
