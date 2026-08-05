@@ -18,3 +18,4 @@ export * from "./health-service";
 export * from "./briefing-service";
 export * from "./briefing-loader";
 export * from "./day-brief-service";
+export * from "./upcoming-events";
