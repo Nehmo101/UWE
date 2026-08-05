@@ -62,6 +62,7 @@ const PAGE_TYPE_TO_GRAPH_CATEGORY: Record<PageType, GraphNodeCategory> = {
   rule: "lore",
   note: "lore",
   quest: "quest",
+  story_arc: "lore",
   handout: "handout",
   map: "lore",
   sound: "lore",

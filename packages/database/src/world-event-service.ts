@@ -7,6 +7,8 @@ export const WORLD_EVENT_ENTITY_ROLE_LABELS: Record<WorldEventEntityRole, string
   involved: "Beteiligt",
   location: "Ort",
   faction: "Fraktion",
+  trigger: "Auslöser",
+  consequence: "Folge",
 };
 
 export interface PortalWorldEventView {
@@ -118,6 +120,37 @@ export class WorldEventService {
       throw new Error("Chronik-Eintrag nicht gefunden.");
     }
     await this.db.worldEvent.delete({ where: { id: eventId } });
+  }
+
+  async addEntityLink(worldId: string, eventId: string, pageId: string, role: WorldEventEntityRole) {
+    const event = await this.db.worldEvent.findFirst({
+      where: { id: eventId, worldId },
+      select: { id: true },
+    });
+    if (!event) {
+      throw new Error("Chronik-Eintrag nicht gefunden.");
+    }
+    const page = await this.db.page.findFirst({
+      where: { id: pageId, worldId },
+      select: { id: true },
+    });
+    if (!page) {
+      throw new Error("Seite nicht gefunden.");
+    }
+    return this.db.worldEventEntityLink.create({
+      data: { eventId, pageId, role },
+    });
+  }
+
+  async removeEntityLink(worldId: string, linkId: string) {
+    const link = await this.db.worldEventEntityLink.findFirst({
+      where: { id: linkId, event: { worldId } },
+      select: { id: true },
+    });
+    if (!link) {
+      throw new Error("Verknüpfung nicht gefunden.");
+    }
+    await this.db.worldEventEntityLink.delete({ where: { id: linkId } });
   }
 
   async create(input: CreateWorldEventInput) {

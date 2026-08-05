@@ -1,0 +1,14 @@
+-- Kampagnen-Cockpit: zwei Enum-Erweiterungen, keine neuen Modelle.
+--
+-- `PageType.story_arc`                  — Story-Bogen/Kapitel einer Kampagne.
+--                                         Status läuft über das vorhandene
+--                                         `prep_status`, die Reihenfolge über
+--                                         `sort_index`, die Zuordnung über
+--                                         `campaign_id` — alles existiert auf Page.
+-- `WorldEventEntityRole.trigger`        — diese Seite hat das Ereignis ausgelöst.
+-- `WorldEventEntityRole.consequence`    — das Ereignis zieht diese Seite nach sich.
+--
+-- SQLite speichert Prisma-Enums als TEXT ohne Check-Constraint; neue Werte
+-- brauchen deshalb kein DDL. Die Migration existiert trotzdem, damit die
+-- Historie den Zeitpunkt der Erweiterung dokumentiert (Gegenstück:
+-- migrations-postgresql/20260805090000_campaign_cockpit_enums).
