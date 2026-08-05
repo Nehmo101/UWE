@@ -31,6 +31,13 @@ export const BRAIN_PUBLIC_ROUTES = ["/login", "/api/health", "/api/health/*"] as
 export const FAMILY_PUBLIC_ROUTES = [
   ...BRAIN_PUBLIC_ROUTES,
   "/api/calendar/feed/*",
+  // CalDAV-Server fürs iPhone: der Client authentifiziert per HTTP Basic mit
+  // einem eigenen Token-Typ (`uwedav_…`, nur als Hash gespeichert, einzeln
+  // widerrufbar) — geprüft im Route Handler, die Middleware lässt durch.
+  // `/.well-known/caldav` ist der Discovery-Redirect (RFC 6764), ohne Auth.
+  "/api/dav",
+  "/api/dav/*",
+  "/.well-known/caldav",
 ] as const;
 
 export type RouteAccess = "public" | "protected" | "protected-session";
@@ -338,7 +345,8 @@ function classifyApiRoute(resolved: string, surface: UweAppSurface): RouteClassi
   }
 
   if (surface === "brain" || surface === "family") {
-    if (matchesAny(resolved, BRAIN_PUBLIC_ROUTES)) {
+    const publicRoutes = surface === "family" ? FAMILY_PUBLIC_ROUTES : BRAIN_PUBLIC_ROUTES;
+    if (matchesAny(resolved, publicRoutes)) {
       return { access: "public", unknownApi: false, pathname: resolved };
     }
     // Checkbox-gated surface: every other API is protected; unknown APIs
@@ -377,7 +385,8 @@ function classifyAppRoute(resolved: string, surface: UweAppSurface): RouteClassi
   }
 
   if (surface === "brain" || surface === "family") {
-    if (matchesAny(resolved, BRAIN_PUBLIC_ROUTES)) {
+    const publicRoutes = surface === "family" ? FAMILY_PUBLIC_ROUTES : BRAIN_PUBLIC_ROUTES;
+    if (matchesAny(resolved, publicRoutes)) {
       return { access: "public", unknownApi: false, pathname: resolved };
     }
     // Checkbox-gated pages: require a session (redirect to /login); the handler
