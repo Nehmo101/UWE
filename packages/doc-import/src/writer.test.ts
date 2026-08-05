@@ -33,6 +33,28 @@ const TURM = [
   "Eine Bibliothek.",
 ].join("\n\n");
 
+const ANKERSPLITTER = `---
+titel: Ankersplitter
+typ: gegenstand
+---
+
+# Ankersplitter
+
+**Sehr selten · Plotgegenstand · rituell entnommen**
+
+## Eigenschaften
+
+- **Widerstand gegen Blitzschaden**, solange getragen
+
+:::dm Am Tisch
+
+## Am Tisch
+
+Der Splitter ist nie Beute, sondern Verantwortung.
+
+:::
+`;
+
 describe("writeDocImport", () => {
   let databaseUrl: string;
 
@@ -189,6 +211,50 @@ describe("writeDocImport", () => {
 
     const written = await repo.getPageBySlug("korrektur", "der-ring");
     assert.equal(written?.type, "npc");
+  });
+
+  it("füllt die Magic-Item-Werkbank beim Import eines Gegenstands", async () => {
+    const repo = createUweRepository(databaseUrl);
+    await repo.createWorld({ name: "Aernis", slug: "aernis-item" });
+
+    const plan = buildDocImportPlan([{ fileName: "ankersplitter.md", content: ANKERSPLITTER }], {
+      mode: "wiki_pages",
+      profile: "plain",
+    });
+
+    const result = await writeDocImport(repo, plan.pages, plan.relations, {
+      worldSlug: "aernis-item",
+      confirmed: true,
+    });
+
+    assert.equal(result.itemsStructured, 1);
+
+    const page = await repo.getPageBySlug("aernis-item", "ankersplitter");
+    assert.ok(page);
+    assert.equal(page.type, "item");
+
+    const { createPrismaClient } = await import("@uwe/database/client");
+    const db = createPrismaClient(databaseUrl);
+    const stored = await db.structuredItem.findUnique({ where: { pageId: page.id } });
+    assert.ok(stored, "der Import legt Werkbank-Daten an");
+
+    const data = stored.data as Record<string, unknown>;
+    assert.equal(data.rarity, "very_rare");
+    assert.equal(data.itemType, "Plotgegenstand");
+    assert.deepEqual(data.properties, ["Widerstand gegen Blitzschaden, solange getragen"]);
+    // Die eine Regel: Spielleitungsmaterial nie in den spielersichtbaren Feldern.
+    assert.doesNotMatch(String(data.visibleDescription ?? ""), /nie Beute/);
+    assert.match(String(data.dmSecret ?? ""), /nie Beute/);
+  });
+
+  it("legt für Nicht-Gegenstände keine Werkbank-Daten an", async () => {
+    const repo = createUweRepository(databaseUrl);
+    const page = await repo.getPageBySlug("terra-bulk", "pellar-hopsenried");
+    assert.ok(page);
+
+    const { createPrismaClient } = await import("@uwe/database/client");
+    const db = createPrismaClient(databaseUrl);
+    assert.equal(await db.structuredItem.findUnique({ where: { pageId: page.id } }), null);
   });
 
   it("refuses to write without confirmation", async () => {

@@ -193,6 +193,37 @@ function applyTypes(nodes: DocumentNode[], stats: Partial<Record<SectionRole, nu
 }
 
 /**
+ * Kapitel eines Kampagnenbuchs erkennen.
+ *
+ * Ein Gliederungsabschnitt, unter dem die Szenen hängen, ist kein Wissenstext,
+ * sondern ein Story-Bogen — genau das, was das Kampagnen-Cockpit als Kapitel
+ * liest. Bis hierher kam jedes importierte Kapitel als `lore` an und musste von
+ * Hand umgestellt werden, damit das Cockpit die Kampagne überhaupt zeigt.
+ *
+ * Das Erkennungsmerkmal ist bewusst eng: Es zählt nur, was ohnehin `lore`
+ * würde (Rolle `section` oder `part`) **und** mindestens eine Begegnung direkt
+ * unter sich hat. Ein Bestiarium (Rolle `statblock_list`), eine Dungeon-Ebene
+ * (Rolle `level`) und ein Weltkapitel ohne Szenen bleiben damit unberührt.
+ */
+function markStoryArcs(nodes: DocumentNode[]): number {
+  let count = 0;
+
+  for (const node of nodes) {
+    const role = node.role ?? "section";
+    const hasEncounterChild = node.children.some((child) => child.role === "encounter");
+
+    if ((role === "section" || role === "part") && node.typeHint === "lore" && hasEncounterChild) {
+      node.typeHint = "story_arc";
+      count += 1;
+    }
+
+    count += markStoryArcs(node.children);
+  }
+
+  return count;
+}
+
+/**
  * Baut den Seitenbaum.
  *
  * Der erste Wurzelknoten trägt das Dokument; weitere `#`-Überschriften sind
@@ -249,6 +280,7 @@ export function restructureDocument(
   dropEmptyShells(root, counters);
 
   const pages = applyTypes([root], byRole);
+  markStoryArcs([root]);
 
   return {
     tree: { preamble: tree.preamble, nodes: [root] },
