@@ -26,20 +26,22 @@ export function EventMemberPicker({
   const chosen = new Set(selected);
 
   return (
-    <fieldset className="family-form-inline">
+    <fieldset className="family-checkgroup">
       <legend>Wen betrifft der Termin?</legend>
-      {members.map((member) => (
-        <label key={member.id} className="family-check">
-          <input
-            type="checkbox"
-            name="memberIds"
-            value={member.id}
-            defaultChecked={chosen.has(member.id)}
-          />
-          <MemberDot colour={member.colour} />
-          {member.displayName}
-        </label>
-      ))}
+      <div className="family-checkgroup-items">
+        {members.map((member) => (
+          <label key={member.id} className="family-check">
+            <input
+              type="checkbox"
+              name="memberIds"
+              value={member.id}
+              defaultChecked={chosen.has(member.id)}
+            />
+            <MemberDot colour={member.colour} />
+            {member.displayName}
+          </label>
+        ))}
+      </div>
     </fieldset>
   );
 }
