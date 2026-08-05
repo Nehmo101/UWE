@@ -38,12 +38,16 @@ export function worldNav(worldSlug: string): NavGroup[] {
           "was passiert",
           "world clock",
         ]),
-        // Die Kampagne war überall ein Filter (Kontextspalte, Import-Ziel,
-        // Backup-Formular) und nirgends etwas, das man anlegen konnte.
-        item("world-campaigns", "Kampagnen", `${base}/campaigns`, "swords", "Übersicht", [
+        // Seit dem Cockpit-Umbau die Kampagnen-Wurzel: Liste + Verwaltung +
+        // Einstieg in die Kampagnen-Cockpits (Kapitel, Quests, Abschluss).
+        item("world-campaigns", "Kampagnen-Cockpit", `${base}/kampagnen`, "swords", "Übersicht", [
           "kampagne",
           "kampagnen",
           "campaign",
+          "cockpit",
+          "kapitel",
+          "story-bogen",
+          "session-abschluss",
           "anlegen",
           "umbenennen",
           "verwalten",

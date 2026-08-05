@@ -124,7 +124,7 @@ export default async function StudioWorldWikiPage({ params, searchParams }: Prop
           stand der Eintrag ein zweites Mal davor — die Kontextspalte zeigte ihn
           doppelt, beide als aktiv markiert.
         */}
-        <CampaignSidebar items={campaignItems} manageHref={`/worlds/${worldSlug}/campaigns`} />
+        <CampaignSidebar items={campaignItems} manageHref={`/worlds/${worldSlug}/kampagnen`} />
       </ShellContextPanel>
       <PageHeader
         title="Wiki / Seiten"

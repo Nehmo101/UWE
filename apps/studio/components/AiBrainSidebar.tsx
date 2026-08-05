@@ -21,6 +21,8 @@ interface Props {
   pageSlug?: string;
   sessionId?: string;
   defaultSessionId?: string;
+  /** Kampagnen-Panel: schaltet die requiresCampaign-Aktionen frei. */
+  campaignSlug?: string;
   defaultActionId?: BrainActionId;
   generatorActions?: DndGeneratorAction[];
   /** Sidebar = wiki context panel; store = Brain Knowledge Store page. */
@@ -56,6 +58,7 @@ export function AiBrainSidebar({
   pageSlug,
   sessionId: fixedSessionId,
   defaultSessionId,
+  campaignSlug,
   defaultActionId = "expand_knowledge",
   generatorActions,
   variant = "sidebar",
@@ -136,12 +139,17 @@ export function AiBrainSidebar({
     const response = await studioApiFetch("/api/brain/actions");
     if (!response.ok) return;
     const data = (await response.json()) as { actions: BrainActionDefinition[] };
-    setActions(data.actions);
-    if (data.actions.length > 0) {
-      const preferred = data.actions.find((action) => action.id === defaultActionId);
-      setActionId(preferred?.id ?? data.actions[0].id);
+    // Kampagnen-Aktionen nur im Kampagnen-Panel anbieten — überall sonst
+    // würde der Runner den Lauf mangels campaignSlug ohnehin ablehnen.
+    const usable = campaignSlug
+      ? data.actions
+      : data.actions.filter((action) => !action.requiresCampaign);
+    setActions(usable);
+    if (usable.length > 0) {
+      const preferred = usable.find((action) => action.id === defaultActionId);
+      setActionId(preferred?.id ?? usable[0].id);
     }
-  }, [defaultActionId]);
+  }, [defaultActionId, campaignSlug]);
 
   const loadSessions = useCallback(async () => {
     if (fixedSessionId) {
@@ -280,6 +288,7 @@ export function AiBrainSidebar({
           sessionId: needsSession
             ? fixedSessionId || sessionId || undefined
             : fixedSessionId || undefined,
+          campaignSlug: campaignSlug || undefined,
           useMock,
         }),
       });

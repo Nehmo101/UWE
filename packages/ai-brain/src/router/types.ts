@@ -36,6 +36,12 @@ export interface AiRouterRequest {
   pageSlug?: string;
   sessionId?: string;
   userPrompt?: string;
+  /**
+   * Vorserialisierter Zusatz-Kontext (z. B. der Kampagnen-Digest aus dem
+   * Kampagnen-Cockpit). Wird 1:1 an den Prompt-Kontext angehängt und zählt
+   * gegen das Kontext-Budget.
+   */
+  extraPromptContext?: string;
   model?: string;
   useMock?: boolean;
   options?: BuildAiContextOptions;

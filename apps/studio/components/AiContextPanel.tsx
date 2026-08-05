@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AiBrainSidebar } from "./AiBrainSidebar";
 import type { DndGeneratorView } from "@uwe/ai-brain";
 
-export type AiContextKind = "page" | "session" | "dungeon_room";
+export type AiContextKind = "page" | "session" | "dungeon_room" | "campaign";
 
 interface Props {
   kind: AiContextKind;
@@ -15,6 +15,7 @@ interface Props {
   dungeonSlug?: string;
   levelSlug?: string;
   roomSlug?: string;
+  campaignSlug?: string;
 }
 
 export function AiContextPanel({
@@ -25,6 +26,7 @@ export function AiContextPanel({
   dungeonSlug,
   levelSlug,
   roomSlug,
+  campaignSlug,
 }: Props) {
   const [generator, setGenerator] = useState<DndGeneratorView | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -36,6 +38,7 @@ export function AiContextPanel({
     if (dungeonSlug) params.set("dungeonSlug", dungeonSlug);
     if (levelSlug) params.set("levelSlug", levelSlug);
     if (roomSlug) params.set("roomSlug", roomSlug);
+    if (campaignSlug) params.set("campaignSlug", campaignSlug);
 
     const response = await fetch(studioApiUrl(`/api/dnd-generator?${params.toString()}`));
     if (!response.ok) {
@@ -47,7 +50,7 @@ export function AiContextPanel({
     const data = (await response.json()) as { generator: DndGeneratorView };
     setGenerator(data.generator);
     setLoadError(null);
-  }, [kind, worldSlug, pageSlug, sessionId, dungeonSlug, levelSlug, roomSlug]);
+  }, [kind, worldSlug, pageSlug, sessionId, dungeonSlug, levelSlug, roomSlug, campaignSlug]);
 
   useEffect(() => {
     void loadGenerator();
@@ -98,12 +101,14 @@ export function AiContextPanel({
         </>
       )}
 
-      {(pageSlug || sessionId) && (
+      {(pageSlug || sessionId || campaignSlug) && (
         <AiBrainSidebar
           worldSlug={worldSlug}
           pageSlug={pageSlug}
           sessionId={sessionId}
           defaultSessionId={sessionId}
+          campaignSlug={campaignSlug}
+          defaultActionId={kind === "campaign" ? "campaign_chapter_draft" : undefined}
           generatorActions={generator?.actions}
         />
       )}

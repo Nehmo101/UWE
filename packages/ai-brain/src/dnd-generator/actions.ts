@@ -79,6 +79,26 @@ const BASE_ACTIONS: DndGeneratorAction[] = [
     requiresReview: true,
   },
   {
+    id: "campaign_chapter_draft",
+    label: "Kapitel-Entwurf aus offenen Fäden",
+    description:
+      "Nächstes Kapitel der Kampagne vorschlagen — wird beim Übernehmen als unvorbereitete Kapitel-Seite angelegt.",
+    taskType: "draft_campaign_chapter",
+    brainActionId: "campaign_chapter_draft",
+    playerSafe: false,
+    requiresReview: true,
+  },
+  {
+    id: "campaign_session_hooks",
+    label: "Session-Aufhänger aus der Chronik",
+    description:
+      "3–5 Einstiegs-Hooks für den nächsten Spielabend — landen in den offenen Plots der nächsten geplanten Session.",
+    taskType: "suggest_session_hooks",
+    brainActionId: "campaign_session_hooks",
+    playerSafe: false,
+    requiresReview: true,
+  },
+  {
     id: "create_label",
     label: "Label erzeugen",
     description: "6×4-Label-Text und Druckhinweise vorschlagen.",
@@ -174,6 +194,7 @@ const CONTEXT_ACTION_IDS: Partial<Record<DndContextDescriptor["kind"], DndGenera
   monster: ["summarize", "dm_notes", "fill_missing", "image_prompt", "create_label"],
   rule: ["summarize", "dm_notes", "canon_check", "extract_brain_facts", "create_knowledge_text"],
   workshop_project: ["summarize", "dm_notes", "canon_check", "fill_missing", "image_prompt"],
+  campaign: ["campaign_chapter_draft", "campaign_session_hooks", "canon_check"],
 };
 
 function actionById(id: DndGeneratorActionId): DndGeneratorAction | undefined {

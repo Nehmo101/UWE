@@ -21,6 +21,7 @@ export interface BuildProposalInput {
   pageId?: string;
   sessionId?: string;
   worldId?: string;
+  campaignId?: string;
 }
 
 function extractMailSubject(text: string): { subject: string; body: string } {
@@ -99,6 +100,45 @@ export function buildProposalsFromResult(input: BuildProposalInput): AiProposal[
           documentType: "world_knowledge",
           source: "ai_generated",
           subject: action.defaultProposalLabel,
+        },
+      },
+    ];
+  }
+
+  /* Kampagnen-Cockpit-Aktionen. targetId zeigt bewusst NICHT auf die
+     Anker-Seite: der Kapitel-Entwurf gehört der Kampagne (neue Seite entsteht
+     erst beim Apply), die Aufhänger-Session wird erst zur Apply-Zeit
+     aufgelöst — so kann der generische content_block-Fallback nie versehentlich
+     auf die Anker-Seite schreiben. */
+  if (action.id === "campaign_chapter_draft") {
+    return [
+      {
+        id: `${baseId}-chapter`,
+        label: action.defaultProposalLabel,
+        content: resultText.trim(),
+        targetType: "campaign_chapter_page",
+        targetId: input.campaignId ?? null,
+        status: "pending",
+        metadata: {
+          campaignId: input.campaignId ?? null,
+          source: "ai_generated",
+        },
+      },
+    ];
+  }
+
+  if (action.id === "campaign_session_hooks") {
+    return [
+      {
+        id: `${baseId}-hooks`,
+        label: action.defaultProposalLabel,
+        content: resultText.trim(),
+        targetType: "session_open_plots",
+        targetId: null,
+        status: "pending",
+        metadata: {
+          campaignId: input.campaignId ?? null,
+          source: "ai_generated",
         },
       },
     ];

@@ -132,4 +132,43 @@ describe("campaign radar (integration)", () => {
     assert.equal(filtered.factions.length, 0);
     assert.equal(filtered.npcSummary.total, 0);
   });
+
+  it("links the last session detail page instead of the list", async () => {
+    const session = await db.gameSession.create({
+      data: { worldId, title: "Auftakt", sessionNumber: 1, status: "played" },
+    });
+    const radar = await createCampaignRadarService(db).getRadar("radar-test");
+    assert.ok(radar?.lastSession);
+    assert.equal(radar.lastSession.id, session.id);
+    assert.ok(radar.lastSession.href.endsWith(`/sessions/${session.id}`));
+  });
+
+  it("orders recent events by in-game date, not by capture time", async () => {
+    // Später erfasst, aber früher in der Weltzeit — muss hinten stehen.
+    await db.worldEvent.create({
+      data: {
+        worldId,
+        title: "Frühes Ereignis",
+        inGameDate: { year: 1480, month: 1, day: 1 },
+        sortOrder: 5,
+      },
+    });
+    await db.worldEvent.create({
+      data: {
+        worldId,
+        title: "Spätes Ereignis",
+        inGameDate: { year: 1490, month: 6, day: 15 },
+        sortOrder: 1,
+      },
+    });
+
+    const radar = await createCampaignRadarService(db).getRadar("radar-test");
+    assert.ok(radar);
+    const titles = radar.recentEvents.map((event) => event.title);
+    assert.ok(
+      titles.indexOf("Spätes Ereignis") < titles.indexOf("Frühes Ereignis"),
+      `Weltzeit-Sortierung verletzt: ${titles.join(", ")}`,
+    );
+    assert.ok(radar.recentEvents[0].dateLabel.includes("1490"));
+  });
 });

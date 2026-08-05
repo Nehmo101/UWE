@@ -1,6 +1,7 @@
 import { guardStudioApiRequest } from "@/src/lib/studio-admin-auth";
 import { NextResponse } from "next/server";
 import {
+  buildCampaignContext,
   buildDndGeneratorView,
   buildDraftPageContext,
   buildPageContext,
@@ -8,6 +9,7 @@ import {
   buildDungeonRoomContext,
   type DndContextDescriptor,
 } from "@uwe/ai-brain";
+import { createCampaignCockpitService } from "@uwe/campaign-cockpit";
 import {
   createAiRunServiceFromClient,
   createAuthService,
@@ -23,6 +25,22 @@ async function resolveContext(searchParams: URLSearchParams): Promise<DndContext
 
   const kind = searchParams.get("kind") ?? "page";
   const repo = createUweRepository();
+
+  if (kind === "campaign") {
+    const campaignSlug = searchParams.get("campaignSlug")?.trim();
+    if (!campaignSlug) return null;
+
+    const campaign = await repo.getCampaignBySlug(worldSlug, campaignSlug);
+    if (!campaign) return null;
+
+    return buildCampaignContext({
+      worldSlug,
+      worldId: campaign.worldId,
+      campaignSlug,
+      campaignId: campaign.id,
+      title: campaign.name,
+    });
+  }
 
   if (kind === "session") {
     const sessionId = searchParams.get("sessionId")?.trim();
@@ -109,7 +127,21 @@ export async function GET(request: Request) {
   let canonicalStatus: string | undefined;
   let pageContent = "";
 
-  if (context.kind === "session" && context.sessionId) {
+  if (context.kind === "campaign" && context.campaignSlug) {
+    const overview = await createCampaignCockpitService(prisma).getCampaignOverview(
+      context.worldSlug,
+      context.campaignSlug,
+    );
+    if (overview) {
+      content = {
+        summary: overview.campaign.description,
+        plannedSession: overview.nextSession
+          ? `Session ${overview.nextSession.sessionNumber}: ${overview.nextSession.title}`
+          : null,
+        chapterList: overview.chapters.map((chapter) => chapter.title).join(", ") || null,
+      };
+    }
+  } else if (context.kind === "session" && context.sessionId) {
     const db = createPrismaClient();
     const auth = createAuthService(db);
     const session = await auth.getGameSessionForDm(context.worldSlug, context.sessionId);
@@ -142,21 +174,29 @@ export async function GET(request: Request) {
   }
 
   const world = await repo.getWorldBySlug(context.worldSlug);
+  // Kampagnen-History NICHT über pageId: der Anker (erstes Kapitel) wandert
+  // mit der Sortierung. Stattdessen breiter laden und über resultMeta filtern.
+  const isCampaign = context.kind === "campaign";
   const recentRuns = world
     ? (
         await aiRuns.list({
           worldId: world.id,
-          pageId: context.pageId,
-          limit: 5,
+          pageId: isCampaign ? undefined : context.pageId,
+          limit: isCampaign ? 25 : 5,
         })
-      ).runs.map((run) => ({
-        id: run.id,
-        source: run.source ?? "ai_run",
-        taskType: run.taskType,
-        createdAt: run.createdAt,
-        status: run.status,
-        resultMeta: run.resultMeta as { actionId?: string } | null,
-      }))
+      ).runs
+        .map((run) => ({
+          id: run.id,
+          source: run.source ?? "ai_run",
+          taskType: run.taskType,
+          createdAt: run.createdAt,
+          status: run.status,
+          resultMeta: run.resultMeta as { actionId?: string; campaignId?: string | null } | null,
+        }))
+        .filter(
+          (run) => !isCampaign || run.resultMeta?.campaignId === context.campaignId,
+        )
+        .slice(0, 5)
     : [];
 
   const view = buildDndGeneratorView({

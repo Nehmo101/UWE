@@ -135,6 +135,13 @@ export default async function SessionReviewPage({ params, searchParams }: Props)
   const auth = createAuthService(db);
   const session = await auth.getGameSessionForDm(worldSlug, sessionId);
   const entries = session ? await createSessionLiveService(db).listEntries(sessionId) : [];
+  // Für den Querlink in den Kampagnen-Abschluss (Kanonisierung).
+  const campaign = session?.campaignId
+    ? await db.campaign.findUnique({
+        where: { id: session.campaignId },
+        select: { slug: true },
+      })
+    : null;
   await db.$disconnect();
 
   if (!session) notFound();
@@ -174,9 +181,19 @@ export default async function SessionReviewPage({ params, searchParams }: Props)
         summary="Vorgemerkte Ereignisse aus dem Live-Modus. Prüfe und übernimm sie bewusst — nichts wird automatisch Kanon."
         meta={<GameSessionStatusBadge status={session.status} />}
         actions={
-          <Link href={`/worlds/${worldSlug}/sessions/${sessionId}`} className={buttonVariants({ variant: "outline" })}>
-            Zur Session
-          </Link>
+          <span className="inline-flex flex-wrap gap-2">
+            {campaign ? (
+              <Link
+                href={`/worlds/${worldSlug}/kampagnen/${campaign.slug}/abschluss?session=${sessionId}`}
+                className={buttonVariants()}
+              >
+                Weiter zum Kampagnen-Abschluss
+              </Link>
+            ) : null}
+            <Link href={`/worlds/${worldSlug}/sessions/${sessionId}`} className={buttonVariants({ variant: "outline" })}>
+              Zur Session
+            </Link>
+          </span>
         }
       />
 

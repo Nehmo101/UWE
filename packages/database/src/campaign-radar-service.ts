@@ -1,6 +1,13 @@
 import type { DungeonPrepStatus } from "./generated/prisma/client";
 import type { PrismaClient } from "./client";
 import { buildPageUrl } from "./page-types";
+import {
+  formatInGameDate,
+  parseInGameDate,
+  parseWorldCalendarMonths,
+  type InGameDate,
+} from "./world-calendar-service";
+import { compareInGameDates } from "./world-event-service";
 
 /**
  * Kampagnen-Radar: „Was passiert gerade in der Welt?" — eine read-only
@@ -35,9 +42,13 @@ export interface RadarEvent {
   title: string;
   summary: string;
   createdAt: Date;
+  inGameDate: InGameDate;
+  /** Weltzeit-Datum, mit Monatsnamen des Weltkalenders formatiert. */
+  dateLabel: string;
 }
 
 export interface RadarLastSession {
+  id: string;
   title: string;
   sessionNumber: number;
   date: Date | null;
@@ -136,14 +147,24 @@ export class CampaignRadarService {
       }),
       this.db.worldEvent.findMany({
         where: { worldId },
-        orderBy: { createdAt: "desc" },
-        take: 6,
-        select: { id: true, title: true, summaryDm: true, summaryPlayer: true, createdAt: true },
+        // Weltzeit statt Erfassungszeit: inGameDate ist Json, also holen wir
+        // eine begrenzte, grob vorsortierte Menge und sortieren in JS exakt.
+        orderBy: [{ sortOrder: "desc" }, { createdAt: "desc" }],
+        take: 60,
+        select: {
+          id: true,
+          title: true,
+          summaryDm: true,
+          summaryPlayer: true,
+          createdAt: true,
+          inGameDate: true,
+          sortOrder: true,
+        },
       }),
       this.db.gameSession.findFirst({
         where: { worldId, status: { in: ["played", "summarized"] }, ...campaignFilter },
         orderBy: [{ sessionNumber: "desc" }],
-        select: { title: true, sessionNumber: true, date: true },
+        select: { id: true, title: true, sessionNumber: true, date: true },
       }),
       this.db.page.findMany({
         where: { worldId, type: "dungeon", ...campaignFilter },
@@ -152,7 +173,7 @@ export class CampaignRadarService {
       }),
       this.db.worldCalendar.findUnique({
         where: { worldId },
-        select: { name: true, currentDate: true, epochLabel: true },
+        select: { name: true, currentDate: true, epochLabel: true, months: true },
       }),
       this.db.page.count({ where: { worldId, type: "npc", ...campaignFilter } }),
       this.db.page.count({
@@ -167,6 +188,8 @@ export class CampaignRadarService {
         where: { worldId, canonicalStatus: "contradictory", ...campaignFilter },
       }),
     ]);
+
+    const calendarMonths = parseWorldCalendarMonths(calendar?.months);
 
     return {
       worldSlug,
@@ -186,18 +209,28 @@ export class CampaignRadarService {
         slug: quest.slug,
         status: quest.questStatus ?? "open",
       })),
-      recentEvents: recentEvents.map((event) => ({
-        id: event.id,
-        title: event.title,
-        summary: event.summaryDm ?? event.summaryPlayer ?? "",
-        createdAt: event.createdAt,
-      })),
+      recentEvents: recentEvents
+        .map((event) => ({ ...event, parsedDate: parseInGameDate(event.inGameDate) }))
+        .sort(
+          (a, b) =>
+            compareInGameDates(b.parsedDate, a.parsedDate) || b.sortOrder - a.sortOrder,
+        )
+        .slice(0, 6)
+        .map((event) => ({
+          id: event.id,
+          title: event.title,
+          summary: event.summaryDm ?? event.summaryPlayer ?? "",
+          createdAt: event.createdAt,
+          inGameDate: event.parsedDate,
+          dateLabel: formatInGameDate(event.parsedDate, calendarMonths),
+        })),
       lastSession: lastSession
         ? {
+            id: lastSession.id,
             title: lastSession.title,
             sessionNumber: lastSession.sessionNumber,
             date: lastSession.date,
-            href: `/worlds/${worldSlug}/sessions`,
+            href: `/worlds/${worldSlug}/sessions/${lastSession.id}`,
           }
         : null,
       dungeons: dungeons.map((dungeon) => ({

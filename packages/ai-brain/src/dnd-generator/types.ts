@@ -19,7 +19,8 @@ export type DndContextKind =
   | "handout"
   | "monster"
   | "rule"
-  | "workshop_project";
+  | "workshop_project"
+  | "campaign";
 
 export type DndGeneratorActionId =
   | "summarize"
@@ -34,7 +35,9 @@ export type DndGeneratorActionId =
   | "create_label"
   | "image_prompt"
   | "regenerate_tone"
-  | "continue_variant";
+  | "continue_variant"
+  | "campaign_chapter_draft"
+  | "campaign_session_hooks";
 
 export interface DndGeneratorAction {
   id: DndGeneratorActionId;
@@ -60,6 +63,8 @@ export interface DndContextDescriptor {
   levelSlug?: string;
   roomSlug?: string;
   workshopProjectId?: string;
+  campaignSlug?: string;
+  campaignId?: string;
 }
 
 export interface MissingContentHint {

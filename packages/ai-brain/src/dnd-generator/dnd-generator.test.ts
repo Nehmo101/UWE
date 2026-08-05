@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  buildCampaignContext,
   buildDndGeneratorView,
   buildPageContext,
   buildSessionContext,
+  contextLabel,
   checkPlayerSafeOutput,
   detectMissingContent,
   listActionsForContext,
@@ -48,6 +50,35 @@ describe("DnD Generator — context", () => {
     assert.ok(sessionActions.some((a) => a.id === "prepare_next_session"));
     assert.ok(!npcActions.some((a) => a.id === "prepare_next_session"));
   });
+
+  it("builds the campaign context with its own label and actions", () => {
+    const campaign = buildCampaignContext({
+      worldSlug: "terra",
+      campaignSlug: "himmelsrouten",
+      campaignId: "camp-1",
+      title: "Himmelsrouten",
+    });
+    assert.equal(campaign.kind, "campaign");
+    assert.equal(campaign.campaignSlug, "himmelsrouten");
+    assert.equal(contextLabel(campaign), "Kampagne");
+
+    const actions = listActionsForContext(campaign);
+    assert.deepEqual(
+      actions.map((a) => a.id),
+      ["campaign_chapter_draft", "campaign_session_hooks", "canon_check"],
+    );
+    // Kampagnen-Aktionen sind DM-Material und tauchen nirgendwo sonst auf.
+    assert.ok(actions.every((a) => a.requiresReview));
+    assert.ok(
+      actions
+        .filter((a) => a.id.startsWith("campaign_"))
+        .every((a) => a.playerSafe === false),
+    );
+    const sessionActions = listActionsForContext(
+      buildSessionContext({ worldSlug: "terra", sessionId: "s1", title: "S1" }),
+    );
+    assert.ok(!sessionActions.some((a) => a.id.startsWith("campaign_")));
+  });
 });
 
 describe("DnD Generator — missing content", () => {
@@ -70,6 +101,23 @@ describe("DnD Generator — missing content", () => {
       { openPlots: null },
     );
     assert.ok(hints.some((h) => h.field === "openPlots"));
+  });
+
+  it("warns a campaign without planned session or chapters", () => {
+    const campaign = buildCampaignContext({
+      worldSlug: "terra",
+      campaignSlug: "himmelsrouten",
+      title: "Himmelsrouten",
+    });
+    const hints = detectMissingContent(campaign, { plannedSession: null, chapterList: "" });
+    assert.ok(hints.some((h) => h.field === "plannedSession" && h.severity === "warn"));
+    assert.ok(hints.some((h) => h.field === "chapterList" && h.severity === "info"));
+
+    const quiet = detectMissingContent(campaign, {
+      plannedSession: "Session 5",
+      chapterList: "Akt I, Akt II",
+    });
+    assert.equal(quiet.length, 0);
   });
 });
 

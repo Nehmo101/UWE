@@ -30,6 +30,7 @@
     "@uwe/auth": "workspace:*",
     "@uwe/backup": "workspace:*",
     "@uwe/calendar": "workspace:*",
+    "@uwe/campaign-cockpit": "workspace:*",
     "@uwe/config": "workspace:*",
     "@uwe/connector": "workspace:*",
     "@uwe/cookbook": "workspace:*",

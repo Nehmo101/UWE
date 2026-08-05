@@ -19,6 +19,8 @@ const TASK_TO_USE_CASE: Partial<Record<CookbookAiTaskType, CookbookUseCaseId>> =
   prepare_canon_check: "canon_check",
   detect_contradictions: "canon_check",
   prepare_next_session: "session_prep",
+  draft_campaign_chapter: "session_prep",
+  suggest_session_hooks: "session_prep",
   summarize_session: "session_prep",
   generate_player_recap: "player_safe_rewrite",
   create_player_handout: "player_safe_rewrite",

@@ -58,7 +58,7 @@ export default async function StudioDungeonsPage({ params, searchParams }: Props
       <ShellContextPanel>
         <CampaignSidebar
           items={campaignNavItems(`/worlds/${worldSlug}/dungeons`, campaigns, campaignSlug)}
-          manageHref={`/worlds/${worldSlug}/campaigns`}
+          manageHref={`/worlds/${worldSlug}/kampagnen`}
         />
       </ShellContextPanel>
       <PageHeader

@@ -18,6 +18,8 @@ export const AI_TASK_LABELS: Record<AiTaskType, string> = {
   page_ai_convert: "Seite KI-konvertieren",
   prepare_canon_check: "Kanonprüfung vorbereiten",
   prepare_next_session: "Nächste Session vorbereiten",
+  draft_campaign_chapter: "Kapitel-Entwurf aus offenen Fäden",
+  suggest_session_hooks: "Session-Aufhänger aus der Chronik",
   create_player_handout: "Spieler-Handout erstellen",
   fill_dungeon_room: "Dungeonraum füllen",
   prepare_mail_draft: "Mail-Entwurf vorbereiten",
@@ -70,6 +72,10 @@ const TASK_INSTRUCTIONS: Record<AiTaskType, string> = {
     "Bereite eine Kanonprüfung vor: Liste Abweichungen, fehlende Quellen, widersprüchliche Aussagen und Empfehlungen zur Kanonisierung.",
   prepare_next_session:
     "Bereite die nächste Session vor: Agenda, Szenen, NPCs, mögliche Encounters, offene Plot-Hooks und Vorbereitungshinweise für den Spielleiter.",
+  draft_campaign_chapter:
+    "Entwirf das nächste Kapitel (Story-Bogen) der Kampagne aus dem Kampagnen-Digest im Kontext: offene Quests, jüngste Chronik, Fraktions-Agenden und der Stand der bisherigen Kapitel. Beginne zwingend mit einer Markdown-Überschrift '# <Kapiteltitel>' — sie wird beim Übernehmen zum Seitentitel. Danach: eine Kurzfassung (2–3 Sätze), die Ziele des Kapitels, 3–5 Szenen oder Stationen mit je einem Absatz, und ein Abschnitt 'Offene Fäden', der aufgegriffene Quests und Fraktionen benennt. Erfinde keine neuen Kanon-Fakten als gesichert — alles ist Vorschlag und wird erst per Review übernommen.",
+  suggest_session_hooks:
+    "Schlage 3–5 konkrete Einstiegs-Aufhänger für den nächsten Spielabend vor, abgeleitet aus der jüngsten Chronik, den offenen Quests und den Fraktions-Agenden im Kampagnen-Digest. Nummerierte Liste; je Aufhänger 2–3 Sätze: die Ausgangsszene, was die Gruppe unmittelbar tun kann, und welcher offene Faden daran hängt. Keine Kanon-Änderungen — die Aufhänger sind Vorbereitungsmaterial für den Spielleiter.",
   create_player_handout:
     "Erstelle ein spielerfreundliches Handout (In-Game-Dokument oder Session-Zusammenfassung). Keine GM-Geheimnisse, keine DM-only-Inhalte.",
   fill_dungeon_room:

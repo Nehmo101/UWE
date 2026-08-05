@@ -35,6 +35,7 @@ const PAGE_TYPE_TO_NAV: Record<PageType, NavCategory> = {
   rule: "lore",
   note: "lore",
   quest: "lore",
+  story_arc: "lore",
   location: "orte",
   region: "orte",
   dungeon: "orte",

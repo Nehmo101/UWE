@@ -123,6 +123,23 @@ export function buildWorkshopProjectContext(input: {
   };
 }
 
+export function buildCampaignContext(input: {
+  worldSlug: string;
+  worldId?: string;
+  campaignSlug: string;
+  campaignId?: string;
+  title: string;
+}): DndContextDescriptor {
+  return {
+    kind: "campaign",
+    worldSlug: input.worldSlug,
+    worldId: input.worldId,
+    campaignSlug: input.campaignSlug,
+    campaignId: input.campaignId,
+    title: input.title,
+  };
+}
+
 export function contextLabel(context: DndContextDescriptor): string {
   const labels: Record<DndContextKind, string> = {
     world: "Welt",
@@ -143,6 +160,7 @@ export function contextLabel(context: DndContextDescriptor): string {
     monster: "Monster",
     rule: "Regel",
     workshop_project: "Werkstatt-Projekt",
+    campaign: "Kampagne",
   };
   return labels[context.kind] ?? "Kontext";
 }
