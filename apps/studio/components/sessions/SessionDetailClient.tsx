@@ -12,6 +12,7 @@ import {
 import { buildPageUrl as dbBuildPageUrl } from "@uwe/database/page-types";
 import type { DmGameSessionView } from "@uwe/database/server";
 import {
+  deleteGameSessionAction,
   linkPageToSessionAction,
   publishSessionRecapAction,
   unlinkPageFromSessionAction,
@@ -40,6 +41,8 @@ interface Props {
   worldSlug: string;
   sessionId: string;
   session: DmGameSessionView;
+  /** Kapitel (story_arc) der Kampagne fürs Zuordnungs-Select. */
+  chapters: Array<{ id: string; title: string }>;
   linkablePages: LinkablePage[];
   /**
    * Notizen und DM-Zusammenfassung als gerendertes HTML mit aufgelösten
@@ -67,6 +70,7 @@ export function SessionDetailClient({
   worldSlug,
   sessionId,
   session,
+  chapters,
   linkablePages,
   richText,
   flash,
@@ -81,6 +85,16 @@ export function SessionDetailClient({
         {session.date ? (
           <span className="ml-2 text-sm text-muted-foreground">
             {session.date.toLocaleDateString("de-DE")}
+          </span>
+        ) : null}
+        {session.storyArcPage && session.campaignSlug ? (
+          <span className="ml-2 text-sm text-muted-foreground">
+            · Kapitel:{" "}
+            <Link
+              href={`/worlds/${worldSlug}/kampagnen/${session.campaignSlug}/kapitel/${session.storyArcPage.slug}`}
+            >
+              {session.storyArcPage.title}
+            </Link>
           </span>
         ) : null}
       </p>
@@ -163,6 +177,25 @@ export function SessionDetailClient({
             defaultValue={session.date ? session.date.toISOString().slice(0, 10) : ""}
           />
         </div>
+        {chapters.length > 0 ? (
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="session-detail-story-arc">Kapitel / Akt</Label>
+            {/* TODO(design-kit): natives Select — Leerwert „Kein Kapitel" nötig. */}
+            <select
+              id="session-detail-story-arc"
+              name="storyArcPageId"
+              defaultValue={session.storyArcPageId ?? ""}
+              className={cn(SELECT_CLASS, "w-full")}
+            >
+              <option value="">Kein Kapitel</option>
+              {chapters.map((chapter) => (
+                <option key={chapter.id} value={chapter.id}>
+                  {chapter.title}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="session-detail-status">Status</Label>
           {/* TODO(design-kit): natives Select statt Kit-Select — Server-Action-Formular
@@ -330,6 +363,25 @@ export function SessionDetailClient({
           </Button>
         </form>
       ) : null}
+
+      <details className="mt-8 rounded-md border border-border p-3">
+        <summary className="cursor-pointer text-sm font-medium">Session löschen</summary>
+        <div className="mt-3 flex flex-col gap-3">
+          <Alert tone="warning">
+            Live-Protokoll, Lesezeichen, Seiten-Verknüpfungen und Spieler-Zusagen dieser
+            Session werden <strong>mitgelöscht</strong>. Chronik-Einträge und Spielernotizen
+            bleiben erhalten, verlieren aber ihren Session-Bezug; ein gespiegelter
+            Kalender-Termin wird entfernt.
+          </Alert>
+          <form action={deleteGameSessionAction}>
+            <input type="hidden" name="worldSlug" value={worldSlug} />
+            <input type="hidden" name="sessionId" value={sessionId} />
+            <Button type="submit" variant="destructive" size="sm">
+              Endgültig löschen
+            </Button>
+          </form>
+        </div>
+      </details>
     </>
   );
 }

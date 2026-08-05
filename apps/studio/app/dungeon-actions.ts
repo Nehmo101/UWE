@@ -4,7 +4,10 @@ import { z } from "zod";
 import { requireStudioActionAuth } from "@/src/lib/studio-action-auth";
 import {
   createDungeonCockpitService,
+  createGameSessionService,
+  createSessionLiveService,
   getAppRepository,
+  prisma,
   ROOM_CHILD_TYPES,
   type DungeonPrepStatus,
   type RoomChildType,
@@ -286,4 +289,41 @@ export async function updateRoomContentAction(formData: FormData) {
   const redirectTo = `${dungeonBasePath(worldSlug, dungeonSlug)}/ebenen/${levelSlug}/raeume/${roomSlug}`;
   revalidatePath(redirectTo);
   redirect(`${redirectTo}?saved=1`);
+}
+
+/**
+ * Schnell-Protokoll vom Spieltisch: eine Notiz aus dem Raum-Cockpit direkt
+ * ins Live-Protokoll der laufenden Session (refPageId = Raum). Leerer Text
+ * wird zum „Raum betreten"-Marker.
+ */
+export async function logRoomToSessionAction(formData: FormData) {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  const dungeonSlug = String(formData.get("dungeonSlug"));
+  const levelSlug = String(formData.get("levelSlug"));
+  const roomSlug = String(formData.get("roomSlug"));
+  const sessionId = String(formData.get("sessionId"));
+  const roomPageId = String(formData.get("roomPageId"));
+  const content = String(formData.get("content") || "").trim();
+  await requireStudioWorldEdit(worldSlug);
+
+  const session = await createGameSessionService().getByIdForWorld(worldSlug, sessionId);
+  if (!session) throw new Error("Session nicht gefunden.");
+  const room = await prisma.page.findFirst({
+    where: { id: roomPageId, world: { slug: worldSlug }, type: "room" },
+    select: { title: true },
+  });
+  if (!room) throw new Error("Raum nicht gefunden.");
+
+  await createSessionLiveService(prisma).appendEntry({
+    gameSessionId: session.id,
+    kind: "note",
+    content: content || `Raum betreten: ${room.title}`,
+    refPageId: roomPageId,
+  });
+
+  const roomPath = `${dungeonBasePath(worldSlug, dungeonSlug)}/ebenen/${levelSlug}/raeume/${roomSlug}`;
+  revalidatePath(`/worlds/${worldSlug}/sessions/${session.id}/live`);
+  revalidatePath(roomPath);
+  redirect(`${roomPath}?logged=1`);
 }

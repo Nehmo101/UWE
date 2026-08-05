@@ -130,6 +130,65 @@ describe("UWE player notes", () => {
     await db.$disconnect();
   });
 
+  it("note with session follows the session's campaign; foreign sessions are dropped", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+    const repo = createUweRepository(databaseUrl);
+
+    const playerCtx = await auth.buildAccessContextForWorld(worldSlug, { userId: playerUserId });
+    assert.ok(playerCtx);
+
+    // Zweite Kampagne + Session darin: die Notiz muss der Session-Kampagne
+    // folgen, auch wenn das Formular eine andere Kampagne mitschickt.
+    const world = await db.world.findUnique({ where: { slug: worldSlug } });
+    assert.ok(world);
+    const otherCampaign = await repo.createCampaign({
+      worldId: world.id,
+      name: "Zweite Kampagne",
+      slug: "zweite",
+    });
+    const session = await db.gameSession.create({
+      data: {
+        worldId: world.id,
+        campaignId: otherCampaign.id,
+        title: "Session in Kampagne 2",
+        sessionNumber: 1,
+        status: "played",
+        recapPublished: true,
+      },
+    });
+
+    const created = await auth.createPlayerNoteForViewer(worldSlug, playerCtx, {
+      campaignId, // absichtlich die "falsche" Kampagne
+      content: "Am Tisch notiert.",
+      gameSessionId: session.id,
+    });
+    assert.ok(created);
+    assert.equal(created.gameSessionId, session.id);
+    assert.equal(created.campaignId, otherCampaign.id);
+
+    // Session einer fremden Welt: Bezug wird verworfen statt übernommen.
+    const foreignWorld = await repo.createWorld({ name: "Fremd", slug: "fremd-notes" });
+    const foreignSession = await db.gameSession.create({
+      data: {
+        worldId: foreignWorld.id,
+        title: "Fremde Session",
+        sessionNumber: 1,
+        status: "played",
+      },
+    });
+    const crossWorld = await auth.createPlayerNoteForViewer(worldSlug, playerCtx, {
+      campaignId,
+      content: "Mit fremder Session-Kennung.",
+      gameSessionId: foreignSession.id,
+    });
+    assert.ok(crossWorld);
+    assert.equal(crossWorld.gameSessionId, null);
+    assert.equal(crossWorld.campaignId, campaignId);
+
+    await db.$disconnect();
+  });
+
   it("DM sees submitted notes in review queue", async () => {
     const db = createPrismaClient(databaseUrl);
     const auth = createAuthService(db);

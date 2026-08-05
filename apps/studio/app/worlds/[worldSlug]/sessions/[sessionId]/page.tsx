@@ -73,6 +73,12 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
   });
   const linkedIds = new Set(session.linkedPages.map((p) => p.id));
   const linkablePages = allPages.filter((p) => !linkedIds.has(p.id));
+  // Kapitel der Kampagne fürs Zuordnungs-Select (F3) — story_arc-Seiten.
+  const chapters = session.campaignId
+    ? allPages
+        .filter((page) => page.type === "story_arc")
+        .map((page) => ({ id: page.id, title: page.title }))
+    : [];
 
   return (
     <>
@@ -167,6 +173,7 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
         worldSlug={worldSlug}
         sessionId={sessionId}
         session={session}
+        chapters={chapters}
         linkablePages={linkablePages.map((page) => ({
           id: page.id,
           title: page.title,

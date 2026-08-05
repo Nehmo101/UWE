@@ -18,13 +18,13 @@ import { CampaignSidebar } from "@/src/components/wiki";
 import { campaignNavItems } from "@/src/lib/world-nav";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { QuickCreateSessionDialog } from "@/src/components/world/QuickCreateSessionDialog";
-import { Badge, buttonVariants, Card, CardContent, EmptyState } from "@/src/components/ui";
+import { Alert, Badge, buttonVariants, Card, CardContent, EmptyState } from "@/src/components/ui";
 
 const PAGE_SIZE = 20;
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
-  searchParams: Promise<{ campaign?: string; status?: string; page?: string }>;
+  searchParams: Promise<{ campaign?: string; status?: string; page?: string; deleted?: string }>;
 }
 
 function parseStatus(raw: string | undefined) {
@@ -36,7 +36,7 @@ function parseStatus(raw: string | undefined) {
 
 export default async function StudioSessionsPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
-  const { campaign: campaignSlug, status: statusRaw, page: pageRaw } = await searchParams;
+  const { campaign: campaignSlug, status: statusRaw, page: pageRaw, deleted } = await searchParams;
   const page = Math.max(1, Number(pageRaw ?? "1") || 1);
   const statusFilter = parseStatus(statusRaw);
 
@@ -111,6 +111,8 @@ export default async function StudioSessionsPage({ params, searchParams }: Props
           </div>
         }
       />
+
+      {deleted ? <Alert tone="success">Session gelöscht.</Alert> : null}
 
       <nav className="mb-4 flex flex-wrap gap-2" aria-label="Status-Filter">
         <Link

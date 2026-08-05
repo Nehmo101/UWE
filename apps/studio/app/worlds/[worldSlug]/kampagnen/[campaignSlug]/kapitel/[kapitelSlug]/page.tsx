@@ -14,8 +14,11 @@ import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components
 import { campaignCockpitBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { requireStudioWorldRead } from "@/src/lib/authz";
 import {
+  assignDungeonToArcAction,
   assignQuestToArcAction,
+  pinPageToStoryArcAction,
   preparePrintListFromChapterAction,
+  unpinPageFromStoryArcAction,
   updateQuestStatusInPlaceAction,
   updateStoryArcAction,
 } from "../../../../../../kampagnen-actions";
@@ -69,6 +72,22 @@ export default async function ChapterCockpitPage({ params, searchParams }: Props
   const cockpitPath = `${base}/kampagnen/${campaignSlug}`;
   const kapitelPath = `${cockpitPath}/kapitel/${kapitelSlug}`;
   const { campaign, chapter, quests } = view;
+
+  // Kandidaten fürs Pinnen: NSC-, Orts-, Fraktions- und Handout-Seiten der
+  // Welt, die noch nicht an diesem Kapitel hängen.
+  const pinnedIds = new Set(view.pins.map((pin) => pin.target.id));
+  const pinnableTypes = new Set([
+    "npc",
+    "player_character",
+    "monster",
+    "location",
+    "region",
+    "faction",
+    "handout",
+  ]);
+  const pinCandidates = wikiIndex
+    .filter((node) => pinnableTypes.has(node.type) && !pinnedIds.has(node.id))
+    .sort((a, b) => a.title.localeCompare(b.title, "de"));
 
   return (
     <>
@@ -192,6 +211,169 @@ export default async function ChapterCockpitPage({ params, searchParams }: Props
             </CardContent>
           </Card>
         ) : null}
+
+        <Card id="kapitel-akt-tafel">
+          <CardHeader>
+            <CardTitle>Im Akt wichtig</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {view.actRelations.npcs.length === 0 &&
+            view.actRelations.locations.length === 0 &&
+            view.actRelations.factions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Keine [[Wiki-Links]] im Kapitel- oder Quest-Text — NSCs, Orte und Fraktionen
+                erscheinen hier automatisch, sobald sie verlinkt sind.
+              </p>
+            ) : (
+              <dl className="flex flex-col gap-2 text-sm">
+                {(
+                  [
+                    ["NSCs", view.actRelations.npcs],
+                    ["Orte", view.actRelations.locations],
+                    ["Fraktionen", view.actRelations.factions],
+                  ] as const
+                ).map(([label, targets]) =>
+                  targets.length > 0 ? (
+                    <div key={label} className="flex flex-wrap gap-2">
+                      <dt className="font-medium text-muted-foreground">{label}:</dt>
+                      <dd className="flex flex-wrap gap-2">
+                        {targets.map((target, index) => (
+                          <span key={target.id}>
+                            {index > 0 ? "· " : null}
+                            <Link href={target.href}>{target.title}</Link>
+                          </span>
+                        ))}
+                      </dd>
+                    </div>
+                  ) : null,
+                )}
+              </dl>
+            )}
+            <p className="mt-2 text-sm text-muted-foreground">
+              Abgeleitet aus dem Kapiteltext und allen Quest-Texten dieses Akts — plus
+              gepinnte Seiten. Am Spieltisch erscheint diese Tafel im Live-Modus der
+              Session.
+            </p>
+
+            <div className="mt-4 flex flex-col gap-3 border-t border-border pt-3">
+              {view.pins.length > 0 ? (
+                <ul className="flex flex-wrap gap-2 text-sm">
+                  {view.pins.map((pin) => (
+                    <li
+                      key={pin.id}
+                      className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1"
+                    >
+                      <span aria-hidden>📌</span>
+                      <Link href={pin.target.href}>{pin.target.title}</Link>
+                      <form action={unpinPageFromStoryArcAction} className="inline">
+                        <input type="hidden" name="worldSlug" value={worldSlug} />
+                        <input type="hidden" name="campaignSlug" value={campaignSlug} />
+                        <input type="hidden" name="kapitelSlug" value={kapitelSlug} />
+                        <input type="hidden" name="linkId" value={pin.id} />
+                        <Button
+                          type="submit"
+                          variant="ghost"
+                          size="sm"
+                          aria-label={`${pin.target.title} lösen`}
+                        >
+                          ×
+                        </Button>
+                      </form>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {pinCandidates.length > 0 ? (
+                <form
+                  action={pinPageToStoryArcAction}
+                  className="flex flex-wrap items-center gap-2"
+                >
+                  <input type="hidden" name="worldSlug" value={worldSlug} />
+                  <input type="hidden" name="campaignSlug" value={campaignSlug} />
+                  <input type="hidden" name="kapitelSlug" value={kapitelSlug} />
+                  <input type="hidden" name="chapterId" value={chapter.id} />
+                  {/* TODO(design-kit): natives Select — Leerwert nötig. */}
+                  <select name="pageId" required className={NATIVE_SELECT_CLASS}>
+                    <option value="">Seite an den Akt pinnen…</option>
+                    {pinCandidates.map((candidate) => (
+                      <option key={candidate.id} value={candidate.id}>
+                        {candidate.title} ({candidate.type})
+                      </option>
+                    ))}
+                  </select>
+                  <Button type="submit" variant="ghost" size="sm">
+                    Pinnen
+                  </Button>
+                </form>
+              ) : null}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card id="kapitel-dungeons">
+          <CardHeader>
+            <CardTitle>Dungeons in diesem Kapitel</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {view.dungeons.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Kein Dungeon zugeordnet — der Spielabend zeigt Dungeons dieses Kapitels
+                direkt auf der Akt-Tafel.
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-2 text-sm">
+                {view.dungeons.map((dungeon) => (
+                  <li key={dungeon.id} className="flex flex-wrap items-center gap-2">
+                    <Link href={dungeon.href}>{dungeon.title}</Link>
+                    <DungeonPrepStatusBadge status={dungeon.prepStatus} />
+                    {dungeon.summary ? (
+                      <span className="text-muted-foreground"> — {dungeon.summary}</span>
+                    ) : null}
+                    <form action={assignDungeonToArcAction} className="inline-flex">
+                      <input type="hidden" name="worldSlug" value={worldSlug} />
+                      <input type="hidden" name="campaignSlug" value={campaignSlug} />
+                      <input type="hidden" name="kapitelSlug" value={kapitelSlug} />
+                      <input type="hidden" name="dungeonId" value={dungeon.id} />
+                      <input type="hidden" name="chapterId" value="" />
+                      <Button type="submit" variant="ghost" size="sm">
+                        Lösen
+                      </Button>
+                    </form>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {view.assignableDungeons.length > 0 ? (
+              <form
+                action={assignDungeonToArcAction}
+                className="mt-3 flex flex-wrap items-center gap-2"
+              >
+                <input type="hidden" name="worldSlug" value={worldSlug} />
+                <input type="hidden" name="campaignSlug" value={campaignSlug} />
+                <input type="hidden" name="kapitelSlug" value={kapitelSlug} />
+                <input type="hidden" name="chapterId" value={chapter.id} />
+                {/* TODO(design-kit): natives Select — Leerwert nötig. */}
+                <select name="dungeonId" required className={NATIVE_SELECT_CLASS}>
+                  <option value="">Dungeon diesem Kapitel zuordnen…</option>
+                  {view.assignableDungeons.map((dungeon) => (
+                    <option key={dungeon.id} value={dungeon.id}>
+                      {dungeon.title}
+                    </option>
+                  ))}
+                </select>
+                <Button type="submit" variant="ghost" size="sm">
+                  Zuordnen
+                </Button>
+              </form>
+            ) : (
+              <p className="mt-3 text-sm text-muted-foreground">
+                <Link href={`${base}/dungeons/new?campaign=${campaignSlug}`}>
+                  Neuen Dungeon anlegen →
+                </Link>
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

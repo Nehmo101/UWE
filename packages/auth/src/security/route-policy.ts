@@ -192,17 +192,25 @@ export const PROTECTED_ROUTE_PREFIXES = [
   "/api/inference",
   "/api/inference/*",
   "/api/health/private",
+  "/api/tags",
+  "/api/dnd/*",
+  "/api/documents/print",
+  "/api/bugs",
+  "/api/bugs/*",
   "/api/worlds/*/brain",
   "/api/worlds/*/brain/*",
   "/api/worlds/*/graph",
   // Leseansicht einer Seite für den Session-Runner (Studio, nur lesend).
-  //
-  // `[pageSlug]` statt `*` am Ende ist kein Stilfrage: `matchesRoutePattern`
-  // behandelt ein Muster, das auf `/*` endet, als reinen Präfixvergleich —
-  // ein `*` weiter vorne wird dann nicht mehr ersetzt und das Muster trifft nie.
   "/api/worlds/*/reader/[pageSlug]",
   "/api/worlds/*/labels/*/export",
   "/api/worlds/*/print-lists/*/export",
+  "/api/worlds/*/print-lists/*/print-queue",
+  "/api/worlds/*/print-queue",
+  "/api/worlds/*/pages/*",
+  "/api/worlds/*/kampagnen/*",
+  "/api/worlds/*/soundboard/*",
+  "/api/worlds/*/inspector/*",
+  "/api/worlds/*/characters/print",
   "/api/worlds/*/spotify/*",
 ] as const;
 
@@ -244,10 +252,11 @@ export function normalizePathname(pathname: string): string {
   return normalized.toLowerCase();
 }
 
-/**
- * Match a pathname against a pattern.
- * Segments: literal text or `[param]` wildcard for one segment; trailing `/*` matches rest.
- */
+// Match a pathname against a pattern.
+// Segments: literal text, `*` or `[param]` wildcard for one segment; a trailing
+// wildcard segment matches the prefix itself and everything below it. Wildcards
+// earlier in the pattern gelten auch vor einem trailing Wildcard-Segment:
+// /api/worlds/*/spotify/* trifft /api/worlds/terra/spotify/status.
 export function matchesRoutePattern(pathname: string, pattern: string): boolean {
   const normalizedPath = normalizePathname(pathname);
   const normalizedPattern = normalizePathname(pattern);
@@ -256,27 +265,33 @@ export function matchesRoutePattern(pathname: string, pattern: string): boolean 
     return true;
   }
 
+  const pathParts = normalizedPath.split("/").filter(Boolean);
+
   if (normalizedPattern.endsWith("/*")) {
-    const prefix = normalizedPattern.slice(0, -2);
-    return normalizedPath === prefix || normalizedPath.startsWith(`${prefix}/`);
+    const prefixParts = normalizedPattern.slice(0, -2).split("/").filter(Boolean);
+    if (pathParts.length < prefixParts.length) {
+      return false;
+    }
+    return prefixParts.every((part, index) => matchesSegment(part, pathParts[index]));
   }
 
-  const pathParts = normalizedPath.split("/").filter(Boolean);
   const patternParts = normalizedPattern.split("/").filter(Boolean);
 
   if (pathParts.length !== patternParts.length) {
     return false;
   }
 
-  return patternParts.every((part, index) => {
-    if (part.startsWith("[") && part.endsWith("]")) {
-      return Boolean(pathParts[index]);
-    }
-    if (part === "*") {
-      return Boolean(pathParts[index]);
-    }
-    return part === pathParts[index];
-  });
+  return patternParts.every((part, index) => matchesSegment(part, pathParts[index]));
+}
+
+function matchesSegment(patternPart: string, pathPart: string | undefined): boolean {
+  if (!pathPart) {
+    return false;
+  }
+  if (patternPart === "*" || (patternPart.startsWith("[") && patternPart.endsWith("]"))) {
+    return true;
+  }
+  return patternPart === pathPart;
 }
 
 function matchesAny(pathname: string, patterns: readonly string[]): boolean {

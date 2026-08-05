@@ -67,6 +67,7 @@ export const PRISMA_MODEL_BOUNDARIES = {
   WorldCalendar: U("dnd_world", "dm_only"),
   WorldEvent: U("dnd_world", "dm_only"),
   WorldEventEntityLink: U("dnd_world", "dm_only"),
+  StoryArcEntityLink: U("dnd_world", "dm_only"),
   FactionState: U("dnd_world", "dm_only"),
   Character: U("portal_player", "player_visible", "database_only", "G1"),
   CharacterSpell: U("portal_player", "player_visible", "database_only", "G1"),

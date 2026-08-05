@@ -8,6 +8,7 @@ export {
 export {
   deriveQuestBacklinks,
   deriveQuestRelations,
+  mergeQuestRelations,
   type QuestRelations,
   type QuestRelationTarget,
 } from "./quest-relations";
@@ -20,11 +21,18 @@ export {
   type ChapterQuest,
   type ChapterSummary,
   type ChapterView,
+  type CockpitDungeon,
   type CockpitEvent,
   type CockpitFaction,
   type CockpitQuest,
   type CockpitSessionRef,
 } from "./cockpit-service";
+export {
+  createStoryArcPinService,
+  pinRoleForPageType,
+  StoryArcPinService,
+  type StoryArcPin,
+} from "./act-board";
 export { buildCampaignAiDigest } from "./campaign-ai-digest";
 export {
   buildChapterPrintHtml,

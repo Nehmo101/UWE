@@ -6,7 +6,9 @@ import {
 import {
   GameSessionStatusEnum,
   getAppRepository,
+  prisma,
 } from "@uwe/database/server";
+import { compareChapterOrder, findCurrentChapter, STORY_ARC_TYPE } from "@uwe/campaign-cockpit";
 import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { createGameSessionAction } from "../../../../session-actions";
@@ -26,6 +28,23 @@ export default async function StudioNewSessionPage({ params, searchParams }: Pro
   if (!world) notFound();
 
   const campaigns = await repo.listCampaignsByWorld(worldSlug);
+
+  // Kapitel-Vorauswahl (F3): kommt die Anlage aus einer Kampagne (?campaign=),
+  // stehen deren Kapitel zur Wahl, vorausgewählt ist das aktuelle (erstes
+  // nicht gespieltes). Ohne Kampagnen-Kontext bleibt das Feld weg — das
+  // Kapitel lässt sich später im Session-Detail zuordnen.
+  const selectedCampaign = campaignSlug
+    ? campaigns.find((candidate) => candidate.slug === campaignSlug)
+    : null;
+  const chapters = selectedCampaign
+    ? (
+        await prisma.page.findMany({
+          where: { worldId: world.id, campaignId: selectedCampaign.id, type: STORY_ARC_TYPE },
+          select: { id: true, title: true, sortIndex: true, prepStatus: true },
+        })
+      ).sort(compareChapterOrder)
+    : [];
+  const currentChapter = findCurrentChapter(chapters);
 
   return (
     <>
@@ -66,6 +85,29 @@ export default async function StudioNewSessionPage({ params, searchParams }: Pro
             ))}
           </select>
         </div>
+
+        {chapters.length > 0 ? (
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="session-story-arc">Kapitel / Akt</Label>
+            {/* TODO(design-kit): natives Select — Leerwert „Kein Kapitel" nötig. */}
+            <select
+              id="session-story-arc"
+              name="storyArcPageId"
+              defaultValue={currentChapter?.id ?? ""}
+              className="flex h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="">Kein Kapitel</option>
+              {chapters.map((chapter) => (
+                <option key={chapter.id} value={chapter.id}>
+                  {chapter.title}
+                </option>
+              ))}
+            </select>
+            <p className="text-sm text-muted-foreground">
+              Vorausgewählt ist das aktuelle Kapitel der Kampagne.
+            </p>
+          </div>
+        ) : null}
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="session-date">Datum</Label>

@@ -70,6 +70,26 @@ export function deriveQuestRelations(
 }
 
 /**
+ * Mehrere Beziehungs-Sets zu einem zusammenfassen — z. B. Kapiteltext plus
+ * alle Quest-Texte zu einer NSC-Tafel des ganzen Akts. Reihenfolge bleibt
+ * stabil (erste Erwähnung gewinnt), Duplikate fallen über die Seiten-Id weg.
+ */
+export function mergeQuestRelations(...sets: QuestRelations[]): QuestRelations {
+  const merged: QuestRelations = { npcs: [], locations: [], factions: [] };
+  const seen = new Set<string>();
+  for (const set of sets) {
+    for (const key of ["npcs", "locations", "factions"] as const) {
+      for (const target of set[key]) {
+        if (seen.has(target.id)) continue;
+        seen.add(target.id);
+        merged[key].push(target);
+      }
+    }
+  }
+  return merged;
+}
+
+/**
  * Rückwärts: welche Seiten erwähnen diese Quest? Dasselbe Muster wie der
  * Backlink-Aufbau in page-viewer-service — über alle Seiten laufen und deren
  * aufgelöste Block-Ziele gegen die Quest-Id halten.

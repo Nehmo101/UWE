@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { GameSessionStatusBadge } from "@uwe/shared-ui";
 import {
   buildPageUrl,
+  buildWorldWikiIndex,
   createAuthService,
   createConnectorService,
   createPrismaClient,
@@ -12,6 +13,9 @@ import {
   prisma,
   sessionLiveKindLabel,
 } from "@uwe/database/server";
+import { getWorldWikiGraph } from "@uwe/database/page-service";
+import { createCampaignCockpitService } from "@uwe/campaign-cockpit";
+import { SessionActBoard } from "@/components/SessionActBoard";
 import { SessionLivePanel } from "@/components/SessionLivePanel";
 import { SessionLiveSoundboard } from "@/components/SessionLiveSoundboard";
 import { SessionRunner } from "@/components/session-runner/SessionRunner";
@@ -66,6 +70,25 @@ export default async function SessionLivePage({ params }: Props) {
   const engineAudioOnline = connectorSummary.availableCapabilities.includes("audio_local");
 
   if (!session) notFound();
+
+  // Akt-Tafel: hat die Session ein Kapitel, liegt der ganze Akt (Quests,
+  // NSC-Tafel, Dungeons) griffbereit über der Lesefläche — Wechsel unnötig.
+  const storyArcPage = session.storyArcPage;
+  const actBoardView =
+    storyArcPage && sessionCampaign
+      ? await (async () => {
+          const [wikiIndex, graph] = await Promise.all([
+            buildWorldWikiIndex(repo, worldSlug),
+            getWorldWikiGraph(repo, worldSlug),
+          ]);
+          return createCampaignCockpitService(prisma).getChapterView(
+            worldSlug,
+            sessionCampaign.slug,
+            storyArcPage.slug,
+            { wikiIndex, graph },
+          );
+        })()
+      : null;
 
   const linkedPages = session.linkedPages.map((page) => ({
     id: page.id,
@@ -125,11 +148,31 @@ export default async function SessionLivePage({ params }: Props) {
         title={`Live · Session ${session.sessionNumber}`}
         meta={<GameSessionStatusBadge status={session.status} />}
         actions={
-          <Link href={`/worlds/${worldSlug}/prepare-session`} className={buttonVariants({ variant: "outline" })}>
+          <Link
+            href={`/worlds/${worldSlug}/prepare-session?sessionId=${sessionId}${sessionCampaign ? `&campaign=${sessionCampaign.slug}` : ""}`}
+            className={buttonVariants({ variant: "outline" })}
+          >
             Session vorbereiten
           </Link>
         }
       />
+
+      {actBoardView && sessionCampaign ? (
+        <SessionActBoard
+          worldSlug={worldSlug}
+          campaignSlug={sessionCampaign.slug}
+          sessionId={sessionId}
+          openPlots={session.openPlots}
+          view={actBoardView}
+        />
+      ) : (
+        <p className="mb-4 text-sm text-muted-foreground">
+          Kein Kapitel zugeordnet — die Akt-Tafel (Quests, NSCs, Dungeons des Akts) erscheint,
+          sobald die Session im{" "}
+          <Link href={`/worlds/${worldSlug}/sessions/${sessionId}`}>Session-Detail</Link> ein
+          Kapitel bekommt.
+        </p>
+      )}
 
       <SessionRunner
         worldSlug={worldSlug}

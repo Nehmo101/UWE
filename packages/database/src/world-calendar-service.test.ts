@@ -3,8 +3,27 @@ import { describe, it } from "node:test";
 import {
   advanceInGameDate,
   DEFAULT_WORLD_CALENDAR_MONTHS,
+  formatClockLabel,
   formatInGameDate,
 } from "./world-calendar-service";
+
+describe("formatClockLabel (pure)", () => {
+  it("assembles day/month/year with the calendar name", () => {
+    assert.equal(
+      formatClockLabel("Terra-Kalender", { day: 12, monthName: "Regen", year: 1487 }, null),
+      "Terra-Kalender: 12. Regen. 1487",
+    );
+  });
+  it("falls back to the name when the date shape is unknown", () => {
+    assert.equal(formatClockLabel("Kal", 42, null), "Kal");
+  });
+  it("returns null when nothing is known", () => {
+    assert.equal(formatClockLabel(null, null, null), null);
+  });
+  it("uses the epoch label when present", () => {
+    assert.equal(formatClockLabel(null, {}, "3. Zeitalter"), "3. Zeitalter");
+  });
+});
 
 describe("advanceInGameDate", () => {
   const months = DEFAULT_WORLD_CALENDAR_MONTHS;

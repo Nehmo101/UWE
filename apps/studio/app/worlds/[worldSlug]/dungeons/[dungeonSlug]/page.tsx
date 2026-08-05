@@ -11,6 +11,7 @@ import {
   createDungeonCockpitService,
   DungeonPrepStatusEnum,
   getAppRepository,
+  prisma,
 } from "@uwe/database/server";
 import {
   createDungeonLevelAction,
@@ -66,6 +67,29 @@ export default async function StudioDungeonDetailPage({ params, searchParams }: 
   const linkableAssets = assets.filter((a) => !linkedAssetIds.has(a.id));
   const redirectTo = `/worlds/${worldSlug}/dungeons/${dungeonSlug}`;
 
+  // Rückweg ins Kampagnen-Modul: hängt der Dungeon an einem Kapitel
+  // (parentPageId auf eine story_arc-Seite), führt ein Link dorthin zurück.
+  const chapterParent = await prisma.page.findFirst({
+    where: {
+      worldId: world.id,
+      slug: dungeonSlug,
+      type: "dungeon",
+      parentPage: { type: "story_arc" },
+    },
+    select: {
+      parentPage: {
+        select: { title: true, slug: true, campaign: { select: { slug: true } } },
+      },
+    },
+  });
+  const chapterLink =
+    chapterParent?.parentPage && chapterParent.parentPage.campaign
+      ? {
+          title: chapterParent.parentPage.title,
+          href: `/worlds/${worldSlug}/kampagnen/${chapterParent.parentPage.campaign.slug}/kapitel/${chapterParent.parentPage.slug}`,
+        }
+      : null;
+
   return (
     <>
       <ShellBreadcrumb
@@ -85,7 +109,16 @@ export default async function StudioDungeonDetailPage({ params, searchParams }: 
       <PageHeader
         title={overview.dungeon.title}
         summary={overview.dungeon.summary ?? undefined}
-        meta={<DungeonPrepStatusBadge status={overview.dungeon.prepStatus} />}
+        meta={
+          <>
+            <DungeonPrepStatusBadge status={overview.dungeon.prepStatus} />
+            {chapterLink ? (
+              <span className="text-sm text-muted-foreground">
+                Teil von Kapitel <Link href={chapterLink.href}>{chapterLink.title}</Link>
+              </span>
+            ) : null}
+          </>
+        }
       />
       {saved && <Alert tone="success" className="mb-4">Dungeon gespeichert.</Alert>}
       {assetLinked && <Alert tone="success" className="mb-4">Asset verknüpft.</Alert>}

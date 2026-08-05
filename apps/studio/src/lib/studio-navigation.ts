@@ -1,11 +1,9 @@
-import { isLikelyGameSessionId } from "./session-route";
 import { studioCommands } from "../navigation/studio-nav";
 import { worldNavItems as canonicalWorldNavItems } from "../navigation/world-nav";
 
 /** DM tools surfaced on the world dashboard for discoverability (canonical world IA). */
 export function worldDmToolQuickLinks(worldSlug: string): { label: string; href: string }[] {
   const highlightIds = new Set([
-    "world-radar",
     "world-campaigns",
     "world-prepare-session",
     "world-one-shot",
@@ -23,190 +21,13 @@ export function worldDmToolQuickLinks(worldSlug: string): { label: string; href:
     .map((item) => ({ label: item.label, href: item.href }));
 }
 
-export type WorldNavKey =
-  | "overview"
-  | "pages"
-  | "sessions"
-  | "calendar"
-  | "chronicle"
-  | "treasury"
-  | "dungeons"
-  | "assets"
-  | "labels"
-  | "notes"
-  | "soundboard"
-  | "graph"
-  | "inspector"
-  | "import"
-  | "import-central"
-  | "templates"
-  | "jobs"
-  | "brain"
-  | "ai-runs"
-  | "dnd-api"
-  | "backup"
-  | "new-page"
-  | "radar"
-  | "kampagnen"
-  | "karten"
-  | "magic-items"
-  | "prepare-session"
-  | "one-shot"
-  | "open-items"
-  | "roll-tables"
-  | "gruppen"
-  | "print-center"
-  | "quality";
-
-export type WorldBottomNavKey = "overview" | "content" | "sessions" | "tools" | "more";
-
-export type WorldNavSectionId = "overview" | "content" | "sessions" | "dungeons" | "media" | "tools";
-
-export interface WorldNavItem {
-  key: WorldNavKey;
-  label: string;
-  href: string;
-  active?: boolean;
-}
-
-export interface WorldNavSection {
-  id: WorldNavSectionId;
-  title: string;
-  items: WorldNavItem[];
-}
-
-/** Canonical grouped world sidebar for Studio. */
-export function worldNavSections(worldSlug: string, active?: WorldNavKey): WorldNavSection[] {
-  const base = `/worlds/${worldSlug}`;
-  const sections: {
-    id: WorldNavSectionId;
-    title: string;
-    items: { key: WorldNavKey; label: string; href: string }[];
-  }[] = [
-    {
-      id: "overview",
-      title: "Übersicht",
-      items: [
-        { key: "overview", label: "Dashboard", href: `${base}/dashboard` },
-        { key: "kampagnen", label: "Kampagnen", href: `${base}/kampagnen` },
-      ],
-    },
-    {
-      id: "content",
-      title: "Inhalte",
-      items: [
-        { key: "pages", label: "Seiten", href: `${base}/wiki` },
-        { key: "new-page", label: "Neue Seite", href: `${base}/pages/new` },
-        { key: "templates", label: "Seiten-Templates", href: `${base}/templates` },
-      ],
-    },
-    {
-      id: "sessions",
-      title: "Sessions",
-      items: [
-        { key: "sessions", label: "Sessions", href: `${base}/sessions` },
-        { key: "prepare-session", label: "Session vorbereiten", href: `${base}/prepare-session` },
-        { key: "calendar", label: "Weltuhr", href: `${base}/calendar` },
-        { key: "chronicle", label: "Chronik", href: `${base}/chronicle` },
-        { key: "treasury", label: "Gruppenschatz", href: `${base}/treasury` },
-        { key: "notes", label: "Spielernotizen", href: `${base}/notes` },
-      ],
-    },
-    {
-      id: "dungeons",
-      title: "Dungeons",
-      items: [{ key: "dungeons", label: "Dungeons", href: `${base}/dungeons` }],
-    },
-    {
-      id: "media",
-      title: "Medien",
-      items: [
-        { key: "assets", label: "Medien & Assets", href: `${base}/assets` },
-        { key: "soundboard", label: "Soundboard", href: `${base}/soundboard` },
-        { key: "labels", label: "Labels & Print", href: `${base}/labels` },
-      ],
-    },
-    {
-      id: "tools",
-      title: "Tools",
-      items: [
-        { key: "brain", label: "Brain Store", href: `${base}/brain` },
-        { key: "graph", label: "Wissensgraph", href: `${base}/graph` },
-        { key: "karten", label: "Karten", href: `${base}/karten` },
-        { key: "inspector", label: "Kanon & Leaks", href: `${base}/inspector` },
-        { key: "quality", label: "Wiki-Pflege", href: `${base}/quality` },
-        { key: "ai-runs", label: "KI-Läufe", href: `${base}/ai-runs` },
-        { key: "import", label: "Import", href: `${base}/import` },
-        { key: "import-central", label: "Import-Zentrale", href: `${base}/import-central` },
-        { key: "jobs", label: "Hintergrund-Jobs", href: `${base}/jobs` },
-        { key: "dnd-api", label: "DnD API", href: `${base}/dnd-api` },
-        { key: "backup", label: "Backup", href: `${base}/backup` },
-      ],
-    },
-  ];
-
-  return sections.map((section) => ({
-    ...section,
-    items: section.items.map((item) => ({
-      ...item,
-      active: item.key === active,
-    })),
-  }));
-}
-
-/** Flat world nav list for command palette, breadcrumbs, and legacy adapters. */
-export function worldNavItems(worldSlug: string, active?: WorldNavKey): WorldNavItem[] {
-  return worldNavSections(worldSlug, active).flatMap((section) => section.items);
-}
-
-/** Map world nav key to mobile bottom nav active tab. */
-export function worldBottomNavKey(active: WorldNavKey, isSearching = false): WorldBottomNavKey {
-  if (active === "overview" || active === "radar" || active === "kampagnen") return "overview";
-  if (
-    active === "pages" ||
-    active === "new-page" ||
-    active === "graph" ||
-    active === "karten" ||
-    active === "magic-items" ||
-    active === "templates" ||
-    isSearching
-  ) {
-    return "content";
-  }
-  if (
-    active === "sessions" ||
-    active === "notes" ||
-    active === "calendar" ||
-    active === "chronicle" ||
-    active === "treasury" ||
-    active === "prepare-session" ||
-    active === "one-shot" ||
-    active === "open-items" ||
-    active === "roll-tables" ||
-    active === "gruppen" ||
-    active === "dungeons"
-  ) {
-    return "sessions";
-  }
-  if (
-    active === "brain" ||
-    active === "inspector" ||
-    active === "ai-runs" ||
-    active === "import" ||
-    active === "import-central" ||
-    active === "jobs" ||
-    active === "dnd-api" ||
-    active === "backup" ||
-    active === "quality" ||
-    active === "assets" ||
-    active === "soundboard" ||
-    active === "labels" ||
-    active === "print-center"
-  ) {
-    return "tools";
-  }
-  return "more";
-}
+/*
+ * Die fruehere zweite Nav-Quelle (worldNavSections, worldBottomNavKey,
+ * resolveWorldNavKey samt WorldNavKey-Typen) ist abgebaut: sie hatte keine
+ * Konsumenten mehr und driftete gegen die kanonische IA in
+ * src/navigation/world-nav.ts (anderes Label, fehlende Eintraege). Wer eine
+ * Welt-Navigation braucht, nimmt worldNav()/worldNavItems() von dort.
+ */
 
 /** Campaign filter sidebar block used on world subpages with campaign scope. */
 export function campaignNavItems(
@@ -222,74 +43,6 @@ export function campaignNavItems(
       active: selectedSlug === campaign.slug,
     })),
   ];
-}
-
-/** Resolve icon-rail active id from Studio path. */
-export function resolveStudioRailActiveId(activePath: string): string | undefined {
-  const normalized = activePath.split("?")[0]?.replace(/\/$/, "") || "/worlds";
-  if (normalized.startsWith("/worlds") || normalized.startsWith("/search")) return "worlds";
-  if (
-    normalized.startsWith("/admin") ||
-    normalized.startsWith("/command") ||
-    normalized.startsWith("/account") ||
-    normalized.startsWith("/settings")
-  ) {
-    return "system";
-  }
-  return undefined;
-}
-
-/** Resolve active world nav from pathname. */
-export function resolveWorldNavKey(pathname: string, worldSlug: string): WorldNavKey {
-  const base = `/worlds/${worldSlug}`;
-  const normalized = pathname.replace(/\/$/, "");
-
-  if (normalized === `${base}/radar`) return "radar";
-  // Vor den generischen Zwei-Segment-Wiki-Matches: /kampagnen hat eigene Tiefe.
-  if (normalized.startsWith(`${base}/kampagnen`)) return "kampagnen";
-  if (normalized.startsWith(`${base}/campaigns`)) return "kampagnen";
-  if (normalized === `${base}/dashboard`) return "overview";
-  if (normalized === `${base}/wiki`) return "pages";
-  const sessionDetailMatch = normalized.match(new RegExp(`^${base}/sessions/([^/]+)$`));
-  if (sessionDetailMatch) {
-    const segment = sessionDetailMatch[1] ?? "";
-    return isLikelyGameSessionId(segment) ? "sessions" : "pages";
-  }
-  if (normalized.startsWith(`${base}/sessions`)) return "sessions";
-  if (normalized.startsWith(`${base}/calendar`)) return "calendar";
-  if (normalized.startsWith(`${base}/chronicle`)) return "chronicle";
-  if (normalized.startsWith(`${base}/treasury`)) return "treasury";
-  if (normalized.startsWith(`${base}/prepare-session`)) return "prepare-session";
-  if (normalized.startsWith(`${base}/one-shot`)) return "one-shot";
-  if (normalized.startsWith(`${base}/open-items`)) return "open-items";
-  if (normalized.startsWith(`${base}/roll-tables`)) return "roll-tables";
-  if (normalized.startsWith(`${base}/gruppen`)) return "gruppen";
-  if (normalized.startsWith(`${base}/dungeons`)) return "dungeons";
-  if (normalized.startsWith(`${base}/assets`)) return "assets";
-  if (normalized.startsWith(`${base}/labels`)) return "labels";
-  if (normalized.startsWith(`${base}/print-center`)) return "print-center";
-  if (normalized.startsWith(`${base}/notes`)) return "notes";
-  if (normalized.startsWith(`${base}/soundboard`)) return "soundboard";
-  if (normalized.startsWith(`${base}/graph`)) return "graph";
-  if (normalized.startsWith(`${base}/karten`)) return "karten";
-  if (normalized.startsWith(`${base}/magic-items`)) return "magic-items";
-  if (normalized.startsWith(`${base}/inspector`)) return "inspector";
-  if (normalized.startsWith(`${base}/quality`)) return "quality";
-  if (normalized.startsWith(`${base}/brain`)) return "brain";
-  if (normalized.startsWith(`${base}/ai-runs`)) return "ai-runs";
-  // Vor `${base}/import`: „import-central" fängt an wie „import" und ist eine
-  // andere Seite.
-  if (normalized.startsWith(`${base}/import-central`)) return "import-central";
-  if (normalized.startsWith(`${base}/import`)) return "import";
-  if (normalized.startsWith(`${base}/templates`)) return "templates";
-  if (normalized.startsWith(`${base}/jobs`)) return "jobs";
-  if (normalized.startsWith(`${base}/dnd-api`)) return "dnd-api";
-  if (normalized.startsWith(`${base}/backup`)) return "backup";
-  if (normalized.startsWith(`${base}/pages/new`)) return "new-page";
-  if (normalized.match(new RegExp(`^${base}/[^/]+/[^/]+$`))) return "pages";
-  if (normalized.match(new RegExp(`^${base}/[^/]+/[^/]+/edit$`))) return "pages";
-
-  return "overview";
 }
 
 export interface StudioPaletteCommand {
@@ -311,15 +64,6 @@ export interface StudioPaletteCommand {
  * Brain) und `/mail/compose` — letzteres existiert zwar, ruft aber `notFound()`,
  * sobald `?kind=` fehlt, und ist damit kein Sprungziel, sondern ein Ziel mit
  * Kontext (Session-Recap, Handout).
- *
- * Seit die Seitenleiste auf Start / Welten / System zusammengezogen ist, trägt
- * diese Liste zusätzlich die Betriebsflächen: Admin-Hub, Verlauf, KI-Gateway,
- * Prompt-Konsole und die NL-Befehle. Sie sind bewusst **nicht** in der
- * Seitenleiste — dort steht nur, woran täglich gearbeitet wird — aber sie
- * sollen auch nicht nur noch per Adresszeile erreichbar sein.
- *
- * „Brain Store" (`/brain`) stand hier ebenfalls und ist heraus: das Welt-Brain
- * liegt im Welt-Cockpit, das owner-private Brain in der eigenen App.
  */
 export const STUDIO_PALETTE_EXTRA: {
   id: string;
@@ -451,17 +195,4 @@ export function studioCommandPaletteCommands(options: {
   }
 
   return list;
-}
-
-/** Breadcrumb trail for world-scoped Studio pages. */
-export function studioWorldBreadcrumbs(
-  worldName: string,
-  worldSlug: string,
-  segments: { label: string; href?: string }[] = [],
-): { label: string; href?: string }[] {
-  return [
-    { label: "Welten", href: "/worlds" },
-    { label: worldName, href: `/worlds/${worldSlug}/dashboard` },
-    ...segments,
-  ];
 }

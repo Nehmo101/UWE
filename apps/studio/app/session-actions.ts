@@ -73,6 +73,7 @@ export async function createGameSessionAction(formData: FormData) {
   const session = await sessions().create({
     worldId: world.id,
     campaignId: campaign?.id ?? null,
+    storyArcPageId: String(formData.get("storyArcPageId") || "") || null,
     title: parsed.data.title,
     sessionNumber,
     date: parsed.data.date ? new Date(parsed.data.date) : null,
@@ -112,6 +113,11 @@ export async function updateGameSessionAction(formData: FormData) {
     sessionNumber: Number(formData.get("sessionNumber")),
     date: formData.get("date") ? new Date(String(formData.get("date"))) : null,
     status: formData.get("status") as GameSessionStatus,
+    // Kapitel nur anfassen, wenn das Formular das Feld mitschickt (Select ist
+    // immer dabei, leerer Wert = bewusst kein Kapitel).
+    ...(formData.has("storyArcPageId")
+      ? { storyArcPageId: String(formData.get("storyArcPageId") || "") || null }
+      : {}),
     summaryDm: String(formData.get("summaryDm") || "") || null,
     summaryPlayer: String(formData.get("summaryPlayer") || "") || null,
     notes: String(formData.get("notes") || "") || null,
@@ -127,6 +133,23 @@ export async function updateGameSessionAction(formData: FormData) {
   revalidatePath(`/worlds/${worldSlug}/sessions`);
   revalidatePath(`/worlds/${worldSlug}/sessions/${sessionId}`);
   redirect(`/worlds/${worldSlug}/sessions/${sessionId}?saved=1`);
+}
+
+export async function deleteGameSessionAction(formData: FormData) {
+  await requireStudioActionAuth();
+  const worldSlug = String(formData.get("worldSlug"));
+  const sessionId = String(formData.get("sessionId"));
+
+  await requireStudioWorldEdit(worldSlug);
+
+  const removed = await sessions().remove(worldSlug, sessionId);
+  if (!removed) {
+    throw new Error("Session nicht gefunden.");
+  }
+
+  revalidatePath(`/worlds/${worldSlug}/sessions`);
+  revalidatePath(`/auth/worlds/${worldSlug}/sessions`);
+  redirect(`/worlds/${worldSlug}/sessions?deleted=1`);
 }
 
 export async function publishSessionRecapAction(formData: FormData) {

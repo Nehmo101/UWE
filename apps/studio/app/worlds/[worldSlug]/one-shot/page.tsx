@@ -50,6 +50,7 @@ export default async function OneShotPage({ params, searchParams }: Props) {
     select: { title: true, type: true },
     orderBy: { title: "asc" },
   });
+  const campaigns = await getAppRepository().listCampaignsByWorld(worldSlug);
   const locations = pages.filter((p) => p.type === "location" || p.type === "region");
   const npcs = pages.filter((p) => p.type === "npc");
   const selectedNpcs = (Array.isArray(npc) ? npc : npc ? [npc] : []).filter(Boolean);
@@ -192,7 +193,7 @@ export default async function OneShotPage({ params, searchParams }: Props) {
             </CardContent>
           </Card>
 
-          <form action={saveOneShotDraftAction} className="flex flex-wrap items-center gap-3">
+          <form action={saveOneShotDraftAction} className="flex flex-wrap items-end gap-3">
             <input type="hidden" name="worldSlug" value={worldSlug} />
             <input type="hidden" name="worldId" value={world.id} />
             <input type="hidden" name="worldName" value={world.name} />
@@ -201,6 +202,25 @@ export default async function OneShotPage({ params, searchParams }: Props) {
             {selectedNpcs.map((name) => (
               <input key={name} type="hidden" name="npc" value={name} />
             ))}
+            {campaigns.length > 0 ? (
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="one-shot-campaign">Kampagne</Label>
+                {/* TODO(design-kit): natives Select — Leerwert „Keine Kampagne" nötig. */}
+                <select
+                  id="one-shot-campaign"
+                  name="campaignId"
+                  defaultValue={campaigns.length === 1 ? campaigns[0]!.id : ""}
+                  className={NATIVE_SELECT_CLASS}
+                >
+                  <option value="">Keine Kampagne</option>
+                  {campaigns.map((campaign) => (
+                    <option key={campaign.id} value={campaign.id}>
+                      {campaign.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
             <Button type="submit">Als Quest-Entwurf speichern (Draft)</Button>
           </form>
         </>

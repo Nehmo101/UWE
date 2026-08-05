@@ -4,6 +4,7 @@ import { createPrismaClient } from "@uwe/database/client";
 import { createUweRepository } from "@uwe/database/server";
 import { createTestDatabaseUrl } from "@uwe/database/test-helpers";
 import { createCampaignCockpitService } from "./cockpit-service";
+import { createStoryArcPinService } from "./act-board";
 import { createSessionWrapUpService } from "./wrap-up-service";
 
 describe("campaign cockpit (integration)", () => {
@@ -137,6 +138,169 @@ describe("campaign cockpit (integration)", () => {
     assert.equal(withEvents.quests[0].linkedEvents.length, 1);
     assert.equal(withEvents.quests[0].linkedEvents[0].roleLabel, "Auslöser");
     assert.ok(event.id);
+  });
+
+  // Vom aufgelösten Kampagnen-Radar hierher gezogen: Dungeons + NSC-Stand
+  // gehören jetzt zum Kampagnen-Überblick, gefiltert wie im Dungeon-Cockpit.
+  it("lists campaign dungeons and the NPC summary in the overview", async () => {
+    const service = createCampaignCockpitService(db);
+    await db.page.create({
+      data: {
+        worldId,
+        campaignId,
+        title: "Magisterturm",
+        slug: "magisterturm",
+        type: "dungeon",
+        prepStatus: "ready",
+      },
+    });
+    await db.page.create({
+      data: { worldId, title: "Alte Mine", slug: "alte-mine", type: "dungeon" },
+    });
+    await db.page.create({
+      data: {
+        worldId,
+        campaignId,
+        title: "Grimm",
+        slug: "grimm",
+        type: "npc",
+        canonicalStatus: "contradictory",
+      },
+    });
+    await db.page.create({
+      data: { worldId, title: "Fremder", slug: "fremder", type: "npc" },
+    });
+
+    const overview = await service.getCampaignOverview(worldSlug, "himmelsrouten");
+    assert.ok(overview);
+    assert.equal(overview.dungeons.length, 1);
+    assert.equal(overview.dungeons[0].title, "Magisterturm");
+    assert.equal(overview.dungeons[0].prepStatus, "ready");
+    assert.ok(overview.dungeons[0].href.endsWith("/dungeons/magisterturm"));
+    assert.equal(overview.npcSummary.total, 1);
+    assert.equal(overview.npcSummary.flagged, 1);
+  });
+
+  it("pins pages to a chapter and merges them into the act board", async () => {
+    const service = createCampaignCockpitService(db);
+    const pins = createStoryArcPinService(db);
+    const overview = await service.getCampaignOverview(worldSlug, "himmelsrouten");
+    assert.ok(overview);
+    const chapter = overview.chapters[0];
+
+    const npc = await db.page.findFirst({ where: { worldId, slug: "grimm" } });
+    assert.ok(npc);
+
+    const pin = await pins.pin(worldId, chapter.id, npc.id);
+    assert.equal(pin.role, "npc");
+    // Doppelt pinnen ist idempotent (upsert auf die Unique-Kante).
+    await pins.pin(worldId, chapter.id, npc.id);
+
+    // Quests (type quest) lassen sich nicht pinnen — Rolle nicht ableitbar.
+    const quest = await db.page.findFirst({ where: { worldId, type: "quest" } });
+    assert.ok(quest);
+    await assert.rejects(pins.pin(worldId, chapter.id, quest.id), /nicht.*pinnen/);
+
+    // Ohne Graph (keine [[Wiki-Links]] aufgelöst) trägt allein der Pin die Tafel.
+    const view = await service.getChapterView(worldSlug, "himmelsrouten", chapter.slug, {
+      wikiIndex: [],
+      graph: null,
+    });
+    assert.ok(view);
+    assert.equal(view.pins.length, 1);
+    assert.equal(view.pins[0].target.id, npc.id);
+    assert.deepEqual(
+      view.actRelations.npcs.map((target) => target.id),
+      [npc.id],
+    );
+
+    await pins.unpin(worldId, view.pins[0].id);
+    const after = await service.getChapterView(worldSlug, "himmelsrouten", chapter.slug, {
+      wikiIndex: [],
+      graph: null,
+    });
+    assert.equal(after?.pins.length, 0);
+  });
+
+  it("assigns dungeons to a chapter and adopts the chapter's campaign", async () => {
+    const service = createCampaignCockpitService(db);
+    const overview = await service.getCampaignOverview(worldSlug, "himmelsrouten");
+    assert.ok(overview);
+    const chapter = overview.chapters[0];
+
+    // „Alte Mine" wurde oben ohne Kampagne angelegt — beim Zuordnen wandert
+    // sie in die Kampagne des Kapitels.
+    const mine = await db.page.findFirst({ where: { worldId, slug: "alte-mine" } });
+    assert.ok(mine);
+    await service.assignDungeonToChapter(worldId, mine.id, chapter.id);
+
+    const view = await service.getChapterView(worldSlug, "himmelsrouten", chapter.slug, {
+      wikiIndex: [],
+      graph: null,
+    });
+    assert.ok(view);
+    assert.equal(view.dungeons.length, 1);
+    assert.equal(view.dungeons[0].title, "Alte Mine");
+    assert.ok(!view.assignableDungeons.some((dungeon) => dungeon.id === mine.id));
+
+    const assigned = await db.page.findUnique({ where: { id: mine.id } });
+    assert.equal(assigned?.campaignId, campaignId);
+    assert.equal(assigned?.parentPageId, chapter.id);
+
+    // Lösen: Kante fällt, die Kampagnen-Zuordnung bleibt bewusst stehen.
+    await service.assignDungeonToChapter(worldId, mine.id, null);
+    const detachedView = await service.getChapterView(worldSlug, "himmelsrouten", chapter.slug, {
+      wikiIndex: [],
+      graph: null,
+    });
+    assert.equal(detachedView?.dungeons.length, 0);
+    const detached = await db.page.findUnique({ where: { id: mine.id } });
+    assert.equal(detached?.parentPageId, null);
+    assert.equal(detached?.campaignId, campaignId);
+
+    // Nur echte Dungeons: eine Quest-Seite wird abgelehnt.
+    const quest = await db.page.findFirst({ where: { worldId, type: "quest" } });
+    assert.ok(quest);
+    await assert.rejects(
+      service.assignDungeonToChapter(worldId, quest.id, chapter.id),
+      /Dungeon nicht gefunden/,
+    );
+  });
+
+  it("derives the act board from the chapter text itself", async () => {
+    const service = createCampaignCockpitService(db);
+    const created = await service.createChapter({
+      worldId,
+      campaignId,
+      title: "Akt der Tafel",
+      content: "Der [[Grimm]] wartet im Turm.",
+    });
+    const chapterPage = await db.page.findUnique({
+      where: { id: created.id },
+      include: { contentBlocks: true },
+    });
+    assert.ok(chapterPage);
+    const npc = await db.page.findFirst({ where: { worldId, slug: "grimm" } });
+    assert.ok(npc);
+
+    // Handgebautes Graph-Fragment: der Kapitel-Block löst auf den NSC auf.
+    const graph = {
+      pageIndex: [{ id: npc.id, title: npc.title, slug: npc.slug, type: npc.type }],
+      blockTargets: new Map(
+        chapterPage.contentBlocks.map((block) => [block.id, [npc.id]]),
+      ),
+      pages: [],
+    };
+    const view = await service.getChapterView(worldSlug, "himmelsrouten", created.slug, {
+      wikiIndex: [],
+      graph: graph as never,
+    });
+    assert.ok(view);
+    // Kein Quest-Text im Spiel — der Treffer kommt allein aus dem Kapiteltext.
+    assert.deepEqual(
+      view.actRelations.npcs.map((target) => target.id),
+      [npc.id],
+    );
   });
 });
 

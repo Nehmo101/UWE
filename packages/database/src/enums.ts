@@ -9,6 +9,7 @@ export type {
   QuestLifecycleStatus,
   AssetType,
   WorldEventEntityRole,
+  StoryArcEntityRole,
 } from "./generated/prisma/client";
 
 export {

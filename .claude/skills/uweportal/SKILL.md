@@ -68,6 +68,12 @@ Der frühere Tischmodus (Offline-Snapshot, Service Worker, `/auth/tisch`) und
 „Fragen an den DM" sind 2026-08 ersatzlos entfernt. Fragen an den Spielleiter
 laufen über Spielernotizen mit Sichtbarkeit „Nur GM".
 
+Notizen hängen an Sessions: die Notizen-Übersicht bietet die Session als
+Dropdown an (Default: die **aktive Session** — jüngste für Spieler sichtbare;
+„Ohne Session" bleibt explizit wählbar). Die Kampagne folgt dabei serverseitig
+immer der Session — zentral in `createPlayerNoteForViewer`, Sessions fremder
+Welten werden verworfen.
+
 ## Aufbau
 
 Navigation in `apps/portal/src/navigation/portal-nav.ts`: `PORTAL_NAV` (Weltenliste,

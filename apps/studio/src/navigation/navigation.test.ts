@@ -174,7 +174,7 @@ describe("world cockpit navigation", () => {
       "KI / Generatoren",
       "Brain / Wissen",
       "Session vorbereiten",
-      "Kampagnen-Radar",
+      "Kampagnen",
       "Wiki-Pflege",
     ]) {
       assert.ok(labels.includes(label), `missing world area: ${label}`);

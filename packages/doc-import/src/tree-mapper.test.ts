@@ -119,6 +119,26 @@ describe("mapDocumentTree — Typprofile", () => {
     assert.equal(types.get("HIMMELSROUTEN"), "lore");
   });
 
+  it("turns plain chapter/act headings into story_arc pages (Kampagnen-Cockpit)", () => {
+    const { pages } = mapSource(
+      [
+        "# HIMMELSROUTEN",
+        "Ein Kampagnenbuch.",
+        "## AKT II — Der Sturm zieht auf",
+        "Es zieht sich zusammen.",
+        "## Kapitel 2: Der Zaunkönig",
+        "Windhafen wartet.",
+      ].join("\n\n"),
+      { profile: "campaign_book" },
+    );
+    const types = new Map(pages.map((page) => [page.title, page.type]));
+
+    // Kapitel ohne spezifischeres Inhaltsmuster werden Story-Bögen —
+    // Inhaltsregeln (Nebenquests, Bestiarium …) gehen weiterhin vor.
+    assert.equal(types.get("AKT II — Der Sturm zieht auf"), "story_arc");
+    assert.equal(types.get("Kapitel 2: Der Zaunkönig"), "story_arc");
+  });
+
   it("lets an explicit frontmatter type win — but only for the root", () => {
     const { pages } = mapSource("---\ntyp: nsc\n---\n\n# Pellar\n\n## Chronik\n\nText.", {
       profile: "plain",

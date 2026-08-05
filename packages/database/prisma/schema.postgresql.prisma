@@ -752,6 +752,9 @@ model Page {
   dndBeyondReferences   DndBeyondReference[]
   versions              PageVersion[]
   worldEventLinks       WorldEventEntityLink[]
+  sessionsInStoryArc    GameSession[]              @relation("SessionStoryArc")
+  storyArcEntityLinks   StoryArcEntityLink[]       @relation("StoryArcChapter")
+  storyArcPinnedIn      StoryArcEntityLink[]       @relation("StoryArcTarget")
   factionState          FactionState?
   character             Character?
   inventoryItems        InventoryItem[]
@@ -821,6 +824,29 @@ model WorldEventEntityLink {
   @@unique([eventId, pageId, role])
   @@index([pageId])
   @@map("world_event_entity_links")
+}
+
+enum StoryArcEntityRole {
+  npc
+  location
+  faction
+  handout
+}
+
+model StoryArcEntityLink {
+  id             String             @id @default(cuid())
+  storyArcPageId String             @map("story_arc_page_id")
+  pageId         String             @map("page_id")
+  role           StoryArcEntityRole @default(npc)
+  sortIndex      Int?               @map("sort_index")
+  createdAt      DateTime           @default(now()) @map("created_at")
+
+  storyArcPage Page @relation("StoryArcChapter", fields: [storyArcPageId], references: [id], onDelete: Cascade)
+  page         Page @relation("StoryArcTarget", fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([storyArcPageId, pageId, role])
+  @@index([pageId])
+  @@map("story_arc_entity_links")
 }
 
 model FactionState {
@@ -969,6 +995,9 @@ model GameSession {
   id                    String            @id @default(cuid())
   worldId               String            @map("world_id")
   campaignId            String?           @map("campaign_id")
+  /// Welcher Akt/welches Kapitel (Page vom Typ story_arc) wird gespielt.
+  /// Optional, SetNull: die Session ueberlebt das Loeschen ihres Kapitels.
+  storyArcPageId        String?           @map("story_arc_page_id")
   title                 String
   sessionNumber         Int               @map("session_number")
   date                  DateTime?         @map("date")
@@ -985,6 +1014,7 @@ model GameSession {
 
   world          World                 @relation(fields: [worldId], references: [id], onDelete: Cascade)
   campaign       Campaign?             @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  storyArcPage   Page?                 @relation("SessionStoryArc", fields: [storyArcPageId], references: [id], onDelete: SetNull)
   linkedPages    GameSessionPageLink[]
   playerNotes    PlayerNote[]
   brainDocuments BrainDocument[]
@@ -995,6 +1025,7 @@ model GameSession {
   liveEntries    SessionLiveEntry[]
 
   @@index([worldId, sessionNumber])
+  @@index([storyArcPageId])
   @@map("game_sessions")
 }
 

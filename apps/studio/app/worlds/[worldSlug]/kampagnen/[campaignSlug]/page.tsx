@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createCharacterService, getAppRepository, prisma } from "@uwe/database/server";
+import { buildPageUrl, createCharacterService, getAppRepository, prisma } from "@uwe/database/server";
 import { createCampaignCockpitService, findCurrentChapter } from "@uwe/campaign-cockpit";
+import { createPlayerGroupService } from "@uwe/player-hub";
 import { DungeonPrepStatusBadge, QuestStatusBadge, SidebarSection, StatGrid } from "@uwe/shared-ui";
 import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
 import { AiContextPanel } from "@/components/AiContextPanel";
 import { CampaignSidebar } from "@/src/components/wiki";
 import { CampaignCharacterCard } from "@/src/components/campaign/CampaignCharacterCard";
+import { QuestGroupAssignmentCard } from "@/src/components/radar/QuestGroupAssignmentCard";
 import { campaignCockpitBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { requireStudioWorldRead } from "@/src/lib/authz";
 import {
@@ -35,14 +37,19 @@ import {
 
 interface Props {
   params: Promise<{ worldSlug: string; campaignSlug: string }>;
-  searchParams: Promise<{ saved?: string; created?: string; zugewiesen?: string }>;
+  searchParams: Promise<{
+    saved?: string;
+    created?: string;
+    zugewiesen?: string;
+    zugeordnet?: string;
+  }>;
 }
 
 const DATE_FORMAT = new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" });
 
 export default async function CampaignCockpitPage({ params, searchParams }: Props) {
   const { worldSlug, campaignSlug } = await params;
-  const { saved, created, zugewiesen } = await searchParams;
+  const { saved, created, zugewiesen, zugeordnet } = await searchParams;
   const repo = getAppRepository();
   const world = await repo.getWorldBySlug(worldSlug);
   if (!world) notFound();
@@ -57,9 +64,26 @@ export default async function CampaignCockpitPage({ params, searchParams }: Prop
   const campaigns = await repo.listCampaignsByWorld(worldSlug);
   // Charaktere entstehen im Portal; hier wird nur die Kampagne vergeben.
   const characters = await createCharacterService(prisma).listForWorld(world.id);
+  // Quest-Zuordnung an Tischrunden — vom aufgelösten Radar hierher gezogen.
+  // Bewusst ALLE Quests der Kampagne, nicht nur offene: auch eine
+  // abgeschlossene Quest lässt sich nachträglich einer Runde zuschreiben.
+  const groups = await createPlayerGroupService(prisma).listForWorld(world.id);
+  const questPages = await prisma.page.findMany({
+    where: { worldId: world.id, type: "quest", campaignId: overview.campaign.id },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      type: true,
+      questStatus: true,
+      questGroupId: true,
+      portalReleased: true,
+    },
+    orderBy: [{ title: "asc" }],
+  });
   const base = `/worlds/${worldSlug}`;
   const cockpitPath = `${base}/kampagnen/${campaignSlug}`;
-  const { campaign, chapters, unassignedQuests, factions, progress } = overview;
+  const { campaign, chapters, unassignedQuests, factions, dungeons, progress } = overview;
   // Das erste noch nicht gespielte Kapitel in Lesereihenfolge — Druck-Einstieg.
   const currentChapter = findCurrentChapter(
     chapters.map((chapter) => ({
@@ -109,10 +133,12 @@ export default async function CampaignCockpitPage({ params, searchParams }: Prop
         <SidebarSection title="Werkzeuge">
           <ul className="flex flex-col gap-2 text-sm">
             <li>
-              <Link href={`${base}/radar?campaign=${campaignSlug}`}>Kampagnen-Radar →</Link>
+              <Link href={`${base}/prepare-session?campaign=${campaignSlug}`}>
+                Session vorbereiten →
+              </Link>
             </li>
             <li>
-              <Link href={`${base}/prepare-session`}>Session vorbereiten →</Link>
+              <Link href={`${base}/dungeons?campaign=${campaignSlug}`}>Dungeons →</Link>
             </li>
             <li>
               <Link href={`${base}/lesen`}>Lesemodus →</Link>
@@ -162,6 +188,11 @@ export default async function CampaignCockpitPage({ params, searchParams }: Prop
           Charakter-Zuordnung gespeichert.
         </Alert>
       ) : null}
+      {zugeordnet ? (
+        <Alert tone="success" className="mb-4">
+          Quest-Zuordnung gespeichert.
+        </Alert>
+      ) : null}
       {overview.canonConflicts > 0 ? (
         <Alert tone="warning" className="mb-4" role="alert">
           {overview.canonConflicts} widersprüchliche Seite(n) in dieser Kampagne —{" "}
@@ -185,6 +216,15 @@ export default async function CampaignCockpitPage({ params, searchParams }: Prop
             href: "#cockpit-quests",
           },
           { label: "Fraktionen", value: factions.length, href: "#cockpit-fraktionen" },
+          {
+            label: "NSCs",
+            value: overview.npcSummary.total,
+            hint:
+              overview.npcSummary.flagged > 0
+                ? `${overview.npcSummary.flagged} mit Kanon-Markierung`
+                : undefined,
+            href: `${base}/wiki?type=npc&campaign=${campaignSlug}`,
+          },
           {
             label: "Spielernotizen",
             value: overview.noteQueueCount,
@@ -330,6 +370,20 @@ export default async function CampaignCockpitPage({ params, searchParams }: Prop
           }))}
         />
 
+        <QuestGroupAssignmentCard
+          worldSlug={worldSlug}
+          returnTo={cockpitPath}
+          groups={groups.map((group) => ({ id: group.id, name: group.name }))}
+          quests={questPages.map((page) => ({
+            id: page.id,
+            title: page.title,
+            href: buildPageUrl(worldSlug, page.type, page.slug),
+            questStatus: page.questStatus,
+            questGroupId: page.questGroupId,
+            portalReleased: page.portalReleased,
+          }))}
+        />
+
         <Card id="cockpit-fraktionen">
           <CardHeader>
             <CardTitle>Fraktionen</CardTitle>
@@ -354,6 +408,37 @@ export default async function CampaignCockpitPage({ params, searchParams }: Prop
                 ))}
               </ul>
             )}
+          </CardContent>
+        </Card>
+
+        <Card id="cockpit-dungeons">
+          <CardHeader>
+            <CardTitle>Dungeons dieser Kampagne</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {dungeons.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Keine Dungeons in dieser Kampagne.{" "}
+                <Link href={`${base}/dungeons/new?campaign=${campaignSlug}`}>
+                  Dungeon anlegen →
+                </Link>
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-2 text-sm">
+                {dungeons.map((dungeon) => (
+                  <li key={dungeon.id} className="flex flex-wrap items-center gap-2">
+                    <Link href={dungeon.href}>{dungeon.title}</Link>
+                    <DungeonPrepStatusBadge status={dungeon.prepStatus} />
+                    {dungeon.summary ? (
+                      <span className="text-muted-foreground"> — {dungeon.summary}</span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-2 text-sm">
+              <Link href={`${base}/dungeons?campaign=${campaignSlug}`}>Zum Dungeon-Cockpit →</Link>
+            </p>
           </CardContent>
         </Card>
 

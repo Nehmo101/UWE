@@ -14,6 +14,7 @@ import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components
 import { CampaignSidebar } from "@/src/components/wiki";
 import { campaignNavItems } from "@/src/lib/world-nav";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
+import { requireStudioWorldRead } from "@/src/lib/authz";
 import { buttonVariants, Card, CardContent, EmptyState } from "@/src/components/ui";
 
 interface Props {
@@ -32,6 +33,7 @@ function parsePrepStatus(raw: string | undefined) {
 export default async function StudioDungeonsPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
   const { campaign: campaignSlug, status: statusRaw } = await searchParams;
+  await requireStudioWorldRead(worldSlug);
   const statusFilter = parsePrepStatus(statusRaw);
   const repo = getAppRepository();
 

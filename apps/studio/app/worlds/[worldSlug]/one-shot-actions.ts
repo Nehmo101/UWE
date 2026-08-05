@@ -22,6 +22,16 @@ export async function saveOneShotDraftAction(formData: FormData): Promise<void> 
   const worldName = String(formData.get("worldName") || "");
   await requireStudioWorldEdit(worldSlug);
 
+  // Kampagne optional, aber nur eine dieser Welt — One-Shots brachen als
+  // einzige Fläche aus der Kampagnenstruktur aus (kampagnenlose Quests).
+  const rawCampaignId = String(formData.get("campaignId") || "") || null;
+  const campaign = rawCampaignId
+    ? await prisma.campaign.findFirst({
+        where: { id: rawCampaignId, worldId },
+        select: { id: true },
+      })
+    : null;
+
   const outline = buildOneShotOutline({
     worldName,
     worldSlug,
@@ -37,6 +47,7 @@ export async function saveOneShotDraftAction(formData: FormData): Promise<void> 
   const repo = createUweRepositoryFromClient(prisma);
   const page = await repo.createPage({
     worldId,
+    campaignId: campaign?.id ?? undefined,
     title: outline.title,
     slug: slugifyPageTitle(`${outline.title}-${Date.now()}`),
     type: "quest",

@@ -65,6 +65,8 @@ export const STUDIO_WORLD_DASHBOARD_WIDGET_TYPES = [
   "media-assets",
   "ai-brain",
   "recent-pages",
+  // Weltuhr + jüngste Chronik: der welt-weite Rest des aufgelösten Radars.
+  "world-clock",
 ] as const;
 
 export type StudioWorldDashboardWidgetType = (typeof STUDIO_WORLD_DASHBOARD_WIDGET_TYPES)[number];
@@ -126,7 +128,8 @@ export const DEFAULT_STUDIO_WORLD_DASHBOARD_LAYOUT: DashboardWidgetConfig[] = [
   widget("next-session", "next-session", 0, 1),
   widget("open-plots", "open-plots", 0, 2),
   widget("recent-pages", "recent-pages", 0, 3),
-  widget("wiki-pages", "wiki-pages", 1, 1, false),
+  widget("world-clock", "world-clock", 1, 1),
+  widget("wiki-pages", "wiki-pages", 2, 1, false),
   widget("portal-sharing", "portal-sharing", 1, 2, false),
   widget("media-assets", "media-assets", 1, 3, false),
   widget("ai-brain", "ai-brain", 2, 1, false),

@@ -24,6 +24,8 @@ function overview(partial: Partial<CampaignOverview>): CampaignOverview {
     noteQueueCount: 0,
     canonConflicts: 0,
     progress: { played: 0, total: 0, label: "" },
+    dungeons: [],
+    npcSummary: { total: 0, flagged: 0 },
     ...partial,
   };
 }

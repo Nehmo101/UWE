@@ -23,7 +23,6 @@
     "./server": "./src/server.ts",
     "./terra": "./src/terra-service.ts",
     "./campaign": "./src/campaign-service.ts",
-    "./campaign-radar": "./src/campaign-radar-service.ts",
     "./health-metrics": "./src/health-metrics-service.ts",
     "./magic-item": "./src/magic-item-model.ts",
     "./magic-item-service": "./src/magic-item-service.ts",

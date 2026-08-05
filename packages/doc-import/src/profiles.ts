@@ -58,6 +58,12 @@ const CAMPAIGN_RULES: TitleRule[] = [
   { pattern: /magische\s+gegenst(ä|ae)nde|sch(a|ä)tze\b/i, type: "item" },
   { pattern: /\bregeln?\b|hausregeln|anh(ä|ae)nge?\b|tabellen?\b/i, type: "rule" },
   { pattern: /\bdungeon\b/i, type: "dungeon" },
+  // Zuletzt, als besserer Fallback statt lore: „Akt II — …" / „Kapitel 2: …"
+  // wird ein story_arc und kommt damit im Kampagnen-Cockpit an — das
+  // Versprechen „importiere ein Kampagnenbuch, dessen Kapitel hier ankommen"
+  // war vorher leer. Nach den Inhaltsregeln, damit „KAPITEL 13: NEBENQUESTS"
+  // weiterhin quest wird und das Bestiarium monster bleibt.
+  { pattern: /^\s*(akt|kapitel|teil|chapter|act|part)\b[\s\d.:IVX—–-]/i, type: "story_arc" },
 ];
 
 const PROFILE_RULES: Record<DocProfile, TitleRule[]> = {

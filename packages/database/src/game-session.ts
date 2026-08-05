@@ -30,6 +30,8 @@ export const GAME_SESSION_STATUS_LABELS: Record<GameSessionStatus, string> = {
 export interface CreateGameSessionInput {
   worldId: string;
   campaignId?: string | null;
+  /** Kapitel (Page vom Typ story_arc), das diese Session spielt. */
+  storyArcPageId?: string | null;
   title: string;
   sessionNumber: number;
   date?: Date | null;
@@ -49,6 +51,7 @@ export interface UpdateGameSessionInput {
   date?: Date | null;
   status?: GameSessionStatus;
   campaignId?: string | null;
+  storyArcPageId?: string | null;
   summaryDm?: string | null;
   summaryPlayer?: string | null;
   notes?: string | null;
@@ -62,6 +65,7 @@ export interface UpdateGameSessionInput {
 export type GameSessionWithLinks = Prisma.GameSessionGetPayload<{
   include: {
     campaign: true;
+    storyArcPage: { select: { id: true; title: true; slug: true } };
     linkedPages: {
       include: {
         page: {
@@ -100,6 +104,11 @@ export interface DmGameSessionView extends PortalGameSessionView {
   playerDecisions: string | null;
   recapPublished: boolean;
   playerVisibleSchedule: boolean;
+  /** Kapitel der Session (story_arc) — DM-Konzept, bleibt aus der Portal-Sicht raus. */
+  storyArcPageId: string | null;
+  storyArcPage: { id: string; title: string; slug: string } | null;
+  /** Slug der Kampagne für Links ins Kampagnen-Modul. */
+  campaignSlug: string | null;
 }
 
 function withParsedPageArrays<T extends { tags: unknown; aliases: unknown }>(page: T) {
@@ -130,6 +139,9 @@ export function toDmGameSessionView(session: GameSessionWithLinks): DmGameSessio
     playerDecisions: session.playerDecisions,
     recapPublished: session.recapPublished,
     playerVisibleSchedule: session.playerVisibleSchedule,
+    storyArcPageId: session.storyArcPageId,
+    storyArcPage: session.storyArcPage,
+    campaignSlug: session.campaign?.slug ?? null,
     linkedPages: mapLinkedPages(session),
     createdAt: session.createdAt,
     updatedAt: session.updatedAt,
@@ -162,6 +174,7 @@ export class GameSessionService {
   private sessionInclude() {
     return {
       campaign: true,
+      storyArcPage: { select: { id: true, title: true, slug: true } },
       linkedPages: {
         include: {
           page: {
@@ -265,13 +278,29 @@ export class GameSessionService {
     return (last?.sessionNumber ?? 0) + 1;
   }
 
+  /** Tenant-Guard: das Kapitel muss zur Welt gehören und ein story_arc sein. */
+  private async assertStoryArcInWorld(worldId: string, storyArcPageId: string): Promise<void> {
+    const page = await this.db.page.findFirst({
+      where: { id: storyArcPageId, worldId, type: "story_arc" },
+      select: { id: true },
+    });
+    if (!page) {
+      throw new Error("Kapitel nicht gefunden oder gehört nicht zu dieser Welt.");
+    }
+  }
+
   async create(input: CreateGameSessionInput): Promise<GameSessionWithLinks> {
     const linkedPageIds = input.linkedPageIds ?? [];
+
+    if (input.storyArcPageId) {
+      await this.assertStoryArcInWorld(input.worldId, input.storyArcPageId);
+    }
 
     const session = await this.db.gameSession.create({
       data: {
         worldId: input.worldId,
         campaignId: input.campaignId ?? null,
+        storyArcPageId: input.storyArcPageId ?? null,
         title: input.title,
         sessionNumber: input.sessionNumber,
         date: input.date ?? null,
@@ -335,6 +364,17 @@ export class GameSessionService {
   }
 
   async update(sessionId: string, input: UpdateGameSessionInput): Promise<GameSessionWithLinks> {
+    if (input.storyArcPageId) {
+      const existing = await this.db.gameSession.findUnique({
+        where: { id: sessionId },
+        select: { worldId: true },
+      });
+      if (!existing) {
+        throw new Error("Session nicht gefunden.");
+      }
+      await this.assertStoryArcInWorld(existing.worldId, input.storyArcPageId);
+    }
+
     if (input.linkedPageIds) {
       await this.db.gameSessionPageLink.deleteMany({ where: { gameSessionId: sessionId } });
       if (input.linkedPageIds.length > 0) {
@@ -355,6 +395,7 @@ export class GameSessionService {
         date: input.date,
         status: input.status,
         campaignId: input.campaignId,
+        storyArcPageId: input.storyArcPageId,
         summaryDm: input.summaryDm,
         summaryPlayer: input.summaryPlayer,
         notes: input.notes,
@@ -395,6 +436,25 @@ export class GameSessionService {
     return this.db.gameSessionPageLink.deleteMany({
       where: { gameSessionId: sessionId, pageId },
     });
+  }
+
+  /**
+   * Löscht eine Session endgültig. Live-Protokoll, Seiten-Verknüpfungen und
+   * Spieler-Verfügbarkeiten fallen per DB-Cascade mit; Chronik-Einträge,
+   * Spielernotizen und KI-Läufe bleiben erhalten und verlieren nur ihren
+   * Session-Bezug (SetNull). Der gespiegelte Kalender-Termin liegt in der
+   * Family-DB ohne FK und muss deshalb vorher explizit entfernt werden.
+   */
+  async remove(
+    worldSlug: string,
+    sessionId: string,
+  ): Promise<{ id: string; title: string } | null> {
+    const session = await this.getByIdForWorld(worldSlug, sessionId);
+    if (!session) return null;
+
+    await this.safeCalendarUnsync(session.id);
+    await this.db.gameSession.delete({ where: { id: session.id } });
+    return { id: session.id, title: session.title };
   }
 
   async publishRecap(sessionId: string): Promise<GameSessionWithLinks> {

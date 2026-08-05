@@ -124,6 +124,30 @@ export function parseDayNames(value: unknown): string[] | null {
   return names.length > 0 ? names : null;
 }
 
+/**
+ * Formt ein World-Clock-Label aus dem (frei geformten) `currentDate`-Json.
+ * Pure & defensiv: unbekannte Formen fallen auf Name/Epoche zurück.
+ * (Hierher gezogen aus dem aufgelösten Kampagnen-Radar.)
+ */
+export function formatClockLabel(
+  name: string | null | undefined,
+  currentDate: unknown,
+  epochLabel: string | null | undefined,
+): string | null {
+  const parts: string[] = [];
+  if (currentDate && typeof currentDate === "object") {
+    const record = currentDate as Record<string, unknown>;
+    const day = record.day ?? record.d;
+    const month = record.monthName ?? record.month ?? record.m;
+    const year = record.year ?? record.y;
+    const segment = [day, month, year].filter((v) => v != null && v !== "").join(". ");
+    if (segment) parts.push(segment.trim());
+  }
+  if (epochLabel) parts.push(epochLabel);
+  if (parts.length === 0) return name ? name : null;
+  return name ? `${name}: ${parts.join(" ")}` : parts.join(" ");
+}
+
 /** Advance an in-game date by a number of calendar days (wraps months/years). */
 export function advanceInGameDate(
   date: InGameDate,
