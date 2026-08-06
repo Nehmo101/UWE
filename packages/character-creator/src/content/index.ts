@@ -29,6 +29,11 @@ import { ALIGNMENTS, LANGUAGES } from "./misc";
 import { ARMOR, EQUIPMENT_PACKS, WEAPONS } from "./equipment";
 import { CANTRIPS } from "./spells-cantrips";
 import { LEVEL1_SPELLS } from "./spells-level1";
+import {
+  buildCustomBackground,
+  CUSTOM_BACKGROUND_KEY,
+  type CustomBackgroundDraft,
+} from "../rules/custom-background";
 
 export const CLASSES: DndClass[] = [
   ...CLASSES_BARBARIAN_BARD_CLERIC,
@@ -61,6 +66,29 @@ export function findClass(key: string): DndClass | undefined {
 
 export function findBackground(key: string): Background | undefined {
   return BACKGROUNDS.find((entry) => entry.key === key);
+}
+
+/** Die Talente, die ein Hintergrund vergeben darf. */
+export function originFeats(): Feat[] {
+  return FEATS.filter((entry) => entry.category === "origin");
+}
+
+/**
+ * Der Hintergrund eines Entwurfs — aus dem Katalog oder selbst gebaut.
+ *
+ * Die einzige Stelle, die den Unterschied kennt. Alles dahinter — Vorschau,
+ * Prüfung, Anlegen — bekommt einen ganz normalen `Background` und muss nicht
+ * wissen, woher er kommt.
+ */
+export function resolveBackground(draft: {
+  backgroundKey: string | null;
+  customBackground: CustomBackgroundDraft | null;
+}): Background | null {
+  if (!draft.backgroundKey) return null;
+  if (draft.backgroundKey === CUSTOM_BACKGROUND_KEY) {
+    return buildCustomBackground(draft.customBackground, originFeats());
+  }
+  return findBackground(draft.backgroundKey) ?? null;
 }
 
 export function findFeat(key: string): Feat | undefined {

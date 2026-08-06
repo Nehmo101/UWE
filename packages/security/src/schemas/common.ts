@@ -390,6 +390,23 @@ export const characterCreatorAbilitiesSchema = z.object({
   rolled: z.array(z.coerce.number().int().min(3).max(18)).max(6).optional(),
 });
 
+/**
+ * Der selbst gebaute Hintergrund.
+ *
+ * Hier wird nur die **Form** geprüft, nicht die Regel: ob es genau drei
+ * Attribute und zwei Fertigkeiten sind und ob das Talent existiert, entscheidet
+ * `checkCustomBackground` im Regelpaket gegen den echten Katalog. Diese Schicht
+ * hält nur Größe und Zeichenvorrat in Schach, damit nichts Unförmiges
+ * durchgeht.
+ */
+export const characterCustomBackgroundSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  abilityOptions: z.array(creatorKeySchema).max(6),
+  skills: z.array(creatorKeySchema).max(18),
+  toolProficiency: z.string().trim().max(120),
+  originFeat: z.string().trim().max(120),
+});
+
 export const characterDraftSchema = z.object({
   name: z.string().trim().min(1, "Der Charakter braucht einen Namen.").max(120),
   speciesKey: creatorKeySchema.nullable(),
@@ -397,6 +414,7 @@ export const characterDraftSchema = z.object({
   classKey: creatorKeySchema.nullable(),
   subclassKey: creatorKeySchema.nullable(),
   backgroundKey: creatorKeySchema.nullable(),
+  customBackground: characterCustomBackgroundSchema.nullable(),
   abilities: characterCreatorAbilitiesSchema.nullable(),
   chosenSkills: z.array(creatorKeySchema).max(18),
   equipmentChoice: creatorKeySchema.nullable(),

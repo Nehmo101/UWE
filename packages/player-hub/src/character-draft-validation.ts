@@ -20,7 +20,10 @@ import {
   derivePreview,
   evaluatePointBuy,
   findAlignment,
-  findBackground,
+  CUSTOM_BACKGROUND_KEY,
+  originFeats,
+  resolveBackground,
+  type CustomBackgroundDraft,
   findClass,
   findFeat,
   findLanguage,
@@ -71,6 +74,8 @@ export interface CharacterDraftInput {
   classKey: string | null;
   subclassKey: string | null;
   backgroundKey: string | null;
+  /** Der selbst gebaute Hintergrund, falls `backgroundKey` darauf zeigt. */
+  customBackground: CustomBackgroundDraft | null;
   abilities: {
     method: AbilityMethod;
     base: AbilityScoreMap;
@@ -208,11 +213,22 @@ export function validateFullDraft(
     }
   }
 
-  const background: Background | null = input.backgroundKey
-    ? (findBackground(input.backgroundKey) ?? null)
-    : null;
+  /*
+   * Der Hintergrund wird serverseitig neu aufgelöst — auch der selbst
+   * gebaute. `buildCustomBackground` prüft den Bauplan erneut und gibt `null`
+   * zurück, wenn er unvollständig ist; damit kann ein manipulierter Entwurf
+   * sich keine vierte Fertigkeit oder ein fremdes Attributstripel erschleichen.
+   */
+  const background: Background | null = resolveBackground({
+    backgroundKey: input.backgroundKey,
+    customBackground: input.customBackground,
+  });
   if (!background) {
-    issues.push("Unbekannter Hintergrund.");
+    issues.push(
+      input.backgroundKey === CUSTOM_BACKGROUND_KEY
+        ? "Der eigene Hintergrund ist unvollständig."
+        : "Unbekannter Hintergrund.",
+    );
   }
 
   if (!input.abilities) {
@@ -318,6 +334,7 @@ export function validateFullDraft(
     classKey: dndClass.key,
     subclassKey: subclass?.key ?? null,
     backgroundKey: background.key,
+    customBackground: input.customBackground ? { ...input.customBackground } : null,
     abilities: {
       method: input.abilities.method,
       base: { ...input.abilities.base },
@@ -335,7 +352,7 @@ export function validateFullDraft(
 
   // Die kanonische Prüfung des Regelpakets — dieselbe, die der Browser fährt.
   // Sie deckt die Anzahlen (Fertigkeiten, Zauber) und die Hintergrund-Boni ab.
-  const remaining = validateDraft({ draft, species, dndClass, background })
+  const remaining = validateDraft({ draft, species, dndClass, background, originFeats: originFeats() })
     .filter((step) => !step.complete && !step.skipped)
     .flatMap((step) => step.issues);
   if (remaining.length > 0) {

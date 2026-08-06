@@ -75,7 +75,16 @@ Drei Auswege, in der Reihenfolge, in der ich sie empfehlen würde:
 2. **Welt-eigene Hintergründe** durch den Spielleiter im Studio pflegen.
 3. Nur mit gekaufter Lizenz: die PHB-Hintergründe nachtragen.
 
-### Konkret: fünf von zwölf Klassen sind nicht sinnvoll baubar
+### Konkret: drei von zwölf Klassen finden keinen passenden Hintergrund
+
+> **Korrektur.** Eine erste Sichtprüfung sprach von *fünf* Klassen und zählte
+> Barde und Hexenpakt-Magier mit. Das war falsch: beide führen im SRD 2024 nur
+> **ein** Primärattribut (Charisma), und das deckt der Akolyth ab. Betroffen
+> sind ausschließlich Klassen mit **zwei** Primärattributen, deren Paarung in
+> keinem der vier Hintergründe zusammen vorkommt. Die Rechnung steht als Code
+> in `classesWithoutMatchingBackground()` und wird von
+> `custom-background.test.ts` festgehalten — sie kann nicht mehr stillschweigend
+> veralten.
 
 Die vier SRD-Hintergründe bieten genau diese Attributs-Tripel an:
 
@@ -94,18 +103,22 @@ zugleich anhebt:
 | Paladin | STÄ + CHA | — |
 | Mönch | GES + WEI | — |
 | Waldläufer | GES + WEI | — |
-| Barde | CHA + GES | — |
-| Hexenpakt-Magier | CHA + KON | — |
 
-Diese Spieler müssen ihren wichtigsten Wert ungeboostet lassen. Das ist keine
-Geschmacksfrage, sondern ein mechanischer Nachteil, den der Ersteller heute
-weder verhindert noch erklärt. **Das ist die dringlichste Einzelbaustelle
-des Erstellers.**
+Diese Spieler müssten ihren wichtigsten Wert ungeboostet lassen. Das ist keine
+Geschmacksfrage, sondern ein mechanischer Nachteil.
 
-Solange keiner der drei Auswege gebaut ist, sollte der Ersteller die
-Beschränkung im Hintergrund- **und** im Klassen-Schritt benennen statt sie zu
-verschweigen — mindestens ein Satz an der Klassenkachel, wenn kein
-Hintergrund zu ihren Primärattributen passt.
+**Gelöst — Weg 1 ist gebaut.** Der Ersteller bietet jetzt den
+**Eigenbau-Hintergrund** an (`packages/character-creator/src/rules/custom-background.ts`):
+drei Attribute, zwei Fertigkeiten, eine Werkzeugkunde, ein Ursprungstalent,
+50 Goldmünzen. Daraus entsteht ein ganz normaler `Background` — Vorschau,
+Prüfung und Anlegen sehen keinen Unterschied zu einem Katalogeintrag. Der
+Bauplan selbst steht im SRD und ist damit lizenzrechtlich sauber. Die
+Klassenkacheln der drei betroffenen Klassen weisen darauf hin, und der Bauplan
+schlägt ihre Primärattribute vor.
+
+Weg 2 (welt-eigene Hintergründe im Studio pflegen) und Weg 3 (lizenzierte
+PHB-Hintergründe) bleiben offen — sie sind jetzt aber Komfort, nicht mehr
+Voraussetzung dafür, dass eine Klasse überhaupt sinnvoll baubar ist.
 
 Dieselbe Klemme in kleiner: **eine Unterklasse pro Klasse**. Das SRD liefert
 genau eine, das PHB rund vier. Wer im Ersteller „Pfad des Berserkers" als

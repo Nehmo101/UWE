@@ -12,6 +12,8 @@
  * an einer Stelle im Code hängt, die jemand später wegräumt.
  */
 
+import type { CustomBackgroundDraft } from "./rules/custom-background";
+
 /** Die sechs Attribute — Schlüssel identisch zu `AbilityScores` in @uwe/database. */
 export const ABILITIES = [
   "strength",
@@ -305,6 +307,14 @@ export interface CharacterDraft {
   classKey: string | null;
   subclassKey: string | null;
   backgroundKey: string | null;
+  /**
+   * Der selbst gebaute Hintergrund, falls `backgroundKey` auf den Eigenbau
+   * zeigt. Das SRD liefert nur vier Hintergründe, und weil seit 2024 die
+   * Attributsverteilung daran hängt, findet die Hälfte der Klassen darunter
+   * keinen passenden. Der Bauplan für eigene Hintergründe steht selbst im
+   * SRD — siehe `rules/custom-background.ts`.
+   */
+  customBackground: CustomBackgroundDraft | null;
   abilities: AbilityAllocation | null;
   /** Fertigkeiten, die der Spieler über die Klasse gewählt hat. */
   chosenSkills: SkillKey[];
@@ -359,6 +369,7 @@ export function emptyDraft(): CharacterDraft {
     classKey: null,
     subclassKey: null,
     backgroundKey: null,
+    customBackground: null,
     abilities: null,
     chosenSkills: [],
     equipmentChoice: null,

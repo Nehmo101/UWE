@@ -10,5 +10,6 @@
 export * from "./types";
 export * from "./content";
 export * from "./rules/abilities";
+export * from "./rules/custom-background";
 export * from "./rules/derive";
 export * from "./rules/steps";

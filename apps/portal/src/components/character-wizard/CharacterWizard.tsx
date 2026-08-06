@@ -18,7 +18,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CREATOR_STEPS,
   derivePreview,
-  findBackground,
+  originFeats,
+  resolveBackground,
   findClass,
   findLineage,
   findSpecies,
@@ -81,9 +82,13 @@ export function CharacterWizard({ worldSlug, createAction }: CharacterWizardProp
         draft.classKey && draft.subclassKey
           ? (findSubclass(draft.classKey, draft.subclassKey) ?? null)
           : null,
-      background: draft.backgroundKey ? (findBackground(draft.backgroundKey) ?? null) : null,
+      // Über den Auflöser, nicht über `findBackground`: ein selbst gebauter
+      // Hintergrund steht nicht im Katalog, sondern im Entwurf.
+      background: resolveBackground(draft),
     };
-  }, [draft.speciesKey, draft.lineageKey, draft.classKey, draft.subclassKey, draft.backgroundKey]);
+    // `resolveBackground` liest den ganzen Entwurf (der Eigenbau steht darin),
+    // deshalb hängt die Auflösung am Entwurf und nicht an einzelnen Feldern.
+  }, [draft]);
 
   const preview = useMemo(
     () =>
@@ -104,6 +109,7 @@ export function CharacterWizard({ worldSlug, createAction }: CharacterWizardProp
         species: resolved.species,
         dndClass: resolved.dndClass,
         background: resolved.background,
+        originFeats: originFeats(),
       }),
     [draft, resolved],
   );

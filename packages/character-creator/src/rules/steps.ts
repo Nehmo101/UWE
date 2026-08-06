@@ -15,6 +15,7 @@
 import type {
   Background,
   CharacterDraft,
+  Feat,
   CreatorStepKey,
   DndClass,
   Species,
@@ -22,6 +23,7 @@ import type {
   StepValidation,
 } from "../types";
 import { isBackgroundBonusValid } from "./derive";
+import { checkCustomBackground, CUSTOM_BACKGROUND_KEY } from "./custom-background";
 
 export const STEP_META: StepMeta[] = [
   {
@@ -91,7 +93,13 @@ export interface ValidationContext {
   draft: CharacterDraft;
   species: Species | null;
   dndClass: DndClass | null;
+  /** Bereits aufgelöst — Katalog oder Eigenbau, siehe `resolveBackground`. */
   background: Background | null;
+  /**
+   * Die wählbaren Ursprungstalente. Wird hereingereicht, damit die Regeln den
+   * Katalog nicht importieren müssen; leer lassen heißt „keins ist gültig".
+   */
+  originFeats: readonly Feat[];
 }
 
 /** Wählt diese Klasse auf Stufe 1 überhaupt Zauber? */
@@ -123,9 +131,15 @@ function validateClass(ctx: ValidationContext): StepValidation {
 
 function validateBackground(ctx: ValidationContext): StepValidation {
   const issues: string[] = [];
-  if (!ctx.background) {
+
+  if (ctx.draft.backgroundKey === CUSTOM_BACKGROUND_KEY) {
+    // Beim Eigenbau sagt der Bauplan, was noch fehlt — „Wähle einen
+    // Hintergrund" wäre hier nutzlos, der Spieler hat ja schon gewählt.
+    issues.push(...checkCustomBackground(ctx.draft.customBackground, ctx.originFeats).issues);
+  } else if (!ctx.background) {
     issues.push("Wähle einen Hintergrund.");
   }
+
   return { step: "background", complete: issues.length === 0, issues, skipped: false };
 }
 
