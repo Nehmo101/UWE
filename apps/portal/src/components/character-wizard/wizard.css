@@ -1401,3 +1401,68 @@ html[data-uwe-motion="off"] .cw-die[data-rolling="true"] {
   gap: var(--uwe-space-2);
   font-weight: var(--uwe-weight-semibold);
 }
+
+/* ─────────────────── Nachträge aus der Sichtprüfung ─────────────────── */
+
+/*
+ * Das Korn der Vorschau-Leiste lag ÜBER ihrem Text. Die Kachel macht es
+ * richtig (`isolation: isolate` + `z-index: -1`), die Leiste hatte beides
+ * nicht — der Fehler fiel nur deshalb kaum auf, weil das Korn schwach ist.
+ */
+.cw-rail {
+  isolation: isolate;
+}
+
+.cw-rail::before {
+  z-index: -1;
+}
+
+/*
+ * Gedrückt und deaktiviert fehlten vollständig. Ohne `:active` passiert beim
+ * Klick sichtbar nichts, weil `:hover` den Versatz schon vorweggenommen hat —
+ * die Kachel fühlt sich tot an, obwohl sie reagiert.
+ */
+.cw-tile:active {
+  transform: translateY(0);
+  box-shadow: var(--uwe-elev-1);
+}
+
+.cw-tile[aria-disabled="true"],
+.cw-tile:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  box-shadow: none;
+}
+
+.cw-tile[aria-disabled="true"]:hover,
+.cw-tile:disabled:hover {
+  transform: none;
+  border-color: var(--uwe-border);
+  box-shadow: none;
+}
+
+.cw-filter:active,
+.cw-step:active {
+  transform: translateY(1px);
+}
+
+/*
+ * Weniger Vorspann über dem Raster.
+ *
+ * Bei 1440×900 begann die erste Kachelreihe erst bei ~877 px — man sah keine
+ * einzige Option, ohne zu scrollen. Kopfzeile und Hinweisfeld dürfen nicht
+ * das halbe Fenster fressen, wenn darunter die eigentliche Entscheidung steht.
+ */
+@media (min-width: 1100px) {
+  .cw-head {
+    margin-bottom: var(--uwe-space-4);
+  }
+
+  .cw-head__lede {
+    margin-top: var(--uwe-space-1);
+  }
+
+  .cw-steps {
+    margin-bottom: var(--uwe-space-4);
+  }
+}

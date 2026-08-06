@@ -499,13 +499,15 @@ export function SpeciesStep({ draft, patch, set, resolved, validation, goTo }: S
       {SEARCHABLE ? (
         <div className="cw-search">
           <label htmlFor="cw-species-search">Suchen</label>
-          <Input
-            id="cw-species-search"
-            type="search"
-            value={query}
-            placeholder="Name, Merkmal oder Abstammung"
-            onChange={(event) => setQuery(event.target.value)}
-          />
+          <span className="cw-search__field">
+            <Input
+              id="cw-species-search"
+              type="search"
+              value={query}
+              placeholder="Name, Merkmal oder Abstammung"
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </span>
           <span className="cw-filters" role="group" aria-label="Völker filtern">
             <button
               type="button"

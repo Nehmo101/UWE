@@ -570,13 +570,15 @@ export function ClassStep({ draft, patch, set, resolved, preview, goTo }: StepPr
       {SEARCHABLE ? (
         <div className="cw-search">
           <label htmlFor="cw-class-search">Suchen</label>
-          <Input
-            id="cw-class-search"
-            type="search"
-            value={query}
-            placeholder="Name, Rolle oder Merkmal"
-            onChange={(event) => setQuery(event.target.value)}
-          />
+          <span className="cw-search__field">
+            <Input
+              id="cw-class-search"
+              type="search"
+              value={query}
+              placeholder="Name, Rolle oder Merkmal"
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </span>
           <span className="cw-filters" role="group" aria-label="Klassen filtern">
             <FilterPill label="Alle" active={filters.length === 0} onToggle={() => setFilters([])} />
             {CLASS_FILTERS.map((filter) => (
