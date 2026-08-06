@@ -1359,6 +1359,49 @@ html[data-uwe-motion="off"] .cw-die[data-rolling="true"] {
   overflow: hidden;
 }
 
+/* ─── Der Eigenbau-Hintergrund: eine Kachel, die kein Angebot ist, sondern
+   eine Werkbank ───
+   Sie steht zwischen vier fertigen Hintergründen und darf keine fünfte
+   gleichaussehende Karte sein: Wer sie anklickt, bekommt keinen Eintrag,
+   sondern ein Formular. Gestrichelter Rahmen und leerer Wappenplatz sagen das,
+   bevor irgendein Text gelesen wird. Gewählt wechselt sie auf durchgezogen —
+   ab da ist sie ein Hintergrund wie jeder andere. */
+
+.cw-tile[data-variant="build"] {
+  border-style: dashed;
+  border-color: var(--uwe-border-strong);
+  background: var(--uwe-surface-sunken);
+}
+
+.cw-tile[data-variant="build"] .cw-tile__art {
+  border-style: dashed;
+  border-color: var(--uwe-border-strong);
+  background: var(--uwe-surface-sunken);
+  color: var(--uwe-fg-subtle);
+}
+
+.cw-tile[data-variant="build"][aria-pressed="true"] {
+  border-style: solid;
+  border-color: var(--uwe-accent);
+  background: var(--uwe-surface-2);
+}
+
+.cw-tile[data-variant="build"][aria-pressed="true"] .cw-tile__art {
+  border-style: solid;
+  border-color: var(--uwe-border-muted);
+}
+
+/* ─── Chips, die einen ganzen Satz tragen ───
+   `.cw-chip` steht standardmäßig auf `nowrap`, weil eine Kennzahl nicht
+   umbrechen darf („Trefferwürfel W10“). Ein Chip, der eine Auskunft trägt
+   („kein fertiger Hintergrund hebt beide“), würde damit auf dem Telefon aus
+   der Kachel laufen — der bekommt hier die Erlaubnis umzubrechen. */
+
+.cw-chip[data-wrap="true"] {
+  white-space: normal;
+  text-align: start;
+}
+
 /* ─── Suchfeld in der Suchzeile und eine Reihe Schaltflächen ─── */
 
 .cw-search__field {

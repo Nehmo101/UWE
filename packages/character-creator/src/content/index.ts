@@ -32,7 +32,7 @@ import { LEVEL1_SPELLS } from "./spells-level1";
 import {
   buildCustomBackground,
   CUSTOM_BACKGROUND_KEY,
-  type CustomBackgroundDraft,
+  type CustomBackgroundInput,
 } from "../rules/custom-background";
 
 export const CLASSES: DndClass[] = [
@@ -82,7 +82,7 @@ export function originFeats(): Feat[] {
  */
 export function resolveBackground(draft: {
   backgroundKey: string | null;
-  customBackground: CustomBackgroundDraft | null;
+  customBackground: CustomBackgroundInput | null;
 }): Background | null {
   if (!draft.backgroundKey) return null;
   if (draft.backgroundKey === CUSTOM_BACKGROUND_KEY) {

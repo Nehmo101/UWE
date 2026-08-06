@@ -23,7 +23,7 @@ import {
   CUSTOM_BACKGROUND_KEY,
   originFeats,
   resolveBackground,
-  type CustomBackgroundDraft,
+  type CustomBackgroundInput,
   findClass,
   findFeat,
   findLanguage,
@@ -75,7 +75,7 @@ export interface CharacterDraftInput {
   subclassKey: string | null;
   backgroundKey: string | null;
   /** Der selbst gebaute Hintergrund, falls `backgroundKey` darauf zeigt. */
-  customBackground: CustomBackgroundDraft | null;
+  customBackground: CustomBackgroundInput | null;
   abilities: {
     method: AbilityMethod;
     base: AbilityScoreMap;
@@ -334,7 +334,22 @@ export function validateFullDraft(
     classKey: dndClass.key,
     subclassKey: subclass?.key ?? null,
     backgroundKey: background.key,
-    customBackground: input.customBackground ? { ...input.customBackground } : null,
+    /*
+     * Nicht die Eingabe durchreichen, sondern das, was der Server daraus
+     * gemacht hat. `resolveBackground` hat den Bauplan bereits neu gebaut und
+     * dabei alles verworfen, was nicht in den Katalog gehört — genau diese
+     * geprüfte Fassung gehört in den Entwurf, nicht die rohe vom Browser.
+     */
+    customBackground:
+      background.key === CUSTOM_BACKGROUND_KEY
+        ? {
+            name: background.name,
+            abilityOptions: [...background.abilityOptions],
+            skills: [...background.skills],
+            toolProficiency: background.toolProficiency ?? "",
+            originFeat: background.originFeat,
+          }
+        : null,
     abilities: {
       method: input.abilities.method,
       base: { ...input.abilities.base },

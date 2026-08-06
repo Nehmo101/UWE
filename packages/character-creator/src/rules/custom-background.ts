@@ -3,12 +3,15 @@
  *
  * Das SRD 5.2.1 liefert vier Hintergründe. Seit der Fassung 2024 hängt am
  * Hintergrund aber die **Attributsverteilung** — und die vier decken nur die
- * Tripel INT/WEI/CHA, GES/KON/INT, KON/INT/WEI und STÄ/GES/KON ab. Damit
- * findet die Hälfte der Klassen keinen Hintergrund, der beide Primärattribute
+ * Tripel INT/WEI/CHA, GES/KON/INT, KON/INT/WEI und STÄ/GES/KON ab. Drei
+ * Klassen finden darunter keinen Hintergrund, der beide Primärattribute
  * anhebt:
  *
  *   Paladin (STÄ+CHA) · Mönch (GES+WEI) · Waldläufer (GES+WEI)
- *   Barde (CHA+GES) · Hexenpakt-Magier (CHA+KON)
+ *
+ * Betroffen sind nur Klassen mit ZWEI Primärattributen; wer eines hat, findet
+ * immer einen passenden. Die verlässliche Fassung dieser Rechnung ist
+ * `classesWithoutMatchingBackground()` weiter unten — nicht dieser Absatz.
  *
  * Diese Spieler müssten ihren wichtigsten Wert ungeboostet lassen. Die
  * fehlenden zwölf Hintergründe aus dem Spielerhandbuch nachzuschreiben ist
@@ -92,6 +95,24 @@ export interface CustomBackgroundDraft {
   originFeat: string;
 }
 
+/**
+ * Dieselbe Form, aber ungeprüft.
+ *
+ * So kommt der Bauplan über die Leitung: Die zod-Schicht hält Größe und
+ * Zeichenvorrat in Schach, kennt aber die Attributs- und Fertigkeitsschlüssel
+ * nicht. Das Einengen macht der Bauplan selbst — `uniqueValid` wirft alles
+ * weg, was nicht in den Katalog gehört. Deshalb nehmen `checkCustomBackground`
+ * und `buildCustomBackground` diese weite Form an; die enge
+ * `CustomBackgroundDraft` ist die der Oberfläche.
+ */
+export interface CustomBackgroundInput {
+  name: string;
+  abilityOptions: readonly string[];
+  skills: readonly string[];
+  toolProficiency: string;
+  originFeat: string;
+}
+
 export function emptyCustomBackground(): CustomBackgroundDraft {
   return {
     name: "",
@@ -115,7 +136,7 @@ export interface CustomBackgroundProblems {
  * Katalog nicht kennen muss — dieselbe Trennung wie im Rest des Pakets.
  */
 export function checkCustomBackground(
-  draft: CustomBackgroundDraft | null,
+  draft: CustomBackgroundInput | null,
   originFeats: readonly Feat[],
 ): CustomBackgroundProblems {
   const issues: string[] = [];
@@ -175,7 +196,7 @@ function uniqueValid<T extends string>(values: readonly string[], allowed: reado
  * Vorschau mit Attributen, die der Spieler nie gewählt hat.
  */
 export function buildCustomBackground(
-  draft: CustomBackgroundDraft | null,
+  draft: CustomBackgroundInput | null,
   originFeats: readonly Feat[],
 ): Background | null {
   if (!draft) return null;
