@@ -20,7 +20,7 @@
  * Blockierend ist genau ein Feld: der Name. Alles andere darf leer bleiben —
  * ein Charakter, der am Tisch entsteht, ist mehr wert als einer, der an
  * einem Pflichtfeld gestorben ist. Die Hilfstexte stehen trotzdem da und
- * fragen konkret, statt „Beschreibung" über ein leeres Kästchen zu schreiben.
+ * fragen konkret, statt „Beschreibung“ über ein leeres Kästchen zu schreiben.
  */
 
 import { useId } from "react";

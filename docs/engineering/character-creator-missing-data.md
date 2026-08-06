@@ -10,8 +10,7 @@ Legende:
 
 | Zeichen | Bedeutung |
 |---|---|
-| ✅ | mit dieser Runde angelegt (`packages/character-creator`) |
-| ⚠️ | angelegt, aber **nicht gegen die Quelle geprüft** — siehe § 7 |
+| ✅ | mit dieser Runde angelegt (`packages/character-creator`), gegen SRD-Volltext geprüft — Umfang und Grenzen siehe § 7 |
 | ❌ | fehlt vollständig |
 
 ---
@@ -39,12 +38,12 @@ einen Ersteller unbrauchbar:
 |---|---|---|
 | Völker (Spezies) | ✅ 9 Völker, 24 Abstammungen | SRD 5.2.1 kennt **kein** Aasimar |
 | Klassen | ✅ 12 | mit Trefferwürfel, Rettungswürfen, Fertigkeitswahl, Zauberprogression |
-| Unterklassen | ⚠️ 12 | SRD liefert genau **eine** pro Klasse. Für echte Wahlfreiheit fehlen die restlichen ~40 aus dem PHB — die sind **nicht** CC-BY. |
+| Unterklassen | ✅ 12 | SRD liefert genau **eine** pro Klasse. Für echte Wahlfreiheit fehlen die restlichen ~40 aus dem PHB — die sind **nicht** CC-BY. |
 | Hintergründe | ✅ **nur 4** | Akolyth, Krimineller, Weiser, Soldat — mehr hat das SRD nicht. Siehe § 2a. |
 | Talente | ✅ 19 | 6 Ursprungs-, 2 allgemeine, 4 Kampfstile, 7 Epische Gaben — das ist der vollständige SRD-Satz |
-| Ausrüstung (Pakete, Waffen, Rüstung) | ⚠️ | |
-| Zauber Grad 0–1 | ⚠️ | **Grad 2–9 fehlen vollständig** — siehe § 3 |
-| Sprachen | ⚠️ | |
+| Ausrüstung (Pakete, Waffen, Rüstung) | ✅ 7 Pakete, 38 Waffen, 13 Rüstungen | |
+| Zauber Grad 0–1 | ✅ 27 + 57 | **Grad 2–9 fehlen vollständig** — siehe § 3 |
+| Sprachen | ✅ 19 | |
 | Gesinnungen | ✅ 9 | |
 | Zustände (blind, verängstigt …) | ❌ | für den Bogen, nicht für die Erstellung |
 | Magische Gegenstände | ❌ | nur remote über Open5e, nicht im Ersteller |
@@ -192,27 +191,41 @@ abgeleitetes Sigill. Das ist ein Platzhalter, kein Ziel.
 
 ## 7. Prüf-Schuld — bitte ernst nehmen
 
-Die mit ⚠️ markierten Kataloge wurden in dieser Runde **ohne Zugriff auf die
-Primärquelle** geschrieben.
+Der direkte Abgleich mit dem SRD-PDF war **nicht** möglich: Die
+Egress-Richtlinie dieser Umgebung lehnt ausgehende HTTPS-Verbindungen zu
+allen Hosts mit `403` ab (`connect_rejected` — `media.dndbeyond.com` ebenso
+wie `example.com`).
 
-Die Egress-Richtlinie dieser Umgebung hat ausgehende HTTPS-Verbindungen zu
-**allen** Hosts mit `403` abgelehnt (`connect_rejected`, u. a.
-`dndbeyond.com`, `media.dndbeyond.com`, sogar `example.com`). Damit war ein
-direkter Abgleich mit dem SRD-PDF unmöglich.
+Stattdessen wurde gegen **Volltext-Übertragungen des SRD 5.2.1** geprüft, die
+im Container verfügbar waren (`oldmanumby/dnd.srd.5.2.1`,
+`downfallx/dnd-5e-srd-markdown`, `your5e/5e-srd-markdown` mit der
+unveränderten PDF-Konversion, sowie die deutsche Übertragung
+`netzrenner/dnd.srd.5.2.1-de`). Das ist keine Primärquelle, aber deutlich
+mehr als Modellwissen.
 
-Was das je Katalog heißt:
+| Katalog | Geprüft gegen | Belastbarkeit |
+|---|---|---|
+| Völker, Abstammungen | Volltext + deutsche Übertragung | hoch |
+| Klassen, Unterklassen | Volltext, Merkmalstexte zeilenweise | hoch |
+| Hintergründe | PDF-Textextraktion + 2 Konversionen | hoch — der Fund „nur vier" stammt daher |
+| Talente | dieselben Quellen | hoch |
+| Ausrüstung, Waffen, Rüstung | SRD-Tabellen zeilenweise | hoch |
+| Zauber (84) | **zwei unabhängige** Übertragungen, Feld für Feld verglichen; `lists` maschinell extrahiert und zurückgeprüft (84/84, null Abweichungen) | hoch |
 
-- **Völker und Klassen** wurden gegen eine vollständige Volltext-Übertragung
-  des SRD 5.2.1 geprüft, die im Container verfügbar war. Diese Kataloge sind
-  belastbar.
-- **Hintergründe, Talente, Ausrüstung und Zauber** stützen sich auf
-  Modellwissen und Suchergebnis-Zusammenfassungen. Sie sind plausibel, aber
-  **nicht quellengeprüft**.
+**Was trotzdem offen bleibt:**
 
-**Vor dem produktiven Einsatz muss ein Mensch mit dem SRD 5.2.1 danebensitzen
-und diese vier Kataloge durchgehen.** Ein falscher Zauber auf einer
-Klassenliste ist kein Schönheitsfehler — er baut einen Charakter, der am
-Tisch nicht legal ist.
+- Keine dieser Quellen ist das amtliche PDF. Ein Abgleich gegen
+  `SRD_CC_v5.2.1.pdf` bleibt die saubere Abnahme.
+- Die **deutschen Namen sind Übersetzungen dieses Projekts**, keine Zitate —
+  eine offizielle deutsche SRD-5.2.1-Ausgabe existiert nicht. Sie sind der
+  wahrscheinlichste Ort für Korrekturen, nicht die Regelzahlen.
+- Die englischen Namen stehen in `nameEn` daneben, damit jede Zeile
+  nachschlagbar bleibt.
+- Waffenmeisterschaften tragen bewusst ihre **englischen** SRD-Namen
+  (`Meisterschaft: Vex`), statt erfundene deutsche. Das ist eine offene
+  Entscheidung, die einmal fallen und dann überall gelten sollte.
+
+Suchbefehl für die wenigen verbliebenen Lücken:
 
 Suchbefehl für offene Stellen:
 

@@ -13,7 +13,7 @@
  *     die Abstammung — aber keinen zweiten Schritt dafür. Sie erscheint unter
  *     dem Raster, ohne das Raster umzubauen.
  *  3. **Die Erwartung von 2014 korrigieren.** Der häufigste Satz am Tisch ist
- *     „wo sind meine +2?". Er wird hier beantwortet, nicht ausgesessen: die
+ *     „wo sind meine +2?“. Er wird hier beantwortet, nicht ausgesessen: die
  *     Attributsboni kommen seit 2024 aus dem Hintergrund, mit Sprungziel.
  *
  * Bilder: `Species.art` verweist auf `/character-creator/species/<key>.svg`.
@@ -85,13 +85,24 @@ interface SigilSpec {
   innerRatio: number;
 }
 
+/**
+ * Ein Merkmal, ein eigener Hash.
+ *
+ * Bitscheiben desselben FNV-Werts (`hash >>> 4`, `hash >>> 8`) hängen
+ * zusammen: So fielen sechs der neun Völker auf dasselbe Innenzeichen, die
+ * Rosette kam gar nicht vor. Mit einem eigenen Hash je Merkmal trägt im
+ * ganzen Katalog kein Eintrag dasselbe Wappen wie ein anderer.
+ */
+function pick(key: string, salt: string, count: number): number {
+  return hashKey(`${key}#${salt}`) % count;
+}
+
 function sigilSpec(key: string): SigilSpec {
-  const hash = hashKey(key);
   return {
-    arms: 5 + (hash % 4),
-    variant: (hash >>> 4) % 3,
-    tilt: ((hash >>> 8) % 24) * 7.5,
-    innerRatio: 0.4 + ((hash >>> 13) % 5) * 0.07,
+    arms: 5 + pick(key, "arme", 4),
+    variant: pick(key, "form", 3),
+    tilt: pick(key, "dreh", 24) * 7.5,
+    innerRatio: 0.4 + pick(key, "kern", 5) * 0.07,
   };
 }
 
@@ -476,7 +487,7 @@ export function SpeciesStep({ draft, patch, set, resolved, validation, goTo }: S
       <Alert icon="info" title="Völker geben seit 2024 keine Attributsboni mehr">
         Wer aus den älteren Regeln kommt, sucht hier die +2/+1 — sie sind zum
         Hintergrund gewandert. Dein Volk bestimmt Größe, Tempo, Sinne und Merkmale;
-        die Zahlen kommen im Schritt „Hintergrund".{" "}
+        die Zahlen kommen im Schritt „Hintergrund“.{" "}
         <Button variant="link" onClick={() => goTo("background")}>
           Hintergrund ansehen
         </Button>
@@ -530,7 +541,7 @@ export function SpeciesStep({ draft, patch, set, resolved, validation, goTo }: S
         <EmptyState
           icon="search-x"
           title="Kein Volk passt zu dieser Suche."
-          description="Der Katalog hat neun Völker — vermutlich ist ein Filter zu eng gesetzt oder im Suchfeld steht ein Tippfehler."
+          description={`Der Katalog hat ${SPECIES.length} Völker — vermutlich ist ein Filter zu eng gesetzt oder im Suchfeld steht ein Tippfehler.`}
           action={
             <Button variant="outline" onClick={resetSearch}>
               Suche und Filter zurücksetzen

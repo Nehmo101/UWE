@@ -14,7 +14,7 @@
  *
  *   1. **Das Fehlende ist anklickbar.** Jede offene Prüfung bekommt eine
  *      Zeile mit dem Satz, der sagt, was fehlt, und einen Knopf, der genau
- *      dorthin springt (`goTo`). „Es fehlen noch Entscheidungen" ohne Weg
+ *      dorthin springt (`goTo`). „Es fehlen noch Entscheidungen“ ohne Weg
  *      dorthin ist eine Sackgasse.
  *   2. **Der Anlegen-Knopf sagt, warum er nicht geht.** Ein grauer Knopf
  *      ohne Begründung ist die häufigste Stelle, an der ein Ersteller
@@ -185,9 +185,11 @@ export function ReviewStep({
     dndClass?.startingEquipment.find((option) => option.key === draft.equipmentChoice) ?? null;
   const goldOnly = draft.equipmentChoice === "gold";
   const equipmentLines: EquipmentLine[] = equipmentOption?.items ?? [];
-  const startingGold = goldOnly
-    ? (dndClass?.startingGoldAlternative ?? 0)
-    : (equipmentOption?.gold ?? 0) + (background?.startingGold ?? 0);
+  // Dieselbe Rechnung wie beim Anlegen (`createFullCharacter`): die Wahl der
+  // Klasse plus das, was der Hintergrund ohnehin mitgibt.
+  const startingGold =
+    (goldOnly ? (dndClass?.startingGoldAlternative ?? 0) : (equipmentOption?.gold ?? 0)) +
+    (background?.startingGold ?? 0);
 
   const traits: Array<{ origin: string; trait: Trait }> = [
     ...(species?.traits ?? []).map((trait) => ({ origin: species?.name ?? "Volk", trait })),
@@ -442,7 +444,7 @@ export function ReviewStep({
         <SheetBlock title="Beschreibung" span="wide">
           {filledProfile.length === 0 && filledTexts.length === 0 && languageNames.length === 0 ? (
             <p className="cw-sheet__empty">
-              Noch nichts eingetragen — der Schritt „Beschreibung" wartet auf dich.
+              Noch nichts eingetragen — der Schritt „Beschreibung“ wartet auf dich.
             </p>
           ) : null}
           {languageNames.length > 0 ? (

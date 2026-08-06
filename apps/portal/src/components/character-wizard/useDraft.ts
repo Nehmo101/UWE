@@ -77,11 +77,22 @@ export function useDraft(worldSlug: string, initialName = ""): DraftHandle {
   const [restored, setRestored] = useState(false);
   const hydrated = useRef(false);
 
-  // Erst nach dem ersten Rendern lesen — sonst weicht der Server-HTML vom
-  // Client ab und React verwirft den Baum (Hydration-Fehler).
+  /**
+   * Erst nach dem ersten Rendern lesen — sonst weicht das Server-HTML vom
+   * Client ab und React verwirft den Baum (Hydration-Fehler).
+   *
+   * `set-state-in-effect` warnt hier zu Recht im Allgemeinen und zu Unrecht
+   * in diesem Fall: Die Regel zielt auf Effekte, die aus vorhandenem State
+   * neuen State ableiten und dadurch Renderketten auslösen. Hier wird
+   * einmalig ein **externer** Speicher gelesen, den es beim Server-Rendern
+   * nicht gibt. Die Alternativen sind beide schlechter — im
+   * Initialisierer lesen bricht die Hydration, und bis zum Lesen nichts
+   * rendern lässt die Seite sichtbar springen.
+   */
   useEffect(() => {
     const stored = readStored(worldSlug);
     if (stored) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- siehe oben: einmaliges Lesen eines externen Speichers nach der Hydration
       setDraft(stored);
       setRestored(true);
     }

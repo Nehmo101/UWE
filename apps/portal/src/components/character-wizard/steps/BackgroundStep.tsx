@@ -13,7 +13,7 @@
  *   3. Zwei Fertigkeiten, ein Werkzeug, Ausrüstung.
  *
  * Deshalb steht das Talent hier nicht als Wort in einer Chipreihe, sondern
- * aufgelöst über `findFeat` mit seinem Haken auf der Kachel: Wer „Wachsam"
+ * aufgelöst über `findFeat` mit seinem Haken auf der Kachel: Wer „Wachsam“
  * liest, weiß nichts; wer liest, was Wachsam tut, entscheidet.
  *
  * Die Kachel trägt die Entscheidung, drei `<details>` darunter den Wortlaut —
@@ -242,7 +242,14 @@ export function BackgroundStep({ draft, patch, resolved, goTo }: StepProps) {
   const showSearch = BACKGROUNDS.length > SEARCH_THRESHOLD;
 
   return (
-    <div>
+    <section className="cw-section">
+      <div className="cw-section__head">
+        <h3 className="cw-section__title">Woher dein Charakter kommt</h3>
+        <span className="cw-chip">
+          <span className="cw-chip__value">{visible.length}</span>
+          von {BACKGROUNDS.length}
+        </span>
+      </div>
       <p className="cw-section__note">
         Der Hintergrund ist in den Regeln von 2024 die folgenreichste Wahl der
         Erstellung: Er entscheidet, wohin deine Attributspunkte gehen, und er gibt
@@ -344,6 +351,6 @@ export function BackgroundStep({ draft, patch, resolved, goTo }: StepProps) {
           </Button>
         </div>
       ) : null}
-    </div>
+    </section>
   );
 }

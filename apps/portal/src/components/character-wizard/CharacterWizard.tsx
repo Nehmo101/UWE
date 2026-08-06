@@ -14,7 +14,7 @@
  * darf vorspringen. Gesperrt ist nur das Anlegen am Ende.
  */
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CREATOR_STEPS,
   derivePreview,
@@ -118,13 +118,36 @@ export function CharacterWizard({ worldSlug, createAction }: CharacterWizardProp
     [validations],
   );
 
+  /**
+   * Der Schritt steht im Fragment (`#klasse`).
+   *
+   * Damit ist jeder Schritt verlinkbar, der Zurück-Knopf des Browsers tut
+   * das Erwartete, und ein Neuladen landet wieder dort, wo man war — der
+   * Entwurf liegt ohnehin im sessionStorage. Bewusst das Fragment und nicht
+   * `?schritt=`: `useSearchParams` verlangt eine Suspense-Grenze, und der
+   * Schritt ist reiner Anzeigezustand, der den Server nichts angeht.
+   */
+  useEffect(() => {
+    const applyHash = () => {
+      const raw = window.location.hash.replace(/^#/, "");
+      if ((CREATOR_STEPS as readonly string[]).includes(raw)) {
+        setStep(raw as CreatorStepKey);
+      }
+    };
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
+    return () => window.removeEventListener("hashchange", applyHash);
+  }, []);
+
   const goTo = useCallback((next: string) => {
-    if ((CREATOR_STEPS as readonly string[]).includes(next)) {
-      setStep(next as CreatorStepKey);
-      // Der Schrittwechsel soll oben beginnen — sonst steht man mitten in
-      // einer Kachelwand und hält es für einen Ladefehler.
-      document.getElementById("cw-panel-top")?.scrollIntoView({ block: "start" });
+    if (!(CREATOR_STEPS as readonly string[]).includes(next)) return;
+    setStep(next as CreatorStepKey);
+    if (window.location.hash !== `#${next}`) {
+      window.history.pushState(null, "", `#${next}`);
     }
+    // Der Schrittwechsel soll oben beginnen — sonst steht man mitten in
+    // einer Kachelwand und hält es für einen Ladefehler.
+    document.getElementById("cw-panel-top")?.scrollIntoView({ block: "start" });
   }, []);
 
   const currentIndex = CREATOR_STEPS.indexOf(step);

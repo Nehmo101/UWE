@@ -7,7 +7,7 @@
  * gestaltet sein:
  *
  *  - **Die Klasse zaubert nicht.** Dann steht hier kein leeres Raster und
- *    kein „keine Einträge", sondern ein Satz, der erklärt, warum das in
+ *    kein „keine Einträge“, sondern ein Satz, der erklärt, warum das in
  *    Ordnung ist, und ein Weg weiter. Ein Kämpfer, der auf eine leere Fläche
  *    schaut, glaubt, etwas sei kaputt.
  *  - **Die Klasse zaubert.** Dann zwei Abschnitte — Zaubertricks und Zauber
@@ -53,7 +53,7 @@ function paragraphs(text: string): string[] {
     .filter((part) => part.length > 0);
 }
 
-/** „V, G, M" — die Komponenten in einer Marke statt in drei. */
+/** „V, G, M“ — die Komponenten in einer Marke statt in drei. */
 function componentLabel(spell: Spell): string {
   const parts: string[] = [];
   if (spell.components.verbal) parts.push("V");
@@ -129,7 +129,7 @@ interface SpellSectionProps {
   title: string;
   /** Ein Satz darunter — was dieser Abschnitt überhaupt ist. */
   lede: string;
-  /** Mehrzahl für die Zähler- und Sperrmeldung („Zaubertricks"). */
+  /** Mehrzahl für die Zähler- und Sperrmeldung („Zaubertricks“). */
   noun: string;
   spells: Spell[];
   chosen: string[];
@@ -216,18 +216,19 @@ function SpellSection({
           </span>
           {counterLabel}
         </span>
-        {chosen.length > 0 ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              onChange([]);
-              setBlocked(null);
-            }}
-          >
-            Auswahl leeren
-          </Button>
-        ) : null}
+        {/* Steht immer da, auch leer und abgeschaltet: Erschiene die Schaltfläche
+            erst beim ersten Klick, würde sie das Raster darunter wegschieben. */}
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={chosen.length === 0}
+          onClick={() => {
+            onChange([]);
+            setBlocked(null);
+          }}
+        >
+          Auswahl leeren
+        </Button>
       </div>
       <p className="cw-section__note">{lede}</p>
 

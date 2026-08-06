@@ -22,7 +22,6 @@ import type {
   StepValidation,
 } from "../types";
 import { isBackgroundBonusValid } from "./derive";
-import { isPoolFullyAssigned } from "./abilities";
 
 export const STEP_META: StepMeta[] = [
   {
@@ -267,5 +266,3 @@ export function firstIncompleteStep(ctx: ValidationContext): CreatorStepKey | nu
   );
   return found?.step ?? null;
 }
-
-export { isPoolFullyAssigned };

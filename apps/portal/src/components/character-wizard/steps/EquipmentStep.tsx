@@ -14,7 +14,7 @@
  *  - **Gewicht und Wert werden nur behauptet, wo die Daten sie hergeben.**
  *    Die Klassenlisten tragen bei den meisten Zeilen weder `weight` noch
  *    `valueCp`; Pakete lösen wir über `EQUIPMENT_PACKS` auf. Was übrig
- *    bleibt, wird als „mind." markiert statt weggerundet.
+ *    bleibt, wird als „mind.“ markiert statt weggerundet.
  *  - **Der Hintergrund steht getrennt.** Seine Ausrüstung ist keine Wahl,
  *    sondern kommt immer dazu. Sie in die Optionskarten zu mischen, würde
  *    den Vergleich verfälschen.
@@ -22,7 +22,9 @@
 
 import { useState } from "react";
 import {
+  ARMOR,
   EQUIPMENT_PACKS,
+  WEAPONS,
   type EquipmentLine,
   type EquipmentOption,
   type EquipmentPack,
@@ -32,28 +34,43 @@ import { Button } from "@/src/components/ui/button";
 import { NavIcon } from "@/src/components/ui/icon";
 import type { StepProps } from "../types";
 
-/** Schlüssel im Entwurf für „ich nehme lieber das Gold". */
+/** Schlüssel im Entwurf für „ich nehme lieber das Gold“. */
 const GOLD_CHOICE = "gold";
 
 /**
  * Pakete stehen in den Klassenlisten unter ihrem Anzeigenamen
- * („Entdeckerpaket"), nicht unter ihrem Schlüssel — `findPack` hilft hier
+ * („Entdeckerpaket“), nicht unter ihrem Schlüssel — `findPack` hilft hier
  * also nicht. Der Abgleich läuft deshalb über Name und englischen Namen.
  */
 function packFor(name: string): EquipmentPack | undefined {
   return EQUIPMENT_PACKS.find((pack) => pack.name === name || pack.nameEn === name);
 }
 
+/**
+ * Waffen- und Rüstungstabelle in einem Nachschlagewerk. Die Klassenlisten
+ * nennen nur Name und Menge — Gewicht, Preis und die Kampfnotiz („1W12 Hieb,
+ * Schwer, Zweihändig") stehen erst hier. Genau die machen zwei Optionen
+ * vergleichbar.
+ */
+const GEAR: readonly EquipmentLine[] = [...WEAPONS, ...ARMOR];
+
+function gearFor(name: string): EquipmentLine | undefined {
+  return GEAR.find((entry) => entry.name === name);
+}
+
 /** Gewicht einer Zeile in Pfund — `null`, wenn der Katalog nichts hergibt. */
 function lineWeight(line: EquipmentLine): number | null {
   if (typeof line.weight === "number") return line.weight;
+  const gear = gearFor(line.name);
+  if (gear && typeof gear.weight === "number") return gear.weight;
   const pack = packFor(line.name);
   if (!pack) return null;
   let sum = 0;
   let known = false;
   for (const item of pack.items) {
-    if (typeof item.weight === "number") {
-      sum += item.weight * item.quantity;
+    const itemWeight = typeof item.weight === "number" ? item.weight : gearFor(item.name)?.weight;
+    if (typeof itemWeight === "number") {
+      sum += itemWeight * item.quantity;
       known = true;
     }
   }
@@ -63,8 +80,16 @@ function lineWeight(line: EquipmentLine): number | null {
 /** Wert einer Zeile in Kupfermünzen — `null`, wenn unbekannt. */
 function lineValueCp(line: EquipmentLine): number | null {
   if (typeof line.valueCp === "number") return line.valueCp;
+  const gear = gearFor(line.name);
+  if (gear && typeof gear.valueCp === "number") return gear.valueCp;
   const pack = packFor(line.name);
   return pack ? pack.costGp * 100 : null;
+}
+
+/** Die Notiz zur Zeile: eigene zuerst, sonst die aus der Waffentabelle. */
+function lineNote(line: EquipmentLine): string | null {
+  if (line.notes) return line.notes;
+  return gearFor(line.name)?.notes ?? null;
 }
 
 interface Totals {
@@ -188,15 +213,18 @@ function OptionCard({ option, selected, onSelect }: OptionCardProps) {
         <span className="cw-tile__name">{option.label}</span>
 
         <span className="cw-items">
-          {option.items.map((line) => (
-            <span key={`${line.name}-${line.quantity}`} className="cw-item">
-              <span className="cw-item__qty">{line.quantity}×</span>
-              <span className="cw-item__name">
-                {line.name}
-                {line.notes ? <span className="cw-item__note"> — {line.notes}</span> : null}
+          {option.items.map((line) => {
+            const note = lineNote(line);
+            return (
+              <span key={`${line.name}-${line.quantity}`} className="cw-item">
+                <span className="cw-item__qty">{line.quantity}×</span>
+                <span className="cw-item__name">
+                  {line.name}
+                  {note ? <span className="cw-item__note"> — {note}</span> : null}
+                </span>
               </span>
-            </span>
-          ))}
+            );
+          })}
           {option.gold > 0 ? (
             <span className="cw-item">
               <span className="cw-item__qty">+</span>
@@ -394,7 +422,7 @@ export function EquipmentStep({ draft, set, resolved, validation, goTo }: StepPr
             <span className="cw-note__text">
               Gewicht und Wert stammen aus dem Ausrüstungskatalog; Pakete werden über
               ihren Inhalt aufgelöst. Wo eine Zeile keine Zahl hinterlegt hat, steht
-              vor dem Wert „mind." — die Summe ist dann eine Untergrenze, keine
+              vor dem Wert {"„mind.“"} — die Summe ist dann eine Untergrenze, keine
               Behauptung.
             </span>
           </div>

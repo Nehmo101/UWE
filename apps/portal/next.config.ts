@@ -32,7 +32,12 @@ const nextConfig: NextConfig = {
     "jsdom",
     "isomorphic-dompurify",
   ],
-  transpilePackages: ["@uwe/shared-ui", "@uwe/auth", "@uwe/env"],
+  // @uwe/character-creator liefert wie die anderen Pakete rohes TypeScript und
+  // wird aus einer "use client"-Komponente importiert (der Charakter-Ersteller
+  // liest den Katalog im Browser). Ohne Eintrag hier scheitert das Client-Bündel
+  // stumm: der Chunk kommt nicht zustande, die Hydration bleibt aus, und die
+  // Seite steht für immer auf „Portal wird geladen…".
+  transpilePackages: ["@uwe/shared-ui", "@uwe/auth", "@uwe/env", "@uwe/character-creator"],
   async redirects() {
     // Gegenstueck zu apps/studio/next.config.ts — dieselbe Begruendung, dieselbe
     // Wahl von 307 statt 308. Die Ansicht im Portal ist die lesende.
