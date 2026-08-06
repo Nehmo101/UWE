@@ -16,7 +16,13 @@
  * Laufzeit nicht — und beiden Schritten als fertige Antwort hingelegt.
  */
 
-import { BACKGROUNDS, CLASSES, classesWithoutMatchingBackground } from "@uwe/character-creator";
+import {
+  ABILITY_SHORT,
+  BACKGROUNDS,
+  CLASSES,
+  classesWithoutMatchingBackground,
+  findClass,
+} from "@uwe/character-creator";
 
 /** Die Klassen, für die kein Katalog-Hintergrund beide Primärattribute hebt. */
 export const CLASSES_WITHOUT_BACKGROUND = classesWithoutMatchingBackground(CLASSES, BACKGROUNDS);
@@ -27,3 +33,19 @@ const STRANDED_KEYS = new Set(CLASSES_WITHOUT_BACKGROUND.map((entry) => entry.ke
 export function lacksMatchingBackground(classKey: string | null | undefined): boolean {
   return typeof classKey === "string" && STRANDED_KEYS.has(classKey);
 }
+
+/**
+ * „Paladin (STÄ+CHA), Mönch (GES+WEI) und Waldläufer (GES+WEI)“ — aufgezählt
+ * aus der Rechnung, nicht aus dem Gedächtnis. Eine ausgeschriebene Liste im
+ * Fließtext war schon einmal falsch (sie nannte fünf Klassen); diese hier kann
+ * nicht veralten.
+ */
+export const STRANDED_CLASS_SUMMARY: string = (() => {
+  const parts = CLASSES_WITHOUT_BACKGROUND.map((entry) => {
+    const found = findClass(entry.key);
+    if (!found) return entry.name;
+    return `${entry.name} (${found.primaryAbilities.map((key) => ABILITY_SHORT[key]).join("+")})`;
+  });
+  if (parts.length <= 1) return parts[0] ?? "";
+  return `${parts.slice(0, -1).join(", ")} und ${parts[parts.length - 1]}`;
+})();

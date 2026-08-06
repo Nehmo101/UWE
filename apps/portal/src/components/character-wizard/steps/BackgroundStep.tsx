@@ -40,6 +40,7 @@ import {
   CUSTOM_SKILL_COUNT,
   emptyCustomBackground,
   findFeat,
+  originFeats,
   type AbilityKey,
   type Background,
   type CustomBackgroundDraft,
@@ -68,6 +69,9 @@ const BACKGROUND_ICONS: Record<string, string> = {
 
 /** Ab so vielen Einträgen lohnt ein Suchfeld. Darunter ist es nur Lärm. */
 const SEARCH_THRESHOLD = 8;
+
+/** Wie viele Ursprungstalente der Eigenbau zur Wahl stellt. */
+const ORIGIN_FEAT_COUNT = originFeats().length;
 
 /** Wonach die Eigenbau-Kachel gefunden wird — sie hat keinen Katalogtext. */
 const CUSTOM_HAYSTACK = [
@@ -235,22 +239,32 @@ function CustomBackgroundTile({
           anhebt.
         </span>
 
+        {/* Dieselbe Stelle wie auf den Katalogkacheln — dort steht das
+            Ursprungstalent, hier steht, dass du es aussuchst. */}
         <span className="cw-feat">
-          <span className="cw-feat__label">Du wählst</span>
-          <span className="cw-feat__name">
-            {CUSTOM_ABILITY_COUNT} Attribute · {CUSTOM_SKILL_COUNT} Fertigkeiten · 1
-            Werkzeug · 1 Talent
-          </span>
+          <span className="cw-feat__label">Ursprungstalent</span>
+          <span className="cw-feat__name">Eines von {ORIGIN_FEAT_COUNT} zur Wahl</span>
           <span className="cw-feat__text">
-            Statt einer Ausrüstungsliste {CUSTOM_BACKGROUND_GOLD} Goldmünzen zum
-            Selbsteinkaufen.
+            Vom Wachsam-Bonus auf die Initiative bis zu Zaubern für eine Klasse,
+            die gar nicht zaubert — was jedes Talent tut, steht im Bauplan darunter.
           </span>
         </span>
 
+        {/* Gleiche Kennzahlen in gleicher Reihenfolge wie im Katalog:
+            Attribute, Fertigkeiten, Werkzeug — nur eben als Wahl. */}
         <span className="cw-tile__meta">
-          <span className="cw-chip">STÄ GES KON INT WEI CHA</span>
+          <span className="cw-chip" data-tone="accent">
+            <span className="cw-chip__value">{CUSTOM_ABILITY_COUNT}</span> Attribute
+            nach Wahl
+          </span>
           <span className="cw-chip">
-            <span className="cw-chip__value">{CUSTOM_BACKGROUND_GOLD}</span> GM
+            <span className="cw-chip__value">{CUSTOM_SKILL_COUNT}</span> Fertigkeiten
+            nach Wahl
+          </span>
+          <span className="cw-chip">Werkzeug nach Wahl</span>
+          <span className="cw-chip">
+            <span className="cw-chip__value">{CUSTOM_BACKGROUND_GOLD}</span> GM statt
+            Ausrüstung
           </span>
           {strandedClassName ? (
             <span className="cw-chip" data-tone="accent" data-wrap="true">

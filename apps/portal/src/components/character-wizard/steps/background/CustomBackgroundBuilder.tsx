@@ -64,6 +64,33 @@ function joinNames(parts: readonly string[]): string {
   return `${parts.slice(0, -1).join(", ")} und ${parts[parts.length - 1]}`;
 }
 
+/**
+ * Der Halbsatz, der die Klasse mit den drei Attributen verbindet.
+ *
+ * Er ändert sich mit dem Stand der Wahl: Solange die Primärattribute noch
+ * angehakt sind (weil der Schritt sie vorbelegt hat), sagt er das; wer sie
+ * abgewählt hat, bekommt keine Behauptung über eine Vorbelegung, die nicht
+ * mehr steht, sondern den Hinweis, was die Klasse tragen würde.
+ */
+function classHint(
+  dndClass: DndClass | null,
+  chosen: readonly AbilityKey[],
+  stranded: boolean,
+): string | null {
+  const primaries = dndClass?.primaryAbilities ?? [];
+  if (!dndClass || primaries.length === 0) return null;
+
+  const named = joinNames(primaries.map((ability) => ABILITY_LABELS[ability]));
+  const gap = stranded
+    ? ` Kein fertiger Hintergrund hebt ${named} zusammen an — genau dafür gibt es diesen Bauplan.`
+    : "";
+
+  if (primaries.every((ability) => chosen.includes(ability))) {
+    return `${dndClass.name} steht auf ${named}; beides ist hier vorbelegt.${gap} Du darfst es jederzeit abwählen.`;
+  }
+  return `${dndClass.name} steht auf ${named}.${gap} Wer beide anhebt, spielt die Klasse so, wie sie gerechnet ist.`;
+}
+
 export interface CustomBackgroundBuilderProps {
   value: CustomBackgroundDraft;
   onChange: (next: CustomBackgroundDraft) => void;
@@ -191,18 +218,8 @@ export function CustomBackgroundBuilder({
           <p className="cw-fieldset__hint">
             Auf diese drei verteilst du im Schritt „Attribute“ entweder +2 und +1
             oder dreimal +1. Das ist der ganze Grund, warum es diesen Bauplan
-            gibt — hier entscheidest du, wo deine Punkte landen.
-            {dndClass && primaries.length > 0 ? (
-              <>
-                {" "}
-                {dndClass.name} steht auf{" "}
-                {joinNames(primaries.map((ability) => ABILITY_LABELS[ability]))}
-                {stranded
-                  ? " — beide sind vorbelegt, weil kein fertiger Hintergrund sie zusammen anhebt."
-                  : " — vorbelegt, damit du nicht suchen musst."}{" "}
-                Du darfst die Vorbelegung jederzeit abwählen.
-              </>
-            ) : null}
+            gibt — hier entscheidest du, wo deine Punkte landen.{" "}
+            {classHint(dndClass, value.abilityOptions, stranded)}
           </p>
 
           <p className="cw-field__hint" aria-live="polite">
