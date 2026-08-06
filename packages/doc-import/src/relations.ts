@@ -16,6 +16,7 @@
  * wie viele Ziele es gibt und wie viele davon (noch) ins Leere zeigen.
  */
 
+import { decodeHtmlEntities } from "@uwe/shared-utils/html-entities";
 import { normalizeLookupKey } from "@uwe/shared-utils/slug";
 
 /**
@@ -39,7 +40,10 @@ export function collectWikiLinkTargets(text: string): string[] {
   WIKILINK.lastIndex = 0;
   let match: RegExpExecArray | null;
   while ((match = WIKILINK.exec(text)) !== null) {
-    const target = match[1]?.trim();
+    // Der Text kommt hier bereits als HTML an: `[[A'Tuin]]` steht darin als
+    // `[[A&#39;Tuin]]`. Ohne Rückübersetzung meldet die Vorschau ein totes Ziel,
+    // das in Wirklichkeit auflöst — siehe `decodeHtmlEntities`.
+    const target = decodeHtmlEntities(match[1]?.trim() ?? "");
     if (!target) continue;
 
     const key = normalizeLookupKey(target);

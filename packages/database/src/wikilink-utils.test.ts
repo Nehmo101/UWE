@@ -160,3 +160,33 @@ test("bleibt auch bei vielen offenen Klammern vor einem späten `]` linear", () 
 
   assert.ok(elapsedMs < 1000, `parseWikiLinks brauchte ${elapsedMs.toFixed(0)} ms`);
 });
+
+/**
+ * Seiteninhalt liegt seit dem Dokument-Import als HTML vor, und `marked`
+ * maskiert beim Übersetzen auch das, was zwischen den doppelten Klammern steht.
+ * Ein Ziel, das so gelesen wird, findet nie eine Seite — deshalb übersetzt der
+ * Scanner Ziel und Beschriftung zurück.
+ *
+ * Die Gleichheitstests oben bleiben davon unberührt: Keine ihrer Eingaben
+ * enthält ein `&`, weder in der Fallliste noch im erzeugten Alphabet.
+ */
+test("übersetzt HTML-Entitäten in Ziel und Beschriftung zurück", () => {
+  assert.deepEqual(parseWikiLinks("Auf [[A&#39;Tuin]]."), [
+    { target: "A'Tuin", label: undefined, start: 4, end: 18 },
+  ]);
+  assert.deepEqual(parseWikiLinks("[[Schätze &amp; Gegenstände]]"), [
+    { target: "Schätze & Gegenstände", label: undefined, start: 0, end: 29 },
+  ]);
+  assert.deepEqual(parseWikiLinks("[[atuin|A&#39;Tuin]]"), [
+    { target: "atuin", label: "A'Tuin", start: 0, end: 20 },
+  ]);
+});
+
+test("die Offsets bleiben roh, auch wenn das Ziel kürzer wird", () => {
+  // Renderer und Backlinks schneiden mit start/end in den Originaltext. Würden
+  // die Offsets der übersetzten Länge folgen, verrutschte jeder Schnitt.
+  const text = "vorher [[A&#39;Tuin]] nachher";
+  const [link] = parseWikiLinks(text);
+  assert.equal(link.target, "A'Tuin");
+  assert.equal(text.slice(link.start, link.end), "[[A&#39;Tuin]]");
+});

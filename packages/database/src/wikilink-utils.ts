@@ -1,5 +1,13 @@
+import { decodeHtmlEntities } from "@uwe/shared-utils/html-entities";
+
 export interface ParsedWikiLink {
-  /** Raw target text inside [[...]] before the pipe. */
+  /**
+   * Zielseite des Links, HTML-Entitäten bereits zurückübersetzt.
+   *
+   * Seiteninhalt liegt seit dem Dokument-Import als HTML vor, und darin ist ein
+   * `[[A'Tuin]]` zu `[[A&#39;Tuin]]` geworden. Wer das Ziel roh nachschlägt,
+   * findet nie eine Seite — siehe `decodeHtmlEntities`.
+   */
   target: string;
   /** Optional display label after the pipe. */
   label?: string;
@@ -60,8 +68,10 @@ function readWikiLinkAt(
 
   return {
     link: {
-      target: target.trim(),
-      label: label?.trim(),
+      // Die Offsets bleiben roh — Renderer, Graph und Backlinks schneiden damit
+      // in den Originaltext. Nur die beiden Zeichenketten werden zurückübersetzt.
+      target: decodeHtmlEntities(target.trim()),
+      label: label === undefined ? undefined : decodeHtmlEntities(label.trim()),
       start: open,
       end: cursor + 2,
     },
