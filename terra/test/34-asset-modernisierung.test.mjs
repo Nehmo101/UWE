@@ -225,7 +225,14 @@ test('Asset-Modernisierung - echter Objektgenerator behaelt 505 Instanzen', () =
   assert.equal(meshVertices, quellVertices);
   // Final-Art-Geometrien duerfen Detail gewinnen, solange der statische Merge
   // exakt dieselbe Vertexmenge wie die 505 Quellpools traegt (Assertion oben).
-  assert.equal(meshVertices, 794417,
+  /* AAA-Runde (Welle B1): Bewuchs und Architektur haben bewusst Detail
+     gewonnen — Kronen mit Formenhierarchie, Dachkante/Traufe/Ueberstand,
+     Anbauten. Der Snapshot wandert deshalb von 794417 auf 819023 (+3,1 %).
+     Der eigentliche Vertrag darueber ist unberuehrt: meshVertices ===
+     quellVertices haelt weiterhin, das statische Merging verliert und
+     dupliziert also nichts. Ebenso unveraendert: 505 Instanzen, 67 Material-
+     gruppen, 58 Tiefen-Meshes, 9 Mikro-Pools, 5 Uint32-Gruppen. */
+  assert.equal(meshVertices, 819023,
     'deterministischer Final-Art-Vertexsnapshot unerwartet verschoben');
   const uint32Gruppen = el.group.children.filter((mesh) =>
     mesh.geometry.index.array.BYTES_PER_ELEMENT === 4);

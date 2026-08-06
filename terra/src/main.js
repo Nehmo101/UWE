@@ -471,7 +471,12 @@ function animate() {
   // dt) — der Regler senkt bei anhaltend zaehen Bildern die Renderskala und
   // hebt sie wieder, sobald die Rate traegt.
   // Art-Sichten bleiben pixelgenau; Headless-Last ist kein Asset-Signal.
-  if (!SCHAU_MODUS) tickLeistung(raw);
+  // Ebenso der Aufnahmelauf (tools/terra-shots): der Regler schaltet ab 38 ms
+  // die Renderskala herunter, und genau in diesem Bereich liegen die Bildzeiten
+  // der Abnahmeaufnahmen. Ohne diese Sperre entschiede die Tagesform der
+  // Maschine mit, in welcher Aufloesung ein Vergleichsbild entsteht — der
+  // Vorher/Nachher-Vergleich waere dann teilweise Rauschen.
+  if (!SCHAU_MODUS && !window.__terraAufnahme) tickLeistung(raw);
   renderFrame(camera, now * 0.001);
 
   frameCount++; fpsAcc += raw;
@@ -481,3 +486,30 @@ function animate() {
 animate();
 window.__terraOk = true;
 window.__terraDebug = { POOLS: POOLS, S: S, getRenderInfo: getRenderInfo };
+
+/* Aufnahme-Haken fuer die visuelle Regression (tools/terra-shots).
+   Alles hier ist bereits oeffentlich im Modulgraphen — der Haken buendelt es
+   nur, damit ein Aufnahmelauf die Kamera exakt setzen kann, statt sie ueber
+   Tastendruecke zu erraten. Bedienelemente werden bewusst NICHT gespiegelt:
+   Tageszeit, Wetter, Biom und Seed fahren im Aufnahmelauf ueber dieselben
+   DOM-Schalter wie bei einem Menschen, damit der Lauf die echte Verdrahtung
+   prueft und nicht eine Abkuerzung daneben. */
+window.__terraShot = {
+  cam: cam, camera: camera, scene: scene, renderer: renderer,
+  S: S, POOLS: POOLS, getRenderInfo: getRenderInfo,
+  heightAt: heightAt,
+  /** Kamera hart setzen (ohne Weichzug), damit Bild N exakt Bild N bleibt. */
+  stelle: function (v) {
+    if (Number.isFinite(v.x)) cam.tFocus.x = cam.focus.x = v.x;
+    if (Number.isFinite(v.z)) cam.tFocus.z = cam.focus.z = v.z;
+    cam.focusY = heightAt(cam.focus.x, cam.focus.z);
+    if (Number.isFinite(v.dist)) cam.tDist = cam.dist = v.dist;
+    if (Number.isFinite(v.yaw)) cam.tYaw = cam.yaw = v.yaw;
+    if (Number.isFinite(v.pitch)) cam.tPitch = cam.pitch = v.pitch;
+    if (Number.isFinite(v.hebung)) cam.tHebung = cam.hebung = v.hebung;
+    if (Number.isFinite(v.fov)) {
+      cam.tFov = cam.fov = camera.fov = v.fov;
+      camera.updateProjectionMatrix();
+    }
+  }
+};

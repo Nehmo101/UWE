@@ -61,3 +61,12 @@ qa-artifacts/
 .artifacts/terra-art/
 .worktrees/
 tools/uwe-host-command-center/dist/
+
+# Terra-Bildabnahme (tools/terra-shots)
+# .terra-shots: erzeugte Aufnahmen, mehrere hundert MB je Lauf — jederzeit
+#   reproduzierbar ueber `node tools/terra-shots/shoot.mjs`.
+# .terra-refs: Vergleichsmaterial Dritter (Standbilder aus Anno 117 und aus der
+#   offenen Studio-Ghibli-Galerie). Nur lokaler Abgleich. Dieses Repository ist
+#   oeffentlich — die Bilder duerfen hier NICHT mitveroeffentlicht werden.
+.terra-shots/
+.terra-refs/

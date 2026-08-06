@@ -27,18 +27,73 @@ import { initWeltleben, tickWeltleben } from './weltleben.js';
    ========================================================================== */
 var PRESETS = {
   morgen: {
-    sonneDir: [-0.80, 0.26, 0.50], sonne: 0xffd2a0, sonneStk: 2.4,
-    hemiHimmel: 0xc6d9ec, hemiBoden: 0xbfae94, hemiStk: 0.85,
-    gegen: 0x9db8d8, gegenStk: 0.28,
-    fogWarm: 0xf8e2bc, fogCool: 0xc2d2e2, fogNah: 195, fogFern: 860, fogCap: 1.0,
-    himmel: [0x6d9cc8, 0x93b9dc, 0xbcd3e6, 0xf0e3cd, 0xf9eeda],
+    /* LICHTAUFBAU — SCHLUESSEL UND FUELLUNG SIND GETRENNTE AUFGABEN.
+
+       Die vorige Runde hat sonneStk hochgezogen und hemiStk gesenkt, in der
+       Annahme, damit den Kontrast zu holen. Das war die falsche Schraube: der
+       Kontrast steckte im Wrap-Diffuse (render/materials.js), der einer 84
+       Grad abgewandten Flaeche noch 67 % der vollen Einstrahlung gab. Beide
+       Lichter taten dadurch dasselbe — jedes von beiden beleuchtete die ganze
+       Kugel, nur mit anderer Farbe. Das Ergebnis war ein einziger Ton mit
+       Filter darueber, genau der Befund der Abnahme.
+
+       Seit der Terminator im Direktlicht scharf ist, hat jedes der beiden
+       Lichter genau EINE Aufgabe:
+         sonne  = Schluessel. Warm, gerichtet, wirft. Trifft NUR die Lichtseite.
+         hemi   = Fuellung.  Kuehl von oben, warm vom Boden. Trifft alles.
+       hemiStk steigt deshalb wieder deutlich — nicht als Rueckschritt, sondern
+       weil das Fuelllicht ab jetzt die Schattenseite ALLEIN traegt. Gerechnet:
+       Lichtseite 2.85 + 0.86 = 3.71, Schattenseite 0.11 + 0.86 = 0.97, also
+       rund 1 : 3.8. Im Wurfschatten (schattenTiefe 1.0) bleibt die Fuellung
+       allein: 1 : 4.3. Das ist der Korridor der Vorbilder — dunkel genug fuer
+       Tiefen, hell genug, dass ein Schatten Lokalfarbe behaelt. */
+    sonneDir: [-0.80, 0.26, 0.50], sonne: 0xffd2a0, sonneStk: 3.10,
+    hemiHimmel: 0xc6d9ec, hemiBoden: 0xa89272, hemiStk: 0.58,
+    gegen: 0x9db8d8, gegenStk: 0.24,
+    /* Nebelfarben eine Stufe zurueck (0.87/0.81 -> 0.82/0.75 Luminanz).
+       Der Dunst ist die Farbe, in die ALLES Ferne laeuft, und seit die
+       Kuppel ihren Horizontsaum aus genau dieser Farbe bildet (sky.js,
+       paintSky), setzt sie zugleich die Obergrenze fuer die Helligkeit des
+       Himmelsbands. Bei 0.87 war der Dunst heller als jede Wolkenoberkante —
+       dann kann keine Wolke mehr vor ihm stehen. */
+    fogWarm: 0xecd6b0, fogCool: 0xbcc8d2, fogNah: 140, fogFern: 820, fogCap: 1.0,
+    fogKurve: 0.55, luftSockel: 0.010,
+    /* Die beiden obersten Stuetzstellen lagen bei Luminanz 0.90/0.94 — also
+       auf Papierweiss. Eine nach unten geneigte Kamera sieht fast nur dieses
+       Band, und in JEDEM Referenzbild (Anno wie Ghibli) liegt der Anteil
+       ueber 0.85 zwischen 0 % und 4.6 %, bei terra lag er ueber 25 %. Der
+       hellste Wert im Bild gehoert dem besonnten Boden, nicht der Luft.
+
+       Zweite Runde: die Stuetzstellen [2]..[4] sind das, was eine Weit-
+       aufnahme ueberhaupt zu sehen bekommt (sky.js, baueKuppel — das
+       Sichtfenster ueber dem Horizont ist wenige Grad hoch). [2] ist damit
+       nicht mehr "irgendwo in der Mitte", sondern DIE Himmelsfarbe des
+       Bildes und geht entsprechend in den mittleren Wertebereich. Der warme
+       Dunst bleibt [3]/[4] vorbehalten und liegt jetzt in einem Saum von
+       unter einem Grad. */
+    /* Dritte Runde, und diesmal mit geaenderter BEDEUTUNG der Stuetzstellen
+       (sky.js, paintSky): [0..2] und [4] sind die Hoehenrampe, [3] ist die
+       SONNENGLUT und liegt nur dort, wo die Sonne steht. Sie darf und soll
+       der hellste Wert des Presets sein — der Befund "kein Sonnenanker, der
+       Dom ist rotationssymmetrisch gleichfoermig" laesst sich nur mit einer
+       eigenen Farbe fuer die Sonnenseite beheben. Vorher war [3] Teil der
+       Rampe UND das Azimutziel und musste beides zugleich sein. */
+    himmel: [0x2f6aa8, 0x5288ba, 0x6f9ab8, 0xffd8a4, 0xc2bdae],
     scheibe: 0xffe8c8, scheibeGr: 170, gegenGlow: 0xd8e2ee,
-    wolkeOben: 0xfff4e4, wolkeUnten: 0xb9c2d2, wolkeRand: 0xffe2b8, wolkeFern: 0xdfe6ec,
-    wolkeDeck: 0.82, wolkenschatten: 0.16, fenster: 1.1,
-    schatten: 0.34, wasser: 0x4a95ab, welt: 0xf4f2ee, bounce: 0xd8cebc,
+    // Schattenseite der Ballen kuehler und tiefer: seit der Puff eine
+    // Lichtrichtung hat (uSonneUV), traegt dieser Abstand die ganze Plastik.
+    wolkeOben: 0xfff4e4, wolkeUnten: 0xa8b4c8, wolkeRand: 0xffe2b8, wolkeFern: 0xd6dee6,
+    // 0.16 -> 0.26: die wandernden Wolkenschatten sind das Band zwischen
+    // Himmel und Boden (anno-04, anno-10) und fehlten laut Befund ganz.
+    wolkeDeck: 0.82, wolkenschatten: 0.26, fenster: 1.1,
+    schatten: 0.34, wasser: 0x4a95ab, welt: 0xe8e4dc, bounce: 0xd8cebc,
     // G1: Rankenglut tags dezent warm-grau (entspricht dem bisherigen Look),
     // sterne 0 — kein Sternenfeld am Tag.
-    rankenGlut: 0.3, rankenGlutFarbe: 0x4a463e, sterne: 0,
+    /* 0.30 -> 0.10. Die Emission liegt FLACH auf dem Rankenmaterial, ohne
+       Lichtrichtung — bei 0.30 war sie auf dem weissen Stamm der groesste
+       Einzelbeitrag und machte aus den Riesenwurzeln texturloses Cremevolumen
+       (Abnahmebefund). Tags leuchtet Arbor nicht, tags steht sie im Licht. */
+    rankenGlut: 0.1, rankenGlutFarbe: 0x4a463e, sterne: 0,
     // H3: Arbor spendet der Welt Licht. Morgens traegt das Tageslicht schon,
     // die Ranke bleibt aber ein schwacher Nahlicht-Sockel.
     arborLicht: 0.15, arborFarbe: 0xdfe8f0,
@@ -46,6 +101,22 @@ var PRESETS = {
     // F1-Startwert (Feinkalibrierung: F4): aufgehelltes, kuehles Morgenblau —
     // Hue ~20° blauwaerts gegenueber bounce, hell genug fuer den 15-%-Sockel.
     schattenKuehl: 0x96a8c8,
+    // Sonnenschatten: `schattenWeich` ist der Vogel-Radius in Texeln,
+    // `schattenTiefe` die Deckkraft der Maske. Morgens steht die Sonne flach
+    // (Hoehe 0.26) — lange Schatten mit noch weicher Kante.
+    // Tiefe 0.92 -> 1.00: die Maske schliesst jetzt ganz. Was im Wurfschatten
+    // uebrig bleibt, ist ausschliesslich Fuelllicht — dieselbe Trennung wie
+    // beim Terminator, und der Grund, warum ein Schatten kuehl ist.
+    schattenWeich: 1.8, schattenTiefe: 1.0,
+    // Gegenlichtsaum: morgens flach und warm, deutlich sichtbar.
+    sonnensaum: 0xffc890, sonnensaumStk: 0.60,
+    // Kontaktverdunklung (render/pipeline.js): flaches Morgenlicht wirft
+    // lange Schatten, aber die Fuge selbst bleibt weich.
+    kontakt: 0.55,
+    // Warm/Kalt: warmes Streiflicht gegen blaue Schatten. Gemessen war das
+    // Vorzeichen bisher UMGEKEHRT (Lichter kuehler als Tiefen), weil die
+    // hellste Masse im Bild der kuehle Himmel war.
+    farbskript: { licht: 0xffe8c8, mitte: 0xfdf6ec, schatten: 0x8ea6cc, staerke: 0.26 },
     belichtung: 0.98,
     // Kalibrierkorridor (F4): Landschaftsmassen S 0.25–0.50, Werteumfang
     // 0.20–0.85, reines Weiss nur Wolkenlichtern vorbehalten. Bloomschwelle
@@ -53,52 +124,156 @@ var PRESETS = {
     // gilt, aber 1.2 trieb die Wiesen an den oberen S-Rand (~0.5);
     // satLicht < 1 (Lichter entsaettigen) bleibt unveraendert.
     bloom: { staerke: 0.22, radius: 0.7, schwelle: 1.0 },
-    grade: { lift: [0.014, 0.022, 0.040], gamma: [1.0, 1.0, 1.0], gain: [1.06, 1.02, 0.95],
-      satMitte: 1.15, satLicht: 0.94, schwarz: 0.028, vignette: 0.10 }
+    /* GRADUIERUNG. lift und schwarz hoben den Schwarzpunkt bisher ZWEIMAL an
+       (0.014/0.022/0.040 plus 0.028) — das war die zweite Haelfte des
+       fehlenden Tonwertumfangs. Kein Referenzbild hat einen p05 ueber 0.251;
+       terra lag bei 0.30. Beide Sockel gehen deutlich zurueck, bleiben aber
+       vorhanden: die Tiefen sollen Zeichnung behalten, nicht zulaufen. */
+    grade: { lift: [0.008, 0.013, 0.024], gamma: [1.0, 1.0, 1.0], gain: [1.06, 1.02, 0.95],
+      satMitte: 1.15, satLicht: 0.94, kontrast: 0.34, schwarz: 0.020, vignette: 0.10 }
   },
   mittag: {
-    sonneDir: [0.45, 0.75, 0.35], sonne: 0xfff2dc, sonneStk: 2.6,
-    hemiHimmel: 0xbfd8ee, hemiBoden: 0xcbb896, hemiStk: 0.9,
-    gegen: 0xa8c8e8, gegenStk: 0.32,
-    fogWarm: 0xf2e8d4, fogCool: 0xc8d8e4, fogNah: 240, fogFern: 980, fogCap: 1.0,
-    himmel: [0x4f92cf, 0x77aede, 0xa8cbe8, 0xe6ecdf, 0xf6f1e3],
+    // Haertestes Licht des Tages: der groesste Schluessel und die kleinste
+    // Fuellung — ein Mittagsschatten ist der dunkelste des Tages (1 : 4.9).
+    sonneDir: [0.45, 0.75, 0.35], sonne: 0xfff2dc, sonneStk: 3.15,
+    hemiHimmel: 0xbfd8ee, hemiBoden: 0xb09b78, hemiStk: 0.55,
+    gegen: 0xa8c8e8, gegenStk: 0.26,
+    // Wie bei morgen: der Dunst gibt eine Stufe nach, damit die Wolkenbank
+    // ueberhaupt heller sein kann als die Luft hinter ihr.
+    fogWarm: 0xdccfb0, fogCool: 0xa8bccc, fogNah: 185, fogFern: 940, fogCap: 1.0,
+    fogKurve: 0.50, luftSockel: 0.009,
+    /* Nach anno-06 und totoro-001: mittags ist der Himmel ein SATTES,
+       mittleres Blau, und der Dunst am Wasser ist ein schmaler, warmer Saum
+       — keine grosse graugruene Flaeche. [3]/[4] standen bei einer
+       Saettigung von 0.05, also praktisch auf Neutralgrau; gemessen war
+       wasser-kueste mit sat 0.235 nur knapp ueber dem Korridorboden von
+       0.228, und der Himmel war der Grund. */
+    // [3] ist ab jetzt die Sonnenglut (siehe morgen). Mittags steht die Sonne
+    // hoch, der Azimutanteil ist entsprechend schwach (azStk 0.57) — die Glut
+    // liegt als warmer Dunstkern ueber dem Sonnenazimut, nicht als Scheibe.
+    /* Deutlich tiefer und saettiger als der rechnerische Zielwert, und das
+       ist Absicht: gemessen kommt die Kuppelfarbe NICHT unveraendert ins
+       Bild. Zwischen ihr und dem Bildpunkt liegen Bloom, das Farbskript
+       (mitte 0xfdf8f0, also fast Weiss, bei Staerke 0.22) und die
+       Palettenbindung (0.16). Eine Stuetzstelle von 0x5b9ad0 kam als
+       (155,184,195) heraus — 40 Stufen heller und um zwei Drittel
+       entsaettigt. Kalibriert wird deshalb am Bildpunkt, nicht am Hexwert. */
+    himmel: [0x0d4a96, 0x1f66b4, 0x3f89c8, 0xe0d8bc, 0xa8c0c4],
     scheibe: 0xfff8ec, scheibeGr: 120, gegenGlow: 0xd2e0ea,
-    wolkeOben: 0xffffff, wolkeUnten: 0xb6c4d4, wolkeRand: 0xfff2da, wolkeFern: 0xd8e4ee,
-    wolkeDeck: 0.78, wolkenschatten: 0.25, fenster: 0.0,
-    schatten: 0.45, wasser: 0x3f93ad, welt: 0xffffff, bounce: 0xe0d8c0,
+    // Schattenseite deutlich kuehler: totoro-001 und kazetachinu-022 setzen
+    // gegen das Weiss der Lichtseite ein klares Blaugrau, kein helles Grau.
+    wolkeOben: 0xffffff, wolkeUnten: 0x8ea6c4, wolkeRand: 0xfff2da, wolkeFern: 0xcfdce8,
+    wolkeDeck: 0.78, wolkenschatten: 0.36, fenster: 0.0,
+    schatten: 0.45, wasser: 0x3f93ad, welt: 0xf2f0ea, bounce: 0xe0d8c0,
     // G1: mittags die schwaechste Glut — hartes Licht schluckt das Leuchten.
-    rankenGlut: 0.25, rankenGlutFarbe: 0x4a463e, sterne: 0,
+    rankenGlut: 0.06, rankenGlutFarbe: 0x4a463e, sterne: 0,
     // H3: mittags aus — hartes Sonnenlicht laesst kein Rankenlicht zu.
     arborLicht: 0.0, arborFarbe: 0xdfe8f0,
     strahlen: 0.12,
     // F1-Startwert (Feinkalibrierung: F4): neutrales Himmelblau — mittags
     // kommt die Schattenfuellung vom blauen Himmel, nicht von warmem Bounce.
     schattenKuehl: 0x8ea6c4,
-    belichtung: 0.98,
+    // Mittag zeichnet am haertesten: kleinster Vogel-Radius, volle Maske,
+    // und die schaerfste Kontaktfuge des Tages.
+    schattenWeich: 1.2, schattenTiefe: 1.0,
+    kontakt: 0.62,
+    // Mittags steht die Sonne im Ruecken der Silhouetten kaum je — der
+    // schwaechste Saum des Tages.
+    sonnensaum: 0xfff0d8, sonnensaumStk: 0.22,
+    farbskript: { licht: 0xfff0d4, mitte: 0xfdf8f0, schatten: 0x93aacc, staerke: 0.22 },
+    // 0.98 -> 0.93: gemessen brannten Schaumsaum und Schneefeld bei Mittag
+    // auf 25 % der Bildflaeche ueber Luminanz 0.85 aus (Referenzen: 0-4.6 %).
+    // Der hellste Wert im Bild gehoert dem besonnten Boden, nicht dem Wasser.
+    belichtung: 0.93,
     // Kalibrierkorridor (F4): Landschaftsmassen S 0.25–0.50, Werteumfang
     // 0.20–0.85. Hoechste Bloomschwelle des Tages (1.05) — hartes Mittags-
     // licht soll zeichnen, nicht leuchten. satMitte 1.22 → 1.15: grenzwertig
     // hoch, die hellste Stimmung braucht die wenigste Nachsaettigung;
     // satLicht < 1 bleibt.
     bloom: { staerke: 0.18, radius: 0.7, schwelle: 1.05 },
-    grade: { lift: [0.010, 0.016, 0.028], gamma: [1.0, 1.0, 1.0], gain: [1.05, 1.03, 0.97],
-      satMitte: 1.15, satLicht: 0.95, schwarz: 0.024, vignette: 0.10 }
+    grade: { lift: [0.004, 0.007, 0.014], gamma: [1.0, 1.0, 1.0], gain: [1.05, 1.03, 0.97],
+      satMitte: 1.15, satLicht: 0.95, kontrast: 0.16, schwarz: 0.018, vignette: 0.10 }
   },
   abend: {
     // Die staerkste Stimmung: dunkle Silhouetten gegen warmen Himmel, kuehle
     // Schatten gegen warmes Licht. Der Nebel staffelt, statt zu ueberdecken.
-    sonneDir: [-0.95, 0.10, -0.26], sonne: 0xff9a4e, sonneStk: 2.5,
-    hemiHimmel: 0x55639c, hemiBoden: 0x4c4238, hemiStk: 0.34,
-    gegen: 0x7a86b8, gegenStk: 0.42,
-    fogWarm: 0xf6b070, fogCool: 0x757ea6, fogNah: 260, fogFern: 1150, fogCap: 1.0,
-    himmel: [0x252a55, 0x4a4a7c, 0x8d6a90, 0xf0a860, 0xffd9a0],
+    /* Nachkalibriert: der erste Durchgang hat den Abend UEBERdunkelt (56.6 %
+       der Pixel unter Luminanz 0.20 gegen 28.4 % vorher und 15-29 % in den
+       Referenzen). Grund war die falsche Annahme, der Sonne-zu-Hemisphaere-
+       Tausch trage in jeder Stimmung gleich: bei einer Sonnenhoehe von 0.10
+       liegt fast die ganze Landschaft im Streiflicht, dotNL ist ueberall
+       klein — die Sonne kann die weggenommene Fuellung dann gar nicht
+       ersetzen. Der Abend war schon vor dieser Runde die EINZIGE Stimmung
+       im Referenzkorridor; er bekommt deshalb nur die Haelfte der Kur. */
+    /* ABEND, dritte Fassung. Der Befund der Abnahme lautete: "der Abend ist
+       nicht beleuchtet, sondern global orange uebermalt". Das stimmte und
+       hatte zwei Ursachen, die sich gegenseitig verdeckt haben.
+       (1) Der Wrap-Diffuse gab jeder Flaeche mindestens 67 % Einstrahlung —
+           bei einer Sonnenhoehe von 0.10 heisst das: Boden, Dachnord- und
+           Dachsuedseite bekamen fast denselben Wert. Behoben in materials.js.
+       (2) Die Fuellung war mit 0.40 auf einem sehr dunklen Blauviolett fast
+           nicht vorhanden (Leuchtdichte rund 0.05). Alles, was NICHT vom
+           orangen Streiflicht getroffen wurde, fiel damit in eine einzige
+           schwarze Masse — und weil die Sonne bei 6 Grad Hoehe kaum etwas
+           trifft, war das fast das ganze Bild.
+       Jetzt: der Schluessel bleibt orange und flach — er soll nur noch die
+       zur Sonne gedrehten Flaechen erwischen, das ist das Rimlight, das
+       gefehlt hat. Die Fuellung wird zur eigentlichen Grundhelligkeit der
+       Landschaft, deutlich staerker und heller, und sie ist BLAUVIOLETT. Der
+       Kalt-Warm-Kontrast des Abends entsteht damit dort, wo er in jedem
+       gemalten Sonnenuntergang entsteht: zwischen dem, was die Sonne noch
+       trifft, und dem, was nur noch der Himmel beleuchtet. */
+    sonneDir: [-0.95, 0.10, -0.26], sonne: 0xff9a4e, sonneStk: 3.0,
+    hemiHimmel: 0x6e7cb6, hemiBoden: 0x6b5847, hemiStk: 1.34,
+    gegen: 0x7a86b8, gegenStk: 0.40,
+    /* DIE WICHTIGSTE ZEILE DES ABENDBILDES, und das ist ein Messergebnis.
+       In weite-abend liegt der Horizont 1.38 Halbbildhoehen UEBER der oberen
+       Bildkante (camera.js: ndc.y = tan(pitch)/tan(fov/2), pitch 0.40,
+       fov 34). Was dort wie Himmel aussieht, IST keiner: es ist die
+       Wasserebene (water.js, WASSER_RAND 872) bei 370 bis 730 Einheiten
+       Abstand, voll vernebelt. Nachgewiesen mit einer Aufnahme, in der die
+       Kuppel schwarz gefaerbt war — das Band blieb bei Luminanz 0.61 stehen,
+       die Kuppel steuert dort keine 20 % bei.
+       Damit ist die Nebelfarbe der einzige Regler, der dieses Band traegt.
+       Sie geht deshalb deutlich zurueck (0.72 -> 0.63 warm, 0.40 kuehl):
+       ein dunklerer, kaelterer Dunst vergroessert den Abstand zwischen dem
+       klaren Vordergrund und der Ferne — genau die "Distanzabsorption statt
+       globaler Rosa-Tonung", die der Befund verlangt. */
+    fogWarm: 0xeda468, fogCool: 0x69709c, fogNah: 165, fogFern: 880, fogCap: 1.0,
+    fogKurve: 0.62, luftSockel: 0.028,
+    // Abendhimmel bleibt fast unangetastet: gemessen liegen hier bereits
+    // 0.0 % ueber 0.85 und 28 % unter 0.20 — der einzige Werteumfang, der
+    // schon vor dieser Runde den Referenzen entsprach. Nur der schmale
+    // Horizontstreifen [4] gibt eine Spur nach, damit er nicht als einziges
+    // Feld im Bild an die Weissgrenze stoesst.
+    // Der Horizontstreifen bekommt wieder Farbe: gemessen war er als hellste
+    // Flaeche im Bild ein fast neutrales Creme, und ein Abendrot ohne Rot am
+    // Horizont ist kein Abendrot. Heller wird er dabei NICHT — nur satter.
+    // Dritte Beruehrung, klein: der Horizontsaum war ein sandiges Creme und
+    // damit die hellste Flaeche im Abendbild. Nach marnie-021 gehoert die
+    // hellste Stelle des Abendhimmels der SONNE, und das Band darum ist
+    // rosig-orange, nicht sandfarben. Nur Farbton und eine Spur Wert, die
+    // Stimmung bleibt.
+    /* VIERTE FASSUNG, und die erste, in der [3] und [4] nicht mehr dasselbe
+       tun. Gemessen war [3] (0xe58a48, Luminanz 0.60) DUNKLER als [4]
+       (0xeeb27e, 0.72) — das "Horizontgluehen" hat die Sonnenseite also
+       nachweislich abgedunkelt: die Messspalte auf dem Sonnenazimut lag 16
+       Stufen unter der Bildmitte. Ein Abendhimmel oeffnet gegen die Sonne
+       hin auf (marnie-021: heller Kern, nach aussen saettigend und
+       abkuehlend), er schliesst nicht.
+       Jetzt: [4] ist der Horizont ABGEWANDT von der Sonne, [3] ist die Glut
+       AN der Sonne und der hellste Wert des Presets. Der Verlauf zwischen
+       beiden laeuft ueber den Azimut, nicht ueber die Hoehe. */
+    himmel: [0x23264f, 0x494a80, 0x8d5f86, 0xffc98a, 0xd99b6e],
     scheibe: 0xffc078, scheibeGr: 260, gegenGlow: 0x8d94c2,
-    wolkeOben: 0xf6c294, wolkeUnten: 0x6e6f96, wolkeRand: 0xffb060, wolkeFern: 0x9a8aa2,
-    wolkeDeck: 0.85, wolkenschatten: 0.06, fenster: 2.6,
-    schatten: 0.4, wasser: 0x46567c, welt: 0xe8d2c0, bounce: 0x9a8ca0,
+    wolkeOben: 0xf6c294, wolkeUnten: 0x615f8c, wolkeRand: 0xffb060, wolkeFern: 0x9a8aa2,
+    // 0.06 -> 0.20: auch am Abend gliedern Wolkenschatten die Weite. Bei
+    // streifendem Licht sind sie lang und weich, aber sie sind da.
+    wolkeDeck: 0.85, wolkenschatten: 0.20, fenster: 2.6,
+    schatten: 0.4, wasser: 0x46567c, welt: 0xdcc8b6, bounce: 0x9a8ca0,
     // G1: in der Daemmerung beginnt die Ranke zu leuchten; sterne 0.15 —
     // die ersten Sterne stehen schon am Abendhimmel.
-    rankenGlut: 0.55, rankenGlutFarbe: 0x4a463e, sterne: 0.15,
+    rankenGlut: 0.35, rankenGlutFarbe: 0x4a463e, sterne: 0.15,
     // H3: in der Daemmerung uebernimmt Arbor spuerbar — kuehles Weiss gegen
     // das orange Restlicht, der staerkste Kalt-Warm-Kontrast des Tages.
     arborLicht: 0.35, arborFarbe: 0xd8e6ee,
@@ -107,30 +282,65 @@ var PRESETS = {
     // vier Stimmungen — der Abend lebt vom maximalen Kalt-Warm-Kontrast
     // zwischen orangem Licht und blauvioletten Schatten.
     schattenKuehl: 0x5a628e,
-    belichtung: 0.94,
+    // Flachste Sonne des Tages (Hoehe 0.10): sehr lange Schatten, deren Kante
+    // mit der Entfernung ausfranst — dafuer der groesste Radius am Tag.
+    /* Deutlich flacher als am Tag, und das ist keine Zurueckhaltung, sondern
+       Notwendigkeit: bei 6 Grad Sonnenhoehe wirft ein 400 Einheiten hoher
+       Rankenstamm einen Streifen ueber die ganze Karte. Mit voller Maske
+       waren das zwei schnurgerade schwarze Baender quer durchs Bild — kein
+       Drama, sondern ein Fehler. Bei 0.5 lesen sie sich als lange, weiche
+       Abendschatten. */
+    schattenWeich: 3.2, schattenTiefe: 0.85,
+    /* Der staerkste Saum der fuenf: im Gegenlicht ist die Kante das
+       Einzige, was die Sonne noch trifft. Genau der Effekt, der im
+       Abendbild fehlte — die Haeuser am Mittelhang standen als schwarze
+       Flecken auf Braun, ohne dass irgendwo Licht vorbeistrich. */
+    sonnensaum: 0xffa860, sonnensaumStk: 1.70,
+    // Weichster Kontakt des Tages: bei streifendem Licht ist die Fuge selbst
+    // schon halb im Schatten, ein harter Hof saehe aufgemalt aus.
+    kontakt: 0.52,
+    // Der staerkste Kalt-Warm-Kontrast der fuenf Stimmungen: oranges
+    // Restlicht gegen blauviolette Schatten.
+    farbskript: { licht: 0xffd0a0, mitte: 0xefd8c6, schatten: 0x565f92, staerke: 0.34 },
+    belichtung: 0.99,
     // Kalibrierkorridor (F4): das Abendrot behaelt den groessten Tonwert-
     // umfang (dunkelste Silhouetten gegen den hellsten Himmel), deshalb
     // niedrigster lift-Sockel und die einzige Schwelle unter 1.0 (0.92 — ok,
     // bleibt ueber der ~0.9-Untergrenze). satMitte 1.05 bleibt: der Kontrast
     // kommt hier aus Kalt-Warm, nicht aus Saettigung; satLicht 0.9 bleibt.
     bloom: { staerke: 0.34, radius: 0.75, schwelle: 0.92 },
-    grade: { lift: [0.012, 0.020, 0.050], gamma: [0.90, 0.90, 0.95], gain: [1.10, 1.0, 0.88],
-      satMitte: 1.05, satLicht: 0.9, schwarz: 0.02, vignette: 0.12 }
+    // gamma 0.90 -> 0.97: die alte Kurve zog die Mitten zusaetzlich nach
+    // unten (pow(c, 1/0.90) = pow(c, 1.11)). Solange der Abend seinen
+    // Tonwertumfang aus einer Untermalung holen musste, war das richtig; seit
+    // Schluessel und Fuellung getrennt sind, kommt er aus dem Licht.
+    grade: { lift: [0.014, 0.021, 0.048], gamma: [0.97, 0.97, 1.0], gain: [1.10, 1.0, 0.88],
+      satMitte: 1.05, satLicht: 0.9, kontrast: 0.12, schwarz: 0.016, vignette: 0.12 }
   },
   nebel: {
     // Kontrast reduziert, aber das Motiv bleibt lesbar: halbe Dichte und ein
     // Deckel, unter den nahe Objekte nicht fallen.
-    sonneDir: [0.20, 0.92, 0.22], sonne: 0xf2f2ea, sonneStk: 0.9,
-    hemiHimmel: 0xe0e8ea, hemiBoden: 0xcfcabc, hemiStk: 1.1,
+    // Die einzige Stimmung, in der die Fuellung den Schluessel UEBERSTEIGT —
+    // genau das ist Dunst: ein Himmel, der von ueberall gleich hell ist.
+    // Der Rest Sonne haelt das Bild davor, in eine flache Scheibe zu kippen.
+    sonneDir: [0.20, 0.92, 0.22], sonne: 0xf2f2ea, sonneStk: 1.05,
+    hemiHimmel: 0xe0e8ea, hemiBoden: 0xbdb8a8, hemiStk: 1.15,
     gegen: 0xdfe4e4, gegenStk: 0.12,
     fogWarm: 0xeceada, fogCool: 0xdde4e2, fogNah: 110, fogFern: 880, fogCap: 0.86,
-    himmel: [0xb9c6cc, 0xc9d4d6, 0xd9e0de, 0xe8ebe4, 0xf0f1ea],
+    fogKurve: 0.28, luftSockel: 0.008,
+    // Nebel bleibt grau — aber gemessen liegt weite-nebel mit sat 0.187 UNTER
+    // dem Korridorboden 0.228, und "keine graue Suppe" steht ausdruecklich in
+    // der Aufnahmefrage. Der Himmel bekommt deshalb oben einen kuehlen
+    // Blaustich; unten bleibt er neutral, damit der Dunst weiss ausblasst.
+    // [3] Sonnenglut: im Dunst steht die Sonne fast senkrecht (azStk 0.30),
+    // der Azimutanteil ist entsprechend schwach — die Glut bleibt eine
+    // Ahnung von Richtung, kein Loch in der Suppe.
+    himmel: [0x93a5b2, 0xa6b6c0, 0xb4c2c6, 0xe8ece4, 0xc6cdc9],
     scheibe: 0xf6f4ea, scheibeGr: 90, gegenGlow: 0xe4e8e4,
     wolkeOben: 0xf2f4f0, wolkeUnten: 0xd4dad8, wolkeRand: 0xf0eee2, wolkeFern: 0xe2e7e2,
     wolkeDeck: 0.5, wolkenschatten: 0.0, fenster: 1.6,
-    schatten: 0.15, wasser: 0xa6bcbb, welt: 0xf4f6f2, bounce: 0xdcd8cc,
+    schatten: 0.15, wasser: 0xa6bcbb, welt: 0xeaece8, bounce: 0xdcd8cc,
     // G1: im Nebel traegt die Glut ein Stueck weiter als am klaren Tag.
-    rankenGlut: 0.4, rankenGlutFarbe: 0x4a463e, sterne: 0,
+    rankenGlut: 0.16, rankenGlutFarbe: 0x4a463e, sterne: 0,
     // H3: im Dunst traegt das Rankenlicht weiter als am klaren Tag, bleibt
     // aber schwach — der Nebelanteil (Lichtsaeule) macht hier die Wirkung.
     arborLicht: 0.15, arborFarbe: 0xe2eced,
@@ -139,6 +349,18 @@ var PRESETS = {
     // Umgebungslicht — Nebel frisst Farbkontrast, kuehle Schatten wuerden
     // hier kuenstlich wirken.
     schattenKuehl: 0xaeb8bc,
+    // Diffuses Licht: die Maske bleibt weitgehend offen (0.35) und der Rand
+    // laeuft breit aus — ein Schatten im Nebel ist eine Ahnung, keine Kante.
+    schattenWeich: 4.5, schattenTiefe: 0.35,
+    // Im Dunst gibt es keine Kante, an der Licht vorbeistreift.
+    sonnensaum: 0xf6f4ec, sonnensaumStk: 0.12,
+    // Fast keine Kontaktfuge: bei rundum gleichem Licht gibt es kaum
+    // Verdeckung. Ganz weg darf sie trotzdem nicht — sonst schwimmt im
+    // Nebelbild alles, weil ihm auch der Wurfschatten fehlt.
+    kontakt: 0.26,
+    // Schwaechstes Toning der fuenf: Nebel frisst Farbkontrast, ein
+    // deutliches Split-Toning wirkte hier aufgesetzt.
+    farbskript: { licht: 0xf4eede, mitte: 0xfbfaf6, schatten: 0xa6b2be, staerke: 0.16 },
     belichtung: 1.05,
     // Kalibrierkorridor (F4): bewusst engster Werteumfang, aber lesbar —
     // fogCap 0.86 deckelt den Nebelfaktor, nahe Objekte behalten Zeichnung.
@@ -146,8 +368,11 @@ var PRESETS = {
     // Stimmung, in der das erlaubt ist); hoechste Bloomschwelle 1.1, damit
     // das flache Licht nirgends blueht. Werte bleiben.
     bloom: { staerke: 0.10, radius: 0.6, schwelle: 1.1 },
-    grade: { lift: [0.030, 0.034, 0.040], gamma: [1.0, 1.0, 1.0], gain: [1.0, 1.0, 1.0],
-      satMitte: 0.85, satLicht: 0.8, schwarz: 0.05, vignette: 0.08 }
+    // satMitte 0.85 -> 0.98, satLicht 0.8 -> 0.88: gemessen lag der Nebel bei
+    // mittlerer Saettigung 0.138, waehrend KEIN Referenzbild unter 0.228
+    // faellt — auch ein Dunstbild behaelt Lokalfarbe, es verliert Kontrast.
+    grade: { lift: [0.016, 0.018, 0.024], gamma: [1.0, 1.0, 1.0], gain: [1.0, 1.0, 1.0],
+      satMitte: 0.98, satLicht: 0.88, kontrast: 0.16, schwarz: 0.024, vignette: 0.08 }
   },
   nacht: {
     // G1 — Mondnacht nach den Konzeptbildern: tiefdunkelblauer Himmel mit
@@ -155,13 +380,20 @@ var PRESETS = {
     // warmes Fensterglühen der Staedtchen als Gegenpol, Landschaft gedaempft
     // und kuehl, Nebel kuehl und duenn. Alle Werte sind kalibrierbare
     // Richtwerte. Die "Sonne" ist hier der Mond: kuehl, schwach, schraeg.
-    sonneDir: [-0.55, 0.52, -0.42], sonne: 0xb8c8e8, sonneStk: 0.55,
-    hemiHimmel: 0x2a3454, hemiBoden: 0x1c1c28, hemiStk: 0.5,
+    // Mondlicht ist gerichtet und schwach; die Fuellung kommt vom Nachthimmel
+    // und ist noch schwaecher. Beide steigen leicht mit, damit der schaerfere
+    // Terminator die Nacht nicht in schwarze Flaechen ohne Zeichnung zerlegt —
+    // der Kalibrierkorridor verlangt Tiefen MIT Zeichnung.
+    sonneDir: [-0.55, 0.52, -0.42], sonne: 0xb8c8e8, sonneStk: 0.78,
+    hemiHimmel: 0x3e4c78, hemiBoden: 0x24242f, hemiStk: 0.95,
     gegen: 0x36406a, gegenStk: 0.22,
     // fogWarm kaum warm — der Mond liefert kein warmes Streulicht; die
     // Nebelachse bleibt kuehl-in-kuehl, nur minimal aufgehellt zum Mond hin.
     fogWarm: 0x4a5680, fogCool: 0x252c48, fogNah: 220, fogFern: 1050, fogCap: 0.95,
-    himmel: [0x0a1026, 0x141c3a, 0x1e2a52, 0x2c3a66, 0x38466e],
+    fogKurve: 0.45, luftSockel: 0.030,
+    // [3] ist nachts das MONDgluehen — der helle Hof um die Scheibe, der
+    // laut Kanon die Silhouetten traegt. Wie am Tag azimutal, nicht als Ring.
+    himmel: [0x080d20, 0x121a34, 0x22304f, 0x6a7ea8, 0x35415f],
     // Die Scheibe IST der Mond — kein eigenes Objekt, sky.js rendert wie
     // immer die Preset-getriebene Sonnenscheibe.
     scheibe: 0xe8ecf4, scheibeGr: 110, gegenGlow: 0x2e3858,
@@ -180,6 +412,20 @@ var PRESETS = {
     arborLicht: 1.0, arborFarbe: 0xc4e4e0,
     strahlen: 0.0,
     schattenKuehl: 0x3a4668,
+    // Der Mond wirft Schatten — aber schwach und weich. 0.45 statt 1.0, sonst
+    // saeuft die ohnehin dunkle Nacht in schwarzen Flaechen ab.
+    schattenWeich: 3.2, schattenTiefe: 0.45,
+    // Mondsaum: kuehl und schmal, aber vorhanden — er zeichnet nachts die
+    // Silhouetten gegen den dunklen Himmel.
+    sonnensaum: 0xa8bcdc, sonnensaumStk: 0.55,
+    // Nachts sitzt der Kontakt nur als Andeutung: sonst zoege der Hof um jedes
+    // beleuchtete Fenster einen schwarzen Rand.
+    kontakt: 0.22,
+    // Nachts liegt der Kalt-Warm-Kontrast zwischen Mondlicht (kuehl) und dem
+    // Fensterglut der Staedtchen (warm) — das Skript stuetzt nur den kuehlen
+    // Teil, die Glut ist Emission und laeuft ohnehin an der Graduierung
+    // vorbei in den Bloom.
+    farbskript: { licht: 0xd8e6fc, mitte: 0xa8b6d6, schatten: 0x2e3a5c, staerke: 0.20 },
     belichtung: 0.9,
     // Bewusste Ausnahme der ~0.9-Schwellen-Regel: schwelle 0.85 — die Glut
     // (Ranken, Fenster, Mond) DARF nachts bluehen; die gedaempfte Landschaft
@@ -188,7 +434,7 @@ var PRESETS = {
     // lift-Sockel ~0.03: die Nacht faellt nie auf reines Schwarz — Schatten
     // behalten Zeichnung (keine einfarbigen Flaechen), Sockel leicht blau.
     grade: { lift: [0.028, 0.030, 0.038], gamma: [1.0, 1.0, 1.04], gain: [0.92, 0.96, 1.06],
-      satMitte: 1.0, satLicht: 0.85, schwarz: 0.03, vignette: 0.16 }
+      satMitte: 1.0, satLicht: 0.85, kontrast: 0.06, schwarz: 0.03, vignette: 0.16 }
   }
 };
 
@@ -217,7 +463,11 @@ var PRESETS = {
      fogCap          min() gegen den Nebeldeckel
      fogTint         [r,g,b] multiplikativ auf beide Nebelfarben
      sonne/hemi      Faktoren auf die Lichtstaerken
-     schatten        Faktor auf die Kontaktschatten-Deckkraft
+     schatten        Faktor auf Kontaktschatten UND auf die Deckkraft der
+                     Sonnenschattenmaske (sun.shadow.intensity) — unter einer
+                     geschlossenen Wolkendecke gibt es beides kaum noch
+     schattenWeich   Faktor auf den Vogel-Radius der Schattenkante: je
+                     diffuser das Licht, desto breiter der Halbschatten
      wind            ZIEL fuer windUniforms.uWindStaerke (Gras, Kronen, Ranken)
      belichtung      Faktor auf look.belichtung
      gain            Faktor auf grade.gain (Regen/Sturm dunkeln die Welt ab)
@@ -234,7 +484,7 @@ var WETTER = {
     wolkeDeck: 1.00, wolkeGrau: 0.00, wolkeDunkel: 1.00,
     wolkenschatten: 1.00, wolkenTempo: 1.00,
     fogNah: 1.00, fogFern: 1.00, fogCap: 1.00, fogTint: [1, 1, 1],
-    sonne: 1.00, hemi: 1.00, schatten: 1.00, wind: 1.00,
+    sonne: 1.00, hemi: 1.00, schatten: 1.00, schattenWeich: 1.00, wind: 1.00,
     belichtung: 1.00, gain: 1.00, sat: 1.00, vignette: 0.00, bloom: 1.00,
     vfxTyp: null, vfxDichte: 1.0, vfxBiom: 1.00
   },
@@ -245,7 +495,7 @@ var WETTER = {
     wolkeDeck: 1.30, wolkeGrau: 0.35, wolkeDunkel: 0.90,
     wolkenschatten: 1.45, wolkenTempo: 1.30,
     fogNah: 0.85, fogFern: 0.92, fogCap: 1.00, fogTint: [0.99, 0.99, 1.01],
-    sonne: 0.78, hemi: 1.12, schatten: 0.72, wind: 1.15,
+    sonne: 0.78, hemi: 1.12, schatten: 0.72, schattenWeich: 1.70, wind: 1.15,
     belichtung: 0.99, gain: 0.98, sat: 0.94, vignette: 0.02, bloom: 0.85,
     vfxTyp: null, vfxDichte: 1.0, vfxBiom: 0.70
   },
@@ -259,7 +509,7 @@ var WETTER = {
     wolkeDeck: 1.50, wolkeGrau: 0.70, wolkeDunkel: 0.72,
     wolkenschatten: 0.50, wolkenTempo: 1.55,
     fogNah: 0.55, fogFern: 0.55, fogCap: 0.97, fogTint: [0.94, 0.96, 1.00],
-    sonne: 0.50, hemi: 1.05, schatten: 0.45, wind: 1.35,
+    sonne: 0.50, hemi: 1.05, schatten: 0.45, schattenWeich: 2.40, wind: 1.35,
     belichtung: 0.95, gain: 0.90, sat: 0.78, vignette: 0.06, bloom: 0.70,
     vfxTyp: "regen", vfxDichte: 1.0, vfxBiom: 0.00
   },
@@ -269,7 +519,7 @@ var WETTER = {
     wolkeDeck: 1.40, wolkeGrau: 0.55, wolkeDunkel: 0.94,
     wolkenschatten: 0.40, wolkenTempo: 0.90,
     fogNah: 0.50, fogFern: 0.60, fogCap: 0.95, fogTint: [1.01, 1.01, 1.03],
-    sonne: 0.60, hemi: 1.20, schatten: 0.50, wind: 0.80,
+    sonne: 0.60, hemi: 1.20, schatten: 0.50, schattenWeich: 2.20, wind: 0.80,
     belichtung: 1.02, gain: 1.00, sat: 0.80, vignette: 0.03, bloom: 0.90,
     vfxTyp: "schnee", vfxDichte: 1.0, vfxBiom: 0.00
   },
@@ -281,7 +531,7 @@ var WETTER = {
     wolkeDeck: 1.60, wolkeGrau: 0.80, wolkeDunkel: 0.62,
     wolkenschatten: 0.90, wolkenTempo: 2.60,
     fogNah: 0.38, fogFern: 0.45, fogCap: 0.99, fogTint: [0.92, 0.94, 0.99],
-    sonne: 0.42, hemi: 0.95, schatten: 0.35, wind: 2.60,
+    sonne: 0.42, hemi: 0.95, schatten: 0.35, schattenWeich: 2.00, wind: 2.60,
     belichtung: 0.93, gain: 0.86, sat: 0.72, vignette: 0.10, bloom: 0.65,
     vfxTyp: "regen", vfxDichte: 1.6, vfxBiom: 0.00
   }
@@ -383,6 +633,121 @@ var sun = new THREE.DirectionalLight(0xfff2dc, 2.6);
 var hemi = new THREE.HemisphereLight(0xbfd8ee, 0xcbb896, 0.9);
 var rimLight = new THREE.DirectionalLight(0xa8c8e8, 0.32);
 
+/* ==========================================================================
+   SONNENSCHATTEN — eine mitgefuehrte Kaskade der Staerke eins
+
+   Die Schattenkarte selbst schaltet render/pipeline.js ein. Hier steht, WAS
+   sie sieht: eine orthografische Kamera, die je Bild eng um den Kamerafokus
+   gelegt wird.
+
+   WARUM KEINE ECHTE KASKADE. Eine geneigte Kamera sieht bis zum Horizont;
+   eine einzige Schattenkarte kann das nicht abdecken. Drei Kaskadenstufen
+   waeren drei zusaetzliche Geometriedurchlaeufe — bei rund 900.000 Dreiecken
+   je Bild und einem ohnehin gerissenen 20-ms-Vertrag ist das nicht bezahlbar.
+   Stattdessen waechst die EINE Karte mit der Kameradistanz mit:
+
+     halbweite = dist * 1.9, geklemmt auf 90..430
+
+   Der Faktor ist nachgerechnet, nicht geraten. Bei fov 34 und Bildhoehe 900
+   deckt ein Bildpunkt in der Fokusebene rund dist * 0.0007 Welteinheiten ab;
+   ein Schattentexel ist halbweite/1024 gross. Mit 1.9 landet ein Texel bei
+   rund drei Bildpunkten — in JEDER Aufnahme, vom 44er-Nahblick auf die
+   Schildkroete bis zum 230er-Rankenplateau. Die Schattenaufloesung bleibt
+   also im BILD konstant, statt in der Nahaufnahme zu verschwenden und in der
+   Weite zu verhungern.
+
+   Was jenseits der Halbweite liegt, ist voll besonnt (three gibt ausserhalb
+   des Frustums 1.0 zurueck). Bei halbweite = 1.9 * dist liegt diese Grenze
+   rund das Doppelte der Kameradistanz hinter dem Fokus — dort traegt der
+   Nebel das Bild bereits, eine Kante ist in keiner der 14 Aufnahmen sichtbar.
+
+   TEXELRASTUNG. Ohne sie wandert die Karte beim Kamerafahren in
+   Bruchteilen eines Texels und jede Schattenkante flimmert. Der Mittelpunkt
+   wird deshalb in der Lichtebene (Seite/Hoch) auf ganze Texel gerundet.
+
+   BIAS. Die Kamera ist orthografisch, die Tiefe also LINEAR — es gibt kein
+   Praezisionsproblem in der Ferne, und `bias` waere in Weltmass sehr grob
+   (0.0005 * Tiefenbereich). Der Streifenschutz laeuft deshalb fast
+   vollstaendig ueber `normalBias`, das three in WELTeinheiten auf die
+   Normale rechnet: 1.8 Texelbreiten, mitwachsend mit der Halbweite.
+   ========================================================================== */
+var SCHATTEN_KARTE = 2048;          // Kantenlaenge der Schattentextur
+var SCHATTEN_NAH = 90, SCHATTEN_FERN = 430;   // Grenzen der Halbweite
+sun.castShadow = true;
+sun.shadow.mapSize.set(SCHATTEN_KARTE, SCHATTEN_KARTE);
+sun.shadow.bias = -0.00035;
+sun.shadow.camera.near = 1;
+
+var SCHATTEN_HOEHE_MIN = 0.18;      // flachste Ausrichtung der Schattenkamera
+var _schSeite = new THREE.Vector3(), _schHoch = new THREE.Vector3();
+var _schRicht = new THREE.Vector3();
+var _schAuf = new THREE.Vector3(0, 1, 0), _schMitte = new THREE.Vector3();
+var schattenDir = new THREE.Vector3(0.45, 0.75, 0.35).normalize();
+
+/**
+ * Legt die Schattenkamera um den aktuellen Kamerafokus. Laeuft je Bild
+ * (tickAtmosphere) und zusaetzlich am Ende jedes applyTod, damit ein
+ * Tageszeitwechsel im STEHENDEN Bild sofort greift.
+ */
+function schattenFitten() {
+  var halb = cam.dist * 1.9;
+  if (halb < SCHATTEN_NAH) halb = SCHATTEN_NAH;
+  if (halb > SCHATTEN_FERN) halb = SCHATTEN_FERN;
+  var texel = 2 * halb / SCHATTEN_KARTE;
+
+  /* Mindesthoehe der SCHATTENrichtung. Die Beleuchtung selbst behaelt die
+     Preset-Richtung — nur die Schattenkamera richtet sich flacher als
+     SCHATTEN_HOEHE_MIN nicht mehr aus. Grund: die Schattenlaenge waechst mit
+     1/tan(Hoehe) und laeuft gegen unendlich. Beim Abendpreset (Hoehe 0.10)
+     legte ein Rankenstamm dadurch einen Streifen ueber die halbe Karte,
+     und die Schattenkamera musste eine Tiefe abdecken, in der jedes Texel
+     wertlos wurde. 0.18 laesst die Abendschatten rund fuenfmal so lang wie
+     ihr Objekt — deutlich laenger als am Mittag, aber endlich.
+     Die Abweichung ist bei streifendem Licht nicht ablesbar: der AZIMUT
+     bleibt exakt erhalten, und die Terminatorzeichnung auf den Objekten
+     kommt weiterhin aus der echten Richtung. */
+  _schRicht.copy(schattenDir);
+  if (_schRicht.y < SCHATTEN_HOEHE_MIN) {
+    var eben = Math.sqrt(Math.max(1e-6, 1 - _schRicht.y * _schRicht.y));
+    var zielEben = Math.sqrt(1 - SCHATTEN_HOEHE_MIN * SCHATTEN_HOEHE_MIN);
+    _schRicht.x *= zielEben / eben;
+    _schRicht.z *= zielEben / eben;
+    _schRicht.y = SCHATTEN_HOEHE_MIN;
+    _schRicht.normalize();
+  }
+
+  // Orthonormale Lichtbasis. Bei fast senkrechter Sonne (mittag/nebel) ist
+  // die Weltachse Y kein brauchbarer Aufwaerts-Bezug mehr — dann dient Z.
+  _schAuf.set(0, 1, 0);
+  if (Math.abs(_schRicht.y) > 0.985) _schAuf.set(0, 0, 1);
+  _schSeite.crossVectors(_schAuf, _schRicht).normalize();
+  _schHoch.crossVectors(_schRicht, _schSeite).normalize();
+
+  // Mittelpunkt: der Kamerafokus, in der Lichtebene auf ganze Texel gerundet.
+  _schMitte.set(cam.focus.x, cam.focusY, cam.focus.z);
+  var s = Math.round(_schMitte.dot(_schSeite) / texel) * texel;
+  var h = Math.round(_schMitte.dot(_schHoch) / texel) * texel;
+  var t = _schMitte.dot(_schRicht);
+  _schMitte.set(0, 0, 0)
+    .addScaledVector(_schSeite, s).addScaledVector(_schHoch, h)
+    .addScaledVector(_schRicht, t);
+
+  // Abstand der Lichtquelle: hoch genug, dass Ranken (bis 1000 Einheiten),
+  // Schwebeinseln und Bergkaemme noch VOR der nahen Ebene liegen.
+  var abstand = 1250;
+  sun.position.copy(_schMitte).addScaledVector(_schRicht, abstand);
+  sun.target.position.copy(_schMitte);
+  sun.target.updateMatrixWorld();
+  var c = sun.shadow.camera;
+  c.left = -halb; c.right = halb; c.top = halb; c.bottom = -halb;
+  c.far = abstand + halb * 2.4 + 400;
+  c.updateProjectionMatrix();
+  // 1.8 Texelbreiten: unter ~1.2 kommen Streifen auf schraegen Daechern
+  // zurueck, ueber ~2.5 loest sich der Schatten sichtbar vom Fuss des
+  // Objekts. Waechst mit der Halbweite mit, weil das Texel es auch tut.
+  sun.shadow.normalBias = texel * 1.8;
+}
+
 var todName = "mittag";
 var todFrom = null, todTo = PRESETS.mittag, todT = 1;
 var fogMittel = new THREE.Color();          // Fallback-Nebelfarbe (Rauch, fog.color)
@@ -430,9 +795,21 @@ function applyTod(t) {
 
   _dir.set(lerp(a.sonneDir[0], b.sonneDir[0], e), lerp(a.sonneDir[1], b.sonneDir[1], e),
     lerp(a.sonneDir[2], b.sonneDir[2], e)).normalize();
-  sun.position.copy(_dir).multiplyScalar(600);
+  /* Die Sonnenposition setzt jetzt schattenFitten() (Position UND Ziel wandern
+     gemeinsam mit dem Kamerafokus). Fuer die Lichtrichtung ist das
+     wertneutral: three bildet sie als position - target.position, und beide
+     verschieben sich um denselben Betrag. */
+  schattenDir.copy(_dir);
   mixHex(a.sonne, b.sonne, e, sun.color);
   sun.intensity = mixNum(a.sonneStk, b.sonneStk, e) * W.sonne;
+  // Schattenhaerte und -tiefe gehoeren zur Stimmung: Mittag zeichnet hart,
+  // Nebel loest fast auf, die Nacht behaelt nur eine Andeutung. `radius` ist
+  // der Halbmesser des 5-Punkt-Vogel-Kreises in Texeln, `intensity` mischt
+  // die fertige Maske gegen 1.0 (three: mix( 1.0, shadow, shadowIntensity )).
+  sun.shadow.radius = mixNum(a.schattenWeich, b.schattenWeich, e)
+    * (W.schattenWeich === undefined ? 1 : W.schattenWeich);
+  sun.shadow.intensity = clamp(mixNum(a.schattenTiefe, b.schattenTiefe, e)
+    * W.schatten, 0, 1);
   mixHex(a.hemiHimmel, b.hemiHimmel, e, hemi.color);
   mixHex(a.hemiBoden, b.hemiBoden, e, hemi.groundColor);
   hemi.intensity = mixNum(a.hemiStk, b.hemiStk, e) * W.hemi;
@@ -446,9 +823,28 @@ function applyTod(t) {
   mixHex(a.fogCool, b.fogCool, e, terraUniforms.uFogCool.value);
   terraUniforms.uSunDir.value.copy(_dir);
   terraUniforms.uFogCap.value = mixNum(a.fogCap, b.fogCap, e);
+  /* Staffelung und Luftsockel der Luftperspektive (render/materials.js,
+     Patch 4). Beide werden TOLERANT gelesen: fehlt das Feld auf einer Seite
+     der Blende, blendet es gegen 0 — also gegen den Zustand vor dieser Runde
+     (Nebelgerade, kein Sockel), nicht gegen NaN. Damit tragen sie auch
+     Wetter- und Biomtabellen, die diese Felder nicht kennen. */
+  terraUniforms.uFogKurve.value = mixNum(a.fogKurve === undefined ? 0 : a.fogKurve,
+    b.fogKurve === undefined ? 0 : b.fogKurve, e);
+  terraUniforms.uLuftSockel.value = mixNum(a.luftSockel === undefined ? 0 : a.luftSockel,
+    b.luftSockel === undefined ? 0 : b.luftSockel, e);
   mixHex(a.bounce, b.bounce, e, terraUniforms.uBounce.value);
   // F1: kuehle Schattenfarbe blendet wie alle Farbfelder weich mit
   mixHex(a.schattenKuehl, b.schattenKuehl, e, terraUniforms.uSchattenKuehl.value);
+  /* Gegenlichtsaum: Farbe und Staerke blenden getrennt und werden erst hier
+     zusammengefuehrt. Getrennt, weil eine Farbe im Farbraum interpoliert und
+     eine Staerke linear — ein vorab multiplizierter Wert blendete beim
+     Tageszeitwechsel ueber Schwarz und der Saum blinkte. Der Wetterfaktor
+     ist derselbe wie beim Wurfschatten: unter einer Wolkendecke streift kein
+     Licht mehr an einer Kante vorbei. */
+  mixHex(a.sonnensaum === undefined ? 0 : a.sonnensaum,
+    b.sonnensaum === undefined ? 0 : b.sonnensaum, e, terraUniforms.uSonnensaum.value)
+    .multiplyScalar(mixNum(a.sonnensaumStk === undefined ? 0 : a.sonnensaumStk,
+      b.sonnensaumStk === undefined ? 0 : b.sonnensaumStk, e) * W.schatten);
   fogMittel.copy(terraUniforms.uFogWarm.value).lerp(terraUniforms.uFogCool.value, 0.5);
   if (sceneHook && sceneHook.fog) {
     sceneHook.fog.color.copy(fogMittel);
@@ -469,8 +865,25 @@ function applyTod(t) {
   // Himmel mit fuenf Stuetzstellen
   var h = [];
   for (var i = 0; i < 5; i++) h.push(mixHex(a.himmel[i], b.himmel[i], e, _col).getHex());
-  paintSky(h[0], h[1], h[2], h[3], h[4]);
+  /* setSonnenDir VOR paintSky: die Kuppel faerbt seit dieser Runde auch
+     azimutal (Sonnengluehen am Horizont, world/sky.js) und liest dafuer die
+     hinterlegte Sonnenrichtung. Umgekehrt haette sie beim ersten applyTod die
+     Startrichtung des Moduls benutzt und danach je einen Takt nachgehinkt. */
   setSonnenDir(_dir);
+  /* fogMittel als sechstes Argument: die Kuppel bildet ihren Horizontsaum und
+     ihre beiden Fernstufen aus der ECHTEN Nebelfarbe der Stimmung (sky.js,
+     paintSky). Vorher wurden die beiden Flaechen, die sich an der Horizont-
+     kante beruehren, aus zwei voneinander unabhaengigen Zahlensaetzen
+     gefaerbt — daher der Abnahmebefund "abrupter Farbsprung von beige auf
+     mauve an einer 1-Pixel-Polygonkante".
+     BEWUSST HIER und nicht nach den Nachkorrekturen: an dieser Stelle steht
+     die Tageszeit-Blende von fogMittel. Die Biom- und Wetterkorrekturen
+     danach sind reine Multiplikatoren im Bereich 0.92–1.06 (store.js
+     luft.fogCoolTint, WETTER.fogTint) — sie verschieben den Saum um wenige
+     Stufen, waehrend ein Verschieben dieses Aufrufs die Reihenfolge von
+     setWolkenFarben/recolorClouds mitreissen wuerde, das die Dunstfarbe
+     ebenfalls liest. Die Naht bleibt damit gemessen unter drei Stufen. */
+  paintSky(h[0], h[1], h[2], h[3], h[4], fogMittel);
   setSonne(_dir, mixHex(a.scheibe, b.scheibe, e, _col).getHex(),
     mixNum(a.scheibeGr, b.scheibeGr, e),
     mixHex(a.gegenGlow, b.gegenGlow, e, _m).getHex());
@@ -492,7 +905,16 @@ function applyTod(t) {
 
   // Kontaktschatten: unter einer geschlossenen Decke gibt es kaum noch
   // gerichtetes Licht, also auch kaum noch harte Schlagschatten.
-  schattenMat.opacity = mixNum(a.schatten, b.schatten, e) * W.schatten;
+  // SCHATTEN_BLOB_REST: seit die Sonne eine echte Schattenkarte hat, liegt
+  // unter jedem Objekt beides. Der gemalte Fleck bleibt als Fugenschluss am
+  // Kontaktpunkt (siehe core/pools.js), aber nur noch mit einem Drittel
+  // seiner Deckkraft — sonst summierten sich Fleck und Wurfschatten zu einem
+  // schwarzen Sockel. Der Faktor haengt an der Schattentiefe der Stimmung:
+  // wo die Karte kaum wirkt (Nebel 0.35, Nacht 0.45), traegt der Fleck
+  // wieder mehr.
+  var schattenTiefe = mixNum(a.schattenTiefe, b.schattenTiefe, e);
+  schattenMat.opacity = mixNum(a.schatten, b.schatten, e) * W.schatten
+    * (1 - 0.62 * schattenTiefe);
   mixHex(a.wasser, b.wasser, e, waterMat.color);
   // Biom-Tint (G5): faerbt die Preset-Wasserfarbe je Biom um (wiese = [1,1,1]).
   // io.js ruft nach jedem Biomwechsel setTod(..., true), damit er sofort greift.
@@ -612,18 +1034,50 @@ function applyTod(t) {
       // Wetterkorrektur und drueckt nur (Regen 0.78, Sturm 0.72).
       satMitte: mixNum(a.grade.satMitte, b.grade.satMitte, e) * satFaktor * W.sat,
       satLicht: mixNum(a.grade.satLicht, b.grade.satLicht, e),
+      // Tonwertumfang: fehlt das Feld auf einer Seite, blendet es gegen 0
+      // (die Identitaet), nicht gegen NaN.
+      kontrast: mixNum(a.grade.kontrast === undefined ? 0 : a.grade.kontrast,
+        b.grade.kontrast === undefined ? 0 : b.grade.kontrast, e),
       schwarz: mixNum(a.grade.schwarz, b.grade.schwarz, e),
       vignette: mixNum(a.grade.vignette, b.grade.vignette, e) + W.vignette },
     horizont: fogMittel,
+    /* Kontaktverdunklung: dieselbe Wetterachse wie der Wurfschatten. Unter
+       einer geschlossenen Wolkendecke verschwindet die Fuge mit dem
+       gerichteten Licht — W.schatten traegt beides. */
+    kontakt: mixNum(a.kontakt === undefined ? 0 : a.kontakt,
+      b.kontakt === undefined ? 0 : b.kontakt, e) * (0.45 + 0.55 * W.schatten),
     // C1: Godrays. Der Wert je Tageszeit steuert die Staerke, die
     // Sonnenrichtung liefert den Ursprung im Bildraum. Nachts 0 —
     // dann strahlen die Ranken statt der Sonne (Kanon).
     strahlen: mixNum(a.strahlen === undefined ? 0 : a.strahlen,
       b.strahlen === undefined ? 0 : b.strahlen, e) * (W.strahlen === undefined ? 1 : W.strahlen),
-    sonneDir: _dir
+    sonneDir: _dir,
+    // Warm/Kalt-Trennung als Filmlook ueber der Palette. Fehlt das Feld
+    // (Wetter-/Biomtabellen liefern es nicht), schaltet setLook den Zweig ab.
+    farbskript: mischeSkript(a.farbskript, b.farbskript, e)
   });
 
+  // Die Schattenkamera folgt der Sonnenrichtung — nach der Blende, damit ein
+  // Tageszeitwechsel auch im stehenden Bild sofort die richtige Richtung hat.
+  schattenFitten();
   wetterVfxSetzen(wE);
+}
+
+/* Blendet die beiden Farbskripte zweier Presets. Eigene Funktion statt eines
+   Eintrags in schnappschuss(): das Skript ist ein Objekt aus drei Hexfarben
+   plus einer Zahl, und mixHex braucht je Farbe einen eigenen Zielpuffer.
+   Fehlt es auf einer Seite, blendet die Staerke der anderen Seite gegen 0 —
+   ein Preset ohne Skript zieht das Toning also sauber heraus. */
+var _skLicht = new THREE.Color(), _skMitte = new THREE.Color(), _skSchatten = new THREE.Color();
+var _skript = { licht: _skLicht, mitte: _skMitte, schatten: _skSchatten, staerke: 0 };
+function mischeSkript(a, b, e) {
+  if (!a && !b) return null;
+  var q = a || b, r = b || a;
+  mixHex(q.licht, r.licht, e, _skLicht);
+  mixHex(q.mitte, r.mitte, e, _skMitte);
+  mixHex(q.schatten, r.schatten, e, _skSchatten);
+  _skript.staerke = lerp(a ? a.staerke : 0, b ? b.staerke : 0, e);
+  return _skript;
 }
 
 /* ==========================================================================
@@ -707,9 +1161,22 @@ function schnappschuss() {
   // Hex-Farben sind numbers — lerp im Zahlenraum waere falsch. Farbfelder gezielt:
   ['sonne','hemiHimmel','hemiBoden','gegen','fogWarm','fogCool','scheibe','gegenGlow',
    'wolkeOben','wolkeUnten','wolkeRand','wolkeFern','wasser','welt','bounce',
-   'schattenKuehl','rankenGlutFarbe','arborFarbe'].forEach(function (k) {
+   'schattenKuehl','sonnensaum','rankenGlutFarbe','arborFarbe'].forEach(function (k) {
     s[k] = mixHex(a[k], b[k], e, _col).getHex();
   });
+  // Farbskript: drei Hexfarben plus Staerke — die generische Schleife oben
+  // wuerde es als Objekt hart uebernehmen und beim Wechsel mitten in einer
+  // Blende einen Tonsprung erzeugen.
+  if (a.farbskript || b.farbskript) {
+    var qa = a.farbskript || b.farbskript, qb = b.farbskript || a.farbskript;
+    s.farbskript = {
+      licht: mixHex(qa.licht, qb.licht, e, _col).getHex(),
+      mitte: mixHex(qa.mitte, qb.mitte, e, _col).getHex(),
+      schatten: mixHex(qa.schatten, qb.schatten, e, _col).getHex(),
+      staerke: lerp(a.farbskript ? a.farbskript.staerke : 0,
+        b.farbskript ? b.farbskript.staerke : 0, e)
+    };
+  } else s.farbskript = null;
   return s;
 }
 
@@ -763,6 +1230,10 @@ function tickAtmosphere(raw) {
   // ein aufziehendes Unwetter darf nicht schalten, sondern muss aufziehen.
   if (wetterT < 1) { wetterT = Math.min(1, wetterT + Math.min(0.3, raw) / 1.6); lauf = true; }
   if (lauf) applyTod(todT);
+  // Die Schattenkamera haengt am Kamerafokus und muss deshalb JEDES Bild
+  // nachgezogen werden, nicht nur bei einer laufenden Blende. Der Aufruf ist
+  // reine Vektorrechnung (kein Renderzugriff) und kostet nichts Messbares.
+  else schattenFitten();
   // Wolkenschatten wandern synchron zur mittleren Wolkenlage — im Sturm
   // schneller, im Schneefall langsamer (derselbe Faktor wie fuer sky.js).
   terraUniforms.uCloudDrift.value.x +=
@@ -773,6 +1244,9 @@ function tickAtmosphere(raw) {
 function initAtmosphere(scene) {
   sceneHook = scene;
   scene.add(sun);
+  // Das Ziel MUSS in der Szene haengen: three liest die Lichtrichtung aus
+  // target.matrixWorld, und die wird nur fuer Objekte im Graphen aktualisiert.
+  scene.add(sun.target);
   scene.add(hemi);
   scene.add(rimLight);
   scene.add(birdMesh);

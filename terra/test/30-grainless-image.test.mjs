@@ -49,13 +49,45 @@ test('malerische Flaechen bleiben, Tiefenstaffelung ist rein tonal und scharf', 
   assert.match(pipeline, /uMultiGrenzen/);
   assert.doesNotMatch(pipeline, /uMultiWeich/);
   assert.doesNotMatch(pipeline, /\bverwischt\b/);
-  assert.doesNotMatch(pipeline,
+  /* Die Regel gilt der TIEFENSTAFFELUNG und deshalb genau dem Pass, der sie
+     rechnet: KanteBildShader (Kante, Kontakthof, Tiefenbaender, Palette,
+     Papierkante). Dort darf kein Nachbarpixel des Farbbildes gelesen werden —
+     sonst wuerde die Staffelung raeumlich weichzeichnen statt tonal zu wirken.
+
+     Die Kantenglaettung am Ende der Kette ist ausdruecklich NICHT gemeint und
+     war es nie: sie ist kein Weichzeichner, sondern ein Kantenfilter. Sie
+     mischt nur dort, wo die Luminanzspanne der fuenf Kreuznachbarn eine
+     Schwelle reisst, und nur QUER zur erkannten Kantenrichtung — auf einer
+     Flaeche liefert sie Bit fuer Bit den Mittelwert zurueck. Der zweite Test
+     unten haelt genau diese Eigenschaft fest.
+     Geprueft wird deshalb der Quelltextabschnitt des Kante-Passes, nicht die
+     ganze Datei. */
+  const kanteVon = pipeline.indexOf('const KanteBildShader');
+  const kanteBis = pipeline.indexOf('const KantenglaettungShader');
+  assert.ok(kanteVon > 0 && kanteBis > kanteVon, 'KanteBildShader nicht gefunden');
+  assert.doesNotMatch(pipeline.slice(kanteVon, kanteBis),
     /texture2D\s*\(\s*tDiffuse\s*,\s*vUv\s*[+-]/,
     'Tiefenstaffelung darf das Farbbild nicht raeumlich weichzeichnen');
   assert.match(pipeline, /t\.minFilter\s*=\s*t\.magFilter\s*=\s*THREE\.LinearFilter/,
     'die Palette soll weich zwischen Stuetzfarben interpolieren');
   assert.match(pipeline, /float wellig/,
     'die Papierkante bleibt weich und organisch, nur das Pixelrauschen entfaellt');
+});
+
+test('Kantenglaettung greift nur an Kanten und laesst Flaechen unberuehrt', () => {
+  const von = pipeline.indexOf('const KantenglaettungShader');
+  assert.ok(von > 0, 'die Kantenglaettung fehlt — Silhouetten treppen wieder');
+  const shader = pipeline.slice(von, pipeline.indexOf('function initPipeline', von));
+  // Der Frueh-Ausstieg IST die Zusage: liegt die Luminanzspanne der fuenf
+  // Kreuznachbarn unter der Schwelle, wird der Mittelwert unveraendert
+  // zurueckgegeben. Ohne ihn waere der Pass ein Vollbild-Weichzeichner.
+  assert.match(shader, /if \( spanne < max\( uMinKante, lMax \* uKante \) \)/);
+  assert.match(shader, /gl_FragColor = vec4\( mitteRGB, 1\.0 \);[\s\S]{0,24}return;/);
+  // Sie mischt entlang der ERKANNTEN Richtung, nicht mit festen Nachbarn.
+  assert.match(shader, /richtung = clamp\( richtung \* kehr, -uSpanne, uSpanne \) \* t;/);
+  // Und sie laeuft nach dem OutputPass, also auf gammakodierten Werten.
+  assert.match(pipeline, /composer\.addPass\(outputPass\);\s*\n\s*composer\.addPass\(aaPass\);/);
+  assert.doesNotMatch(shader, /\buZeit\b|\bkorn\b/);
 });
 
 test('Retina-Aufloesung bleibt bei Asset-Schau, Resize und Depth-Pass konsistent', () => {

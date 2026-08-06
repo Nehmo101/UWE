@@ -1478,6 +1478,8 @@ function genRanke(el) {
     var mound = new THREE.Mesh(
       moundGeo(R * 4.6, R * 1.15, fx0, fz0, (el.seed + 61 + wf * 977) | 0), rockMat);
     mound.position.set(fx0, heightAt(fx0, fz0), fz0);
+    mound.castShadow = true;
+    mound.receiveShadow = true;
     mound.userData.el = el;
     groupOf(el).add(mound);
 
@@ -1565,7 +1567,19 @@ function genRanke(el) {
     // Plateaus RUTSCHEN also bei Anzahlaenderung, wuerfeln aber nicht um.
     var rPl = ortsRng(k, -1, el.seed + 511);
     var fr = nPl > 1 ? k / (nPl - 1) : 0.45;
-    t = clamp(0.34 + fr * 0.54 + rr(rPl, -0.025, 0.025), 0.1, 0.96);
+    /* Untergrenze 0.34 -> 0.44. Befund der Bildabnahme: das UNTERSTE Plateau
+       einer 145er Ranke sass bei 0.34 auf rund 49 Einheiten Hoehe und ist
+       zugleich das LAENGSTE (L = lerp(44, 24, fr)) — es ragte also 41
+       Einheiten waagerecht vom Stamm weg, auf genau der Hoehe, an der die
+       Weitblicke (Kamerahoehe 68, Blickneigung 0.40) den oberen Bildrand
+       haben. Sichtbar blieb davon nur die schwarze Blattunterseite, frei
+       ueber dem Horizont und ohne den Stamm, der sie traegt: die
+       "Polygonfetzen" der Abnahme. Ab 0.44 liegt die unterste Blattetage
+       vollstaendig ueber der Bildkante und die Krone bleibt beisammen.
+       Die STAFFELUNG bleibt erhalten (oberstes Plateau weiterhin bei 0.92),
+       die Reihenfolge in plateauDaten ebenso — Wendeltreppe und
+       Haengebruecken haengen an der Ordnung, nicht am Absolutwert. */
+    t = clamp(0.44 + fr * 0.48 + rr(rPl, -0.025, 0.025), 0.1, 0.96);
     frameAt(axis, t, c, n1, n2);
     var pang = k * 2.39996 + el.seed * 0.0007;
     var L = lerp(44, 24, fr) * p.plateau;
@@ -1922,12 +1936,23 @@ function genRanke(el) {
   // Ranken-Mesh erst NACH der Plateau-Schleife bauen, damit die
   // herabhaengenden Bewuchsstraenge (geos.push in der Schleife) mitkommen.
   var vineMesh = new THREE.Mesh(mergeGeos(geos), vineMat);
+  /* Der Rankenstamm ist die hoechste Silhouette der Karte. Ohne castShadow
+     stand er bei einer Sonnenhoehe von 0.26 senkrecht auf dem Huegel, ohne
+     dass am Boden ein einziger Streifen lag.
+     Der gedithertete Ranken-Discard (Patch 7) fehlt der Schattenkarte — die
+     Ranke wirft oben also die volle Silhouette statt der ausblendenden.
+     Dieselbe bewusste Abweichung, die der Tiefen-Prepass seit jeher hat, und
+     an einer Stelle, die 400 Einheiten ueber dem Boden liegt. */
+  vineMesh.castShadow = true;
+  vineMesh.receiveShadow = true;
   vineMesh.userData.el = el;
   vineMesh.renderOrder = 2;
   groupOf(el).add(vineMesh);
 
   if (leafGeos.length) {
     var lm = new THREE.Mesh(mergeGeos(leafGeos), leafMat);
+    lm.castShadow = true;
+    lm.receiveShadow = true;
     lm.userData.el = el;
     groupOf(el).add(lm);
   }
@@ -1941,9 +1966,19 @@ function genRanke(el) {
     // Ein Strom je Insel (Baeume laufen sequentiell mit — sie gehoeren zur
     // Insel und wuerfeln nur zusammen mit ihr um).
     var rI = ortsRng(k, 0, el.seed + 517);
-    t = rr(rI, 0.25, 0.95);
+    /* Untergrenze 0.25 -> 0.58, Abdrift 2.6-7 R -> 2.4-5.2 R. Eine Insel bei
+       einem Viertel der Rankenhoehe schwebt UNTERHALB der ersten Blattetage
+       neben dem nackten Stamm: nichts im Bild bezieht sich auf sie, und im
+       Gegenlicht bleibt von ihr nur ein schwarzer Keil (Befund der
+       Bildabnahme in weite-morgen/weite-abend). Schwebeinseln gehoeren zur
+       KRONE — dort stehen Blaetter, Plateaus und Luftwurzeln als Bezug
+       daneben, und die Silhouette der Ranke bleibt eine. Die gekuerzte
+       Abdrift haelt sie zusaetzlich im Kronenumriss statt frei daneben.
+       Passt zum Wachstumsmodell (alterFaktoren): Inseln sammeln sich ohnehin
+       erst spaet, sstep(0.30, 0.85, alter). */
+    t = rr(rI, 0.58, 0.95);
     frameAt(axis, t, c, n1, n2);
-    var ia = rr(rI, 0, 6.283), idst = R * rr(rI, 2.6, 7);
+    var ia = rr(rI, 0, 6.283), idst = R * rr(rI, 2.4, 5.2);
     var ix = c.x + Math.cos(ia) * idst, iy = c.y + rr(rI, -H * 0.05, H * 0.05),
         iz = c.z + Math.sin(ia) * idst;
     var ir = rr(rI, 3.5, 8);
@@ -1960,7 +1995,11 @@ function genRanke(el) {
     }
   }
   if (islGeos.length) {
+    // Schwebeinseln: Werfer UND Empfaenger — der Schatten einer Insel auf
+    // dem Land darunter ist das Einzige, was ihre Hoehe wirklich zeigt.
     var im = new THREE.Mesh(mergeGeos(islGeos), rockMat);
+    im.castShadow = true;
+    im.receiveShadow = true;
     im.userData.el = el;
     groupOf(el).add(im);
   }

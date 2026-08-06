@@ -3,6 +3,9 @@ import * as THREE from 'three';
 import { clamp, lerp, sstep, DEG, vnoise, fractal } from '../core/rng.js';
 import { MAP, VW, HALF, S, BIOME, hoehenProfil } from '../core/store.js';
 import { terraMat, tintedMats, setzeBiomKarte } from '../render/materials.js';
+// Nahfeld-Bodentexturen. render/textures.js haengt nur an three und core/rng.js
+// — kein Zyklus (render/materials.js importiert von dort ebenfalls).
+import { TEX } from '../render/textures.js';
 // I2: Biomflaechen. biomfeld.js haengt nur an core/rng.js und core/store.js —
 // es traegt eine eigene Kopie von inPoly/polyBBox, damit kein Rueckimport nach
 // generators/ entsteht (dort haengt areas.js an genau dieser Datei).
@@ -134,6 +137,8 @@ function felderSichern() {
   biomFeld = new Uint8Array(n); biomFeld.fill(BIOM_KEINS);
   biomGewicht = new Uint8Array(n);
   feldLaenge = n;
+  // Frische Felder tragen keine Wegsenke mehr — die gemerkte Box gilt nicht.
+  wegI0 = 0; wegI1 = -1; wegJ0 = 0; wegJ1 = -1; wegFaellig = false;
   // Frisches (genullte) base-Feld ist eine Aenderung wie jede andere. Praktisch
   // folgt sofort verwerfeHistorie() aus io.js, aber der Zaehler soll auch dann
   // stimmen, wenn jemand felderSichern() kuenftig ohne diesen Rahmen ruft.
@@ -254,6 +259,224 @@ var PVW = PATCH + 1;            // Vertices je Patch-Kante
 var terrain = new THREE.Group();   // Huelle: alle Patch-Meshes haengen hier drin
 var terraMaterial = terraMat({ vertexColors: true, cloudShadow: true, familie: 'erde' });
 tintedMats.push(terraMaterial);    // genau EINMAL, auch ueber Groessenwechsel
+
+/* ==========================================================================
+   DER BODEN ALS MATERIAL — der Nahfeld-Block am Terrainmaterial
+
+   Befund der Abnahme: "Die Gelaendeoberflaeche ist derzeit kein Material,
+   sondern eine eingefaerbte Flaeche." Das ist keine Geschmacksfrage, sondern
+   eine Aufloesungsrechnung. Das Gitter traegt EINEN Vertex je Welteinheit;
+   im Nahblick (Kameradistanz 54) sind das rund 29 Bildpunkte. Alles, was
+   terrainColor unten rechnet — und sei es die feinste Oktave —, ist also
+   mindestens 29 Bildpunkte breit und ueber diese Strecke linear interpoliert.
+   Unterhalb dieser Grenze gab es bisher nur die Aquarell-Malschicht aus
+   render/materials.js mit nachgerechnet ±2,8 % Helligkeit. Deshalb der Brei.
+
+   Dieser Block schliesst die Luecke PRO BILDPUNKT. Er haengt sich an das
+   Terrainmaterial und an KEIN anderes:
+
+     * er wickelt den vorhandenen onBeforeCompile ein, statt ihn zu ersetzen
+       (Wrap-Licht, Nebel, Wolkenschatten, Malschicht und Biom-LUT bleiben
+       vollstaendig erhalten);
+     * er laeuft an EINEM Materialobjekt, das nur terrain.js benutzt
+       (render/materials.js: cloudShadow ist der einzige Aufruf mit true);
+     * der Programmschluessel bekommt ein Anhaengsel, damit three das Programm
+       nicht mit einem ungepatchten teilt.
+
+   ANKER — beide gepruefte Stellen der Phong-Programme:
+     Vertex   #include <begin_vertex>        (materials.js patcht dort nicht)
+     Fragment #include <normal_fragment_maps>
+   Der Fragmentanker ist mit Bedacht gewaehlt: dort ist `normal` fertig
+   (Blickraum) und `diffuseColor` steht noch — beides laesst sich in EINEM
+   Block anfassen, und lights_phong_fragment liest danach beides. Ein Anker
+   bei color_fragment koennte die Normale nicht erreichen; die Koernung waere
+   dann wieder nur Farbe und kein Licht.
+
+   VIER TEXTURZUGRIFFE, mehr nicht: Gras fein, Erde fein, Erde makro — und der
+   Makrozugriff traegt gleich drei Aufgaben (Bluetenflecken einblenden,
+   grossflaechige Helligkeit, Kantenbruch). Das ist der Grund, warum die
+   Bildzeit sich nicht bewegt.
+   ========================================================================== */
+/* Kachelweiten in Welteinheiten. 2,6 fuer das Nahfeld ist die Zahl, an der
+   die ganze Rechnung haengt: bei 512 Texeln sind das 197 Texel je Einheit
+   gegenueber 29 Bildpunkten im Nahblick — die Textur steht also mit Reserve
+   ueber der Bildaufloesung und laeuft in der Weite sauber in die Mip-Stufen
+   aus. Groesser gewaehlt wuerde sie unscharf, kleiner begaenne sie zu
+   flimmern (dieselbe Abtastgrenze, an der die Vertexoktaven bei 0.245
+   enden). 17,5 fuer die Makrolage ist knapp die siebenfache Weite: gross
+   genug, dass die Kachel im Bild nicht als Kachel lesbar wird. */
+var BODEN_FEIN = 1 / 2.6;
+var BODEN_MAKRO = 1 / 17.5;
+/* Staerke der Nahzeichnung, 0..1. Traegt zwei Dinge zugleich:
+   die Beruhigung auf Kartenmassstab (dKorn aus terrainColor — eine Karte
+   zeigt Flaechen, keine Kiesel) und die Abschaltung. aktualisierePatch zieht
+   ihn nach, also genau dann, wenn auch die Vertexfarbe neu gerechnet wird. */
+var uBodenNah = { value: 1 };
+
+/** Setzt einen Textanker im Shader; meldet sich, wenn er fehlt. */
+function bodenErsetze(shader, feld, anker, neu) {
+  if (shader[feld].indexOf(anker) < 0) {
+    console.warn('terra: Boden-Patch "' + anker + '" fand seinen Anker nicht — ' +
+      'der Nahbereich bleibt ohne Koernung.');
+    return false;
+  }
+  shader[feld] = shader[feld].replace(anker, neu);
+  return true;
+}
+
+/**
+ * Haengt den Nahfeld-Block an einen Shader.
+ * @param fest  optional [weg, gras, kies, schnee] — Bodenart als KONSTANTE
+ *   statt als Vertexattribut. Fuer Meshes gedacht, die kein eigenes Gitter
+ *   mit `bodenart` fuehren, aber trotzdem Boden sind: das Wegband und die
+ *   Gassen aus generators/paths.js sind der Fall, fuer den das gebaut ist
+ *   (sie liegen als eigene Streifenmeshes UEBER dem Gelaende und waren in der
+ *   Abnahme die letzten voellig texturlosen Flaechen im Bild). Fehlt der
+ *   Parameter, kommt die Bodenart wie beim Gelaende aus dem Attribut.
+ */
+function bodenPatch(shader, fest) {
+  shader.uniforms.uBodenGras = { value: TEX.bodenGras };
+  shader.uniforms.uBodenErde = { value: TEX.bodenErde };
+  shader.uniforms.uBodenNah = uBodenNah;
+
+  var quelle;
+  if (fest) {
+    quelle = 'const vec4 vBodenArt = vec4( ' + fest[0].toFixed(3) + ', ' +
+      fest[1].toFixed(3) + ', ' + fest[2].toFixed(3) + ', ' + fest[3].toFixed(3) + ' );\n';
+  } else {
+    quelle = 'varying vec4 vBodenArt;\n';
+    shader.vertexShader = 'attribute vec4 bodenart;\nvarying vec4 vBodenArt;\n' + shader.vertexShader;
+    bodenErsetze(shader, 'vertexShader', '#include <begin_vertex>',
+      '#include <begin_vertex>\n\tvBodenArt = bodenart;');
+  }
+
+  shader.fragmentShader =
+    'uniform sampler2D uBodenGras;\nuniform sampler2D uBodenErde;\n' +
+    'uniform float uBodenNah;\n' + quelle + shader.fragmentShader;
+  bodenErsetze(shader, 'fragmentShader', '#include <normal_fragment_maps>',
+    '#include <normal_fragment_maps>\n' +
+    '{\n' +
+    /* Abstandsblende. Ohne sie flimmerte die Koernung am Horizont, und der
+       gemalte Charakter der Weitaufnahme ginge verloren: ein Aquarell hat im
+       Hintergrund KEINE Oberflaechenzeichnung. Die Mip-Stufen allein
+       reichen dafuer nicht — sie mitteln die Farbe weg, die Normale aber
+       bleibt bis zuletzt kontrastreich. Restanteil 0.2 statt 0, damit der
+       Uebergang nicht als Ring durch die Landschaft laeuft. */
+    '\tfloat bdW = uBodenNah * mix( 1.0, 0.16, smoothstep( 60.0, 220.0, length( vViewPosition ) ) );\n' +
+    '\tif ( bdW > 0.004 ) {\n' +
+    '\t\tvec2 bdP = vTerraW.xz;\n' +
+    '\t\tvec4 bdG = texture2D( uBodenGras, bdP * ' + BODEN_FEIN.toFixed(5) + ' );\n' +
+    '\t\tvec4 bdE = texture2D( uBodenErde, bdP * ' + BODEN_FEIN.toFixed(5) + ' );\n' +
+    '\t\tvec4 bdM = texture2D( uBodenErde, bdP * ' + BODEN_MAKRO.toFixed(5) + ' );\n' +
+    /* NESTER statt Rieseln. Ohne diesen Faktor liegt das Feinkorn mit
+       gleicher Staerke ueber der ganzen Flaeche, und das liest sich als
+       Filmkorn — der erste Versuch sah aus wie ein verschmutzter Sensor.
+       In anno-05 ist der Boden fleckig ORGANISIERT: dichte Grasnester,
+       ausgemagerte Kuppen, offene Erdstellen dazwischen. Die Makrolage
+       (17,5 Einheiten) liefert genau diese Verteilung, und sie moduliert
+       deshalb die AMPLITUDE der Feinschicht statt nur additiv danebenzu-
+       liegen. Untergrenze 0.45, damit keine Flaeche voellig kahl wird. */
+    '\t\tfloat bdNest = 0.45 + bdM.a * 1.25;\n' +
+    /* --- Die Wegkante, pro Bildpunkt -----------------------------------
+       vBodenArt.x traegt den STETIGEN Trittwert aus terrainColor, nicht die
+       fertige Deckung. Die Schwelle faellt erst hier — und zwar gegen die
+       Hoehenkanaele der beiden Texturen versetzt. Damit liegt die Grenze
+       zwischen Weg und Gras nicht mehr auf den Dreieckskanten des Gitters
+       (der zweitschwerste Befund der Abnahme: "harte Zickzacklinien"),
+       sondern auf einer Struktur mit 512 Texeln je 2,6 Einheiten. Genau das
+       ist der Height-Blend, den die Vorbilder zeigen: in totoro-018 stehen
+       einzelne Halme bis auf den Lehm vor, in anno-05 greifen Erdzungen ins
+       Gras. Die Makrohoehe faellt die grossen Buchten, die Feinhoehe die
+       Zaehne darin. */
+    '\t\tfloat bdKante = vBodenArt.x + ( bdM.a - 0.5 ) * 0.42 + ( bdE.a - 0.5 ) * 0.26\n' +
+    '\t\t\t+ ( bdG.a - 0.5 ) * 0.16;\n' +
+    '\t\tfloat bdWeg = smoothstep( 0.18, 0.34, bdKante );\n' +
+    '\t\tfloat bdKies = clamp( vBodenArt.z + bdWeg * 0.85, 0.0, 1.0 );\n' +
+    '\t\tfloat bdGras = clamp( vBodenArt.y * ( 1.0 - bdWeg * 0.9 ), 0.0, 1.0 );\n' +
+    // Schnee deckt zu: unter einer Decke ist weder Grasflor noch Kies zu sehen.
+    '\t\tfloat bdFrei = 1.0 - vBodenArt.w * 0.85;\n' +
+    '\t\tbdKies *= bdFrei; bdGras *= bdFrei;\n' +
+    /* --- Albedo ---------------------------------------------------------
+       Drei Beitraege, alle mittelwertfrei um 0.5 und deshalb ohne Wirkung
+       auf die Grundhelligkeit der Landschaft. Der Kiesanteil traegt mehr
+       Kontrast als der Grasanteil, weil ein Stein einen harten Schlagschatten
+       hat und ein Halm nicht. */
+    '\t\tfloat bdA = ( ( bdG.b - 0.5 ) * bdGras * 1.25\n' +
+    '\t\t\t+ ( bdE.b - 0.5 ) * bdKies * 1.55 ) * bdNest\n' +
+    '\t\t\t+ ( bdM.b - 0.5 ) * 0.46;\n' +
+    '\t\tdiffuseColor.rgb *= 1.0 + bdA * bdW;\n' +
+    /* Der Farbstich, den eine reine Helligkeitstextur nicht liefern kann:
+       Grasnester ziehen ins Kuehl-Gruene (Schatten zwischen den Halmen sind
+       blau, nicht grau), offene Erde ins Warm-Rote. Zwei Zeilen, kein
+       zusaetzlicher Zugriff — beide Groessen liegen schon vor. Genau dieser
+       Gegensatz macht in totoro-018 den Unterschied zwischen Weg und Bewuchs
+       aus, noch bevor eine Kante gezeichnet ist. */
+    '\t\tdiffuseColor.rgb *= mix( vec3( 1.0 ), vec3( 0.93, 1.03, 0.97 ),\n' +
+    '\t\t\tclamp( ( bdG.b - 0.5 ) * 2.2, 0.0, 1.0 ) * bdGras * 0.55 * bdW );\n' +
+    '\t\tdiffuseColor.rgb *= mix( vec3( 1.0 ), vec3( 1.07, 0.99, 0.92 ),\n' +
+    '\t\t\tclamp( ( 0.5 - bdE.b ) * 2.2, 0.0, 1.0 ) * bdKies * 0.55 * bdW );\n' +
+    /* Bluetenflecken: der helle Anteil des Graskanals, aber nur dort, wo die
+       Makrolage einen Fleck setzt — eine Wiese blueht in Nestern, nicht
+       flaechendeckend (anno-05: die weissen Doldenfelder liegen als Inseln
+       in der Weide). Additiv und leicht warm, damit sie als Bluete und nicht
+       als Bleiche liest. */
+    '\t\tfloat bdBlu = max( bdG.b - 0.72, 0.0 ) * smoothstep( 0.52, 0.78, bdM.b ) * bdGras;\n' +
+    '\t\tdiffuseColor.rgb += vec3( 0.44, 0.46, 0.34 ) * ( bdBlu * 1.9 * bdW );\n' +
+    /* Der Weg zieht ins Staubige: heller, waermer, entsaettigt. Multiplikativ,
+       damit Wolkenschatten, Schnee und Tageszeit-Grundton erhalten bleiben —
+       und weil die Vertexfarbe den Weg nur noch als weiches Band traegt,
+       macht erst dieser Griff die Grenze im Bild scharf. */
+    '\t\tdiffuseColor.rgb *= mix( vec3( 1.0 ), vec3( 1.20, 1.06, 0.82 ), bdWeg * 0.55 * bdW );\n' +
+    /* Boeschungsfuss: ein schmales dunkles Band GENAU auf der Schwelle. In
+       anno-05 ist es die feuchte Rinne am Rand des Trampelpfades, in
+       totoro-018 der dunkle Saum zwischen Weg und Bewuchs. Es trennt die
+       beiden Flaechen zusaetzlich zur Materialgrenze und ist der Ersatz fuer
+       den frueheren Farbverlauf. */
+    '\t\tfloat bdSaum = max( 1.0 - abs( bdKante - 0.34 ) * 11.0, 0.0 ) * vBodenArt.x;\n' +
+    '\t\tdiffuseColor.rgb *= 1.0 - bdSaum * 0.20 * bdW;\n' +
+    /* --- Normale --------------------------------------------------------
+       Der eigentliche Gewinn. `normal` steht im Blickraum, die Textur liefert
+       eine Neigung in WELTkoordinaten (u -> x, v -> z); mat3( viewMatrix )
+       dreht sie hinueber — die Matrix ist orthonormal, eine Normalenmatrix
+       ist deshalb nicht noetig, und viewMatrix ist im Fragmentshader ohnehin
+       deklariert (kein neues Uniform).
+       Kies steht staerker als Gras: ein Kiesel woelbt sich, ein Halm knickt.
+       Die Makrolage liegt schwach darunter und bricht die FACETTIERUNG des
+       Gitters auf — der Befund "einzelne flache Polygone kippen gegeneinander
+       ins Licht" ist genau das Fehlen einer Zwischenordnung in der Normalen. */
+    '\t\tvec2 bdN = ( ( bdG.rg - 0.5 ) * bdGras * 0.80\n' +
+    '\t\t\t+ ( bdE.rg - 0.5 ) * bdKies * 1.30 ) * bdNest\n' +
+    '\t\t\t+ ( bdM.rg - 0.5 ) * 0.55 * ( 1.0 - vBodenArt.w * 0.7 );\n' +
+    '\t\tnormal = normalize( normal + mat3( viewMatrix ) * vec3( bdN.x, 0.0, bdN.y ) * ( 1.9 * bdW ) );\n' +
+    '\t}\n' +
+    '}');
+}
+
+/**
+ * Haengt die Nahfeld-Koernung an ein FERTIGES terraMat-Material, ohne dessen
+ * eigenen Patch zu verlieren. Wickeln statt ersetzen: Wrap-Licht, Nebel,
+ * Malschicht und Biom-LUT laufen zuerst, der Bodenblock danach.
+ * @param mat   ein Material aus terraMat() (MeshPhongMaterial mit Weltpunkt)
+ * @param fest  Bodenart als Konstante, siehe bodenPatch — Pflicht fuer jedes
+ *   Mesh ohne `bodenart`-Attribut, sonst bliebe die Bodenart (0,0,0,1) und
+ *   der Block zeichnete nichts.
+ * @param name  Anhaengsel fuer den Programmschluessel; zwei Materialien mit
+ *   verschiedener Bodenart brauchen verschiedene Programme.
+ */
+function bodenKoernungAnhaengen(mat, fest, name) {
+  var vorher = mat.onBeforeCompile;
+  mat.onBeforeCompile = function (shader, renderer) {
+    vorher.call(this, shader, renderer);
+    bodenPatch(shader, fest);
+  };
+  var schluessel = mat.customProgramCacheKey;
+  mat.customProgramCacheKey = function () {
+    return schluessel.call(this) + '|boden' + (name || '');
+  };
+  return mat;
+}
+
+bodenKoernungAnhaengen(terraMaterial, null, 'G');
 // [{geo, mesh, gi0, gj0, stufe, kanten, wunsch}], zeilenweise pj*patchN+pi
 var patches = [];
 var patchN = 0;                 // Patches je Achse
@@ -263,6 +486,17 @@ function baueEinenPatch(gi0, gj0) {
   var geo = new THREE.BufferGeometry();
   var n = PVW * PVW;
   var pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), col = new Float32Array(n * 3);
+  /* Die Bodenart: (Trittwert, Gras, Kies/Sand/Fels, Schnee) je Vertex. Sie
+     sagt dem Nahfeld-Block im Shader, WELCHE Koernung an dieser Stelle gilt —
+     ohne sie muesste er die Materialzugehoerigkeit aus der Vertexfarbe raten,
+     und die ist biomabhaengig (eine Wuestenwiese ist ockerfarben wie ein Weg).
+     UINT8 und normalisiert: vier Bytes je Vertex statt sechzehn. Die Stufung
+     von 1/255 ist unkritisch, weil jeder der vier Werte im Shader ohnehin
+     gegen eine Rauschtextur verschoben wird — die Quantisierung verschwindet
+     im Kantenbruch. Vorbelegung 0 heisst „kein Weg, kein Gras, nichts": bis
+     refreshGrid das erste Mal laeuft, traegt der Boden keine Koernung, was
+     genau richtig ist (er traegt dann auch noch keine Hoehe). */
+  var art = new Uint8Array(n * 4);
   for (var lj = 0; lj < PVW; lj++) {
     for (var li = 0; li < PVW; li++) {
       var k = (lj * PVW + li) * 3;
@@ -275,9 +509,21 @@ function baueEinenPatch(gi0, gj0) {
   geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
   geo.setAttribute("normal", new THREE.BufferAttribute(nor, 3));
   geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  geo.setAttribute("bodenart", new THREE.BufferAttribute(art, 4, true));
   geo.setIndex(patchIndex);
   geo.computeBoundingSphere();       // vorlaeufig flach, refreshGrid zieht nach
   var mesh = new THREE.Mesh(geo, terraMaterial);
+  /* Das Gelaende ist Empfaenger UND Werfer. Der Empfang ist der Hauptzweck
+     der ganzen Schattenkarte: erst wenn Haeuser, Baeume und Rankenstaemme
+     einen Streifen auf den Boden legen, stehen sie darin statt darauf.
+     Das WERFEN ist die zweite Haelfte und der Grund, warum ein Hang lesbar
+     wird — in den Vorbildern zeichnet der Eigenschatten des Gelaendes das
+     Gefaelle (anno-05: die Wiese, anno-03: die Klippen).
+     frustumCulled bleibt an: die Patches sind klein und three prueft sie
+     auch gegen die Schattenkamera, ein Patch am anderen Kartenende kostet
+     also nichts. */
+  mesh.receiveShadow = true;
+  mesh.castShadow = true;
   mesh.frustumCulled = true;         // jetzt sinnvoll: Patches sind klein genug
   // H1c: der einzige Weg an die Kamera, ohne main.js anzufassen. Der Haken
   // drosselt sich selbst (siehe lodHaken) und ist bei abgeschaltetem LOD ein
@@ -627,8 +873,22 @@ function terrainGeometrienNeu() {
 // den Grundtoenen, kleine Mischgewichte, weiche Schwellen — grosse Flaechen
 // "atmen", ohne scheckig zu werden.
 var COS50 = Math.cos(50 * DEG), COS58 = Math.cos(58 * DEG);
+// Schneehaftung: ab 20 Grad duennt die Decke aus, ueber 38 Grad haelt sie
+// nicht mehr (Begruendung am Schneeblock in terrainColor).
+var COS20 = Math.cos(20 * DEG), COS38 = Math.cos(38 * DEG);
 var COS_BAND_A = Math.cos(52 * DEG), COS_BAND_B = Math.cos(35 * DEG);
 var _tc = new THREE.Color(), _tc2 = new THREE.Color();
+/* Nebenausgang von terrainColor: die Bodenart der zuletzt gerechneten Stelle.
+   Bewusst KEIN zweiter Rueckgabewert und kein Objekt je Aufruf — die Funktion
+   laeuft ueber eine Million Mal je Vollaufbau, und jedes erzeugte Objekt
+   waere dort Muell fuer den Sammler. aktualisierePatch liest die vier Werte
+   direkt nach dem Aufruf; alle anderen Aufrufer (Tests, Kartenbaum) ignorieren
+   sie und rechnen unveraendert weiter.
+     weg    STETIGER Trittwert vor jeder Schwelle (der Shader schwellt selbst)
+     gras   Anteil gewachsener Narbe
+     kies   Anteil Sand, Fels und Geroell
+     schnee Anteil Schneedecke */
+var _art = { weg: 0, gras: 1, kies: 0, schnee: 0 };
 
 /* ==========================================================================
    I1 — Reliefschattierung: der einzige Eingriff des Signaturenkatalogs in
@@ -857,6 +1117,15 @@ function ruheFaktor(m) {
    (aoRoh/aoFeld werden oben in felderSichern() angelegt und mit 1 gefuellt.) */
 
 function computeAO(i0, i1, j0, j1) {
+  /* Faellige Wegsenke zuerst. computeAO laeuft in JEDEM Weg von core/dirty.js
+     nach rebuildCorridors (rebuildAll: recomputeHeights -> rebuildCorridors ->
+     rebuildBiomFeld -> computeAO; commit: rebuildCorridors ->
+     refreshTerrainBereich/-Full, beide mit computeAO darin) und ist damit die
+     erste Stelle, an der die frischen Trittstempel in die Hoehen duerfen.
+     Genau hier muessen sie auch stehen: die Kruemmungs-Verdeckung darunter
+     liest `hgt`, und ohne die Senke bekaeme die Boeschungskante des Weges
+     kein Relief — der wichtigste Teil des ganzen Einschnitts. */
+  senkeNachtragen();
   i0 = clamp(i0 - 1, 0, VW - 1); i1 = clamp(i1 + 1, 0, VW - 1);
   j0 = clamp(j0 - 1, 0, VW - 1); j1 = clamp(j1 + 1, 0, VW - 1);
   var i, j;
@@ -923,6 +1192,33 @@ function terrainColor(h, ny, x, z, out, ao) {
   out.lerp(P.erde, ruhig(sstep(0.68, 0.9, fractal(x * 0.055, z * 0.055, S.worldSeed + 717)) * 0.34,
     RUHE_M_ERDE, sFleck));
 
+  /* --- Grasnarbe: die fehlende mittlere Ordnung -------------------------
+     Die drei Schichten darueber liegen bei 0.012, 0.052 und 0.055 — also
+     Wellenlaengen von 83, 19 und 18 Welteinheiten. Im Nahblick (rund 52
+     Bildpunkte je Einheit) ist die feinste davon fast tausend Bildpunkte
+     breit. Zwischen dieser Landschaftswelle und dem Texturkorn, das erst
+     unterhalb einer halben Einheit einsetzt, klaffte eine ganze
+     Groessenordnung — und genau in ihr liegt alles, was eine Wiese als Wiese
+     lesbar macht: Bulten, ausgemagerte Kuppen, sattere Senken (howl-009 ist
+     ueber die ganze Bildbreite aus nichts anderem gebaut).
+
+     Zwei Oktaven schliessen sie:
+       0.115  ~8,7 Einheiten  Bulten und Fettflecken der Weide
+       0.245  ~4,1 Einheiten  die Narbe selbst; bei einem Vertex je Einheit
+                              sind das gut vier Stuetzstellen je Welle — die
+                              feinste Frequenz, die dieses Gitter ohne
+                              Flimmern noch traegt. Alles darunter ist Sache
+                              der Texturkoernung in render/textures.js.
+     Beide haengen wie jede andere Feinheit an dKorn und verschwinden auf
+     Kartenmassstab; ihr Mittelwert wird dabei NICHT nachgereicht, weil sie
+     symmetrisch um 0.5 aufgetragen werden (lerp gegen zwei Gegenpole zu
+     gleichen Teilen) und ihr Erwartungswert damit bereits die Ausgangsfarbe
+     ist — anders als die einseitigen Flecken-Oktaven mit ihren RUHE_M_*. */
+  var narbe = fractal(x * 0.115, z * 0.115, S.worldSeed + 1301) * 0.62
+            + fractal(x * 0.245, z * 0.245, S.worldSeed + 1302) * 0.38;
+  out.lerp(P.grasKuehl, clamp((0.5 - narbe) * 0.46, 0, 1) * dKorn);
+  out.lerp(P.grasTrocken, clamp((narbe - 0.5) * 0.52, 0, 1) * dKorn);
+
   // Oasen-Logik (nur wueste, oase > 0 — im wiese-Pfad springt der Zweig nie
   // an): unter Hoehe ~2 zieht es die Senken Richtung gedaempftem Gruen;
   // das grobe Rauschen macht die Flecken spaerlich statt zum Ring.
@@ -951,12 +1247,90 @@ function terrainColor(h, ny, x, z, out, ao) {
   // liegen bei 15 und 37 Bildpunkten — sie machen aus einer Schneegrenze
   // keinen Zungenrand mehr, sondern einen Flimmersaum. Ohne sie folgt die
   // Grenze exakt der Hoehenlinie, und genau das ist eine Hoehenschichtkarte.
+  /* Dritte Oktave (0.30 = knapp 3,3 Welteinheiten Wellenlaenge). Das Gitter
+     traegt einen Vertex je Einheit; damit liegen gut drei Stuetzstellen auf
+     einer Welle — nah genug an der Abtastgrenze, dass eine noch feinere
+     Oktave zu flimmern begaenne, und fein genug, dass die Zonengrenze nicht
+     nur wellt, sondern VERZAHNT: die breiten Buchten der 0.09er Oktave
+     bekommen kleine Zaehne, wie der Saum zwischen Sand und Gras in anno-05.
+     Die Amplitude bleibt klein, weil sie auf eine HOEHE addiert wird — 0.55
+     Einheiten sind an einem flachen Strand mehrere Meter Grenzversatz.
+
+     Die beiden alten Gewichte bleiben unangetastet. Das ist Pflicht, nicht
+     Zurueckhaltung: world/biomfeld.js fuehrt in `stoerung()` eine woertliche
+     Kopie dieser drei Zeilen, damit sich eine Biomgrenze genau so bricht wie
+     die Sand- und Felsgrenze daneben (Begruendung dort, Abschnitt 4). Wer
+     hier eine Zahl bewegt, muss sie dort mitbewegen — und dort haengt an der
+     Summe zusaetzlich die Reichweite der Ausfransung. */
   var stoer = (fractal(x * 0.09, z * 0.09, S.worldSeed + 606) - 0.5) * 2.6
-            + (fractal(x * 0.22, z * 0.22, S.worldSeed + 607) - 0.5) * 0.9;
+            + (fractal(x * 0.22, z * 0.22, S.worldSeed + 607) - 0.5) * 0.9
+            + (fractal(x * 0.30, z * 0.30, S.worldSeed + 608) - 0.5) * 0.55;
   var hg = h + stoer * dKorn;
-  out.lerp(P.sand, sstep(P.sandA, P.sandB, hg));
+  var sandW = sstep(P.sandA, P.sandB, hg);
+  out.lerp(P.sand, sandW);
+  /* Die Sandzone war die leerste Flaeche des ganzen Bildes: EIN Farbwert,
+     ueber Dutzende Welteinheiten unveraendert. Die Grasnarbe weiter oben
+     hilft ihr nicht — sie steht VOR diesem lerp und wird hier ueberschrieben.
+     Sand hat aber sehr wohl Zeichnung: trockene helle Kuppen, feuchtere
+     dunkle Senken, angewehte Zungen. Dieselbe Narbe, nur nach dem Zonen-lerp
+     und gegen die beiden Nachbartoene der Palette aufgetragen — helle Seite
+     Richtung Brandung (der hellste Ton, den ein Strand hat), dunkle Seite
+     Richtung Erde. Gewichtet mit sandW, ausserhalb der Zone also exakt 0. */
+  if (sandW > 0.01) {
+    var sandN = clamp((narbe - 0.5129) * 1.9, -1, 1);
+    var sandM = sandW * dKorn * 0.30;
+    if (sandN > 0) out.lerp(P.brandung, sandN * sandM);
+    else out.lerp(P.erde, -sandN * sandM * 0.85);
+  }
   out.lerp(P.fels, sstep(P.felsA, P.felsB, hg));
-  out.lerp(P.schnee, sstep(P.schneeA, P.schneeB, hg));
+  /* --- Schnee als Auflage, nicht als Anstrich --------------------------
+     `sstep(schneeA, schneeB, hg)` allein ist eine Hoehenlinie: oberhalb von
+     schneeB traegt JEDE Flaeche dieselbe geschlossene Decke, gleich ob sie
+     waagerecht liegt oder senkrecht steht. Auf einem Kegel wie in
+     berg-schnee ergibt das den weissen Zuckerhut ohne ein einziges Merkmal.
+     In howl-009 macht der Schnee genau das Gegenteil: er zeichnet den Berg,
+     weil er sich nach drei Regeln VERTEILT.
+
+       NEIGUNG    Ueber etwa 38 Grad haelt keine geschlossene Decke; ab 20
+                  Grad duennt sie aus. Der bisherige einzige Ausweg war
+                  `rock` weiter unten, und der greift erst ab 50 Grad — also
+                  praktisch nie auf gewachsenem Gelaende.
+       VERWEHUNG  `ao` misst bereits genau das, was eine Wechte antreibt:
+                  unter dem Ruhewert 0.95 ist die Zelle konkav (Rinne, Mulde
+                  — dort sammelt sich der Schnee), darueber konvex (Grat,
+                  Kante — dort blaest ihn der Wind frei). Kein zusaetzliches
+                  Feld, keine zusaetzliche Ableitung.
+       FAHNE      Zwei Oktaven ueber die Flaeche, damit die Schneegrenze in
+                  Zungen die Rinnen hinunterlaeuft, statt der Hoehenlinie zu
+                  folgen.
+
+     Und wo der Wind den Schnee wegnimmt, steht FELS und nicht Gras: eine
+     abgeblasene Flanke oberhalb der Schneegrenze ist blank, nicht bewachsen.
+     Genau das macht die Grate in den Vorlagen lesbar.
+
+     Kartenmassstab bleibt unberuehrt: bei ruhe = 1 ist dKorn exakt 0, und
+     `lerp(1, deckung, 0)` ist exakt 1.0 — dieselbe geschlossene Decke wie
+     bisher, weil eine Karte Schneeflaechen zeigt und keine Wechten. */
+  var schneeM = sstep(P.schneeA, P.schneeB, hg);
+  if (schneeM > 0) {
+    var halt = sstep(COS38, COS20, ny);
+    var wehe = ao === undefined ? 1 : clamp(1 + (0.95 - ao) * 4.0, 0.42, 1.5);
+    var fahne = fractal(x * 0.075, z * 0.075, S.worldSeed + 1210) * 0.72
+              + fractal(x * 0.20, z * 0.20, S.worldSeed + 1211) * 0.46;
+    /* Der Grundwert ist mit Absicht so hoch, dass er in der Ebene ueber 1
+       hinauslaeuft und dort klemmt. Der erste Anlauf stand bei 0.42 + 0.86
+       und mittelte auf 0.94 — damit duennte die Decke UEBERALL aus, auch auf
+       der waagerechten Firn. Das Ergebnis war kein Gebirge, sondern ein
+       ausgewaschenes Bild. Eine Schneedecke ist aber nicht durchscheinend,
+       sondern ENTWEDER da ODER weggeblasen; ihre Zeichnung entsteht aus dem
+       Gegensatz zwischen zugewehter Mulde und blankem Grat, nicht aus
+       flaechigem Verduennen. Also: in der Ebene voll (Klemme), und die
+       Unterscheidung machen halt (Neigung) und wehe (Kruemmung). */
+    var deckung = clamp(halt * wehe * (0.78 + fahne * 0.60), 0, 1);
+    var blank = (1 - deckung) * sstep(P.schneeA, P.schneeB, hg) * dKorn;
+    if (blank > 0) out.lerp(P.fels, blank * 0.66);
+    out.lerp(P.schnee, schneeM * lerp(1, deckung, dKorn));
+  }
   var saum = Math.max(
     1 - sstep(0.0, 0.55, Math.abs(hg - P.saumSand)),
     Math.max(1 - sstep(0.0, 0.7, Math.abs(hg - P.saumFels)),
@@ -965,6 +1339,21 @@ function terrainColor(h, ny, x, z, out, ao) {
 
   var rock = 1 - sstep(COS58, COS50, ny);                 // Steilhänge immer Fels
   if (rock > 0) out.lerp(P.fels, rock * 0.9);             // bricht auch durch Schnee
+  /* Bodenart fuer den Nahfeld-Block im Shader. Sie faellt hier ab, weil an
+     dieser Stelle alle Zonengewichte gerechnet sind — kein zusaetzlicher
+     Rauschaufruf, kein zusaetzlicher Feldzugriff, nur drei Additionen.
+     `weg` traegt der Wegblock weiter unten nach; bis dahin gilt „kein Weg". */
+  /* Sand zaehlt nur zu 55 % als Kies. Beide bekommen dieselbe Koernungs-
+     textur, aber ein Strand ist kein Schotterhang: seine Zeichnung ist fein
+     und flach, die eines Geroellfeldes grob und plastisch. Die halbe
+     Gewichtung ist der billigste Weg dorthin (keine dritte Textur, kein
+     dritter Zugriff) — und sie hat einen zweiten Nutzen: der Strand in
+     berg-schnee trug bei voller Gewichtung ueber die ganze Bucht einen
+     gleichmaessigen Kieselteppich, was aus der Ferne wie ein Fellstrich las. */
+  _art.kies = clamp(sandW * 0.70 + sstep(P.felsA, P.felsB, hg) + rock, 0, 1);
+  _art.schnee = clamp(schneeM, 0, 1);
+  _art.gras = clamp(1 - _art.kies - _art.schnee, 0, 1);
+  _art.weg = 0;
   // gerichtete Gesteinsbaender auf Haengen: folgen der Hoehenlinie
   var steil = 1 - sstep(COS_BAND_A, COS_BAND_B, ny);
   if (steil > 0) {
@@ -978,10 +1367,101 @@ function terrainColor(h, ny, x, z, out, ao) {
   // Abnutzung entlang der Wege: getretenes Gras wird erdig, Rand ausgefranst
   // I6: eine Trittspur ist auf 2000 m je Zelle zwei Kilometer breit. Sie
   // faellt weg — der Weg selbst steht auf dieser Karte als Liniensignatur.
+  /* --- Der Weg: Kante statt Verlauf ------------------------------------
+     Frueher stand hier ein einziges lerp mit einer weich ausgefransten
+     Deckung — ein Farbband, das ueber rund vier Welteinheiten ins Gras
+     ausblutete. In den Vorlagen ist die Grenze Weg/Gras das genaue Gegenteil
+     einer Weichzeichnung: in totoro-018 stehen die Halme bis auf den Lehm
+     vor, in anno-08 laufen die Feldwege mit einer gezackten, harten Kante
+     durch die Wiese. Drei Schichten bauen das nach:
+
+       KANTE     Die Trittdeckung wird nicht mehr direkt benutzt, sondern
+                 gegen zwei Rauschoktaven verschoben und dann ueber eine
+                 SCHMALE Schwelle geschickt. Aus dem Verlauf wird eine
+                 Verzahnung: Grasinseln bleiben auf dem Weg stehen, Erdzungen
+                 greifen ins Gras. Die Oktaven sind dieselben Frequenzen wie
+                 vorher (0.35) plus eine groebere (0.13), die die Zacken zu
+                 Buchten zusammenfasst — sonst saehe die Kante aus wie eine
+                 Saege statt wie ein ausgetretener Rand.
+       SAUM      Genau auf der Schwelle, also im Uebergangsband, liegt ein
+                 dunklerer, feuchter Streifen: der Fuss der Boeschung, in dem
+                 sich Wasser haelt. Er trennt Weg und Gras zusaetzlich zur
+                 Geometrie und ist der Ersatz fuer den frueheren Verlauf.
+       SPUR      Laengsstreifen auf der Wegflaeche. Die Laufrichtung steht
+                 nirgends geschrieben, laesst sich aber ablesen: der Anstieg
+                 des Abnutzungsfeldes zeigt QUER zum Weg, die Senkrechte dazu
+                 laengs. Das Rauschen wird in diesem Achsenkreuz gestreckt
+                 abgetastet — fein quer, grob laengs — und liest sich als
+                 Fahrspur. Die vier zusaetzlichen Feldzugriffe fallen nur dort
+                 an, wo ueberhaupt ein Weg liegt (unter 3 % der Karte), und
+                 die Farbrechnung laeuft ohnehin nur beim Aufbau, nie je Bild.
+
+     Bei ruhe = 1 (Kartenmassstab) blendet das Ganze wie bisher ueber dKorn
+     aus — dort ist ein Weg eine Liniensignatur, kein Gelaendemerkmal. */
   var wtr = wearAt(x, z);
   if (wtr > 0.01) {
-    var frans = fractal(x * 0.35, z * 0.35, S.worldSeed + 505) * 0.5;
-    out.lerp(P.tritt, clamp(wtr * 1.05 - frans, 0, 0.7) * dKorn);
+    /* --- ARBEITSTEILUNG mit dem Nahfeld-Block ---------------------------
+       Hier stand bis zuletzt eine SCHMALE Schwelle auf einem verrauschten
+       Trittwert (`wtr` plus zwei Oktaven bei 0.35 und 0.13, dann
+       sstep(0.24, 0.44)). Der Gedanke war richtig — eine ausgefranste Kante
+       statt eines Verlaufs —, der Ort war falsch, und zwar aus einem Grund,
+       der sich nachrechnen laesst:
+
+       Die feinere der beiden Oktaven hat eine Wellenlaenge von 2,9
+       Welteinheiten. Das Gitter traegt EINEN Vertex je Einheit. Zwischen zwei
+       Stuetzstellen interpoliert die Grafikkarte GERADE — die Ausfransung
+       kommt im Bild also nicht als Zacke an, sondern als Dreieckskante. Genau
+       das hat die Abnahme gesehen: "harte Zickzacklinien zwischen Gruen und
+       Ocker … entlang der Dreieckskanten". Eine schmale Schwelle auf einem
+       groben Gitter KANN nichts anderes erzeugen.
+
+       Also die Aufgabenteilung:
+
+         hier    die LAGE und das weiche Farbband. `wtr` ist das gestempelte
+                 Abnutzungsfeld, ueber die Wegbreite glatt und ohne Oktaven.
+                 Auf keiner Zwischenstufe entsteht damit eine Gitterkante.
+         Shader  die KANTE. Derselbe Wert wandert als vBodenArt.x in den
+                 Nahfeld-Block, wird dort gegen die HOEHENKANAELE der beiden
+                 Bodentexturen verschoben — 197 Texel je Welteinheit statt
+                 einem Vertex — und erst dann geschwellt. Dazu Boeschungs-
+                 saum, Staubton und die Kieskoernung der Wegflaeche.
+
+       Die Spur (Fahrrinne) bleibt HIER: sie braucht die Laufrichtung des
+       Weges, und die steht nur im Abnutzungsfeld, nicht im Shader. */
+    _art.weg = clamp(wtr, 0, 1);
+    var deck = sstep(0.10, 0.55, wtr) * dKorn;
+    if (deck > 0) {
+      // Laufrichtung aus dem Gefaelle der Abnutzung
+      var wgx = wearAt(x + 1.5, z) - wearAt(x - 1.5, z);
+      var wgz = wearAt(x, z + 1.5) - wearAt(x, z - 1.5);
+      var wgl = Math.sqrt(wgx * wgx + wgz * wgz);
+      var qx = 1, qz = 0;
+      if (wgl > 1e-4) { qx = wgx / wgl; qz = wgz / wgl; }
+      var qQuer = x * qx + z * qz;              // Querkoordinate des Weges
+      var qLang = z * qx - x * qz;              // Laengskoordinate
+      var spur = fractal(qQuer * 0.52, qLang * 0.075, S.worldSeed + 507);
+      _tc2.copy(P.tritt);
+      // ausgefahrene Rinnen dunkel, aufgeworfener Grat hell und staubig
+      _tc2.multiplyScalar(0.90 + spur * 0.24);
+      out.lerp(_tc2, deck * 0.80);
+      // Der Boeschungsfuss ist in den Shader gewandert (siehe oben): dort
+      // liegt er auf der PER-BILDPUNKT gebrochenen Schwelle statt auf der
+      // Gitterkante — und nur dort ist er die feuchte Rinne aus anno-05
+      // statt ein zweiter Zickzackfaden.
+    }
+  }
+  /* Die grosse leere Flaeche: auch WEIT weg von jedem Weg ist ein Boden nicht
+     gleichmaessig. Die Trittmulden, in denen sich Wasser haelt, sind in
+     anno-05 ueber die ganze Wiese verteilt, nicht nur am Pfad — flache
+     dunklere Nester, die dem Gelaende Massstab geben. Eine einzige Oktave bei
+     0.085 (rund 12 Welteinheiten, also gut ein Drittel Bildhoehe im
+     Nahblick), einseitig aufgetragen und deshalb mit Mittelwertausgleich
+     ueber `sFleck` wie die Fleckenoktaven weiter oben. Auf einer Karte
+     verschwindet sie mit dKorn. */
+  var mulde = sstep(0.70, 0.93, fractal(x * 0.085, z * 0.085, S.worldSeed + 1405));
+  if (mulde > 0) {
+    _tc2.copy(P.erde).lerp(P.grasKuehl, 0.45);
+    out.lerp(_tc2, mulde * 0.20 * dKorn);
   }
   /* J — das nasse Seeufer. Das Meer bekommt seinen feuchten Saum ueber die
      Hoehe relativ zu WATER (Sand und Brandung weiter unten); ein Bergsee
@@ -1025,6 +1505,44 @@ function terrainColor(h, ny, x, z, out, ao) {
   var surf = sstep(brA, brB, h) * sstep(-0.6, 0.06, h);
   if (surf > 0) out.lerp(P.brandung, surf * brS * dKorn);
 
+  /* --- Der Strand: Feuchtband und Grobkorn-Gradient ---------------------
+     Abnahmebefund: "Ufer-/Strandband … ist ein geometrisch glatter Bogen in
+     einem einzigen Sandton, ohne Feuchtzone, ohne Kiesel- oder Grobkorn-
+     Gradient zur Vegetation hin". Ein echter Strand hat quer zur Wasserlinie
+     drei Baender, und zwar in dieser Reihenfolge:
+
+       0,1..1,1  FEUCHT    staendig ueberspuelter Sand. Dunkler und satter,
+                           nicht heller — nasser Sand schluckt Licht. Genau
+                           dieses Band fehlte, und ohne es sieht jede Kueste
+                           aus wie eine ausgeschnittene Pappe.
+       1,0..2,6  TROCKEN   der helle Streifen, der bisher allein dastand.
+       2,2..4,2  GROBKORN  Kies und Schwemmgut am Spuelsaum der Sturmflut,
+                           dort wo der Bewuchs beginnt. Er traegt zugleich die
+                           Bodenart `kies` weiter nach oben und laesst damit
+                           die Kieselkoernung des Shaders in die Vegetations-
+                           grenze hineinlaufen — der Uebergang verzahnt sich,
+                           statt als Bogen zu schneiden.
+
+     Die Baender sind gegen dieselbe Stoergroesse `stoer` verschoben wie die
+     Sand- und Felsgrenze weiter oben. Ohne das laegen sie als drei exakt
+     parallele Hoehenlinien uebereinander — eine Kontur mehr statt eines
+     Strandes. Alles an dKorn: auf Kartenmassstab ist ein zwei Einheiten
+     breites Band ein Kilometer Farbe, dort zeichnet sig_kueste. */
+  if (dKorn > 0 && hg < 4.2 && hg > -0.4) {
+    var feucht = sstep(1.1, 0.1, hg) * sstep(-0.4, 0.15, hg) * sandW;
+    if (feucht > 0) {
+      _tc2.copy(P.sand).lerp(P.tiefe, 0.30);
+      out.lerp(_tc2, feucht * 0.42 * dKorn);
+    }
+    var grob = sstep(2.2, 3.1, hg) * sstep(4.2, 3.4, hg) * sandW;
+    if (grob > 0) {
+      _tc2.copy(P.sand).lerp(P.erde, 0.45);
+      out.lerp(_tc2, grob * 0.34 * dKorn);
+      _art.kies = clamp(_art.kies + grob * 0.6, 0, 1);
+      _art.gras = clamp(1 - _art.kies - _art.schnee, 0, 1);
+    }
+  }
+
   // F2: dieselbe grobe Drift moduliert auch den Value um +-5 % — die
   // Helligkeitswelle folgt damit exakt der Farbwelle (ein Waschgang, wie beim
   // Nass-in-nass-Lauf), statt ein zweites unabhaengiges Muster zu stapeln.
@@ -1034,8 +1552,24 @@ function terrainColor(h, ny, x, z, out, ao) {
      genau ihr Gleichlauf ist der Nass-in-nass-Effekt von F2. Der Ausgleich
      ganz hinten ersetzt den Mittelwert der entfernten Oktaven; er ist bei
      ruhe = 0 exakt +0.0 und damit wirkungslos. */
+  /* Die zweite Oktave stand bei 0.55 — eine Wellenlaenge von 1,8
+     Welteinheiten auf einem Gitter mit EINEM Vertex je Einheit. Das ist
+     unterhalb der Abtastgrenze: was dort ankommt, ist nicht Korn, sondern der
+     Schwebungsrest zwischen Rauschfrequenz und Gitterweite — die in der
+     Abnahme benannten "gestreckten Texel". Sie laeuft jetzt bei 0.28 (3,6
+     Einheiten, gut drei Stuetzstellen). Der MITTELWERT von vnoise haengt nicht
+     an der Frequenz, RUHE_M_WERT bleibt damit unveraendert gueltig.
+
+     Dazu die Helligkeitswelle der Grasnarbe. Sie laeuft mit der Farbwelle
+     gleich (derselbe Rauschwert), so wie die Drift es weiter oben mit ihrer
+     tut — eine Wiese, deren sattere Flecken zugleich die dunkleren sind,
+     liest sich als Bewuchs; zwei unabhaengige Muster uebereinander lesen sich
+     als Schmutz. Um 0.5129 zentriert, dem gemessenen Erwartungswert von
+     fractal(): der Term ist damit exakt mittelwertfrei und laesst den
+     Ausgleich RUHE_M_WERT unberuehrt. */
   var v = 0.94 + fractal(x * 0.16, z * 0.16, S.worldSeed + 909) * 0.08 * dKorn
-        + vnoise(x * 0.55, z * 0.55, S.worldSeed + 313) * 0.05 * dKorn
+        + vnoise(x * 0.28, z * 0.28, S.worldSeed + 313) * 0.05 * dKorn
+        - (narbe - 0.5129) * 0.11 * dKorn
         + ruhig((drift - 0.5) * 0.10, 0, sDrift)
         + RUHE_M_WERT * ruhe;
   /* I6: die Kruemmungs-Verdeckung misst EINE Gitterzelle. Auf Ortsmassstab
@@ -1088,8 +1622,13 @@ function aktualisierePatch(p, i0, i1, j0, j1) {
   var ljA = Math.max(j0, gj0) - gj0, ljB = Math.min(j1, gj0 + PATCH) - gj0;
   if (liB < liA || ljB < ljA) return;
   var pos = p.geo.attributes.position, nor = p.geo.attributes.normal,
-      col = p.geo.attributes.color;
-  var P = pos.array, N = nor.array, C = col.array;
+      col = p.geo.attributes.color, art = p.geo.attributes.bodenart;
+  var P = pos.array, N = nor.array, C = col.array, A = art.array;
+  /* Die Nahzeichnung folgt derselben Beruhigung wie die Vertexfarbe. Hier
+     nachgezogen und nicht je Bild, weil sie sich genau dann aendert, wenn
+     terrainColor mit einem anderen dKorn rechnet — und das ist immer ein
+     Auffrischen. Eine Zuweisung je Patch, kein Uniform-Umbau. */
+  uBodenNah.value = 1 - ruheFaktor(S.einheitMeter);
   for (var lj = ljA; lj <= ljB; lj++) {
     var j = gj0 + lj;
     var jm = (j > 0 ? j - 1 : 0) * VW, jp = (j < VW - 1 ? j + 1 : VW - 1) * VW, jr = j * VW;
@@ -1107,6 +1646,10 @@ function aktualisierePatch(p, i0, i1, j0, j1) {
       N[k] = nx; N[k + 1] = ny; N[k + 2] = nz;
       terrainColor(h, ny, i - HALF, j - HALF, _tc, aoFeld[id]);
       C[k] = _tc.r; C[k + 1] = _tc.g; C[k + 2] = _tc.b;
+      // Bodenart aus dem Nebenausgang, direkt nach dem Aufruf (siehe _art).
+      var ka = (lr + li) * 4;
+      A[ka] = _art.weg * 255; A[ka + 1] = _art.gras * 255;
+      A[ka + 2] = _art.kies * 255; A[ka + 3] = _art.schnee * 255;
     }
   }
   // Upload-Range umfasst ganze Patchzeilen, damit sie zusammenhängend bleibt.
@@ -1114,6 +1657,8 @@ function aktualisierePatch(p, i0, i1, j0, j1) {
   pos.clearUpdateRanges(); pos.addUpdateRange(off, cnt); pos.needsUpdate = true;
   nor.clearUpdateRanges(); nor.addUpdateRange(off, cnt); nor.needsUpdate = true;
   col.clearUpdateRanges(); col.addUpdateRange(off, cnt); col.needsUpdate = true;
+  art.clearUpdateRanges(); art.addUpdateRange(ljA * PVW * 4, (ljB - ljA + 1) * PVW * 4);
+  art.needsUpdate = true;
   // Hoehen haben sich geaendert -> Huellkugel neu. Frueher geschah das nur
   // beim Vollrefresh (frustumCulled war aus); jetzt haengt das Culling daran,
   // also nach JEDER Aenderung. Kosten: ein Durchlauf ueber 65*65 Vertices je
@@ -1126,6 +1671,10 @@ function aktualisierePatch(p, i0, i1, j0, j1) {
  * und dort nur in den Patches, die ihn ueberhaupt beruehren.
  */
 function refreshGrid(i0, i1, j0, j1) {
+  // Zweites Netz unter derselben Nachrechnung: wer das Gitter hochlaedt, ohne
+  // vorher AO gerechnet zu haben, soll trotzdem die gesenkten Hoehen sehen.
+  // Nach computeAO ist der Aufruf ein einziger Vergleich.
+  senkeNachtragen();
   i0 = clamp(i0 | 0, 0, VW - 1); i1 = clamp(i1 | 0, 0, VW - 1);
   j0 = clamp(j0 | 0, 0, VW - 1); j1 = clamp(j1 | 0, 0, VW - 1);
   if (i1 < i0 || j1 < j0) return;
@@ -1180,8 +1729,127 @@ function baseHeightAt(x, z) {
   return lerp(lerp(a, b, tx), lerp(c, d, tx), tz);
 }
 
-// corridor und wear werden oben in felderSichern() angelegt.
-function stampWear(x, z, r) {
+/* ==========================================================================
+   Die Wegsenke — warum ein Weg eine Hoehenaenderung ist und keine Farbe
+
+   Bis hierher war ein Weg AUSSCHLIESSLICH Anstrich: `wear` faerbte das Gras
+   erdig, und das Wegband aus assets/wegrand-profil.js legte sich mit einer
+   Krone von +0.145 ueber das Gelaende. Auf der Kuppe war genau das zu sehen —
+   ein Farbband, das sich vom Boden abhebt, statt in ihm zu liegen. Ein
+   getretener Weg ist aber das Gegenteil: die Stelle, an der Jahrzehnte Tritt
+   und Rad das Erdreich ABGETRAGEN haben. In anno-08 liegen die Feldwege
+   sichtbar tiefer als das Gras daneben, in totoro-018 laeuft der Gartenweg als
+   Hohlweg zwischen den Boeschungen.
+
+   Deshalb schneidet `wear` jetzt in `hgt` ein — und ausdruecklich NICHT in
+   `base`:
+
+     base  ist der gespeicherte Zustand (Delta-Format v3). Eine Senke dort
+           wuerde beim naechsten Laden ein zweites Mal eingeschnitten und mit
+           jedem Speichern tiefer werden.
+     hgt   ist die Renderhoehe und wird aus base + Fluessen ohnehin bei jeder
+           Aenderung neu zusammengesetzt — genau der richtige Ort.
+
+   Drei Wirkungen fallen dabei von selbst an, und sie sind der eigentliche
+   Gewinn:
+     * computeAO liest `hgt`. Die Boeschungskante ist konkav und wird dunkel,
+       die Schulter konvex und hell — der Weg bekommt ohne eine einzige
+       zusaetzliche Zeile sein Relief.
+     * Das Wegband wird in genElement NACH refreshTerrain gebaut und liest
+       heightAt(). Seine Krone sitzt damit in der Senke statt auf der Wiese.
+     * Der Schattenwurf des Gelaendes (die Patches werfen) legt bei tiefer
+       Sonne einen Streifen in den Hohlweg.
+
+   KONSISTENZVERTRAG — und warum die Senke NIE schrittweise verrechnet wird
+
+   Der erste Anlauf hat stampWear die Differenz nachziehen lassen
+   (`hgt -= senke(neu) - senke(alt)`) und clearWear sie wieder addieren. Das
+   ist arithmetisch richtig und in float32 trotzdem falsch: jeder Schreibzugriff
+   auf ein Float32Array rundet, und eine Addition macht eine Subtraktion nicht
+   bitgenau rueckgaengig. 01-determinismus („rebuildAll zweimal ergibt dieselbe
+   Karte") hat das sofort gefunden — 31 Zellen mit einer Abweichung von 1e-6,
+   genug, um ein Viertel anders auszulegen.
+
+   Deshalb wird die Senke IMMER in einem Zug geschrieben und nie fortgeschrieben:
+
+     stampWear        schreibt AUSSCHLIESSLICH `wear` und merkt sich die Box.
+     clearWear        leert `wear` und stellt `hgt` ueber recomputeHeights
+                      wieder her — danach steht dort exakt base + Fluesse.
+     recomputeHeights schreibt hgt = base, dann die Fluesse, dann EINMAL
+                      `-= senke(wear)`. Reine Funktion der drei Eingaben.
+     senkeNachtragen  faellige Box nachrechnen; haengt an computeAO und
+                      refreshGrid, die in jedem Weg von core/dirty.js NACH
+                      rebuildCorridors laufen.
+
+   Das loest zugleich die Reihenfolgefrage. rebuildCorridors ruft fuer Viertel
+   und Werften districtStreets()/werftAchse(), und die lesen heightAt(). Weil
+   clearWear am Anfang dieser Funktion die Senke entfernt und stampWear sie
+   nicht wieder einbringt, sehen beide waehrend des ganzen Stempelns dasselbe
+   senkenfreie Feld wie vor dieser Runde — im ersten Aufbau nach dem Laden
+   genau wie in jedem weiteren.
+
+   Byteidentitaet ohne Weg: WEG_SENKE[0] ist exakt 0, und `hgt - 0` ist fuer
+   jeden endlichen Float bitgleich `hgt`. Eine Karte ohne Strassen rechnet
+   Zahl fuer Zahl wie bisher.
+   ========================================================================== */
+var WEG_TIEFE = 0.38;        // Welteinheiten in der Wegmitte
+/* Die Rampe beginnt spaet (0.06) und ist bei 0.60 fertig. Der wear-Wert
+   faellt vom Wegkern nach aussen; die Senke erreicht ihre volle Tiefe also
+   schon INNERHALB des Trittbandes und laesst aussen einen ungesenkten Kragen
+   stehen. Genau dieser Kragen ist die ausgetretene Kante: erdig gefaerbt,
+   aber noch auf Wiesenhoehe. */
+var WEG_SENKE = (function () {
+  var t = new Float32Array(256);
+  for (var k = 1; k < 256; k++) t[k] = sstep(0.06, 0.60, k / 255) * WEG_TIEFE;
+  return t;                                   // t[0] bleibt exakt 0
+})();
+/* Zwei getrennte Angaben, und die Trennung ist der Kern der Sache:
+
+     wegI0..wegJ1  WO seit dem letzten clearWear gestempelt wurde. Diese Box
+                   ueberlebt das Nachtragen, denn nur sie sagt clearWear,
+                   welchen Ausschnitt es wiederherstellen muss. Wuerde sie
+                   beim Nachtragen geleert, faende der ZWEITE rebuildAll eine
+                   leere Box vor, liesse die Senke aus dem vorigen Lauf stehen
+                   und legte districtStreets ein anderes Hoehenfeld unter als
+                   dem ersten — genau der Fehler, den 01-determinismus prueft.
+     wegFaellig    OB `hgt` gerade hinterherhinkt. Ohne das Flag rechnete jede
+                   Auffrischung die Wegbox erneut durch, auch wenn sich nichts
+                   geaendert hat.
+
+   Leere Box heisst wegI1 < wegI0. Sie erspart der Nachrechnung die ganze
+   Karte — Wege belegen selbst auf einer dicht besiedelten Karte wenige
+   Prozent der Flaeche. */
+var wegI0 = 0, wegI1 = -1, wegJ0 = 0, wegJ1 = -1, wegFaellig = false;
+function wegMerk(i, j) {
+  wegFaellig = true;
+  if (wegI1 < wegI0) { wegI0 = wegI1 = i; wegJ0 = wegJ1 = j; return; }
+  if (i < wegI0) wegI0 = i; else if (i > wegI1) wegI1 = i;
+  if (j < wegJ0) wegJ0 = j; else if (j > wegJ1) wegJ1 = j;
+}
+/** Faellige Wegsenke in einem Zug nachrechnen. Idempotent, und wenn nichts
+ *  aussteht genau ein Vergleich. */
+function senkeNachtragen() {
+  if (!wegFaellig || wegI1 < wegI0) return;
+  wegFaellig = false;                 // vor dem Aufruf: recomputeHeights ruft
+  recomputeHeights(wegI0, wegI1, wegJ0, wegJ1);   // refreshGrid nicht zurueck
+}
+
+/* corridor und wear werden oben in felderSichern() angelegt.
+ * @param staerke  optional 0..1, Standard 1. Fuer Stempel, die FAERBEN, aber
+ *   nicht EINSCHNEIDEN sollen — der Fundamentsaum eines Gebaeudes ist der
+ *   Fall, fuer den das gedacht ist (Abnahmebefund: "Gebaeudewaende schneiden
+ *   mit harter Kante ins Gras, ohne Erdsaum, ohne Kontaktabdunkelung").
+ *   Die Rampe der Wegsenke beginnt bei 0.06 (siehe WEG_SENKE): bis
+ *   staerke = 0.06 ist die Hoehenaenderung EXAKT null, das Gelaende bekommt
+ *   also einen Erd-Halo, ohne dass das Haus darauf zu schweben beginnt.
+ *   Darueber senkt sich der Boden anteilig — was fuer eine Setzungs-Delle
+ *   rings um ein schweres Bauwerk richtig ist, unter der Grundflaeche selbst
+ *   aber nicht. Wer das nutzt, stempelt den Saum deshalb um den Umriss herum
+ *   und nicht auf ihn.
+ *   OHNE den Parameter ist die Rechnung Zahl fuer Zahl die bisherige:
+ *   `* 1` auf einem endlichen Float ist bitgleich die Identitaet. */
+function stampWear(x, z, r, staerke) {
+  var st = staerke === undefined ? 1 : clamp(staerke, 0, 1);
   var a0 = Math.max(0, Math.floor(x + HALF - r)), a1 = Math.min(VW - 1, Math.ceil(x + HALF + r));
   var b0 = Math.max(0, Math.floor(z + HALF - r)), b1 = Math.min(VW - 1, Math.ceil(z + HALF + r));
   for (var j = b0; j <= b1; j++) {
@@ -1189,17 +1857,30 @@ function stampWear(x, z, r) {
       var dx = (i - HALF) - x, dz = (j - HALF) - z;
       var d = Math.sqrt(dx * dx + dz * dz);
       if (d > r) continue;
-      var w = Math.round(sstep(r, r * 0.3, d) * 255);
+      var w = Math.round(sstep(r, r * 0.3, d) * st * 255);
       var id = j * VW + i;
-      if (w > wear[id]) wear[id] = w;
+      // Nur `wear` schreiben, `hgt` bleibt unberuehrt (siehe Konsistenz-
+      // vertrag oben): waehrend des Stempelns lesen districtStreets und
+      // werftAchse ueber heightAt ein senkenfreies Feld.
+      if (w > wear[id]) { wear[id] = w; wegMerk(i, j); }
     }
   }
 }
 /** Leert Trittspur UND Uferstreifen. Beide sind dasselbe Laufzeitpaar: sie
  *  entstehen ausschliesslich in rebuildCorridors (core/dirty.js) neu, und
  *  jeder Aufrufer, der die eine Maske frisch braucht, braucht auch die
- *  andere frisch — auch die Testwelt, die hierueber ihre Isolation holt. */
-function clearWear() { wear.fill(0); ufer.fill(0); }
+ *  andere frisch — auch die Testwelt, die hierueber ihre Isolation holt.
+ *  Nimmt zugleich die Wegsenke aus `hgt` (siehe Konsistenzvertrag oben) —
+ *  nicht durch Zurueckaddieren, sondern indem `hgt` bei geleertem `wear` neu
+ *  aus base und Fluessen zusammengesetzt wird. Nur so ist das Ergebnis
+ *  bitgenau dasselbe wie ohne jede Senke. Wurde nie gesenkt (frische Welt,
+ *  Karte ohne Strassen), ist die Box leer und es passiert nichts. */
+function clearWear() {
+  var a = wegI0, b = wegI1, c = wegJ0, d = wegJ1;
+  wegI0 = 0; wegI1 = -1; wegJ0 = 0; wegJ1 = -1; wegFaellig = false;
+  wear.fill(0); ufer.fill(0);
+  if (b >= a) recomputeHeights(a, b, c, d);
+}
 function wearAt(x, z) {
   var i = clamp(Math.round(x + HALF), 0, VW - 1), j = clamp(Math.round(z + HALF), 0, VW - 1);
   return wear[j * VW + i] / 255;
@@ -1323,6 +2004,25 @@ function recomputeHeights(i0, i1, j0, j1) {
       }
     }
   }
+  /* Wegsenke zuletzt (Begruendung im Abschnitt bei WEG_TIEFE). Die Reihenfolge
+     ist nicht Geschmack, sondern die Bedingung dafuer, dass rebuildAll zweimal
+     dasselbe ergibt: clearWear gibt die Senke durch ADDITION zurueck, und eine
+     Addition hebt eine Subtraktion nur dann auf, wenn dazwischen nichts
+     geklemmt hat. Stuende der Abzug VOR den Fluessen, gewaenne an einer Furt
+     das Minimum des Flussbetts, und die Rueckgabe landete um genau die
+     Senktiefe zu hoch — der zweite Neuaufbau saehe anders aus als der erste
+     (01-determinismus, "rebuildAll zweimal ergibt dieselbe Karte" hat genau
+     das gefunden). Danach ist die Senke der letzte Summand und damit exakt
+     umkehrbar; ein Weg ueber eine Furt vertieft das Bett um 0,38 Einheiten,
+     und dort steht ohnehin eine Bruecke.
+
+     Ohne Strassen ist wear ueberall 0 und WEG_SENKE[0] exakt 0: `hgt - 0` ist
+     fuer jeden endlichen Float bitgleich `hgt`. Der Rechenweg einer Karte
+     ohne Wege bleibt Zahl fuer Zahl der bisherige. */
+  for (var jw = j0; jw <= j1; jw++) {
+    var rw = jw * VW;
+    for (var iw = i0; iw <= i1; iw++) hgt[rw + iw] -= WEG_SENKE[wear[rw + iw]];
+  }
 }
 
 /** Terrain aus Basis + Flüssen neu berechnen und hochladen. */
@@ -1431,4 +2131,5 @@ export { base, hgt, genBase, genBaseIn, stampWear, clearWear, wearAt,
   biomFeld, biomGewicht, rebuildBiomFeld,
   hoehenVersion, basisGeaendert, holeSchmutzRegion,
   aktualisiereDetailstufen, setzeLod, lodAn, terrainStufenStatistik,
+  bodenKoernungAnhaengen, BODEN_FEIN, BODEN_MAKRO,
   holeIndex as terrainIndexSatz };

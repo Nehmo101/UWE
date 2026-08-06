@@ -5,12 +5,19 @@ import {
   berechneRenderMasse
 } from '../src/render/render-masse.js';
 
+/* Der Tiefen-Prepass laeuft seit der Bildgrundlagen-Runde in VOLLER
+   Renderaufloesung, nicht mehr in halber. Er speist den Sobel der
+   Silhouettenlinie, den Kontakthof und die Himmelsmaske der Godrays; aus
+   halber Aufloesung rasteten alle drei auf 2x2-Bloecken ein (eine
+   Tiefentextur muss NearestFilter tragen) und legten eine vier Bildpunkte
+   breite Treppe ueber jeden Hoehenruecken. Gemessen kostet die Umstellung
+   nichts — siehe render-masse.js. */
 test('normale Ansichten behalten volle Retina-Schaerfe', () => {
   const masse = berechneRenderMasse(1280, 720, 2);
   assert.equal(masse.pixelRatio, 2);
   assert.deepEqual(
     [masse.tiefenBreite, masse.tiefenHoehe],
-    [1280, 720]
+    [2560, 1440]
   );
 });
 
@@ -25,6 +32,6 @@ test('sehr grosse Retina-Fenster bleiben innerhalb des 4K-Pixelbudgets', () => {
   assert.ok(2560 * 1440 * masse.pixelRatio ** 2 <= MAX_RENDER_PIXEL);
   assert.deepEqual(
     [masse.tiefenBreite, masse.tiefenHoehe],
-    [1920, 1080]
+    [3840, 2160]
   );
 });
