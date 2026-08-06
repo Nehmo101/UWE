@@ -24,6 +24,7 @@
     "@tanstack/react-table": "^8.21.3",
     "@uwe/assets": "workspace:*",
     "@uwe/auth": "workspace:*",
+    "@uwe/character-creator": "workspace:*",
     "@uwe/config": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/dnd-api": "workspace:*",

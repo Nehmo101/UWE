@@ -77,9 +77,28 @@ des vorgeschauten Kontos. `getGameSessionForViewer` wendet dieselbe Regel auf di
 Detailseite an, damit eine geratene Session-Id nichts öffnet; die
 Verfügbarkeits-Abstimmung und `createPlayerNoteForViewer` hängen daran.
 
-Charaktere legen Spieler selbst im Portal an
-(`packages/player-hub/src/player-characters.ts` — Wiki-Seite + leerer Bogen);
-die Kampagnen-Zuweisung bleibt im Studio (Kampagnen-Cockpit).
+Charaktere legen Spieler selbst im Portal an — seit 2026-08 über den
+**Charakter-Ersteller** unter `/auth/worlds/<welt>/characters/neu`: neun
+Schritte (Volk, Klasse, Hintergrund, Attribute, Fertigkeiten, Ausrüstung,
+Zauber, Beschreibung, Übersicht) gegen den SRD-5.2.1-Katalog in
+`@uwe/character-creator`. Das Anlegen läuft über
+`createFullCharacter` (`packages/player-hub`) in **einer** Transaktion und
+prüft den Entwurf serverseitig noch einmal aus dem Katalog nach — dem Browser
+wird nichts geglaubt. Angelegt werden Wiki-Seite, Textblock, gefüllter Bogen,
+Zauber und Startausrüstung.
+
+Zwei Dinge, die man dazu wissen muss: Das SRD liefert nur **vier**
+Hintergründe, und weil seit 2024 die Attributsverteilung daran hängt, finden
+Paladin, Mönch und Waldläufer darunter keinen passenden — dafür gibt es den
+**Eigenbau-Hintergrund** nach SRD-Bauplan
+(`rules/custom-background.ts`). Und `@uwe/character-creator` muss in
+`transpilePackages` stehen: Das Paket liefert rohes TypeScript und wird aus
+einer `"use client"`-Komponente gelesen.
+
+Der alte Ein-Feld-Weg (`createOwnCharacter` — Wiki-Seite + leerer Bogen)
+besteht daneben weiter, für alle, die ihre Werte schon auf Papier haben. Die
+Kampagnen-Zuweisung bleibt in beiden Fällen im Studio (Kampagnen-Cockpit).
+Offene Punkte: [docs/engineering/character-creator-offene-punkte.md](../../../docs/engineering/character-creator-offene-punkte.md).
 
 Der frühere Tischmodus (Offline-Snapshot, Service Worker, `/auth/tisch`) und
 „Fragen an den DM" sind 2026-08 ersatzlos entfernt. Fragen an den Spielleiter

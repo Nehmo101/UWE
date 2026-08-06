@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@uwe/auth": "workspace:*",
+    "@uwe/character-creator": "workspace:*",
     "@uwe/database": "workspace:*",
     "@uwe/shared-utils": "workspace:*"
   },

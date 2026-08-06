@@ -328,6 +328,109 @@ export const playerCharacterBlockSchema = z.object({
   returnPath: z.string().trim().max(500).optional(),
 });
 
+/**
+ * Der Entwurf des Charakter-Erstellers, wie er über die Server Action kommt.
+ *
+ * Das Portal schickt eine JSON-Zeichenkette statt eines FormData-Bündels: der
+ * Entwurf ist verschachtelt (Attribute, Details, drei Schlüssellisten) und
+ * würde als flaches Formular in dreißig Feldern zerfallen.
+ *
+ * Diese Schemata prüfen **Form und Grenzen**, nicht die Regeln. Ob eine
+ * Fertigkeit zur Klasse passt oder der Punktekauf aufgeht, weiß nur der
+ * Katalog — das entscheidet `validateFullDraft` in `@uwe/player-hub`. Die
+ * Katalogschlüssel bleiben hier deshalb bewusst freie, längenbegrenzte
+ * Zeichenketten: ein zu enger Ausdruck würde bei jedem neuen SRD-Eintrag
+ * zur stillen Falle, und ein unbekannter Schlüssel fällt ohnehin beim
+ * Nachschlagen durch.
+ */
+const creatorKeySchema = z.string().trim().min(1).max(80);
+const creatorShortText = z.string().trim().max(120);
+const creatorLongText = z.string().trim().max(5_000);
+const creatorBaseScore = z.coerce.number().int().min(3).max(18);
+const creatorBonusScore = z.coerce.number().int().min(0).max(3);
+
+export const characterCreatorAbilityMapSchema = z.object({
+  strength: creatorBaseScore,
+  dexterity: creatorBaseScore,
+  constitution: creatorBaseScore,
+  intelligence: creatorBaseScore,
+  wisdom: creatorBaseScore,
+  charisma: creatorBaseScore,
+});
+
+export const characterCreatorAbilityBonusSchema = z.object({
+  strength: creatorBonusScore.optional(),
+  dexterity: creatorBonusScore.optional(),
+  constitution: creatorBonusScore.optional(),
+  intelligence: creatorBonusScore.optional(),
+  wisdom: creatorBonusScore.optional(),
+  charisma: creatorBonusScore.optional(),
+});
+
+export const characterCreatorDetailsSchema = z.object({
+  pronouns: creatorShortText,
+  age: creatorShortText,
+  height: creatorShortText,
+  weight: creatorShortText,
+  eyes: creatorShortText,
+  hair: creatorShortText,
+  skin: creatorShortText,
+  appearance: creatorLongText,
+  backstory: creatorLongText,
+  personality: creatorLongText,
+  ideals: creatorLongText,
+  bonds: creatorLongText,
+  flaws: creatorLongText,
+});
+
+export const characterCreatorAbilitiesSchema = z.object({
+  method: z.enum(["standard_array", "point_buy", "roll", "manual"]),
+  base: characterCreatorAbilityMapSchema,
+  backgroundBonus: characterCreatorAbilityBonusSchema,
+  rolled: z.array(z.coerce.number().int().min(3).max(18)).max(6).optional(),
+});
+
+/**
+ * Der selbst gebaute Hintergrund.
+ *
+ * Hier wird nur die **Form** geprüft, nicht die Regel: ob es genau drei
+ * Attribute und zwei Fertigkeiten sind und ob das Talent existiert, entscheidet
+ * `checkCustomBackground` im Regelpaket gegen den echten Katalog. Diese Schicht
+ * hält nur Größe und Zeichenvorrat in Schach, damit nichts Unförmiges
+ * durchgeht.
+ */
+export const characterCustomBackgroundSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  abilityOptions: z.array(creatorKeySchema).max(6),
+  skills: z.array(creatorKeySchema).max(18),
+  toolProficiency: z.string().trim().max(120),
+  originFeat: z.string().trim().max(120),
+});
+
+export const characterDraftSchema = z.object({
+  name: z.string().trim().min(1, "Der Charakter braucht einen Namen.").max(120),
+  speciesKey: creatorKeySchema.nullable(),
+  lineageKey: creatorKeySchema.nullable(),
+  classKey: creatorKeySchema.nullable(),
+  subclassKey: creatorKeySchema.nullable(),
+  backgroundKey: creatorKeySchema.nullable(),
+  customBackground: characterCustomBackgroundSchema.nullable(),
+  abilities: characterCreatorAbilitiesSchema.nullable(),
+  chosenSkills: z.array(creatorKeySchema).max(18),
+  equipmentChoice: creatorKeySchema.nullable(),
+  cantrips: z.array(creatorKeySchema).max(12),
+  spells: z.array(creatorKeySchema).max(12),
+  languages: z.array(creatorKeySchema).max(20),
+  alignmentKey: creatorKeySchema.nullable(),
+  details: characterCreatorDetailsSchema,
+});
+
+/** Was die Server Action bekommt: die Zielwelt und der Entwurf. */
+export const characterDraftPayloadSchema = z.object({
+  worldSlug: slugSchema,
+  draft: characterDraftSchema,
+});
+
 const abilityScoreField = z.coerce.number().int().min(1).max(30);
 
 const savingThrowChoiceField = z.enum(["none", "proficient"]).optional();

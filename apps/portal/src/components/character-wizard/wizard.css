@@ -1,0 +1,1525 @@
+/**
+ * Der Charakter-Ersteller — die Oberflächenschicht.
+ *
+ * Grundsätze, damit spätere Änderungen nicht am Look vorbeiarbeiten:
+ *
+ *  1. **Nur Token, keine Festwerte.** Farben kommen aus `--uwe-*`, Abstände
+ *     aus `--uwe-space-*`, Dauern aus `--uwe-dur-*`. Wer hier `#ffffff` oder
+ *     `200ms` schreibt, bricht Theme-Wechsel und die Bewegungs-Abschaltung.
+ *  2. **Zwei Zonen.** Links wird entschieden, rechts steht, was die
+ *     Entscheidung anrichtet. Die rechte Spalte klebt und scrollt nicht mit.
+ *  3. **Material statt Flächen.** Jede Karte hat Korn, Kante und Tiefe —
+ *     eine reine `background: white`-Karte ist hier ein Fehler, kein Stil.
+ *  4. **Bewegung nur, wo sie etwas erklärt.** Auswahl, Schrittwechsel,
+ *     Würfel. Nichts läuft endlos.
+ */
+
+.cw {
+  --cw-rail-width: 22rem;
+  --cw-tile-min: 15rem;
+  /* Feines Korn, damit große Flächen nicht wie Karton wirken. Inline-SVG,
+     weil die CSP externe Bilder verbietet. */
+  --cw-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E");
+  display: grid;
+  gap: var(--uwe-space-6);
+  align-items: start;
+  /*
+   * `minmax(0, 1fr)` statt der stillschweigenden `auto`-Spalte.
+   *
+   * Ein Raster ohne Spaltenangabe legt eine `auto`-Spalte an, und Raster-
+   * Kinder haben `min-width: auto` — beides zusammen heißt: die Spalte wird
+   * so breit wie ihr breitester Inhalt und schrumpft nicht. Auf dem Telefon
+   * schob damit die erste lange Zeile das ganze Raster über den Rand. Sichtbar
+   * war das nur als abgeschnittener Text: `overflow: hidden` weiter oben in
+   * der Hülle verschluckt die Bildlaufleiste, also wächst auch
+   * `documentElement.scrollWidth` nicht — eine Überlaufprüfung am Dokument
+   * meldet in diesem Fall fröhlich „alles in Ordnung".
+   */
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Dasselbe eine Ebene tiefer: ohne `min-width: 0` bricht ein langes Wort
+   nicht um, sondern dehnt seine Spalte. */
+.cw > * {
+  min-width: 0;
+}
+
+@media (min-width: 1100px) {
+  .cw {
+    grid-template-columns: minmax(0, 1fr) var(--cw-rail-width);
+  }
+
+  /* Die Schrittleiste gehört über beide Spalten — sonst endet sie an der
+     Vorschau-Leiste und schneidet die hinteren Schritte im Wort ab. */
+  .cw-steps {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Die linke Spalte darf schmaler werden als ihr Inhalt; ohne `min-width: 0`
+   sprengt eine lange Kachelzeile das Raster statt umzubrechen. */
+.cw-main {
+  min-width: 0;
+}
+
+/* ─────────────────────────── Schrittleiste ─────────────────────────── */
+
+.cw-steps {
+  position: relative;
+  display: flex;
+  gap: var(--uwe-space-1);
+  overflow-x: auto;
+  padding-bottom: var(--uwe-space-2);
+  margin-bottom: var(--uwe-space-5);
+  scrollbar-width: thin;
+  /* Die Leiste darf scrollen, die Seite nicht. */
+  scroll-snap-type: x proximity;
+  /* Wo sie doch scrollt (Telefon), franst die letzte Kachel aus, statt
+     abgehackt zu enden — sonst liest sich der Schnitt wie ein Fehler und
+     nicht wie „hier geht es weiter". */
+  mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent 100%);
+}
+
+/*
+ * Ab Tablet-Breite umbrechen statt scrollen.
+ *
+ * Neun Schritte brauchen nebeneinander rund 1280 px. Über beide Spalten
+ * gespannt stehen bei einem 1440-px-Fenster etwa 1130 px zur Verfügung — es
+ * fehlt also weiterhin ein Schritt, und die Maske war ausgerechnet oberhalb
+ * 1100 px abgeschaltet. Zwei Zeilen sind kein Schönheitsfehler; ein
+ * unsichtbarer neunter Schritt schon.
+ */
+@media (min-width: 700px) {
+  .cw-steps {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    row-gap: var(--uwe-space-2);
+    mask-image: none;
+  }
+
+  /* Die durchgehende Linie unter der Leiste trägt nur bei einer Zeile. */
+  .cw-steps::after {
+    display: none;
+  }
+}
+
+.cw-steps::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: var(--uwe-space-2);
+  height: 2px;
+  background: var(--uwe-border);
+  border-radius: var(--uwe-r-pill);
+  z-index: 0;
+}
+
+.cw-step {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  display: flex;
+  align-items: center;
+  gap: var(--uwe-space-2);
+  padding: var(--uwe-space-2) var(--uwe-space-3);
+  border: 0;
+  background: transparent;
+  border-radius: var(--uwe-r-md);
+  color: var(--uwe-fg-muted);
+  font: inherit;
+  font-size: var(--uwe-text-sm);
+  font-weight: var(--uwe-weight-medium);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    color var(--uwe-dur-fast) var(--uwe-ease-out),
+    background-color var(--uwe-dur-fast) var(--uwe-ease-out);
+}
+
+.cw-step:hover {
+  color: var(--uwe-fg);
+  background: var(--uwe-surface-sunken);
+}
+
+.cw-step__index {
+  display: grid;
+  place-items: center;
+  width: 1.625rem;
+  height: 1.625rem;
+  border-radius: var(--uwe-r-pill);
+  border: 1.5px solid var(--uwe-border-strong);
+  font-size: var(--uwe-text-2xs);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--uwe-weight-bold);
+  transition:
+    border-color var(--uwe-dur-fast) var(--uwe-ease-out),
+    background-color var(--uwe-dur-fast) var(--uwe-ease-out),
+    color var(--uwe-dur-fast) var(--uwe-ease-out);
+}
+
+.cw-step[data-state="done"] .cw-step__index {
+  background: var(--uwe-accent);
+  border-color: var(--uwe-accent);
+  color: var(--uwe-on-accent);
+}
+
+.cw-step[data-state="current"] {
+  color: var(--uwe-fg);
+}
+
+.cw-step[data-state="current"] .cw-step__index {
+  border-color: var(--uwe-accent);
+  color: var(--uwe-accent-ink);
+  box-shadow: 0 0 0 3px var(--uwe-accent-muted);
+}
+
+/* Der Marker unter dem aktiven Schritt — die einzige Stelle, an der die
+   Leiste ihre Position wirklich behauptet. */
+.cw-step[data-state="current"]::after {
+  content: "";
+  position: absolute;
+  inset-inline: var(--uwe-space-2);
+  bottom: calc(-1 * var(--uwe-space-2));
+  height: 2px;
+  background: var(--uwe-accent);
+  border-radius: var(--uwe-r-pill);
+}
+
+.cw-step[data-state="skipped"] {
+  opacity: 0.55;
+}
+
+.cw-step:focus-visible {
+  outline: 2px solid var(--uwe-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ───────────────────────────── Kopfzeile ───────────────────────────── */
+
+.cw-head {
+  margin-bottom: var(--uwe-space-5);
+}
+
+.cw-head__eyebrow {
+  font-size: var(--uwe-text-2xs);
+  letter-spacing: var(--uwe-tracking-caps);
+  text-transform: uppercase;
+  font-weight: var(--uwe-weight-bold);
+  color: var(--uwe-accent-ink);
+}
+
+.cw-head__title {
+  font-family: var(--uwe-font-display);
+  font-size: var(--uwe-text-3xl);
+  font-weight: var(--uwe-weight-medium);
+  line-height: var(--uwe-leading-tight);
+  letter-spacing: -0.02em;
+  margin-top: var(--uwe-space-1);
+}
+
+.cw-head__lede {
+  margin-top: var(--uwe-space-2);
+  max-width: var(--uwe-measure);
+  color: var(--uwe-fg-muted);
+  font-size: var(--uwe-text-base);
+  line-height: var(--uwe-leading-normal);
+}
+
+/* ───────────────────────── Auswahlkarten (Kacheln) ───────────────────────── */
+
+.cw-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--cw-tile-min), 1fr));
+  gap: var(--uwe-space-4);
+  /* Gleich hohe Karten in einer Reihe — ausgefranste Kanten lesen sich billig. */
+  align-items: stretch;
+}
+
+.cw-tile {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  gap: var(--uwe-space-2);
+  padding: var(--uwe-pad-card);
+  text-align: start;
+  border: 1.5px solid var(--uwe-border);
+  border-radius: var(--uwe-r-lg);
+  background: var(--uwe-surface-2);
+  box-shadow: var(--uwe-elev-1);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    transform var(--uwe-dur-fast) var(--uwe-ease-out),
+    border-color var(--uwe-dur-fast) var(--uwe-ease-out),
+    box-shadow var(--uwe-dur-fast) var(--uwe-ease-out);
+}
+
+/* Korn und ein sehr weicher Lichtverlauf von oben — zusammen ergibt das
+   „bedrucktes Papier" statt „weißes Rechteck". */
+.cw-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--cw-grain), linear-gradient(180deg, rgb(255 255 255 / 6%), transparent 45%);
+  pointer-events: none;
+}
+
+.cw-tile:hover {
+  transform: translateY(-2px);
+  border-color: var(--uwe-border-strong);
+  box-shadow: var(--uwe-elev-2);
+}
+
+.cw-tile:focus-visible {
+  outline: 2px solid var(--uwe-focus-ring);
+  outline-offset: 3px;
+}
+
+.cw-tile[aria-pressed="true"],
+.cw-tile[data-selected="true"] {
+  border-color: var(--uwe-accent);
+  box-shadow:
+    var(--uwe-elev-2),
+    inset 0 0 0 1px var(--uwe-accent),
+    inset 0 0 2.5rem -0.75rem var(--uwe-accent-muted);
+  transform: translateY(-2px);
+}
+
+/* Die Ecke, an der man die Wahl auch ohne Farbe erkennt. */
+.cw-tile[aria-pressed="true"]::after,
+.cw-tile[data-selected="true"]::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  width: 2.75rem;
+  height: 2.75rem;
+  background: linear-gradient(225deg, var(--uwe-accent) 0 50%, transparent 50%);
+  pointer-events: none;
+}
+
+.cw-tile__check {
+  position: absolute;
+  inset-block-start: 0.3rem;
+  inset-inline-end: 0.3rem;
+  color: var(--uwe-on-accent);
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity var(--uwe-dur-fast) var(--uwe-ease-out),
+    transform var(--uwe-dur-fast) var(--uwe-ease-out);
+}
+
+.cw-tile[aria-pressed="true"] .cw-tile__check,
+.cw-tile[data-selected="true"] .cw-tile__check {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.cw-tile__art {
+  aspect-ratio: 16 / 9;
+  border-radius: var(--uwe-r-md);
+  background:
+    radial-gradient(120% 90% at 50% 0%, var(--uwe-accent-muted), transparent 70%),
+    var(--uwe-surface-sunken);
+  display: grid;
+  place-items: center;
+  margin-bottom: var(--uwe-space-1);
+  border: 1px solid var(--uwe-border-muted);
+  overflow: hidden;
+}
+
+.cw-tile__art img,
+.cw-tile__art svg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cw-tile__name {
+  font-family: var(--uwe-font-display);
+  font-size: var(--uwe-text-xl);
+  font-weight: var(--uwe-weight-medium);
+  line-height: var(--uwe-leading-tight);
+  letter-spacing: -0.01em;
+}
+
+.cw-tile__hook {
+  font-size: var(--uwe-text-sm);
+  line-height: var(--uwe-leading-normal);
+  color: var(--uwe-fg-muted);
+  /* Drei Zeilen, dann Schluss — sonst franst das Raster aus. */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cw-tile__meta {
+  margin-top: auto;
+  padding-top: var(--uwe-space-2);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--uwe-space-1);
+  border-top: 1px solid var(--uwe-border-muted);
+}
+
+/* ───────────────────────────── Chips ───────────────────────────── */
+
+.cw-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--uwe-r-sm);
+  border: 1px solid var(--uwe-border-muted);
+  background: var(--uwe-surface-sunken);
+  font-size: var(--uwe-text-2xs);
+  font-weight: var(--uwe-weight-medium);
+  color: var(--uwe-fg-muted);
+  white-space: nowrap;
+}
+
+.cw-chip[data-tone="accent"] {
+  border-color: color-mix(in srgb, var(--uwe-accent) 35%, transparent);
+  background: var(--uwe-accent-muted);
+  color: var(--uwe-accent-ink);
+}
+
+.cw-chip__value {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--uwe-weight-bold);
+  color: var(--uwe-fg);
+}
+
+/* ───────────────────────── Die Charakter-Leiste ───────────────────────── */
+
+.cw-rail {
+  position: sticky;
+  top: var(--uwe-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--uwe-space-4);
+  padding: var(--uwe-pad-card);
+  border: 1.5px solid var(--uwe-border);
+  border-radius: var(--uwe-r-xl);
+  background: var(--uwe-surface-3);
+  box-shadow: var(--uwe-elev-2);
+  overflow: hidden;
+}
+
+.cw-rail::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--cw-grain);
+  pointer-events: none;
+}
+
+.cw-rail__name {
+  font-family: var(--uwe-font-display);
+  font-size: var(--uwe-text-2xl);
+  font-weight: var(--uwe-weight-medium);
+  line-height: var(--uwe-leading-tight);
+}
+
+.cw-rail__name[data-placeholder="true"] {
+  color: var(--uwe-fg-subtle);
+  font-style: italic;
+}
+
+.cw-rail__subtitle {
+  font-size: var(--uwe-text-sm);
+  color: var(--uwe-fg-muted);
+  margin-top: var(--uwe-space-1);
+}
+
+/* Die drei großen Zahlen. Sie sind das Lauteste in der Leiste — genau so
+   liest man einen Bogen auch auf Papier. */
+.cw-vitals {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--uwe-space-2);
+}
+
+.cw-vital {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: var(--uwe-space-2) var(--uwe-space-1);
+  border-radius: var(--uwe-r-md);
+  border: 1px solid var(--uwe-border-muted);
+  background: var(--uwe-surface-sunken);
+}
+
+.cw-vital__value {
+  font-size: var(--uwe-text-2xl);
+  font-weight: var(--uwe-weight-bold);
+  font-variant-numeric: tabular-nums lining-nums;
+  line-height: 1;
+  color: var(--uwe-fg);
+  /* Zahlenwechsel soll man sehen, aber nicht ertragen müssen. */
+  transition: color var(--uwe-dur-fast) var(--uwe-ease-out);
+}
+
+.cw-vital__value[data-empty="true"] {
+  color: var(--uwe-fg-subtle);
+}
+
+.cw-vital__label {
+  font-size: var(--uwe-text-2xs);
+  letter-spacing: var(--uwe-tracking-wide);
+  text-transform: uppercase;
+  color: var(--uwe-fg-muted);
+}
+
+/* Sechs Attribute als Block — Wert groß, Modifikator darunter. */
+.cw-abilities {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--uwe-space-2);
+}
+
+.cw-ability {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--uwe-space-2) 0;
+  border-radius: var(--uwe-r-md);
+  border: 1px solid var(--uwe-border-muted);
+  background: var(--uwe-surface-2);
+}
+
+.cw-ability__short {
+  font-size: var(--uwe-text-2xs);
+  letter-spacing: var(--uwe-tracking-wide);
+  color: var(--uwe-fg-muted);
+  font-weight: var(--uwe-weight-semibold);
+}
+
+.cw-ability__mod {
+  font-size: var(--uwe-text-xl);
+  font-weight: var(--uwe-weight-bold);
+  font-variant-numeric: tabular-nums lining-nums;
+  line-height: 1.1;
+}
+
+.cw-ability__score {
+  font-size: var(--uwe-text-2xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--uwe-fg-subtle);
+}
+
+/* Ein Attribut, das der Hintergrund gerade angehoben hat. */
+.cw-ability[data-boosted="true"] {
+  border-color: color-mix(in srgb, var(--uwe-accent) 45%, transparent);
+  background: var(--uwe-accent-muted);
+}
+
+.cw-rail__section-title {
+  font-size: var(--uwe-text-2xs);
+  letter-spacing: var(--uwe-tracking-caps);
+  text-transform: uppercase;
+  font-weight: var(--uwe-weight-bold);
+  color: var(--uwe-fg-muted);
+  margin-bottom: var(--uwe-space-2);
+}
+
+.cw-rail__empty {
+  font-size: var(--uwe-text-sm);
+  color: var(--uwe-fg-subtle);
+  font-style: italic;
+}
+
+/* ─────────────────────── Fußleiste mit Navigation ─────────────────────── */
+
+.cw-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: var(--uwe-z-sticky);
+  display: flex;
+  align-items: center;
+  gap: var(--uwe-space-3);
+  margin-top: var(--uwe-space-6);
+  padding: var(--uwe-space-3) 0;
+  background: linear-gradient(180deg, transparent, var(--uwe-bg) 35%);
+}
+
+.cw-footer__spacer {
+  flex: 1;
+}
+
+.cw-footer__hint {
+  font-size: var(--uwe-text-sm);
+  color: var(--uwe-fg-muted);
+}
+
+.cw-footer__hint[data-tone="blocked"] {
+  color: var(--uwe-warning-ink, var(--uwe-warning));
+}
+
+/* ───────────────────────────── Schrittwechsel ───────────────────────────── */
+
+.cw-panel {
+  animation: cw-panel-in var(--uwe-dur-base) var(--uwe-ease-out) both;
+  /*
+   * Platz für die klebende Fußleiste. Deren Verlauf ist oben durchsichtig,
+   * also lag der letzte Absatz vorher lesbar UNTER dem Zurück-Knopf — auf
+   * dem Telefon verdeckte er das Feld „Anrede" vollständig.
+   */
+  padding-block-end: 4.5rem;
+}
+
+@keyframes cw-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ───────────────────────────── Würfelwurf ───────────────────────────── */
+
+.cw-dice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--uwe-space-2);
+}
+
+.cw-die {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--uwe-r-sm);
+  border: 1.5px solid var(--uwe-border-strong);
+  background: var(--uwe-surface-3);
+  box-shadow: var(--uwe-elev-1);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-weight: var(--uwe-weight-bold);
+  font-size: var(--uwe-text-lg);
+}
+
+/* Der weggefallene Würfel bleibt sichtbar — man will sehen, was man
+   verloren hat, sonst fühlt sich der Wurf wie eine Behauptung an. */
+.cw-die[data-dropped="true"] {
+  opacity: 0.4;
+  border-style: dashed;
+  text-decoration: line-through;
+}
+
+.cw-die[data-rolling="true"] {
+  animation: cw-tumble var(--uwe-dur-slow) var(--uwe-ease-soft);
+}
+
+@keyframes cw-tumble {
+  0% {
+    transform: translateY(-0.75rem) rotate(-18deg) scale(0.9);
+  }
+  55% {
+    transform: translateY(0.15rem) rotate(8deg) scale(1.04);
+  }
+  75% {
+    transform: translateY(-0.1rem) rotate(-3deg) scale(0.99);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+/* ───────────────────────── Punktekauf-Regler ───────────────────────── */
+
+.cw-buy-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: var(--uwe-space-3);
+  padding: var(--uwe-space-3);
+  border-radius: var(--uwe-r-md);
+  border: 1px solid var(--uwe-border-muted);
+  background: var(--uwe-surface-2);
+}
+
+.cw-buy-row + .cw-buy-row {
+  margin-top: var(--uwe-space-2);
+}
+
+.cw-budget {
+  display: flex;
+  align-items: baseline;
+  gap: var(--uwe-space-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.cw-budget__value {
+  font-size: var(--uwe-text-2xl);
+  font-weight: var(--uwe-weight-bold);
+}
+
+.cw-budget__value[data-exhausted="true"] {
+  color: var(--uwe-accent-ink);
+}
+
+/* Ein Balken, der zeigt, wie viel Budget weg ist. */
+.cw-budget__bar {
+  flex: 1;
+  height: 0.4rem;
+  border-radius: var(--uwe-r-pill);
+  background: var(--uwe-surface-sunken);
+  overflow: hidden;
+}
+
+.cw-budget__fill {
+  height: 100%;
+  background: var(--uwe-accent);
+  border-radius: inherit;
+  transition: width var(--uwe-dur-base) var(--uwe-ease-out);
+}
+
+/* ───────────────────────────── Kleinkram ───────────────────────────── */
+
+.cw-search {
+  display: flex;
+  gap: var(--uwe-space-2);
+  align-items: center;
+  margin-bottom: var(--uwe-space-4);
+  flex-wrap: wrap;
+}
+
+.cw-filters {
+  display: flex;
+  gap: var(--uwe-space-1);
+  flex-wrap: wrap;
+}
+
+.cw-filter {
+  padding: 0.3rem 0.7rem;
+  border-radius: var(--uwe-r-pill);
+  border: 1px solid var(--uwe-border);
+  background: transparent;
+  font-size: var(--uwe-text-xs);
+  font-weight: var(--uwe-weight-medium);
+  color: var(--uwe-fg-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--uwe-dur-fast) var(--uwe-ease-out),
+    color var(--uwe-dur-fast) var(--uwe-ease-out),
+    border-color var(--uwe-dur-fast) var(--uwe-ease-out);
+}
+
+.cw-filter[aria-pressed="true"] {
+  background: var(--uwe-accent);
+  border-color: var(--uwe-accent);
+  color: var(--uwe-on-accent);
+}
+
+.cw-filter:focus-visible {
+  outline: 2px solid var(--uwe-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Ein aufklappbarer Regeltext. Erst die Entscheidung, dann das Kleingedruckte. */
+.cw-disclosure > summary {
+  cursor: pointer;
+  font-size: var(--uwe-text-sm);
+  font-weight: var(--uwe-weight-medium);
+  color: var(--uwe-accent-ink);
+  list-style: none;
+  padding: var(--uwe-space-1) 0;
+}
+
+.cw-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.cw-disclosure > summary::before {
+  content: "▸ ";
+  display: inline-block;
+  transition: transform var(--uwe-dur-fast) var(--uwe-ease-out);
+}
+
+.cw-disclosure[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.cw-prose {
+  font-size: var(--uwe-text-sm);
+  line-height: var(--uwe-leading-normal);
+  color: var(--uwe-fg-muted);
+  max-width: var(--uwe-measure);
+}
+
+.cw-prose p + p {
+  margin-top: var(--uwe-space-2);
+}
+
+/* Bewegung aus: die beiden globalen Schalter nullen `--uwe-dur-*` bereits.
+   Die Keyframe-Animationen brauchen zusätzlich diesen Riegel, weil sie
+   sonst mit 0s laufen, aber im ersten Frame noch versetzt starten. */
+@media (prefers-reduced-motion: reduce) {
+  .cw-panel,
+  .cw-die[data-rolling="true"] {
+    animation: none;
+  }
+}
+
+html[data-uwe-motion="off"] .cw-panel,
+html[data-uwe-motion="off"] .cw-die[data-rolling="true"] {
+  animation: none;
+}
+
+/* ═════════════════════ Formularschritt (Beschreibung) ═════════════════════ */
+
+/* Dreizehn Freitextfelder in einer Spalte wären ein Steuerformular. Sie
+   stehen deshalb in drei benannten Gruppen — wer sein Volk gewählt hat,
+   sucht „Augen" nicht zwischen „Ideale" und „Makel". */
+
+.cw-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--uwe-space-6);
+}
+
+.cw-fieldset {
+  border: 1.5px solid var(--uwe-border);
+  border-radius: var(--uwe-r-lg);
+  background: var(--uwe-surface-2);
+  box-shadow: var(--uwe-elev-1);
+  padding: var(--uwe-pad-card);
+  /* Ohne Reset erbt ein <fieldset> die UA-Ränder und sitzt schief. */
+  margin: 0;
+  min-inline-size: 0;
+}
+
+.cw-fieldset__legend {
+  font-family: var(--uwe-font-display);
+  font-size: var(--uwe-text-lg);
+  font-weight: var(--uwe-weight-medium);
+  line-height: var(--uwe-leading-snug);
+  padding-inline: var(--uwe-space-2);
+  margin-inline-start: calc(-1 * var(--uwe-space-2));
+}
+
+.cw-fieldset__hint {
+  font-size: var(--uwe-text-sm);
+  line-height: var(--uwe-leading-normal);
+  color: var(--uwe-fg-muted);
+  max-width: var(--uwe-measure);
+  margin-bottom: var(--uwe-space-4);
+}
+
+/* Kurze Felder nebeneinander, lange über die volle Breite. */
+.cw-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: var(--uwe-space-4);
+}
+
+.cw-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--uwe-space-1);
+  min-inline-size: 0;
+}
+
+.cw-field[data-span="full"] {
+  grid-column: 1 / -1;
+}
+
+.cw-field__label {
+  font-size: var(--uwe-text-sm);
+  font-weight: var(--uwe-weight-semibold);
+  line-height: var(--uwe-leading-snug);
+  color: var(--uwe-fg);
+}
+
+.cw-field__hint {
+  font-size: var(--uwe-text-xs);
+  line-height: var(--uwe-leading-normal);
+  color: var(--uwe-fg-muted);
+}
+
+/* Pflicht wird nicht über Farbe allein erzählt — das Wort steht daneben. */
+.cw-field__required {
+  font-size: var(--uwe-text-2xs);
+  letter-spacing: var(--uwe-tracking-wide);
+  text-transform: uppercase;
+  font-weight: var(--uwe-weight-bold);
+  color: var(--uwe-accent-ink);
+  margin-inline-start: var(--uwe-space-1);
+}
+
+.cw-field__error {
+  font-size: var(--uwe-text-xs);
+  font-weight: var(--uwe-weight-medium);
+  color: var(--uwe-danger-ink, var(--uwe-danger));
+}
+
+/* Neun Gesinnungen brauchen keine 15-rem-Kacheln — sie tragen zwei Zeilen. */
+.cw-grid[data-density="compact"] {
+  --cw-tile-min: 12rem;
+}
+
+/* Umschaltbare Marken (Sprachen). Wie `.cw-filter`, aber mit Touch-Höhe —
+   hier wird ausgewählt, nicht gefiltert. */
+.cw-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--uwe-space-2);
+}
+
+.cw-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--uwe-space-1);
+  min-height: var(--uwe-touch-min);
+  padding: var(--uwe-space-2) var(--uwe-space-4);
+  border-radius: var(--uwe-r-pill);
+  border: 1.5px solid var(--uwe-border);
+  background: var(--uwe-surface-2);
+  color: var(--uwe-fg-muted);
+  font: inherit;
+  font-size: var(--uwe-text-sm);
+  font-weight: var(--uwe-weight-medium);
+  cursor: pointer;
+  transition:
+    background-color var(--uwe-dur-fast) var(--uwe-ease-out),
+    border-color var(--uwe-dur-fast) var(--uwe-ease-out),
+    color var(--uwe-dur-fast) var(--uwe-ease-out);
+}
+
+.cw-toggle:hover {
+  border-color: var(--uwe-border-strong);
+  color: var(--uwe-fg);
+}
+
+.cw-toggle[aria-pressed="true"] {
+  background: var(--uwe-accent);
+  border-color: var(--uwe-accent);
+  color: var(--uwe-on-accent);
+}
+
+.cw-toggle:focus-visible {
+  outline: 2px solid var(--uwe-focus-ring);
+  outline-offset: 2px;
+}
+
+.cw-toggle__mark {
+  display: inline-flex;
+  opacity: 0;
+}
+
+.cw-toggle[aria-pressed="true"] .cw-toggle__mark {
+  opacity: 1;
+}
+
+/* ═══════════════════════ Übersicht: der Bogen ═══════════════════════ */
+
+.cw-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--uwe-space-5);
+}
+
+.cw-sheet__banner {
+  position: relative;
+  isolation: isolate;
+  padding: var(--uwe-pad-card);
+  border: 1.5px solid var(--uwe-accent);
+  border-radius: var(--uwe-r-xl);
+  background:
+    radial-gradient(120% 140% at 0% 0%, var(--uwe-accent-muted), transparent 60%),
+    var(--uwe-surface-3);
+  box-shadow: var(--uwe-elev-2);
+  overflow: hidden;
+}
+
+.cw-sheet__banner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--cw-grain);
+  pointer-events: none;
+}
+
+.cw-sheet__name {
+  font-family: var(--uwe-font-display);
+  font-size: var(--uwe-text-3xl);
+  font-weight: var(--uwe-weight-medium);
+  line-height: var(--uwe-leading-tight);
+  letter-spacing: -0.02em;
+}
+
+.cw-sheet__lede {
+  margin-top: var(--uwe-space-1);
+  font-size: var(--uwe-text-base);
+  color: var(--uwe-fg-muted);
+}
+
+.cw-sheet__marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--uwe-space-1);
+  margin-top: var(--uwe-space-3);
+}
+
+/* Die Blöcke des Bogens. `auto-fit` statt fester Spalten: auf dem Telefon
+   eine Spalte, am Schreibtisch drei — ohne Umbruchpunkte im TSX. */
+.cw-sheet__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: var(--uwe-space-4);
+  align-items: start;
+}
+
+.cw-sheet__block {
+  padding: var(--uwe-pad-card);
+  border: 1.5px solid var(--uwe-border);
+  border-radius: var(--uwe-r-lg);
+  background: var(--uwe-surface-2);
+  box-shadow: var(--uwe-elev-1);
+  min-inline-size: 0;
+}
+
+.cw-sheet__block[data-span="wide"] {
+  grid-column: 1 / -1;
+}
+
+.cw-sheet__block-title {
+  font-size: var(--uwe-text-2xs);
+  letter-spacing: var(--uwe-tracking-caps);
+  text-transform: uppercase;
+  font-weight: var(--uwe-weight-bold);
+  color: var(--uwe-fg-muted);
+  margin-bottom: var(--uwe-space-3);
+}
+
+.cw-sheet__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--uwe-space-1);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.cw-sheet__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--uwe-space-3);
+  padding-block: var(--uwe-space-1);
+  font-size: var(--uwe-text-sm);
+  border-bottom: 1px solid var(--uwe-border-muted);
+}
+
+.cw-sheet__row:last-child {
+  border-bottom: 0;
+}
+
+.cw-sheet__row-label {
+  color: var(--uwe-fg-muted);
+  min-inline-size: 0;
+}
+
+.cw-sheet__row-value {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-weight: var(--uwe-weight-semibold);
+  white-space: nowrap;
+}
+
+.cw-sheet__text {
+  font-size: var(--uwe-text-sm);
+  line-height: var(--uwe-leading-normal);
+  color: var(--uwe-fg-muted);
+  max-width: var(--uwe-measure);
+  white-space: pre-wrap;
+}
+
+.cw-sheet__empty {
+  font-size: var(--uwe-text-sm);
+  color: var(--uwe-fg-subtle);
+  font-style: italic;
+}
+
+/* Vier Kennzahlen statt drei — auf dem Bogen steht das Tempo mit dabei. */
+.cw-vitals[data-columns="4"] {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+@media (min-width: 40rem) {
+  .cw-vitals[data-columns="4"] {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* ═══════════════ Übersicht: was noch fehlt, und der Abschluss ═══════════════ */
+
+.cw-todo {
+  padding: var(--uwe-pad-card);
+  border: 1.5px solid color-mix(in srgb, var(--uwe-warning) 45%, var(--uwe-border));
+  border-radius: var(--uwe-r-lg);
+  background: color-mix(in srgb, var(--uwe-warning) 8%, var(--uwe-surface-2));
+}
+
+.cw-todo__title {
+  font-family: var(--uwe-font-display);
+  font-size: var(--uwe-text-lg);
+  font-weight: var(--uwe-weight-medium);
+  line-height: var(--uwe-leading-snug);
+}
+
+.cw-todo__lede {
+  margin-top: var(--uwe-space-1);
+  margin-bottom: var(--uwe-space-3);
+  font-size: var(--uwe-text-sm);
+  color: var(--uwe-fg-muted);
+  max-width: var(--uwe-measure);
+}
+
+.cw-todo__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--uwe-space-2);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.cw-todo__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--uwe-space-3);
+  padding: var(--uwe-space-3);
+  border-radius: var(--uwe-r-md);
+  border: 1px solid var(--uwe-border-muted);
+  background: var(--uwe-surface-2);
+}
+
+.cw-todo__text {
+  min-inline-size: 0;
+  font-size: var(--uwe-text-sm);
+}
+
+.cw-todo__step {
+  display: block;
+  font-size: var(--uwe-text-2xs);
+  letter-spacing: var(--uwe-tracking-caps);
+  text-transform: uppercase;
+  font-weight: var(--uwe-weight-bold);
+  color: var(--uwe-fg-muted);
+}
+
+.cw-submit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--uwe-space-3);
+  padding: var(--uwe-pad-card);
+  border: 1.5px solid var(--uwe-border);
+  border-radius: var(--uwe-r-lg);
+  background: var(--uwe-surface-3);
+  box-shadow: var(--uwe-elev-1);
+}
+
+.cw-submit__reason {
+  flex: 1 1 16rem;
+  font-size: var(--uwe-text-sm);
+  color: var(--uwe-fg-muted);
+  min-inline-size: 0;
+}
+
+.cw-alert {
+  padding: var(--uwe-space-3);
+  border-radius: var(--uwe-r-md);
+  border: 1.5px solid color-mix(in srgb, var(--uwe-danger) 45%, var(--uwe-border));
+  background: color-mix(in srgb, var(--uwe-danger) 10%, var(--uwe-surface-2));
+  font-size: var(--uwe-text-sm);
+  color: var(--uwe-fg);
+}
+
+/* ──────────── Bausteine der Schritte: Abschnitt, Liste, Leerzustand ────────────
+   Nachgezogen für Hintergrund, Ausrüstung und Zauber — Schritte, die mehr
+   brauchen als Kachel und Chip: einen Abschnittskopf mit Zähler, eine Liste
+   mit Mengen, eine statische Tafel für das, was ohne Wahl dazukommt, und den
+   Platz unter der Kachel, an dem der Regeltext aufklappt. Gleiche Regel wie
+   oben: nur Token, keine Festwerte. */
+
+/* Kachel plus aufklappbarer Regeltext bilden zusammen ein Rasterfeld. Ein
+   `<details>` darf nicht in einen `<button>` — deshalb dieser Rahmen. */
+.cw-choice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--uwe-space-2);
+  min-width: 0;
+}
+
+.cw-choice > .cw-tile {
+  flex: 1 1 auto;
+}
+
+/* Vergleichskarten (Startausrüstung) brauchen mehr Breite als eine Kachel:
+   zwei Optionen nebeneinander lesen zu können ist hier die ganze Aufgabe. */
+.cw-grid[data-wide="true"] {
+  --cw-tile-min: 21rem;
+}
+
+/* ─── Abschnitt mit Kopfzeile und Zähler ─── */
+
+.cw-section + .cw-section {
+  margin-top: var(--uwe-space-6);
+}
+
+.cw-section__head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--uwe-space-2);
+  margin-bottom: var(--uwe-space-2);
+}
+
+.cw-section__title {
+  font-family: var(--uwe-font-display);
+  font-size: var(--uwe-text-xl);
+  font-weight: var(--uwe-weight-medium);
+  line-height: var(--uwe-leading-tight);
+}
+
+.cw-section__note {
+  margin-bottom: var(--uwe-space-4);
+  max-width: var(--uwe-measure);
+  font-size: var(--uwe-text-sm);
+  line-height: var(--uwe-leading-normal);
+  color: var(--uwe-fg-muted);
+}
+
+/* ─── Statische Tafel: was ohne Wahl dazukommt ─── */
+
+.cw-slab {
+  padding: var(--uwe-pad-card);
+  border: 1.5px solid var(--uwe-border);
+  border-radius: var(--uwe-r-lg);
+  background: var(--uwe-surface-2);
+  box-shadow: var(--uwe-elev-1);
+}
+
+/* ─── Leerer Zustand: sagt, was als Nächstes zu tun ist ─── */
+
+.cw-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--uwe-space-3);
+  padding: var(--uwe-space-6) var(--uwe-pad-card);
+  border: 1.5px dashed var(--uwe-border-strong);
+  border-radius: var(--uwe-r-lg);
+  background: var(--uwe-surface-sunken);
+}
+
+.cw-empty__icon {
+  color: var(--uwe-fg-subtle);
+}
+
+.cw-empty__title {
+  font-family: var(--uwe-font-display);
+  font-size: var(--uwe-text-lg);
+  font-weight: var(--uwe-weight-medium);
+  line-height: var(--uwe-leading-tight);
+}
+
+.cw-empty__text {
+  max-width: var(--uwe-measure);
+  font-size: var(--uwe-text-sm);
+  line-height: var(--uwe-leading-normal);
+  color: var(--uwe-fg-muted);
+}
+
+/* ─── Hinweiszeile im Fluss: Zählerstand, Sperrmeldung, Nachtrag ─── */
+
+.cw-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--uwe-space-2);
+  margin-top: var(--uwe-space-4);
+  padding: var(--uwe-space-3);
+  border: 1px solid var(--uwe-border-muted);
+  border-radius: var(--uwe-r-md);
+  background: var(--uwe-surface-sunken);
+  font-size: var(--uwe-text-sm);
+  line-height: var(--uwe-leading-normal);
+  color: var(--uwe-fg-muted);
+}
+
+.cw-note[data-tone="accent"] {
+  border-color: color-mix(in srgb, var(--uwe-accent) 35%, transparent);
+  background: var(--uwe-accent-muted);
+  color: var(--uwe-accent-ink);
+}
+
+.cw-note[data-tone="blocked"] {
+  border-color: color-mix(in srgb, var(--uwe-warning) 45%, transparent);
+  color: var(--uwe-fg);
+}
+
+.cw-note__text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ─── Liste mit Mengen. Steht auch in Kacheln, deshalb auf `<span>` tauglich. ─── */
+
+.cw-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--uwe-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cw-item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--uwe-space-2);
+  font-size: var(--uwe-text-sm);
+  line-height: var(--uwe-leading-normal);
+}
+
+.cw-item__qty {
+  flex: 0 0 auto;
+  min-width: 2.25rem;
+  padding: 0.05rem 0.35rem;
+  border: 1px solid var(--uwe-border-muted);
+  border-radius: var(--uwe-r-sm);
+  background: var(--uwe-surface-sunken);
+  font-size: var(--uwe-text-2xs);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--uwe-weight-bold);
+  text-align: center;
+  color: var(--uwe-fg-muted);
+}
+
+.cw-item__name {
+  color: var(--uwe-fg);
+}
+
+.cw-item__note {
+  font-size: var(--uwe-text-xs);
+  color: var(--uwe-fg-subtle);
+}
+
+/* ─── Das Ursprungstalent auf der Hintergrund-Kachel ───
+   Es ist die folgenreichste Wahl der Erstellung von 2024 und bekommt deshalb
+   auf der Kachel einen eigenen, hervorgehobenen Block statt eines Chips. */
+
+.cw-feat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: var(--uwe-space-2);
+  border: 1px solid color-mix(in srgb, var(--uwe-accent) 35%, transparent);
+  border-radius: var(--uwe-r-md);
+  background: var(--uwe-accent-muted);
+}
+
+.cw-feat__label {
+  font-size: var(--uwe-text-2xs);
+  letter-spacing: var(--uwe-tracking-caps);
+  text-transform: uppercase;
+  font-weight: var(--uwe-weight-bold);
+  color: var(--uwe-accent-ink);
+}
+
+.cw-feat__name {
+  font-size: var(--uwe-text-base);
+  font-weight: var(--uwe-weight-semibold);
+  line-height: var(--uwe-leading-tight);
+  color: var(--uwe-fg);
+}
+
+.cw-feat__text {
+  font-size: var(--uwe-text-xs);
+  line-height: var(--uwe-leading-normal);
+  color: var(--uwe-fg-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ─── Der Eigenbau-Hintergrund: eine Kachel, die kein Angebot ist, sondern
+   eine Werkbank ───
+   Sie steht zwischen vier fertigen Hintergründen und darf keine fünfte
+   gleichaussehende Karte sein: Wer sie anklickt, bekommt keinen Eintrag,
+   sondern ein Formular. Gestrichelter Rahmen und leerer Wappenplatz sagen das,
+   bevor irgendein Text gelesen wird. Gewählt wechselt sie auf durchgezogen —
+   ab da ist sie ein Hintergrund wie jeder andere. */
+
+.cw-tile[data-variant="build"] {
+  border-style: dashed;
+  border-color: var(--uwe-border-strong);
+  background: var(--uwe-surface-sunken);
+}
+
+.cw-tile[data-variant="build"] .cw-tile__art {
+  border-style: dashed;
+  border-color: var(--uwe-border-strong);
+  background: var(--uwe-surface-sunken);
+  color: var(--uwe-fg-subtle);
+}
+
+.cw-tile[data-variant="build"][aria-pressed="true"] {
+  border-style: solid;
+  border-color: var(--uwe-accent);
+  background: var(--uwe-surface-2);
+}
+
+.cw-tile[data-variant="build"][aria-pressed="true"] .cw-tile__art {
+  border-style: solid;
+  border-color: var(--uwe-border-muted);
+}
+
+/* ─── Chips, die einen ganzen Satz tragen ───
+   `.cw-chip` steht standardmäßig auf `nowrap`, weil eine Kennzahl nicht
+   umbrechen darf („Trefferwürfel W10“). Ein Chip, der eine Auskunft trägt
+   („kein fertiger Hintergrund hebt beide“), würde damit auf dem Telefon aus
+   der Kachel laufen — der bekommt hier die Erlaubnis umzubrechen. */
+
+.cw-chip[data-wrap="true"] {
+  white-space: normal;
+  text-align: start;
+}
+
+/* ─── Suchfeld in der Suchzeile und eine Reihe Schaltflächen ─── */
+
+.cw-search__field {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.cw-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--uwe-space-2);
+  margin-top: var(--uwe-space-4);
+}
+
+/* ──────────────────── Hinweis auf einen wiederhergestellten Entwurf ──────────────────── */
+
+/*
+ * Vorher ein zweckentfremdeter `.cw-chip` mit acht Inline-Stilen und ohne
+ * Rolle. Jetzt eine eigene Zeile mit `role="status"` im TSX — sie meldet sich
+ * bei Screenreadern, und das Verwerfen fragt nach.
+ */
+.cw-restored {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--uwe-space-2);
+  margin-bottom: var(--uwe-space-4);
+  padding: var(--uwe-space-2) var(--uwe-space-3);
+  border: 1px solid color-mix(in srgb, var(--uwe-accent) 30%, transparent);
+  border-radius: var(--uwe-r-md);
+  background: var(--uwe-accent-muted);
+  color: var(--uwe-fg);
+  font-size: var(--uwe-text-sm);
+}
+
+.cw-restored__confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--uwe-space-2);
+  font-weight: var(--uwe-weight-semibold);
+}
+
+/* ─────────────────── Nachträge aus der Sichtprüfung ─────────────────── */
+
+/*
+ * Das Korn der Vorschau-Leiste lag ÜBER ihrem Text. Die Kachel macht es
+ * richtig (`isolation: isolate` + `z-index: -1`), die Leiste hatte beides
+ * nicht — der Fehler fiel nur deshalb kaum auf, weil das Korn schwach ist.
+ */
+.cw-rail {
+  isolation: isolate;
+}
+
+.cw-rail::before {
+  z-index: -1;
+}
+
+/*
+ * Gedrückt und deaktiviert fehlten vollständig. Ohne `:active` passiert beim
+ * Klick sichtbar nichts, weil `:hover` den Versatz schon vorweggenommen hat —
+ * die Kachel fühlt sich tot an, obwohl sie reagiert.
+ */
+.cw-tile:active {
+  transform: translateY(0);
+  box-shadow: var(--uwe-elev-1);
+}
+
+.cw-tile[aria-disabled="true"],
+.cw-tile:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  box-shadow: none;
+}
+
+.cw-tile[aria-disabled="true"]:hover,
+.cw-tile:disabled:hover {
+  transform: none;
+  border-color: var(--uwe-border);
+  box-shadow: none;
+}
+
+.cw-filter:active,
+.cw-step:active {
+  transform: translateY(1px);
+}
+
+/*
+ * Weniger Vorspann über dem Raster.
+ *
+ * Bei 1440×900 begann die erste Kachelreihe erst bei ~877 px — man sah keine
+ * einzige Option, ohne zu scrollen. Kopfzeile und Hinweisfeld dürfen nicht
+ * das halbe Fenster fressen, wenn darunter die eigentliche Entscheidung steht.
+ */
+@media (min-width: 1100px) {
+  .cw-head {
+    margin-bottom: var(--uwe-space-4);
+  }
+
+  .cw-head__lede {
+    margin-top: var(--uwe-space-1);
+  }
+
+  .cw-steps {
+    margin-bottom: var(--uwe-space-4);
+  }
+}
+
+/*
+ * Der Haken lag unter der Ecke.
+ *
+ * `.cw-tile::after` zeichnet den Akzent-Keil und ist das letzte Kind — ohne
+ * eigene Stapelebene malt er über `.cw-tile__check`. Gemessen: null helle
+ * Pixel innerhalb des Keils. Betroffen war jede Kachel im Ersteller, und
+ * damit auch das Schloss an den Fertigkeiten, die der Hintergrund mitbringt.
+ * Die Auswahl war dadurch allein an Farbe und Rahmen zu erkennen — genau
+ * das, was sie nicht sein darf.
+ */
+.cw-tile__check {
+  z-index: 1;
+}

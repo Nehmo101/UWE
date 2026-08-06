@@ -170,6 +170,8 @@ Build. Details: [docs/engineering/mcp-servers.md](docs/engineering/mcp-servers.m
 - [docs/engineering/engine-rename-migration.md](docs/engineering/engine-rename-migration.md) — Umzug von den RTX-Namen: Env-Vars, Pfade, systemd-Unit, DB-Enums, was automatisch läuft
 - [docs/family/README.md](docs/family/README.md) — Family: Mitglieder, Kalender, API, Kochbuch, Konto
 - [docs/engineering/doc-import-und-session-runner.md](docs/engineering/doc-import-und-session-runner.md) — Frontmatter-Dialekt, Seitenbaum-Import, Splitscreen am Spieltisch, API-Allowlist-Falle
+- [docs/engineering/character-creator-missing-data.md](docs/engineering/character-creator-missing-data.md) — Charakter-Ersteller: welche Daten fehlen, warum das SRD nur vier Hintergründe hat und was das für drei Klassen bedeutet
+- [docs/engineering/character-creator-offene-punkte.md](docs/engineering/character-creator-offene-punkte.md) — Charakter-Ersteller: Prüf-Lücken, Gestaltungsbefunde und Fehler im Umfeld, nach Nutzen sortiert
 - [docs/design/responsive-tables.md](docs/design/responsive-tables.md) — Tabellen auf dem Telefon: `ResponsiveTable`, `DataTable`, Attribut-Vertrag
 - [docs/design/theme-a11y-checklist.md](docs/design/theme-a11y-checklist.md) — Schwellen der a11y-Prüfmatrix und die Kaskadenfallen
 - [.cursor/skills/manifest.json](.cursor/skills/manifest.json) — Skill-Index (24 Skills)

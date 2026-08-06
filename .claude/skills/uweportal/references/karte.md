@@ -15,12 +15,12 @@ und ob etwas Neues dazugekommen ist. Für das Warum die `SKILL.md` von /uweporta
 | Häkchen | `portal` |
 | Datenbank | uwe.db (lesend, über Studio-Guards) |
 | MCP-Server | `uwe-portal` |
-| Seiten | 26 |
+| Seiten | 27 |
 | API-Routen | 28 |
 
 **Seiten-Bereiche** (Top-Level unter `app/`, Zahl = Seiten darunter)
 
-`auth` (20) · `forgot-password` (1) · `login` (1) · `maintenance` (1) · `portal` (1) · `reset-password` (1)
+`auth` (21) · `forgot-password` (1) · `login` (1) · `maintenance` (1) · `portal` (1) · `reset-password` (1)
 
 **API-Bereiche** (Top-Level unter `app/api/`, Zahl = Route-Handler darunter)
 
@@ -30,7 +30,7 @@ und ob etwas Neues dazugekommen ist. Für das Warum die `SKILL.md` von /uweporta
 
 `character-actions.ts` · `character-sheet-actions.ts` · `note-actions.ts` · `player-hub-actions.ts` · `terra-actions.ts` · `treasury-actions.ts`
 
-**Pakete** (`@uwe/*` aus `apps/portal/package.json`, 11)
+**Pakete** (`@uwe/*` aus `apps/portal/package.json`, 12)
 
-`@uwe/assets` · `@uwe/auth` · `@uwe/config` · `@uwe/database` · `@uwe/dnd-api` · `@uwe/env` · `@uwe/passkeys` · `@uwe/player-hub` · `@uwe/security` · `@uwe/shared-ui` · `@uwe/shared-utils`
+`@uwe/assets` · `@uwe/auth` · `@uwe/character-creator` · `@uwe/config` · `@uwe/database` · `@uwe/dnd-api` · `@uwe/env` · `@uwe/passkeys` · `@uwe/player-hub` · `@uwe/security` · `@uwe/shared-ui` · `@uwe/shared-utils`
 <!-- uwe:generated:karte end -->
