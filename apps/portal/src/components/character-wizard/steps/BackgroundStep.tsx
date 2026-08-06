@@ -50,7 +50,7 @@ import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { NavIcon } from "@/src/components/ui/icon";
 import { SKILL_LABELS } from "../CharacterRail";
-import { lacksMatchingBackground } from "../background-gap";
+import { lacksMatchingBackground, STRANDED_CLASS_SUMMARY } from "../background-gap";
 import { CustomBackgroundBuilder } from "./background/CustomBackgroundBuilder";
 import { FeatText } from "./background/FeatText";
 import type { StepProps } from "../types";
@@ -278,11 +278,11 @@ function CustomBackgroundTile({
         <summary>Warum es den Eigenbau gibt</summary>
         <div className="cw-prose">
           <p>
-            Das SRD 5.2.1 enthält vier Hintergründe. Seit der Fassung von 2024
-            hängt am Hintergrund aber die Attributsverteilung, und diese vier
-            decken zusammen nur vier Attributstripel ab. Für Paladin (STÄ+CHA),
-            Mönch und Waldläufer (beide GES+WEI) gibt es darunter keinen, der
-            beide Primärattribute anhebt.
+            Das SRD 5.2.1 enthält {BACKGROUNDS.length} Hintergründe. Seit der
+            Fassung von 2024 hängt am Hintergrund aber die Attributsverteilung,
+            und ihre Attributstripel decken nicht jede Klasse ab: Für{" "}
+            {STRANDED_CLASS_SUMMARY} gibt es darunter keinen, der beide
+            Primärattribute anhebt.
           </p>
           <p>
             Die zwölf fehlenden Hintergründe des Spielerhandbuchs
@@ -439,14 +439,21 @@ export function BackgroundStep({ draft, patch, resolved, goTo }: StepProps) {
             </strong>{" "}
             {dndClass.name} steht auf{" "}
             {dndClass.primaryAbilities.map((key) => ABILITY_LABELS[key]).join(" und ")}
-            , und die vier Hintergründe des SRD bieten dieses Paar nicht zusammen
-            an. Das ist kein Fehler des Erstellers, sondern eine Lücke des
-            Regelwerks — und das Regelwerk schließt sie selbst: Bau dir deinen
-            Hintergrund nach dem Bauplan unten. Deine beiden Werte sind dort
-            schon vorbelegt.{" "}
-            <Button variant="link" onClick={chooseCustom}>
-              Eigenen Hintergrund bauen
-            </Button>
+            , und die {BACKGROUNDS.length} Hintergründe des SRD bieten dieses Paar
+            nicht zusammen an. Das ist kein Fehler des Erstellers, sondern eine
+            Lücke des Regelwerks — und das Regelwerk schließt sie selbst: Es
+            beschreibt, wie man sich einen Hintergrund baut.{" "}
+            {custom ? (
+              "Genau das tust du gerade — der Bauplan steht unter den Kacheln."
+            ) : (
+              <>
+                Die Kachel dafür steht unten neben den fertigen, und deine beiden
+                Werte sind darin schon angehakt.{" "}
+                <Button variant="link" onClick={chooseCustom}>
+                  Eigenen Hintergrund bauen
+                </Button>
+              </>
+            )}
           </span>
         </div>
       ) : null}
@@ -497,9 +504,9 @@ export function BackgroundStep({ draft, patch, resolved, goTo }: StepProps) {
           <p className="cw-empty__text">
             Kein Katalog-Eintrag hebt{" "}
             {ability === "all" ? "das gesuchte Attribut" : ABILITY_LABELS[ability]} an und
-            trifft zugleich deine Suche. Nimm den Filter heraus, um wieder alle vier
-            SRD-Hintergründe zu sehen — oder bau dir einen, der genau dieses Attribut
-            anhebt.
+            trifft zugleich deine Suche. Nimm den Filter heraus, um wieder alle{" "}
+            {BACKGROUNDS.length} SRD-Hintergründe zu sehen — oder bau dir einen, der
+            genau dieses Attribut anhebt.
           </p>
           <Button variant="outline" onClick={resetFilters}>
             Filter zurücksetzen
