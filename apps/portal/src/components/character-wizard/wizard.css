@@ -1466,3 +1466,17 @@ html[data-uwe-motion="off"] .cw-die[data-rolling="true"] {
     margin-bottom: var(--uwe-space-4);
   }
 }
+
+/*
+ * Der Haken lag unter der Ecke.
+ *
+ * `.cw-tile::after` zeichnet den Akzent-Keil und ist das letzte Kind — ohne
+ * eigene Stapelebene malt er über `.cw-tile__check`. Gemessen: null helle
+ * Pixel innerhalb des Keils. Betroffen war jede Kachel im Ersteller, und
+ * damit auch das Schloss an den Fertigkeiten, die der Hintergrund mitbringt.
+ * Die Auswahl war dadurch allein an Farbe und Rahmen zu erkennen — genau
+ * das, was sie nicht sein darf.
+ */
+.cw-tile__check {
+  z-index: 1;
+}
