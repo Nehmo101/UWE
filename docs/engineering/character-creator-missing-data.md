@@ -75,8 +75,37 @@ Drei Auswege, in der Reihenfolge, in der ich sie empfehlen würde:
 2. **Welt-eigene Hintergründe** durch den Spielleiter im Studio pflegen.
 3. Nur mit gekaufter Lizenz: die PHB-Hintergründe nachtragen.
 
-Solange keiner dieser Wege gebaut ist, sollte der Ersteller die Beschränkung
-im Hintergrund-Schritt **benennen** statt sie zu verschweigen.
+### Konkret: fünf von zwölf Klassen sind nicht sinnvoll baubar
+
+Die vier SRD-Hintergründe bieten genau diese Attributs-Tripel an:
+
+| Hintergrund | Attribute |
+|---|---|
+| Akolyth | INT · WEI · CHA |
+| Krimineller | GES · KON · INT |
+| Weiser | KON · INT · WEI |
+| Soldat | STÄ · GES · KON |
+
+Damit gibt es **keinen** Hintergrund, der die Primärattribute dieser Klassen
+zugleich anhebt:
+
+| Klasse | braucht | im Angebot |
+|---|---|---|
+| Paladin | STÄ + CHA | — |
+| Mönch | GES + WEI | — |
+| Waldläufer | GES + WEI | — |
+| Barde | CHA + GES | — |
+| Hexenpakt-Magier | CHA + KON | — |
+
+Diese Spieler müssen ihren wichtigsten Wert ungeboostet lassen. Das ist keine
+Geschmacksfrage, sondern ein mechanischer Nachteil, den der Ersteller heute
+weder verhindert noch erklärt. **Das ist die dringlichste Einzelbaustelle
+des Erstellers.**
+
+Solange keiner der drei Auswege gebaut ist, sollte der Ersteller die
+Beschränkung im Hintergrund- **und** im Klassen-Schritt benennen statt sie zu
+verschweigen — mindestens ein Satz an der Klassenkachel, wenn kein
+Hintergrund zu ihren Primärattributen passt.
 
 Dieselbe Klemme in kleiner: **eine Unterklasse pro Klasse**. Das SRD liefert
 genau eine, das PHB rund vier. Wer im Ersteller „Pfad des Berserkers" als

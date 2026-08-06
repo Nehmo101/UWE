@@ -23,6 +23,25 @@
   display: grid;
   gap: var(--uwe-space-6);
   align-items: start;
+  /*
+   * `minmax(0, 1fr)` statt der stillschweigenden `auto`-Spalte.
+   *
+   * Ein Raster ohne Spaltenangabe legt eine `auto`-Spalte an, und Raster-
+   * Kinder haben `min-width: auto` — beides zusammen heißt: die Spalte wird
+   * so breit wie ihr breitester Inhalt und schrumpft nicht. Auf dem Telefon
+   * schob damit die erste lange Zeile das ganze Raster über den Rand. Sichtbar
+   * war das nur als abgeschnittener Text: `overflow: hidden` weiter oben in
+   * der Hülle verschluckt die Bildlaufleiste, also wächst auch
+   * `documentElement.scrollWidth` nicht — eine Überlaufprüfung am Dokument
+   * meldet in diesem Fall fröhlich „alles in Ordnung".
+   */
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Dasselbe eine Ebene tiefer: ohne `min-width: 0` bricht ein langes Wort
+   nicht um, sondern dehnt seine Spalte. */
+.cw > * {
+  min-width: 0;
 }
 
 @media (min-width: 1100px) {
@@ -61,11 +80,26 @@
   mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent 100%);
 }
 
-/* Passt alles hinein, ist die Maske überflüssig und würde den letzten
-   Schritt grundlos aufhellen. */
-@media (min-width: 1100px) {
+/*
+ * Ab Tablet-Breite umbrechen statt scrollen.
+ *
+ * Neun Schritte brauchen nebeneinander rund 1280 px. Über beide Spalten
+ * gespannt stehen bei einem 1440-px-Fenster etwa 1130 px zur Verfügung — es
+ * fehlt also weiterhin ein Schritt, und die Maske war ausgerechnet oberhalb
+ * 1100 px abgeschaltet. Zwei Zeilen sind kein Schönheitsfehler; ein
+ * unsichtbarer neunter Schritt schon.
+ */
+@media (min-width: 700px) {
   .cw-steps {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    row-gap: var(--uwe-space-2);
     mask-image: none;
+  }
+
+  /* Die durchgehende Linie unter der Leiste trägt nur bei einer Zeile. */
+  .cw-steps::after {
+    display: none;
   }
 }
 
@@ -534,6 +568,12 @@
 
 .cw-panel {
   animation: cw-panel-in var(--uwe-dur-base) var(--uwe-ease-out) both;
+  /*
+   * Platz für die klebende Fußleiste. Deren Verlauf ist oben durchsichtig,
+   * also lag der letzte Absatz vorher lesbar UNTER dem Zurück-Knopf — auf
+   * dem Telefon verdeckte er das Feld „Anrede" vollständig.
+   */
+  padding-block-end: 4.5rem;
 }
 
 @keyframes cw-panel-in {
@@ -1331,4 +1371,33 @@ html[data-uwe-motion="off"] .cw-die[data-rolling="true"] {
   flex-wrap: wrap;
   gap: var(--uwe-space-2);
   margin-top: var(--uwe-space-4);
+}
+
+/* ──────────────────── Hinweis auf einen wiederhergestellten Entwurf ──────────────────── */
+
+/*
+ * Vorher ein zweckentfremdeter `.cw-chip` mit acht Inline-Stilen und ohne
+ * Rolle. Jetzt eine eigene Zeile mit `role="status"` im TSX — sie meldet sich
+ * bei Screenreadern, und das Verwerfen fragt nach.
+ */
+.cw-restored {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--uwe-space-2);
+  margin-bottom: var(--uwe-space-4);
+  padding: var(--uwe-space-2) var(--uwe-space-3);
+  border: 1px solid color-mix(in srgb, var(--uwe-accent) 30%, transparent);
+  border-radius: var(--uwe-r-md);
+  background: var(--uwe-accent-muted);
+  color: var(--uwe-fg);
+  font-size: var(--uwe-text-sm);
+}
+
+.cw-restored__confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--uwe-space-2);
+  font-weight: var(--uwe-weight-semibold);
 }

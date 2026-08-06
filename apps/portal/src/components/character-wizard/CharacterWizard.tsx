@@ -65,6 +65,7 @@ export interface CharacterWizardProps {
 export function CharacterWizard({ worldSlug, createAction }: CharacterWizardProps) {
   const { draft, set, patch, restored, reset } = useDraft(worldSlug);
   const [step, setStep] = useState<CreatorStepKey>("species");
+  const [confirmReset, setConfirmReset] = useState(false);
 
   const resolved: ResolvedCatalog = useMemo(() => {
     const species = draft.speciesKey ? (findSpecies(draft.speciesKey) ?? null) : null;
@@ -148,6 +149,14 @@ export function CharacterWizard({ worldSlug, createAction }: CharacterWizardProp
     // Der Schrittwechsel soll oben beginnen — sonst steht man mitten in
     // einer Kachelwand und hält es für einen Ladefehler.
     document.getElementById("cw-panel-top")?.scrollIntoView({ block: "start" });
+    // Und der aktive Schritt muss in der Leiste sichtbar sein. Ohne das steht
+    // man auf Schritt 9, während die Leiste noch Schritt 1 zeigt, und die
+    // einzige Positionsangabe ist die Textzeile darüber.
+    requestAnimationFrame(() => {
+      document
+        .querySelector(`.cw-step[data-step="${next}"]`)
+        ?.scrollIntoView({ block: "nearest", inline: "center" });
+    });
   }, []);
 
   const currentIndex = CREATOR_STEPS.indexOf(step);
@@ -196,6 +205,7 @@ export function CharacterWizard({ worldSlug, createAction }: CharacterWizardProp
                 key={entry.key}
                 type="button"
                 className="cw-step"
+                data-step={entry.key}
                 data-state={state}
                 aria-current={entry.key === step ? "step" : undefined}
                 onClick={() => goTo(entry.key)}
@@ -212,24 +222,33 @@ export function CharacterWizard({ worldSlug, createAction }: CharacterWizardProp
       <div className="cw-main">
         <div id="cw-panel-top" />
 
+        {/*
+          `role="status"` statt eines stummen Chips: Wer den Bildschirm nicht
+          sieht, erfährt sonst nie, dass hier ein halb gebauter Charakter aus
+          einer früheren Sitzung steht — und wundert sich über gefüllte Felder.
+
+          „Neu beginnen" fragt nach. Ein Klick daneben hat vorher zehn
+          Entscheidungen gelöscht, unwiderruflich und ohne Rückfrage.
+        */}
         {restored ? (
-          <div className="cw-chip" data-tone="accent" style={{ marginBottom: "1rem" }}>
-            Entwurf wiederhergestellt
-            <button
-              type="button"
-              onClick={reset}
-              style={{
-                marginInlineStart: ".5rem",
-                textDecoration: "underline",
-                background: "none",
-                border: 0,
-                cursor: "pointer",
-                color: "inherit",
-                font: "inherit",
-              }}
-            >
-              neu beginnen
-            </button>
+          <div className="cw-restored" role="status">
+            <NavIcon name="rotate-ccw" width={16} height={16} aria-hidden="true" />
+            <span>Entwurf aus dieser Sitzung wiederhergestellt.</span>
+            {confirmReset ? (
+              <span className="cw-restored__confirm">
+                Wirklich alles verwerfen?
+                <Button size="sm" variant="destructive" onClick={reset}>
+                  Verwerfen
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setConfirmReset(false)}>
+                  Behalten
+                </Button>
+              </span>
+            ) : (
+              <Button size="sm" variant="ghost" onClick={() => setConfirmReset(true)}>
+                Neu beginnen
+              </Button>
+            )}
           </div>
         ) : null}
 

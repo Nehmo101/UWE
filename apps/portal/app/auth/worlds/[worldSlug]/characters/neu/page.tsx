@@ -41,7 +41,9 @@ export default async function NewCharacterPage({ params }: Props) {
     <>
       <PageHeader
         title="Charakter erstellen"
-        summary="Volk, Klasse, Hintergrund, Werte — in neun Schritten zum fertigen Bogen. Dein Entwurf bleibt erhalten, auch wenn du zwischendurch weggehst."
+        /* Nicht „auch wenn du weggehst": der Entwurf liegt im sessionStorage
+           und ist mit dem Tab weg. Was die Seite verspricht, muss sie halten. */
+        summary="Volk, Klasse, Hintergrund, Werte — in neun Schritten zum fertigen Bogen. Dein Entwurf bleibt erhalten, solange dieser Tab offen ist."
       />
       <CharacterWizard worldSlug={worldSlug} createAction={createFullCharacterAction} />
     </>

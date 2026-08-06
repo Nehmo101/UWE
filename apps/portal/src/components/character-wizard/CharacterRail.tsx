@@ -126,6 +126,31 @@ export function CharacterRail({
         </div>
       </div>
 
+      {/*
+        Rettungswürfe und passive Wahrnehmung rechnet `derivePreview` ohnehin
+        aus — sie standen nur nirgends. Genau diese beiden Zahlen sucht ein
+        Spieler am Tisch als Erstes, und sie ändern sich mit der Klassenwahl.
+      */}
+      <div>
+        <p className="cw-rail__section-title">Rettungswürfe</p>
+        {preview.savingThrows.length === 0 ? (
+          <p className="cw-rail__empty">Die Klasse bestimmt sie.</p>
+        ) : (
+          <div className="cw-tile__meta" style={{ borderTop: "none", paddingTop: 0 }}>
+            {preview.savingThrows.map((ability) => (
+              <span key={ability} className="cw-chip" data-tone="accent">
+                {ABILITY_SHORT[ability]}{" "}
+                <span className="cw-chip__value">
+                  {abilitiesChosen
+                    ? formatModifier(preview.modifiers[ability] + preview.proficiencyBonus)
+                    : "—"}
+                </span>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div>
         <p className="cw-rail__section-title">Geübt in</p>
         {preview.skillProficiencies.length === 0 ? (
@@ -166,6 +191,12 @@ export function CharacterRail({
           <span className="cw-chip">
             Übungsbonus <span className="cw-chip__value">+{preview.proficiencyBonus}</span>
           </span>
+          {preview.passivePerception !== null ? (
+            <span className="cw-chip">
+              Passive Wahrnehmung{" "}
+              <span className="cw-chip__value">{preview.passivePerception}</span>
+            </span>
+          ) : null}
           {preview.speed !== null ? (
             <span className="cw-chip">
               Tempo <span className="cw-chip__value">{preview.speed}</span> Fuß

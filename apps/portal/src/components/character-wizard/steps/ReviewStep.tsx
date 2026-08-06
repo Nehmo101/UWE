@@ -259,7 +259,7 @@ export function ReviewStep({
         <Vital label="Trefferpunkte" value={preview.hitPoints} />
         <Vital label="Rüstungsklasse" value={preview.armorClass} />
         <Vital label="Initiative" value={preview.initiative} />
-        <Vital label="Tempo" value={preview.speed} suffix=" ft" />
+        <Vital label="Tempo" value={preview.speed} suffix=" Fuß" />
       </div>
 
       <div className="cw-sheet__grid">
@@ -331,7 +331,7 @@ export function ReviewStep({
             <Row label="Größe" value={species ? SIZE_LABELS[species.size] : "—"} />
             <Row
               label="Dunkelsicht"
-              value={preview.darkvision ? `${preview.darkvision} ft` : "keine"}
+              value={preview.darkvision ? `${preview.darkvision} Fuß` : "keine"}
             />
             <Row label="Hintergrund" value={background?.name ?? "—"} />
             <Row label="Ursprungstalent" value={originFeat?.name ?? background?.originFeat ?? "—"} />
