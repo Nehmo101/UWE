@@ -174,8 +174,13 @@ export function CharacterWizard({ worldSlug, createAction }: CharacterWizardProp
 
   return (
     <div className="cw">
-      <div>
-        <nav className="cw-steps" aria-label="Schritte der Charaktererstellung">
+      {/*
+        Die Schrittleiste steht als eigene Rasterzeile über BEIDEN Spalten.
+        Lag sie in der linken Spalte, endete sie an der Vorschau-Leiste und
+        schnitt die letzten Schritte mitten im Wort ab („Ausrü…") — sichtbar
+        war nur, dass etwas fehlt, nicht was.
+      */}
+      <nav className="cw-steps" aria-label="Schritte der Charaktererstellung">
           {STEP_META.map((entry, index) => {
             const validation = validationFor(entry.key);
             const state =
@@ -202,8 +207,9 @@ export function CharacterWizard({ worldSlug, createAction }: CharacterWizardProp
               </button>
             );
           })}
-        </nav>
+      </nav>
 
+      <div className="cw-main">
         <div id="cw-panel-top" />
 
         {restored ? (

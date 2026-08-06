@@ -37,16 +37,19 @@ function Vital({
   label,
   value,
   title,
+  signed = false,
 }: {
   label: string;
   value: number | null;
   title: string;
+  /** Initiative ist ein Modifikator und wird mit Vorzeichen gelesen, nicht als Menge. */
+  signed?: boolean;
 }) {
   const empty = value === null;
   return (
     <div className="cw-vital" title={title}>
       <span className="cw-vital__value" data-empty={empty}>
-        {empty ? "—" : value}
+        {empty ? "—" : signed ? formatModifier(value) : value}
       </span>
       <span className="cw-vital__label">{label}</span>
     </div>
@@ -98,7 +101,12 @@ export function CharacterRail({
           title="Trefferpunkte auf Stufe 1: Trefferwürfel + Konstitutionsmodifikator"
         />
         <Vital label="RK" value={preview.armorClass} title="Rüstungsklasse ohne Rüstung: 10 + Geschicklichkeit" />
-        <Vital label="Init" value={preview.initiative} title="Initiative: Geschicklichkeitsmodifikator" />
+        <Vital
+          label="Init"
+          value={preview.initiative}
+          title="Initiative: Geschicklichkeitsmodifikator"
+          signed
+        />
       </div>
 
       <div>

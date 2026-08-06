@@ -29,6 +29,18 @@
   .cw {
     grid-template-columns: minmax(0, 1fr) var(--cw-rail-width);
   }
+
+  /* Die Schrittleiste gehört über beide Spalten — sonst endet sie an der
+     Vorschau-Leiste und schneidet die hinteren Schritte im Wort ab. */
+  .cw-steps {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Die linke Spalte darf schmaler werden als ihr Inhalt; ohne `min-width: 0`
+   sprengt eine lange Kachelzeile das Raster statt umzubrechen. */
+.cw-main {
+  min-width: 0;
 }
 
 /* ─────────────────────────── Schrittleiste ─────────────────────────── */
@@ -43,6 +55,18 @@
   scrollbar-width: thin;
   /* Die Leiste darf scrollen, die Seite nicht. */
   scroll-snap-type: x proximity;
+  /* Wo sie doch scrollt (Telefon), franst die letzte Kachel aus, statt
+     abgehackt zu enden — sonst liest sich der Schnitt wie ein Fehler und
+     nicht wie „hier geht es weiter". */
+  mask-image: linear-gradient(to right, #000 calc(100% - 2.5rem), transparent 100%);
+}
+
+/* Passt alles hinein, ist die Maske überflüssig und würde den letzten
+   Schritt grundlos aufhellen. */
+@media (min-width: 1100px) {
+  .cw-steps {
+    mask-image: none;
+  }
 }
 
 .cw-steps::after {

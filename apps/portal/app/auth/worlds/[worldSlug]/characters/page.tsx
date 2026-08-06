@@ -7,7 +7,7 @@ import { getAccessContextForWorld } from "@/src/lib/auth";
 import { PortalEmptyState } from "@/src/components/PortalEmptyState";
 import { PageHeader } from "@/src/components/shell";
 import { Badge } from "@/src/components/ui/badge";
-import { Button } from "@/src/components/ui/button";
+import { Button, buttonVariants } from "@/src/components/ui/button";
 import {
   Card,
   CardContent,
@@ -77,24 +77,58 @@ export default async function PortalCharactersPage({ params }: Props) {
           <CardHeader>
             <CardTitle>Neuer Charakter</CardTitle>
             <CardDescription>
-              Legt Wiki-Seite und leeren Charakterbogen an — beides gehört dir. In welcher
+              Beides legt Wiki-Seite und Charakterbogen an — beides gehört dir. In welcher
               Kampagne er mitspielt, entscheidet der Spielleiter.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form action={createOwnCharacterAction} className="flex flex-wrap items-end gap-3">
-              <input type="hidden" name="worldSlug" value={worldSlug} />
-              <div className="grid min-w-56 flex-1 gap-1.5">
-                <Label htmlFor="new-character-name">Name</Label>
-                <Input
-                  id="new-character-name"
-                  name="displayName"
-                  placeholder="z. B. Thrag, Sohn des Berges"
-                  required
-                />
-              </div>
-              <Button type="submit">Charakter erstellen</Button>
-            </form>
+          <CardContent className="grid gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              {/*
+                Kein `asChild` an `Button` — die Portal-Kopie kennt es nicht.
+                Der etablierte Weg für Links ist `buttonVariants` auf dem `<a>`;
+                die Klasse `uwe-button-surface` darin nimmt den Link aus der
+                globalen Link-Farbe heraus.
+              */}
+              <Link
+                href={`/auth/worlds/${worldSlug}/characters/neu`}
+                className={cn(buttonVariants())}
+              >
+                Charakter erstellen
+              </Link>
+              <span className="text-sm text-muted-foreground">
+                Volk, Klasse, Hintergrund und Werte in neun Schritten — mit
+                Regelhilfe und laufender Vorschau.
+              </span>
+            </div>
+
+            {/*
+              Der alte Ein-Feld-Weg bleibt: Wer seine Werte schon auf Papier hat
+              oder den Bogen von Hand füllen will, soll nicht durch neun Schritte
+              müssen. Er heißt jetzt nur nicht mehr „Charakter erstellen".
+            */}
+            <details className="border-t border-border pt-3">
+              <summary className="cursor-pointer text-sm text-muted-foreground">
+                Nur den Namen anlegen und selbst ausfüllen
+              </summary>
+              <form
+                action={createOwnCharacterAction}
+                className="mt-3 flex flex-wrap items-end gap-3"
+              >
+                <input type="hidden" name="worldSlug" value={worldSlug} />
+                <div className="grid min-w-56 flex-1 gap-1.5">
+                  <Label htmlFor="new-character-name">Name</Label>
+                  <Input
+                    id="new-character-name"
+                    name="displayName"
+                    placeholder="z. B. Thrag, Sohn des Berges"
+                    required
+                  />
+                </div>
+                <Button type="submit" variant="outline">
+                  Leeren Bogen anlegen
+                </Button>
+              </form>
+            </details>
           </CardContent>
         </Card>
       ) : null}
