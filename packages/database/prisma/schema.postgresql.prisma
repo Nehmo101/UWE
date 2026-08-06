@@ -593,11 +593,12 @@ model PlayerGroup {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  world      World               @relation(fields: [worldId], references: [id], onDelete: Cascade)
-  campaign   Campaign?           @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-  members    PlayerGroupMember[]
-  treasury   PartyTreasury?
-  questPages Page[]              @relation("PageQuestGroup")
+  world        World               @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign     Campaign?           @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  members      PlayerGroupMember[]
+  treasury     PartyTreasury?
+  questPages   Page[]              @relation("PageQuestGroup")
+  gameSessions GameSession[]
 
   @@unique([worldId, slug])
   @@index([worldId])
@@ -998,6 +999,15 @@ model GameSession {
   /// Welcher Akt/welches Kapitel (Page vom Typ story_arc) wird gespielt.
   /// Optional, SetNull: die Session ueberlebt das Loeschen ihres Kapitels.
   storyArcPageId        String?           @map("story_arc_page_id")
+  /// Welche Tischrunde spielt diesen Abend.
+  ///
+  /// `null` heisst „die ganze Welt": so verhalten sich alle Bestands-Sessions
+  /// und jede Welt, die ohne Gruppen arbeitet — genau wie beim welt-weiten
+  /// Gruppenschatz. Sobald hier eine Gruppe steht, sehen die Session im Portal
+  /// nur deren Mitglieder; wer in keiner Runde sitzt, sieht sie nicht.
+  /// SetNull: die Session ueberlebt das Aufloesen ihrer Runde und faellt dabei
+  /// auf die welt-weite Sicht zurueck.
+  groupId               String?           @map("group_id")
   title                 String
   sessionNumber         Int               @map("session_number")
   date                  DateTime?         @map("date")
@@ -1015,6 +1025,7 @@ model GameSession {
   world          World                 @relation(fields: [worldId], references: [id], onDelete: Cascade)
   campaign       Campaign?             @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   storyArcPage   Page?                 @relation("SessionStoryArc", fields: [storyArcPageId], references: [id], onDelete: SetNull)
+  group          PlayerGroup?          @relation(fields: [groupId], references: [id], onDelete: SetNull)
   linkedPages    GameSessionPageLink[]
   playerNotes    PlayerNote[]
   brainDocuments BrainDocument[]
@@ -1026,6 +1037,7 @@ model GameSession {
 
   @@index([worldId, sessionNumber])
   @@index([storyArcPageId])
+  @@index([groupId])
   @@map("game_sessions")
 }
 

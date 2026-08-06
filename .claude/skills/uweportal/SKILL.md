@@ -51,7 +51,7 @@ lassen.
 
 Seit 2026-08 gibt es unterhalb der Welt die **Tischrunde** (`PlayerGroup`,
 verwaltet in `/uwestudio` unter `/worlds/[slug]/gruppen`). Sie ist kein Recht
-und kein Häkchen — Lesen bleibt Welt-Sache. Die Gruppe entscheidet zwei Dinge:
+und kein Häkchen — Lesen bleibt Welt-Sache. Die Gruppe entscheidet drei Dinge:
 
 - **Gruppenschatz**: jede Runde führt ihre eigene Kasse und Beute selbst
   (`packages/player-hub/src/group-treasury.ts`, UI in
@@ -59,6 +59,23 @@ und kein Häkchen — Lesen bleibt Welt-Sache. Die Gruppe entscheidet zwei Dinge
 - **Questlog**: das Portal zeigt nur Quests, die der eigenen Runde zugeordnet
   sind (`Page.questGroupId`, vergeben im Kampagnen-Radar des Studios). Ohne
   Zuordnung erscheint eine Quest bei niemandem.
+- **Sessions**: ein Spielabend gehört einer Runde (`GameSession.groupId`,
+  gesetzt im Studio im Session-Formular). Die Zuordnung im Studio ist führend;
+  das Portal filtert damit Termine, Recaps und die Verfügbarkeits-Abfrage.
+
+Die Session-Regel liest sich anders als die Quest-Regel, und das ist Absicht:
+`groupId = null` heißt **welt-weit** — dieselbe Lesart wie beim welt-weiten
+Gruppenschatz. Welten ohne Gruppen ändern sich dadurch nicht. Sobald eine Runde
+eingetragen ist, sehen den Abend nur deren Mitglieder; wer in **keiner** Runde
+sitzt, sieht nur die welt-weiten Abende und nie den einer fremden Runde.
+
+Der Filter sitzt in der Abfrage, nicht in der Anzeige:
+`listVisibleToPlayersForPortal` (`packages/database/src/game-session.ts`) bekommt
+die Runde des Betrachters, aufgelöst in
+`packages/database/src/player-group-scope.ts` — in der Vorschau-als-Spieler die
+des vorgeschauten Kontos. `getGameSessionForViewer` wendet dieselbe Regel auf die
+Detailseite an, damit eine geratene Session-Id nichts öffnet; die
+Verfügbarkeits-Abstimmung und `createPlayerNoteForViewer` hängen daran.
 
 Charaktere legen Spieler selbst im Portal an
 (`packages/player-hub/src/player-characters.ts` — Wiki-Seite + leerer Bogen);
@@ -108,6 +125,7 @@ Portal-Seiten liegen unter `apps/portal/app/auth/**`, Server Actions als
 | Verbindungs-/Token-Problem | `portal_config` zeigt die genutzten Endpunkte |
 | Inhalt fehlt im Portal | Nicht im Portal suchen — in Studio prüfen, ob veröffentlicht und die Welt zugeordnet ist |
 | Quest fehlt im Questlog | Im Studio prüfen: ist sie im Kampagnen-Radar einer Tischrunde zugeordnet? |
+| Session fehlt / falsche Session sichtbar | Im Studio: Tischrunde am Session-Formular („Alle Runden“ = welt-weit) und Mitgliedschaft unter `/worlds/[slug]/gruppen` |
 
 Karte: `references/karte.md` · Depth: `docs/engineering/portal-security.md`,
 `docs/engineering/mcp-servers.md`, `docs/engineering/access-model.md`

@@ -4,6 +4,7 @@ import type {
 } from "./generated/prisma/client";
 import { createPrismaClient, type PrismaClient } from "./client";
 import { parseStringArray } from "./json-utils";
+import { playerGroupSessionScope } from "./player-group-scope";
 import type { PageSummary } from "./repository";
 import { createCalendarService } from "./calendar-service";
 // Der Kalender liegt seit Abschnitt G in uwe-family.db.
@@ -32,6 +33,8 @@ export interface CreateGameSessionInput {
   campaignId?: string | null;
   /** Kapitel (Page vom Typ story_arc), das diese Session spielt. */
   storyArcPageId?: string | null;
+  /** Tischrunde, die diesen Abend spielt. `null` = die ganze Welt. */
+  groupId?: string | null;
   title: string;
   sessionNumber: number;
   date?: Date | null;
@@ -52,6 +55,7 @@ export interface UpdateGameSessionInput {
   status?: GameSessionStatus;
   campaignId?: string | null;
   storyArcPageId?: string | null;
+  groupId?: string | null;
   summaryDm?: string | null;
   summaryPlayer?: string | null;
   notes?: string | null;
@@ -66,6 +70,7 @@ export type GameSessionWithLinks = Prisma.GameSessionGetPayload<{
   include: {
     campaign: true;
     storyArcPage: { select: { id: true; title: true; slug: true } };
+    group: { select: { id: true; name: true } };
     linkedPages: {
       include: {
         page: {
@@ -82,6 +87,12 @@ export interface PortalGameSessionView {
   id: string;
   worldId: string;
   campaignId: string | null;
+  /**
+   * Tischrunde des Abends, `null` = welt-weit. Steht im Portal, damit die
+   * Spielersicht „nur eure Runde" auszeichnen kann — der Filter selbst laeuft
+   * lange vorher in der Datenbank.
+   */
+  groupId: string | null;
   title: string;
   sessionNumber: number;
   date: Date | null;
@@ -107,6 +118,8 @@ export interface DmGameSessionView extends PortalGameSessionView {
   /** Kapitel der Session (story_arc) — DM-Konzept, bleibt aus der Portal-Sicht raus. */
   storyArcPageId: string | null;
   storyArcPage: { id: string; title: string; slug: string } | null;
+  /** Name der zugeordneten Tischrunde — fuer die Studio-Anzeige. */
+  groupName: string | null;
   /** Slug der Kampagne für Links ins Kampagnen-Modul. */
   campaignSlug: string | null;
 }
@@ -128,6 +141,7 @@ export function toDmGameSessionView(session: GameSessionWithLinks): DmGameSessio
     id: session.id,
     worldId: session.worldId,
     campaignId: session.campaignId,
+    groupId: session.groupId,
     title: session.title,
     sessionNumber: session.sessionNumber,
     date: session.date,
@@ -141,6 +155,7 @@ export function toDmGameSessionView(session: GameSessionWithLinks): DmGameSessio
     playerVisibleSchedule: session.playerVisibleSchedule,
     storyArcPageId: session.storyArcPageId,
     storyArcPage: session.storyArcPage,
+    groupName: session.group?.name ?? null,
     campaignSlug: session.campaign?.slug ?? null,
     linkedPages: mapLinkedPages(session),
     createdAt: session.createdAt,
@@ -155,6 +170,7 @@ export function toPortalGameSessionView(session: GameSessionWithLinks): PortalGa
     id: session.id,
     worldId: session.worldId,
     campaignId: session.campaignId,
+    groupId: session.groupId,
     title: session.title,
     sessionNumber: session.sessionNumber,
     date: session.date,
@@ -175,6 +191,7 @@ export class GameSessionService {
     return {
       campaign: true,
       storyArcPage: { select: { id: true, title: true, slug: true } },
+      group: { select: { id: true, name: true } },
       linkedPages: {
         include: {
           page: {
@@ -289,11 +306,31 @@ export class GameSessionService {
     }
   }
 
+  /**
+   * Tenant-Guard: die Tischrunde muss zur Welt gehören.
+   *
+   * Ohne ihn könnte ein Formular eine Session an eine fremde Welt-Runde
+   * hängen — sie verschwände dann für alle, die sie sehen sollen, und tauchte
+   * bei Fremden auf.
+   */
+  private async assertGroupInWorld(worldId: string, groupId: string): Promise<void> {
+    const group = await this.db.playerGroup.findFirst({
+      where: { id: groupId, worldId },
+      select: { id: true },
+    });
+    if (!group) {
+      throw new Error("Tischrunde nicht gefunden oder gehört nicht zu dieser Welt.");
+    }
+  }
+
   async create(input: CreateGameSessionInput): Promise<GameSessionWithLinks> {
     const linkedPageIds = input.linkedPageIds ?? [];
 
     if (input.storyArcPageId) {
       await this.assertStoryArcInWorld(input.worldId, input.storyArcPageId);
+    }
+    if (input.groupId) {
+      await this.assertGroupInWorld(input.worldId, input.groupId);
     }
 
     const session = await this.db.gameSession.create({
@@ -301,6 +338,7 @@ export class GameSessionService {
         worldId: input.worldId,
         campaignId: input.campaignId ?? null,
         storyArcPageId: input.storyArcPageId ?? null,
+        groupId: input.groupId ?? null,
         title: input.title,
         sessionNumber: input.sessionNumber,
         date: input.date ?? null,
@@ -364,7 +402,7 @@ export class GameSessionService {
   }
 
   async update(sessionId: string, input: UpdateGameSessionInput): Promise<GameSessionWithLinks> {
-    if (input.storyArcPageId) {
+    if (input.storyArcPageId || input.groupId) {
       const existing = await this.db.gameSession.findUnique({
         where: { id: sessionId },
         select: { worldId: true },
@@ -372,7 +410,12 @@ export class GameSessionService {
       if (!existing) {
         throw new Error("Session nicht gefunden.");
       }
-      await this.assertStoryArcInWorld(existing.worldId, input.storyArcPageId);
+      if (input.storyArcPageId) {
+        await this.assertStoryArcInWorld(existing.worldId, input.storyArcPageId);
+      }
+      if (input.groupId) {
+        await this.assertGroupInWorld(existing.worldId, input.groupId);
+      }
     }
 
     if (input.linkedPageIds) {
@@ -396,6 +439,7 @@ export class GameSessionService {
         status: input.status,
         campaignId: input.campaignId,
         storyArcPageId: input.storyArcPageId,
+        groupId: input.groupId,
         summaryDm: input.summaryDm,
         summaryPlayer: input.summaryPlayer,
         notes: input.notes,
@@ -466,6 +510,13 @@ export class GameSessionService {
     return session;
   }
 
+  /**
+   * Alle veröffentlichten Recaps der Welt — **ohne** Tischrunden-Filter.
+   *
+   * Nicht für die Spielersicht: dort gilt `listVisibleToPlayersForPortal`, das
+   * die Runde des Betrachters berücksichtigt. Wer diese Methode in einen
+   * Portal-Pfad hängt, zeigt fremde Runden.
+   */
   async listPublishedForPortal(worldSlug: string): Promise<GameSessionWithLinks[]> {
     const world = await this.db.world.findUnique({ where: { slug: worldSlug } });
     if (!world) return [];
@@ -480,19 +531,33 @@ export class GameSessionService {
     });
   }
 
-  /** Player-safe sessions: published recaps plus DM-announced upcoming sessions. */
-  async listVisibleToPlayersForPortal(worldSlug: string): Promise<GameSessionWithLinks[]> {
+  /**
+   * Player-safe sessions: published recaps plus DM-announced upcoming sessions.
+   *
+   * `viewerGroupId` ist die Tischrunde des Betrachters (`null` = keine). Sie
+   * schneidet fremde Runden **in der Abfrage** weg, nicht erst in der Anzeige:
+   * was der Aufrufer nie geladen hat, kann er auch nicht durchreichen.
+   */
+  async listVisibleToPlayersForPortal(
+    worldSlug: string,
+    viewerGroupId: string | null = null,
+  ): Promise<GameSessionWithLinks[]> {
     const world = await this.db.world.findUnique({ where: { slug: worldSlug } });
     if (!world) return [];
 
     return this.db.gameSession.findMany({
       where: {
         worldId: world.id,
-        OR: [
-          { recapPublished: true },
+        AND: [
+          playerGroupSessionScope(viewerGroupId),
           {
-            playerVisibleSchedule: true,
-            status: { in: ["planned", "prepared"] },
+            OR: [
+              { recapPublished: true },
+              {
+                playerVisibleSchedule: true,
+                status: { in: ["planned", "prepared"] },
+              },
+            ],
           },
         ],
       },

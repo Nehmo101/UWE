@@ -31,6 +31,7 @@ import {
 } from "@uwe/auth/server";
 import { toAreaAccess, toAuthUser, toSafeUser, type SafeUser } from "@uwe/auth";
 import type { PageWithBlocks } from "./repository";
+import { findViewerPlayerGroupId, isSessionVisibleToGroup } from "./player-group-scope";
 import {
   normalizeLookupKey,
   parseWikiLinks,
@@ -1046,6 +1047,17 @@ export class AuthService {
       .sort((a, b) => compareInGameDates(a.inGameDate, b.inGameDate));
   }
 
+  /**
+   * Die Tischrunde, mit deren Augen das Portal liest.
+   *
+   * In der Vorschau-als-Spieler zählt das vorgeschaute Konto, sonst das
+   * angemeldete. Ohne Konto bleibt es `null` — dann sind nur welt-weite
+   * Sessions sichtbar.
+   */
+  private async viewerPlayerGroupId(worldId: string, ctx: AccessContext): Promise<string | null> {
+    return findViewerPlayerGroupId(this.db, worldId, ctx.previewAsUserId ?? ctx.user?.id ?? null);
+  }
+
   async listGameSessionsForViewer(worldSlug: string, ctx: AccessContext): Promise<PortalGameSessionView[]> {
     const world = await this.db.world.findUnique({
       where: { slug: worldSlug },
@@ -1067,7 +1079,12 @@ export class AuthService {
         .map((session) => this.toPortalSessionViewForViewer(session, ctx));
     }
 
-    const sessions = await this.gameSessions.listVisibleToPlayersForPortal(worldSlug);
+    // Spielersicht: die Welt sagt, WAS lesbar ist — die Tischrunde sagt, WELCHE
+    // Abende dazugehören. Ohne Runde bleiben nur die welt-weiten übrig.
+    const sessions = await this.gameSessions.listVisibleToPlayersForPortal(
+      worldSlug,
+      await this.viewerPlayerGroupId(world.id, ctx),
+    );
     return sessions.map((session) => this.toPortalSessionViewForViewer(session, ctx));
   }
 
@@ -1089,6 +1106,18 @@ export class AuthService {
       (session.status === "planned" || session.status === "prepared");
 
     if (!session.recapPublished && !dmView && !playerMayViewSchedule) {
+      return null;
+    }
+
+    // Dieselbe Gruppenregel wie in der Liste — sonst genügte die geratene
+    // Session-Id, um den Abend einer fremden Runde zu öffnen.
+    if (
+      !dmView &&
+      !isSessionVisibleToGroup(
+        session.groupId,
+        await this.viewerPlayerGroupId(session.worldId, ctx),
+      )
+    ) {
       return null;
     }
 
@@ -1337,16 +1366,25 @@ export class AuthService {
       return null;
     }
 
-    // Session-Bezug: nur Sessions DIESER Welt; die Kampagne folgt der Session,
-    // damit Notizen nie in der falschen Kampagne landen.
+    // Session-Bezug: nur Sessions DIESER Welt und der eigenen Tischrunde; die
+    // Kampagne folgt der Session, damit Notizen nie in der falschen Kampagne
+    // landen. Die Gruppenregel ist dieselbe wie beim Lesen — sonst hinge die
+    // Notiz am Spielabend einer fremden Runde.
     let campaignId = input.campaignId;
     let gameSessionId = input.gameSessionId ?? null;
     if (gameSessionId) {
       const session = await this.db.gameSession.findFirst({
         where: { id: gameSessionId, worldId: world.id },
-        select: { campaignId: true },
+        select: { campaignId: true, groupId: true },
       });
-      if (!session) {
+      const visible =
+        session !== null &&
+        (isDm(ctx) ||
+          isSessionVisibleToGroup(
+            session.groupId,
+            await this.viewerPlayerGroupId(world.id, ctx),
+          ));
+      if (!session || !visible) {
         gameSessionId = null;
       } else if (session.campaignId) {
         campaignId = session.campaignId;

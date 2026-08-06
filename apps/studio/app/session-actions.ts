@@ -74,6 +74,8 @@ export async function createGameSessionAction(formData: FormData) {
     worldId: world.id,
     campaignId: campaign?.id ?? null,
     storyArcPageId: String(formData.get("storyArcPageId") || "") || null,
+    // Leerer Wert = welt-weite Session (alle Runden sehen sie).
+    groupId: String(formData.get("groupId") || "") || null,
     title: parsed.data.title,
     sessionNumber,
     date: parsed.data.date ? new Date(parsed.data.date) : null,
@@ -117,6 +119,11 @@ export async function updateGameSessionAction(formData: FormData) {
     // immer dabei, leerer Wert = bewusst kein Kapitel).
     ...(formData.has("storyArcPageId")
       ? { storyArcPageId: String(formData.get("storyArcPageId") || "") || null }
+      : {}),
+    // Tischrunde genauso: nur anfassen, wenn das Formular das Feld schickt —
+    // leerer Wert heißt „alle Runden", nicht „unverändert".
+    ...(formData.has("groupId")
+      ? { groupId: String(formData.get("groupId") || "") || null }
       : {}),
     summaryDm: String(formData.get("summaryDm") || "") || null,
     summaryPlayer: String(formData.get("summaryPlayer") || "") || null,
