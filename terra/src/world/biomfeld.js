@@ -109,27 +109,65 @@ function polyBBox(pts) {
    4. Ausfransung
 
    Exakt die Stoeroktave aus terrainColor (world/terrain.js, "Zonengrenzen:
-   staerker gestoert"): dieselben Frequenzen 0.09 / 0.22, dieselben
-   Seedversaetze 606 / 607, dieselben Gewichte 2.6 / 0.9. Kein zusaetzliches
-   Rauschen — die Biomgrenze soll sich genau so brechen wie die Sand- und
-   Felsgrenze daneben, sonst liest man zwei verschiedene Handschriften im
-   selben Bild.
+   staerker gestoert"): dieselben Frequenzen, dieselben Seedversaetze,
+   dieselben Gewichte. Kein zusaetzliches Rauschen — die Biomgrenze soll sich
+   genau so brechen wie die Sand- und Felsgrenze daneben, sonst liest man zwei
+   verschiedene Handschriften im selben Bild. Diese Kopplung ist bindend:
+   wandert dort eine Zahl, muss sie hier mitwandern.
 
-   Wertebereich: fractal liefert 0..1, also liegt die Summe in [-1.75, +1.75].
-   Diese Schranke wird unten gebraucht, um die teure Rauschauswertung auf das
-   Grenzband zu beschraenken.
+   MITGEZOGEN in der Runde Gelaendeoberflaeche: dort ist eine dritte Oktave
+   (0.30, Seedversatz 608, Gewicht 0.55) dazugekommen. Sie macht aus einer
+   bloss gewellten Grenze eine VERZAHNTE — die breiten Buchten der 0.09er
+   Oktave bekommen kleine Zaehne. Weiche Grenzen waren der Hauptbefund der
+   Abnahme; eine Biomkante, die nur wellt, ist derselbe Fehler wie ein Weg,
+   der ausblutet.
+
+   NUR HINZUGEFUEGT, nichts umverteilt — und das ist keine Bequemlichkeit,
+   sondern eine Lehre aus dem ersten Anlauf. Der hatte die mittlere Oktave von
+   0.9 auf 1.35 verstaerkt und im Gegenzug FRANSEN gesenkt, um die
+   Reichweite konstant zu halten. Die Reichweite ist aber der MAXIMALwert,
+   die sichtbare Ausfransung dagegen der EFFEKTIVwert (Wurzel aus der Summe
+   der Gewichtsquadrate). Beide Male an derselben Schraube gedreht ergab
+   effektiv 84 % der bisherigen Ausfransung, und 07-biomfeld hat das sofort
+   gefangen: "Grenze zu gerade: Streuung 0.85" gegen eine Untergrenze von 1.0.
+   Diese Untergrenze ist eine Qualitaetszusage, kein Messrauschen.
+
+   Jetzt: die beiden alten Gewichte unveraendert, die neue Oktave obendrauf.
+   Effektiv sqrt(2.6² + 0.9² + 0.55²) = 2.806 gegen bisher 2.750 — die
+   Ausfransung wird also um 2 % staerker statt schwaecher, und sie wird
+   feiner gezahnt.
+
+   Wertebereich: fractal liefert 0..1, die Summe liegt also in
+   [-2.025, +2.025]. Diese Schranke wird unten gebraucht, um die teure
+   Rauschauswertung auf das Grenzband zu beschraenken.
    ========================================================================== */
-var STOER_MAX = 2.6 * 0.5 + 0.9 * 0.5;   // 1.75
+var STOER_MAX = 2.6 * 0.5 + 0.9 * 0.5 + 0.55 * 0.5;   // 2.025
 
 function stoerung(x, z, seed) {
   return (fractal(x * 0.09, z * 0.09, seed + 606) - 0.5) * 2.6
-       + (fractal(x * 0.22, z * 0.22, seed + 607) - 0.5) * 0.9;
+       + (fractal(x * 0.22, z * 0.22, seed + 607) - 0.5) * 0.9
+       + (fractal(x * 0.30, z * 0.30, seed + 608) - 0.5) * 0.55;
 }
 
 /* Wie weit die Grenze gegenueber der Polygonkante wandern darf, als Anteil
-   von `weich`. 0.30 heisst: bei weich = 8 franst die Kante um bis zu +-4.2
-   Welteinheiten aus — deutlich mehr als das Uebergangsband selbst breit ist,
-   damit die Polygonkante als GERADE nirgends mehr abzulesen ist. */
+   von `weich`. 0.30 heisst bei weich = 8 eine Ausfransung um bis zu +-4.9
+   Welteinheiten (vorher 4.2) — deutlich mehr als das Uebergangsband selbst
+   breit ist, damit die Polygonkante als GERADE nirgends mehr abzulesen ist.
+
+   ACHTUNG, zweite Fundstelle: das Produkt FRANSEN * STOER_MAX steht
+   ausserhalb dieser Datei noch einmal. core/dirty.js rechnet in
+   stempelRadius() fuer den Biompinsel mit `weich * 1.03 + 2`, und 1.03 ist
+   genau 0.5 + FRANSEN * STOER_MAX von vorher (0.5 + 0.30 * 1.75 = 1.025).
+   Jetzt waeren es 0.5 + 0.30 * 2.025 = 1.1075. core/dirty.js gehoert dieser
+   Runde nicht und bleibt unangetastet; die Anpassung ist als gemeinsame
+   Bitte gemeldet.
+
+   Bis dahin ist der Rueckstand nachgerechnet und unschaedlich: er betraegt
+   (1.1075 - 1.03) * weich, bei weich = 8 also 0.62 Zellen. elementBox rundet
+   die Box mit floor/ceil nach aussen und gibt damit bis zu einer ganzen Zelle
+   je Seite zu — der Rueckstand liegt darunter. Wer FRANSEN oder STOER_MAX
+   weiter erhoeht, muss das erneut nachrechnen; ab etwa weich = 13 ist die
+   Reserve aufgebraucht und core/dirty.js MUSS mit. */
 var FRANSEN = 0.30;
 
 /* ==========================================================================

@@ -29,12 +29,29 @@ const terraUniforms = {
   // dunkler zu werden (Anime-Hintergrund-Regel: Schatten kuehl UND aufgehellt).
   // Die Tageszeit schreibt pro Preset hinein (atmosphere.js, schattenKuehl).
   uSchattenKuehl: { value: new THREE.Color(0x8ea6c4) },
+  /* Gegenlichtsaum. Der vorhandene Rim (Patch 2) haengt allein am BLICK und
+     leuchtet deshalb auf jeder Silhouette gleich — der Videospiel-Rim, der
+     immer da ist. Dieser hier haengt zusaetzlich an der SONNE: er zeigt sich
+     nur, wo die Kante zum Licht gedreht ist. Genau das fehlte im Abendbild
+     (Abnahmebefund: "kein Rimlight von der Sonne"). Die Presets schreiben
+     Farbe mal Staerke hinein; Schwarz (Default) schaltet ihn ganz ab. */
+  uSonnensaum: { value: new THREE.Color(0x000000) },
   // Richtungsabhaengiger Nebel: warm zur Sonne hin, kuehl von ihr weg.
   uFogWarm: { value: new THREE.Color(0xe8e2d2) },
   uFogCool: { value: new THREE.Color(0xd4e0e8) },
   uSunDir: { value: new THREE.Vector3(0.45, 0.72, 0.35).normalize() },
   // Obergrenze des Nebelfaktors: haelt im Nebel-Preset nahe Objekte lesbar.
   uFogCap: { value: 1.0 },
+  /* Staffelung der Luftperspektive: Exponent des Nebelverlaufs minus eins.
+     0 = die bisherige Gerade (Standard, damit ein Preset ohne Angabe exakt
+     das alte Bild liefert), 0.55 = Vorder- und Mittelgrund klaren auf,
+     waehrend die Ferne im Dunst bleibt. Endpunkttreu, siehe Patch (4). */
+  uFogKurve: { value: 0 },
+  /* Luftsockel: additiver Beitrag in Nebelfarbe, NUR in den Tiefen. Er ist
+     der einzige Lichtweg, der nicht mit dem Albedo multipliziert wird — und
+     damit der einzige, der ein fast schwarzes Material (Burg, Panzer der
+     Weltschildkroete) aus dem tonwertlosen Schwarz holt. 0 = aus. */
+  uLuftSockel: { value: 0 },
   // C4 — Horizontfarbe des Himmels. Kein Weltmaterial-Patch liest sie; sie
   // liegt hier, weil terraUniforms der einzige zyklusfreie Treffpunkt
   // zwischen der Tageszeit (schreibt ueber setLook in render/pipeline.js)
@@ -89,6 +106,63 @@ const FAMILIEN = {
   stoff:      { tex: 'aquarellFein',   skala: 0.6,  staerke: 0.12 },
   erde:       { tex: 'aquarellGrob',   skala: 0.22, staerke: 0.15 }
 };
+
+/* ==========================================================================
+   FEINKORN UND SCHRAFFUR — warum die Malschicht bis hierher unsichtbar war
+
+   Nachgerechnet aus der Tabelle darueber: `erde` kommt auf eine Weltskala von
+   0.22 * 0.06 = 0.0132, die Aquarelltextur wiederholt sich also alle 76
+   Welteinheiten. In der Weitaufnahme (Kameradistanz 168, fov 34) ist EIN
+   Welteinheit rund 8.8 Bildpunkte gross — eine Kachel deckt damit zwei
+   Drittel der Bildhoehe ab. Was die Malschicht liefert, ist deshalb keine
+   Oberflaeche, sondern eine grossflaechige Schliere; genau als solche hat die
+   Abnahme sie benannt ("weichgezeichnete Duenenschliere ohne jede Geometrie",
+   "jede Flaeche im Bild ist eine reine Vertexfarbe").
+
+   Dazu kam die Amplitude: `mix( vec3(1), tex * 2, 0.15 )` bei einer
+   Texturstreuung von rund +-0.13 ergibt +-4 % Helligkeit. Das ist unterhalb
+   der Sichtbarkeitsschwelle auf einer gefaerbten Flaeche.
+
+   Drei Zahlen beheben beides, und sie sind bewusst RELATIV zur Familie
+   gehalten — jede Familie traegt ihre natuerliche Korngroesse schon in
+   `skala`, ein Dachziegel darf nicht dasselbe Korn haben wie ein Acker:
+
+     KORN_FAKTOR   22   Frequenz des Feinkorns gegenueber der Familienskala.
+                        Fuer `erde` heisst das eine Kachel alle 3.4 Einheiten
+                        (rund 30 Bildpunkte in der Weite, 98 im Nahblick),
+                        fuer `dachziegel` alle 0.84 — Ziegelmass.
+     KORN_AMP     1.5   Helligkeitsanteil. Mit der gemessenen Streuung von
+                        +-0.13 sind das +-2.8 % (Spitzen +-6 %) fuer `erde` —
+                        Pigment auf Papier. Der erste Versuch stand bei 4.5
+                        und war nachweislich zu laut: Waende und Daecher lasen
+                        sich als Schimmel, nicht als Material (die Aquarell-
+                        texturen sind blasenfoermiges Fraktalrauschen, ihre
+                        Grossstruktur vertraegt keine hohe Amplitude).
+     SCHRAFFUR    2.8   Anteil der RICHTUNGSABLEITUNG. Sie ist der eigentliche
+                        Gewinn: zwei Abtastungen derselben Textur, die zweite
+                        um eine halbe Welteinheit ZUR SONNE hin versetzt. Die
+                        Differenz ist die Steigung des Korns in Lichtrichtung
+                        und wirkt wie eine Normalkarte, ohne dass eine
+                        existiert — Vertiefungen bekommen Schatten, Erhebungen
+                        Licht, und die Richtung dreht mit der Tageszeit mit.
+
+   Warum keine echte Normalkarte: sie brauchte Tangenten an jeder Geometrie
+   (das Projekt erzeugt seine Netze selbst und fuehrt keine), eine zweite
+   Texturfamilie und einen zweiten Satz Uniforms. Die Zwei-Abtastungs-
+   Ableitung kostet EINEN zusaetzlichen Texturzugriff auf eine 256er-Textur,
+   die ohnehin im Cache liegt.
+
+   Determinismus: nur vTerraW und uSunDir, keine Zeit, kein Rauschen.
+   ========================================================================== */
+const KORN_FAKTOR = 22;
+const KORN_AMP = 1.5;
+const SCHRAFFUR = 2.8;
+/* Mittelwert des Gruenkanals der Aquarelltexturen. NICHT 0.5: aquarell()
+   multipliziert mit `rand` (auslaufende Farbraender, 0.84..1.0) und drueckt
+   den Mittelwert dadurch nach unten. Ohne die Korrektur dunkelte das Feinkorn
+   jede Flaeche um rund 1.5 % ab — auf allen Materialien gleich, also nicht
+   als Korn sichtbar, sondern als Grauschleier. */
+const KORN_MITTE = 0.47;
 
 /* ==========================================================================
    I6 — Die Biom-Nachschlagetabelle
@@ -204,8 +278,8 @@ function setzeBiomKarte(feld, gewicht, VW, MAP) {
  *  stehen (das Abnahmemuster liest sonst zwei Stellen). Der Zaehler bleibt 0,
  *  solange vfx.js ihn nicht hochzaehlt — das ist der ehrlichere Zustand als
  *  ein fehlender Schluessel: 0 heisst „Patch nicht angekommen". */
-const patchInfo = { wrap: 0, kuehl: 0, rim: 0, hoehe: 0, richtung: 0, wolke: 0, mal: 0, wind: 0, ranken: 0,
-  normale: 0, arbor: 0, schnee: 0, drift: 0, vfx: 0, karte: 0, versuche: 0 };
+const patchInfo = { wrap: 0, kuehl: 0, rim: 0, saum: 0, hoehe: 0, richtung: 0, wolke: 0, mal: 0, wind: 0,
+  ranken: 0, normale: 0, arbor: 0, schnee: 0, drift: 0, vfx: 0, karte: 0, versuche: 0 };
 if (typeof window !== 'undefined') window.terraPatchInfo = patchInfo;
 
 /* --- B4: Zugang zur Bruchmaske ------------------------------------------
@@ -313,7 +387,10 @@ function terraPatch(shader, opts) {
   shader.uniforms.uFogCool = terraUniforms.uFogCool;
   shader.uniforms.uSunDir = terraUniforms.uSunDir;
   shader.uniforms.uFogCap = terraUniforms.uFogCap;
+  shader.uniforms.uFogKurve = terraUniforms.uFogKurve;
+  shader.uniforms.uLuftSockel = terraUniforms.uLuftSockel;
   shader.uniforms.uSchattenKuehl = terraUniforms.uSchattenKuehl;
+  shader.uniforms.uSonnensaum = terraUniforms.uSonnensaum;
   // uCloudTex haengt jetzt UNBEDINGT am Shader: der Wolkenschatten (5) nutzt
   // sie fuer die Bodenschatten, die Schneeauflage (6b) als Bruch-Rauschen.
   // Deshalb steht die Deklaration im gemeinsamen Kopf und NICHT mehr im
@@ -348,6 +425,7 @@ function terraPatch(shader, opts) {
   shader.uniforms.uArborStaerke = terraUniforms.uArborStaerke;
 
   var kopfF = 'uniform vec3 uRim;\nuniform vec3 uBounce;\nuniform vec3 uSchattenKuehl;\n' +
+    'uniform vec3 uSonnensaum;\n' +
     'uniform sampler2D uCloudTex;\n' +
     'uniform float uSchneeAuflage;\nuniform vec2 uSchneeKante;\nuniform vec2 uSchneeHoehe;\n' +
     'uniform vec3 uSchneeFarbe;\nuniform float uSchneeKuehle;\nuniform float uSchneeBruch;\n' +
@@ -368,20 +446,58 @@ function terraPatch(shader, opts) {
     var neu = src
       .replace(aAlt, 'float dotNL = dot( geometryNormal, directLight.direction );')
       .replace(bAlt,
-        'float terraW = dotNL * 0.5 + 0.5;\n' +
-        'float terraB = smoothstep(0.26,0.32,terraW)*0.34\n' +
-        '             + smoothstep(0.50,0.56,terraW)*0.33\n' +
-        '             + smoothstep(0.74,0.80,terraW)*0.33;\n' +
-        'terraB = 0.30 + 0.70 * terraB;\n' +
-        // F1, kuehle Schatten: das Tint-Gewicht haengt am untersten Band
-        // (terraW < 0.26 voll kuehl, ab dem Mittelband 0.56 keine Wirkung) —
-        // Mitten kuehlen kaum, tiefe Schatten deutlich. Der 0.30-Sockel bleibt:
-        // bei terraB = 0.30 hat der Tint mix(uSchattenKuehl, 1.0, 0.30) eine
-        // Luminanz von ~0.39–0.54 (je Preset), der Sonnenbeitrag faellt also
-        // nie unter ~0.12–0.16 seiner vollen Staerke; zusammen mit dem
-        // Hemisphaerenlicht bleibt die Gesamthelligkeit ueber ~15 %.
-        'float terraKuehl = 1.0 - smoothstep( 0.26, 0.56, terraW );\n' +
-        'vec3 terraTint = mix( mix( uBounce, uSchattenKuehl, terraKuehl ), vec3(1.0), terraB );\n' +
+        /* ===================================================================
+           SCHLUESSELLICHT statt Wrap-Diffuse.
+
+           Was hier vorher stand, war ein Half-Lambert: terraW = dotNL*0.5+0.5,
+           drei Stufen darauf, Sockel 0.12. Nachgerechnet gab das einer Flaeche,
+           die 84 Grad von der Sonne wegzeigt (dotNL 0.1), noch 67 % der vollen
+           Einstrahlung. Lichtseite zu Schattenseite stand damit bei 1.5 : 1 —
+           zwei Dachhaelften desselben Hauses hatten praktisch denselben Wert,
+           und die Tageszeit war nur noch eine Farbkorrektur ueber einer flachen
+           Masse. Genau das war der Hauptbefund der Bildabnahme.
+
+           Der Terminator sitzt jetzt dort, wo er hingehoert: an dotNL = 0, in
+           einem SCHMALEN Band. Auf der Lichtseite liegen zwei gemalte Stufen —
+           Ghibli setzt dort zwei bis drei Werte, keinen Verlauf. Ergebnis:
+           Lichtseite zu Schattenseite steht bei rund 20 : 1 im DIREKTLICHT.
+
+           Damit die Schattenseite trotzdem nicht schwarz wird, uebernimmt das
+           Fuelllicht diese Aufgabe — dafuer, und nur dafuer, sind die
+           hemiStk-Werte der Presets deutlich gestiegen (world/atmosphere.js).
+           Das ist der eigentliche Kunstgriff: warmer Schluessel gegen kuehle
+           Fuellung. Vorher taten Sonne und Hemisphaere beide beides.
+           =================================================================== */
+        'float terraNL = dotNL;\n' +
+        'float terraK = smoothstep( -0.06, 0.18, terraNL );\n' +
+        'float terraB = terraK * ( 0.66\n' +
+        '  + 0.19 * smoothstep( 0.22, 0.34, terraNL )\n' +
+        '  + 0.15 * smoothstep( 0.58, 0.72, terraNL ) );\n' +
+        /* Sockel 0.08. Nicht 0 und nicht 0.30 (der alte Wrap-Wert), sondern
+           gemessen: bei 0.04 verlor die Weltschildkroete — ein fast schwarzer
+           Panzer — auf ihrer Schattenseite JEDE Zeichnung (48 % des Bildes
+           unter Luminanz 0.20 gegen 11-29 % in den Referenzen). Auf einem
+           dunklen Albedo traegt das Fuelllicht dort nichts mehr, weil es mit
+           demselben kleinen Albedo multipliziert wird. 0.08 laesst Lichtseite
+           zu Schattenseite bei rund 12 : 1 — immer noch echtes Sonnenlicht,
+           aber mit Rest-Modellierung im Schatten. */
+        'terraB = 0.08 + 0.92 * terraB;\n' +
+        // Warm/Kalt im Direktlicht: uBounce (warmes Bodenlicht) faerbt den
+        // schmalen Saum GENAU an der Schattenkante — dort, wo ein gemaltes
+        // Bild seine waermste Stelle hat —, uSchattenKuehl das Restlicht der
+        // abgewandten Seite.
+        // Hinweis zum WURFschatten: der kuehle Ton laesst sich hier NICHT an
+        // die Schattenmaske haengen. three daempft directLight.color, bevor
+        // RE_Direct laeuft — in einem Wurfschatten ist der ganze Term
+        // (terraB * directLight.color * terraTint) nahe null, ein Tint darauf
+        // waere wirkungslos. Die kuehle Faerbung eines Wurfschattens kommt
+        // deshalb von dort, wo sein Licht wirklich herkommt: aus dem
+        // Hemisphaerenlicht (hemiHimmel, kuehl) und aus dem Schatten-Ton des
+        // Farbskripts in der Graduierung.
+        'float terraKuehl = 1.0 - terraK;\n' +
+        'float terraSaum = terraK * ( 1.0 - smoothstep( 0.06, 0.42, terraNL ) );\n' +
+        'vec3 terraTint = mix( mix( vec3( 1.0 ), uBounce, terraSaum * 0.6 ),\n' +
+        '  uSchattenKuehl, terraKuehl );\n' +
         'vec3 irradiance = terraB * directLight.color * terraTint;');
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <lights_phong_pars_fragment>', neu);
@@ -410,7 +526,8 @@ function terraPatch(shader, opts) {
       '#ifdef USE_INSTANCING\n  terraWP = instanceMatrix * terraWP;\n#endif\n' +
       'vTerraW = ( modelMatrix * terraWP ).xyz;');
     kopfF += 'varying vec3 vTerraW;\nuniform vec3 uFogWarm;\nuniform vec3 uFogCool;\n' +
-             'uniform vec3 uSunDir;\nuniform float uFogCap;\n';
+             'uniform vec3 uSunDir;\nuniform float uFogCap;\n' +
+             'uniform float uFogKurve;\nuniform float uLuftSockel;\n';
     hatWelt = true;
   } else {
     console.warn('terra: Shader-Patch "weltposition" fand seinen Anker nicht.');
@@ -480,6 +597,34 @@ function terraPatch(shader, opts) {
     }
   }
 
+  /* (3d) Gegenlichtsaum. Der Rim aus (2) haengt allein am Blickwinkel und
+          leuchtet deshalb rundum gleich — er modelliert nichts, er umrandet.
+          Dieser Saum haengt zusaetzlich an der Sonnenrichtung: er zeigt sich
+          nur an Kanten, die ZUM Licht gedreht sind. Das ist der Unterschied
+          zwischen einem Silhouettenschimmer und dem Streiflicht eines
+          Sonnenuntergangs — und der Abnahmebefund "kein Rimlight von der
+          Sonne" im Abendbild.
+          Quadriert, damit der Saum schmal bleibt und nicht zur zweiten
+          Fuelllichtquelle wird. Er sitzt in indirectDiffuse und ist damit
+          bewusst NICHT von der Schattenkarte gedaempft: eine Silhouette im
+          Gegenlicht glueht auch dann, wenn ihre Flaeche im Eigenschatten
+          liegt — genau dann sogar am staerksten.
+          Abschaltung ueber die Farbe (Schwarz = Nullsumme), nicht ueber
+          opts: der Quelltext bleibt fuer alle Materialien identisch, die
+          Programmzahl unveraendert. */
+  if (hatWelt && hatNorm) {
+    var ls = '#include <lights_fragment_end>';
+    if (ersetze(shader, 'fragmentShader', ls, ls + '\n' +
+        'float terraSaumF = pow( 1.0 - max( dot( normal,\n' +
+        '  normalize( vViewPosition ) ), 0.0 ), 3.5 );\n' +
+        'terraSaumF *= 1.0 - abs( normal.y ) * 0.80;\n' +
+        'float terraSaumS = max( dot( normalize( vTerraN ), uSunDir ), 0.0 );\n' +
+        'reflectedLight.indirectDiffuse += uSonnensaum * ( terraSaumF * terraSaumS * terraSaumS );',
+        'sonnensaum')) {
+      patchInfo.saum++;
+    }
+  }
+
   // (4) Nebel: Richtungsmischung (warm zur Sonne, kuehl davon weg), Hoehendichte
   //     in Senken, und eine Obergrenze fuer die Lesbarkeit im Nebel-Preset.
   //     Anker aus fog_fragment (0.185): gl_FragColor.rgb = mix( ..., fogColor, fogFactor );
@@ -498,18 +643,84 @@ function terraPatch(shader, opts) {
         '\t\tmin( terraArborN * uArborStaerke, 1.0 ) * 0.45 );\n'
       : '';
     var fogNeu = fogChunk.replace(fogKey,
+      /* ===================================================================
+         LUFTPERSPEKTIVE: GESTAFFELT STATT FLAECHIG
+
+         Drei Aenderungen gegenueber der bisherigen Fassung, alle drei aus
+         demselben Abnahmebefund ("ein einziger grau-tuerkiser Dunstverlauf
+         ohne Horizontlinie", "Lichter und Schatten liegen auf demselben
+         Orangeton"):
+
+         (1) HOEHE GIBT FREI, statt zu verdichten. terraHoch verdichtete den
+             Nebel bisher um 12 % — genau falsch herum. Dunst ist eine
+             BODENNAHE Schicht; ein Bergkamm, ein Rankenstamm oder eine
+             Schwebeinsel steht darueber und bekommt WENIGER davon ab. Genau
+             daraus entsteht die Staffelung der Vorbilder (anno-04: die
+             Bergkette hebt sich hart aus dem Dunsttal, statt in ihm
+             aufzugehen). Der Faktor kehrt sich auf -0.30 um; terraTal
+             (Senken) bleibt unveraendert bei +0.35.
+
+         (2) DIE KURVE. Ein linearer Nebel legt sich als gleichmaessiger
+             Schleier ueber Mittel- UND Hintergrund und macht daraus EINE
+             Flaeche. terraKurve zieht die untere Haelfte des Verlaufs nach
+             unten (fogFactor 0.5 wird zu 0.35) und laesst die obere stehen:
+             Vorder- und Mittelgrund klaren auf, die Ferne bleibt Dunst. Der
+             Abstand zwischen den Ebenen waechst, ohne dass eine Bandkante
+             entsteht — es ist dieselbe stetige Funktion, nur steiler.
+
+         (3) DER WARME KEGEL WIRD ENG. Mit Exponent 2 lag bei 45 Grad
+             Abweichung von der Sonne noch die halbe Warmfarbe an; im
+             Abendbild deckte dieser Kegel praktisch die ganze Bildflaeche
+             und machte aus der Beleuchtung einen Orangefilter. Exponent 4
+             laesst bei denselben 45 Grad nur noch ein Viertel uebrig, und
+             der Deckel 0.88 haelt selbst im Sonnenzentrum einen kuehlen
+             Rest — die Gegenfarbe, die der Abend nicht hatte.
+
+         Zu (2) im Detail: die Kurve ist pow( f, 1 + uFogKurve ) und damit
+         ENDPUNKTTREU — bei f = 0 und f = 1 aendert sich nichts. Das ist
+         Bedingung, nicht Zierde: world/water.js rechnet seinen 872-Einheiten-
+         Saum ausdruecklich gegen den vollen Nebel am Horizont, und eine Kurve,
+         die dort nicht mehr 1 erreicht, risse die Wasserkante zum Himmel auf.
+         Dazwischen sinkt sie: f 0.5 wird zu 0.35, f 0.3 zu 0.20. uFogKurve 0
+         (Standard) ist die Identitaet — ohne Presetwert rendert alles wie zuvor.
+         =================================================================== */
       'float terraTal = 1.0 - smoothstep( 0.5, 10.0, vTerraW.y );\n' +
       '\tfloat terraHoch = smoothstep( 42.0, 185.0, vTerraW.y );\n' +
-      '\tfloat terraDicht = 1.0 + terraTal * 0.35 + terraHoch * 0.12;\n' +
+      '\tfloat terraDicht = 1.0 + terraTal * 0.35 - terraHoch * 0.30;\n' +
       '\tfogFactor = 1.0 - pow( max( 1.0 - fogFactor, 0.0 ), terraDicht );\n' +
       '\tfogFactor = min( fogFactor, uFogCap );\n' +
-      '\tfloat terraSonne = pow( max( dot( normalize( vTerraW - cameraPosition ), uSunDir ), 0.0 ), 2.0 );\n' +
-      '\tvec3 terraFogCol = mix( uFogCool, uFogWarm, terraSonne );\n' +
+      '\tfogFactor = pow( fogFactor, 1.0 + uFogKurve );\n' +
+      '\tfloat terraSonne = pow( max( dot( normalize( vTerraW - cameraPosition ), uSunDir ), 0.0 ), 4.0 );\n' +
+      '\tvec3 terraFogCol = mix( uFogCool, uFogWarm, terraSonne * 0.88 );\n' +
       '\tfloat terraFern = smoothstep( 0.18, 0.78, fogFactor );\n' +
       '\tterraFogCol = mix( terraFogCol, uFogCool, terraFern * terraHoch * 0.18 );\n' +
       '\tfloat terraFogLum = dot( terraFogCol, vec3( 0.299, 0.587, 0.114 ) );\n' +
       '\tterraFogCol = mix( terraFogCol, vec3( terraFogLum ), terraFern * 0.055 );\n' +
       arborDunst +
+      /* LUFTSOCKEL — warum tiefste Tiefen Farbe tragen muessen.
+         Der Abnahmebefund "das Wahrzeichen ist ein schwarzes Loch … keine
+         Materialtrennung, kein Bounce-Licht" hat eine Ursache, die kein
+         Lichtaufbau beheben kann: JEDER Lichtbeitrag wird mit dem Albedo
+         multipliziert, und auf einem fast schwarzen Albedo bleibt jedes
+         Produkt schwarz. In der Natur passiert genau das nicht — zwischen
+         Auge und Objekt steht Luft, und die leuchtet. Dieser Term ist diese
+         Luft: ein ADDITIVER Sockel in der oertlichen Nebelfarbe.
+         Er ist auf die Tiefen begrenzt (Schwelle auf der linearen Luminanz;
+         0.10 linear entspricht rund 0.35 im Gammaraum) — die Mitten und
+         Lichter bleiben Fragment fuer Fragment unveraendert, der
+         Tonwertumfang der letzten Runde also erhalten.
+         Er steht VOR dem Nebel: er ist Licht der Szene, kein Filter.
+
+         Die Farbe ist uFogCool und ausdruecklich NICHT terraFogCol: was einen
+         Schatten aufhellt, ist der HIMMEL, nicht der warme Dunst vor der
+         Sonne. Mit terraFogCol bekam die Bergflanke gegen die Morgensonne
+         warme Tiefen — genau die Kalt-Warm-Umkehr, die der Stilvertrag
+         verbietet. */
+      '\tif ( uLuftSockel > 0.0 ) {\n' +
+      '\t\tfloat terraTief = 1.0 - smoothstep( 0.0, 0.10,\n' +
+      '\t\t\tdot( gl_FragColor.rgb, vec3( 0.299, 0.587, 0.114 ) ) );\n' +
+      '\t\tgl_FragColor.rgb += uFogCool * ( uLuftSockel * terraTief );\n' +
+      '\t}\n' +
       '\tgl_FragColor.rgb = mix( gl_FragColor.rgb, terraFogCol, fogFactor );');
     shader.fragmentShader = shader.fragmentShader.replace(fogInc, fogNeu);
     patchInfo.hoehe++;
@@ -545,14 +756,29 @@ function terraPatch(shader, opts) {
     shader.uniforms['uMalTex' + 0] = { value: opts.mal.texObj };
     kopfF += 'uniform sampler2D uMalTex0;\n';
     var mk = '#include <color_fragment>';
+    var sFein = (opts.mal.skala * KORN_FAKTOR).toFixed(5);
     var malCode = mk + '\n' +
-      'vec3 terraMal = texture2D( uMalTex0, ( vTerraW.xz + vTerraW.yy * 0.7 ) * ' +
+      'vec2 terraMalP = vTerraW.xz + vTerraW.yy * 0.7;\n' +
+      'vec3 terraMal = texture2D( uMalTex0, terraMalP * ' +
         opts.mal.skala.toFixed(4) + ' ).rgb;\n' +
       'diffuseColor.rgb *= mix( vec3(1.0), terraMal * 2.0, ' + opts.mal.staerke.toFixed(3) + ' );\n' +
-      'vec3 terraMalGrob = texture2D( uMalTex0, ( vTerraW.xz + vTerraW.yy * 0.7 ) * ' +
+      'vec3 terraMalGrob = texture2D( uMalTex0, terraMalP * ' +
         (opts.mal.skala * 0.125).toFixed(5) + ' ).rgb;\n' +
       'diffuseColor.rgb *= mix( vec3(1.0), terraMalGrob * 2.0, ' +
-        (opts.mal.staerke * 0.5).toFixed(3) + ' );';
+        (opts.mal.staerke * 0.5).toFixed(3) + ' );\n' +
+      // --- Feinkorn und Schraffur (Begruendung an KORN_FAKTOR oben) --------
+      // Der Versatz der zweiten Abtastung ist eine halbe Welteinheit ZUR
+      // SONNE; das +1e-4 haelt normalize() bei senkrecht stehender Sonne
+      // (Nebel-Preset, uSunDir.xz nahe null) definiert.
+      'vec2 terraKornUV = terraMalP * ' + sFein + ';\n' +
+      'vec2 terraKornL = normalize( uSunDir.xz + vec2( 1e-4, 1e-4 ) ) * ' + sFein + ' * 0.5;\n' +
+      'float terraKornA = texture2D( uMalTex0, terraKornUV ).g;\n' +
+      'float terraKornB = texture2D( uMalTex0, terraKornUV + terraKornL ).g;\n' +
+      'diffuseColor.rgb *= max( 0.0, 1.0\n' +
+      '  + ( terraKornA - ' + KORN_MITTE.toFixed(3) + ' ) * ' +
+        (opts.mal.staerke * KORN_AMP).toFixed(4) + '\n' +
+      '  + ( terraKornA - terraKornB ) * ' +
+        (opts.mal.staerke * SCHRAFFUR).toFixed(4) + ' );';
     if (ersetze(shader, 'fragmentShader', mk, malCode, 'malschicht')) patchInfo.mal++;
   }
 
@@ -825,6 +1051,15 @@ function terraMat(opts) {
   opts.shininess = 0;
   opts.specular = new THREE.Color(0x000000);
   var m = new THREE.MeshPhongMaterial(opts);
+  /* Schattenseite = Materialseite. Ohne diese Zeile setzt three fuer ein
+     FrontSide-Material BackSide in die Schattenkarte (der uebliche Trick fuer
+     geschlossene Koerper). terras Poolgeometrien sind aber zu einem grossen
+     Teil OFFENE Schalen — Dachflaechen, Planen, Bruecken —, und deren
+     Rueckseiten liegen aus Sicht der Sonne gar nicht vor: sie wuerden
+     weggecullt und die Sache wuerfe schlicht keinen Schatten. Der Streifen-
+     schutz laeuft stattdessen ueber shadow.normalBias (world/atmosphere.js).
+     Die Zeile ist folgenlos, solange ein Objekt nicht castShadow traegt. */
+  m.shadowSide = m.side;
   var mal = null;
   if (familie && FAMILIEN[familie]) {
     var F = FAMILIEN[familie];

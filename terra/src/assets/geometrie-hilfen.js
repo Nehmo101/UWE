@@ -203,3 +203,32 @@ export function farbton(hex, faktor) {
   var b = Math.max(0, Math.min(255, Math.round((hex & 255) * faktor)));
   return (r << 16) | (g << 8) | b;
 }
+
+/**
+ * Lineare Mischung zweier Hex-Farben (t = 0 liefert a, t = 1 liefert b).
+ *
+ * Bewusst neben `farbton` und nicht statt dessen: eine Skalierung mit einem
+ * Faktor laeuft immer auf Schwarz zu und entsaettigt dabei. Blattwerk geht
+ * aber nicht von Gruen nach Schwarz, sondern von einem warmen, gelblichen
+ * Lichtgruen ueber ein sattes Mittelgruen in ein kaltes, fast blaeuliches
+ * Kernschatten-Gruen — drei verschiedene Farbtoene, keine drei Helligkeiten.
+ * Genau dieser Farbwechsel traegt in den Vorlagen (Mononoke, Totoro) die
+ * Kronenform; mit blossem Abdunkeln ist er nicht zu bekommen.
+ */
+export function mischFarbe(a, b, t) {
+  var k = t < 0 ? 0 : (t > 1 ? 1 : t);
+  var r = Math.round(((a >> 16) & 255) + (((b >> 16) & 255) - ((a >> 16) & 255)) * k);
+  var g = Math.round(((a >> 8) & 255) + (((b >> 8) & 255) - ((a >> 8) & 255)) * k);
+  var c = Math.round((a & 255) + ((b & 255) - (a & 255)) * k);
+  return (r << 16) | (g << 8) | c;
+}
+
+/**
+ * Dreistufige Blattwerkrampe: 0 = Kernschatten, 0.5 = Mittelton, 1 = Streiflicht.
+ * `stufen` ist ein Objekt { kern, mitte, licht }.
+ */
+export function laubTon(stufen, t) {
+  return t < 0.5
+    ? mischFarbe(stufen.kern, stufen.mitte, t * 2)
+    : mischFarbe(stufen.mitte, stufen.licht, (t - 0.5) * 2);
+}

@@ -233,11 +233,18 @@ function felsDetails(opt) {
   return parts;
 }
 
+/* Der Stengel war ein VIERKANTIGES Rohr mit zwei Deckeln (16 Dreiecke) —
+   bei 0,012 Weltmetern Radius. Drei offene Kanten (6 Dreiecke) sind an
+   dieser Groesse nicht zu unterscheiden und sparen bei den 188 Feldreihen
+   der Beispielkarte rund 7.500 Dreiecke. Zusaetzlich verjuengt sich der
+   Stengel jetzt nach oben, statt gleich dick zu bleiben. */
+var STENGEL = new THREE.CylinderGeometry(0.010, 0.026, 1, 3, 1, true);
+
 function spross(x, y, z, farbe, i) {
   var parts = [];
   var h = 0.26 + (i % 3) * 0.055;
-  parts.push(farbTeil(new CY(0.012, 0.022, h, 4),
-    matrix(x, y + h / 2, z, (i % 2 ? 1 : -1) * 0.08, 0, (i % 3 - 1) * 0.09),
+  parts.push(farbTeil(STENGEL,
+    matrix(x, y + h / 2, z, (i % 2 ? 1 : -1) * 0.08, 0, (i % 3 - 1) * 0.09, 1, h, 1),
     0x607d43, false));
   parts.push(farbTeil(new CO(0.07, 0.16, 5),
     matrix(x + (i % 2 ? 0.025 : -0.025), y + h + 0.06, z), farbe, false));

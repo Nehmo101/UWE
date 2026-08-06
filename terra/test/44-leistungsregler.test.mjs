@@ -82,9 +82,11 @@ test('render-masse - Skala senkt die Pixeldichte, aber nie unter 0.5', () => {
   // Unter DPR 1 darf die Skala fallen — aber nie unter den 0.5-Boden.
   assert.equal(berechneRenderMasse(1280, 720, 1, 0.6).pixelRatio, 0.6);
   assert.equal(berechneRenderMasse(1280, 720, 1, 0.2).pixelRatio, 0.5);
-  // Das Tiefenziel folgt der gesenkten Dichte.
+  // Das Tiefenziel folgt der gesenkten Dichte — seit der Bildgrundlagen-Runde
+  // in voller Renderaufloesung statt in halber (Begruendung in render-masse.js):
+  // 1280 * 1.0 = 1280, nicht mehr 640.
   const masse = berechneRenderMasse(1280, 720, 2, 0.5);
-  assert.deepEqual([masse.tiefenBreite, masse.tiefenHoehe], [640, 360]);
+  assert.deepEqual([masse.tiefenBreite, masse.tiefenHoehe], [1280, 720]);
   // Unsinnige Skalen fallen auf 1 zurueck.
   assert.equal(berechneRenderMasse(1280, 720, 2, 0).pixelRatio, 2);
   assert.equal(berechneRenderMasse(1280, 720, 2, NaN).pixelRatio, 2);

@@ -5,7 +5,7 @@ import {
   ARCHITEKTUR_STILE,
   ARCHITEKTUR_VARIANTEN
 } from "./architektur-katalog.js";
-import { M, farbton, mergeGeos, part } from "./geometrie-hilfen.js";
+import { M, farbton, mergeGeos, part, prismGeo } from "./geometrie-hilfen.js";
 import {
   gestalteArchitekturFormensprache,
   veredleArchitektur
@@ -43,9 +43,16 @@ function kegel(parts, w, h, d, x, y, z, farbe, segmente, rx, ry, rz) {
   ));
 }
 
+/* Kugel und Torus sind die teuersten Grundformen dieser Datei (100 bzw. 96
+   Dreiecke je Aufruf). Sie tragen hier aber fast ausschliesslich SCHMUCK:
+   Zierringe mit 9 cm Rohrstaerke, Fensterbosse von der Groesse einer Faust.
+   Die Aufloesung ist deshalb auf das gesenkt, was bei facettierter Schattierung
+   noch rund aussieht (72 bzw. 60 Dreiecke) — das freigewordene Budget geht in
+   die Dachkanten weiter unten, die man aus derselben Entfernung wirklich
+   sieht. Wer hier wieder hochdreht, nimmt es dem Dach weg. */
 function kugel(parts, w, h, d, x, y, z, farbe, halbkugel) {
   parts.push(part(
-    new THREE.SphereGeometry(0.5, 10, 6, 0, TAU, 0, halbkugel ? PI / 2 : PI),
+    new THREE.SphereGeometry(0.5, 9, 5, 0, TAU, 0, halbkugel ? PI / 2 : PI),
     M(x, y, z, 0, 0, 0, w, h, d),
     farbe
   ));
@@ -53,7 +60,7 @@ function kugel(parts, w, h, d, x, y, z, farbe, halbkugel) {
 
 function torus(parts, w, h, d, x, y, z, farbe, bogen, rx, ry, rz) {
   parts.push(part(
-    new THREE.TorusGeometry(0.5, 0.09, 4, 12, bogen === undefined ? TAU : bogen),
+    new THREE.TorusGeometry(0.5, 0.09, 3, 10, bogen === undefined ? TAU : bogen),
     M(x, y, z, rx, ry, rz, w, h, d),
     farbe
   ));
@@ -67,12 +74,70 @@ function kristall(parts, w, h, d, x, y, z, farbe, rx, ry, rz) {
   ));
 }
 
+/** Lineare Mischung zweier Hex-Farben; t = 0 liefert a, t = 1 liefert b. */
+function mischung(a, b, t) {
+  var k = t < 0 ? 0 : (t > 1 ? 1 : t);
+  var r = Math.round(((a >> 16) & 255) * (1 - k) + ((b >> 16) & 255) * k);
+  var g = Math.round(((a >> 8) & 255) * (1 - k) + ((b >> 8) & 255) * k);
+  var bl = Math.round((a & 255) * (1 - k) + (b & 255) * k);
+  return (r << 16) | (g << 8) | bl;
+}
+
+/**
+ * Farbfaecher einer Variante.
+ *
+ * Die alten Faktoren spannten alle 18 Bautypen einer Kultur in ein Band von
+ * acht Prozent. Solange man die Bautypen einzeln im Schaukasten ansah, war das
+ * genug. In einer SIEDLUNG stehen sie nebeneinander, und dort las sich das
+ * als eine einzige Farbe, fuenfzehnmal wiederholt.
+ *
+ * Reine Helligkeit reicht dafuer nicht — fuenfzehn verschieden helle Haeuser
+ * derselben Farbe bleiben fuenfzehn Haeuser derselben Farbe. In anno-01,
+ * anno-08 und howl-006 steht neben dem verputzten Haus ein holzsichtiges und
+ * daneben ein ockergelbes. Der Faecher dreht deshalb ZWEI Regler:
+ *
+ *   waerme  mischt Wand und Dach zwischen Holzton (kuehl, holzsichtig) und
+ *           Akzentton (warm, ocker) — das ist der Farbton, nicht die Helle.
+ *   verfall altert das Dach zusaetzlich Richtung Holz: ausgeblichene
+ *           Schindeln, nachgedecktes Reet, moosige Ziegel.
+ *
+ * Beide haengen allein am stabilen Variantenindex; die Schrittweiten 3, 5, 7
+ * und 11 sind teilerfremd, damit sich die Kombination nicht schon nach dem
+ * dritten Bautyp wiederholt. Kein Zufallsstrom: die Geometrie wird EINMAL je
+ * Pool gebacken und danach hundertfach instanziert — eine Wuerfelung darin
+ * waere eine Konstante mit Zufallsanstrich.
+ *
+ * dachHell / dachTief / dachSchatten sind die drei Toene, aus denen das
+ * Dachwerk weiter unten Kante, Deckung und Traufschatten baut.
+ */
 function farbenFuer(stil, variantenIndex) {
-  var drift = 0.94 + ((variantenIndex * 7) % 9) * 0.012;
+  var vi = variantenIndex;
+  var drift = 0.89 + ((vi * 7) % 9) * 0.026;
+  var verfall = ((vi * 5) % 7) / 6;
+  var waerme = ((vi * 3) % 5) / 4;
+  var wandZiel = waerme >= 0.5 ? stil.palette.akzent : stil.palette.holz;
+  var wand = farbton(
+    mischung(stil.palette.wand, wandZiel, Math.abs(waerme - 0.5) * 0.42),
+    drift
+  );
+  var dach = farbton(
+    mischung(
+      mischung(stil.palette.dach, stil.palette.akzent, waerme * 0.24),
+      stil.palette.holz, verfall * 0.30
+    ),
+    0.93 + ((vi * 11) % 6) * 0.066
+  );
   return {
-    wand: farbton(stil.palette.wand, drift),
-    wandDunkel: farbton(stil.palette.wand, drift * 0.76),
-    dach: farbton(stil.palette.dach, 0.92 + (variantenIndex % 5) * 0.018),
+    wand: wand,
+    wandDunkel: farbton(wand, 0.76),
+    dach: dach,
+    /* Die drei Dachtoene sind bewusst eng gefuehrt. Ein sehr dunkler
+       Reihenton faerbt aus Siedlungsentfernung nicht als Ziegelfuge, sondern
+       als schwarzer Balken — genau das war der erste Fehlversuch. Nur der
+       Traufschatten darf hart sein: er ist eine Linie, kein Feld. */
+    dachHell: farbton(dach, 1.14),
+    dachTief: farbton(dach, 0.84),
+    dachSchatten: farbton(dach, 0.46),
     akzent: farbton(stil.palette.akzent, 0.95 + (variantenIndex % 3) * 0.025),
     holz: farbton(stil.palette.holz, 0.90 + (variantenIndex % 4) * 0.02),
     fenster: farbton(stil.palette.fenster, 0.94 + (variantenIndex % 2) * 0.04)
@@ -160,74 +225,227 @@ function baueKern(parts, stil, f, w, d, h, x, z, stilIndex, variantenIndex) {
   }
 }
 
+/* ==========================================================================
+   Dachwerk — Kante, Staerke, Traufe, Deckung
+
+   Vor dieser Runde war jedes Dach eine Flaeche OHNE Staerke: der Kegel endete
+   als Messerkante genau ueber der Wandflucht, es gab weder Traufe noch
+   Ueberstand, und die Sonnen- wie die Schattenseite trugen denselben Farbwert.
+   Aus Augenhoehe las sich das als lackiertes Blech.
+
+   Jedes Dach entsteht jetzt in drei Lagen:
+     1. Traufkranz  — eine ueberstehende Platte (die sichtbare DICKE) und
+        darunter ein sehr dunkles Brett (der Traufschatten).
+     2. Dachkoerper — die Form der Kultur, unveraendert in ihrer Aussage.
+     3. Deckung     — First und Reihen. Sie geben dem Dach eine RICHTUNG;
+        ohne sie sieht auch ein Satteldach aus wie ein gefaltetes Blatt.
+
+   Firstrichtung, Neigung und Ueberstand haengen am VARIANTENINDEX. In einer
+   Siedlung stehen achtzehn Bautypen nebeneinander — ihre Firste sollen sich
+   kreuzen, nicht parallel liegen. Ein Zufallsstrom waere hier falsch: die
+   Geometrie wird einmal je Pool gebacken und danach hundertfach instanziert,
+   ein Wuerfel darin waere eine Konstante mit Zufallsanstrich.
+   ========================================================================== */
+
+/* Das Einheitsprisma steht einmal im Modul und wird in part() geklont. Es
+   liefert genau das, was keine Three-Grundform hergibt und was ein Dach
+   braucht: zwei Flaechen mit eigenen Normalen und einen FIRST statt einer
+   Spitze. Der bisherige Vierkantkegel kostete dieselben acht Dreiecke und
+   ergab eine Pyramide — fuenfzehnmal wiederholt sah die Siedlung damit aus
+   wie ein Zeltlager. Die Kopfnotiz von prismGeo ("die Architekturserie
+   verwendet ausschliesslich Three-Primitiven") beschreibt eine Gewohnheit,
+   keinen Vertrag; sie kostet die wichtigste Dachform ueberhaupt.
+   Einheit: x/z in [-0.5, 0.5], Basis auf y = 0, First auf y = 1 laengs z. */
+var EINHEITS_PRISMA = prismGeo(1, 1, 1);
+
+/* Wie viel Kante ein Dach vertraegt, haengt an seinem Material. Ein Wolken-
+   und ein Kristalldach schweben und duerfen keine Traufe bekommen; ein
+   Blattdach bekommt nur einen schmalen Saum. */
+var DACHART = Object.freeze({
+  blatt: "weich", stufe: "hart", schindel: "ziegel", zelt: "hart",
+  muschel: "weich", pilz: "weich", wolke: "frei", krone: "weich",
+  kristall: "frei", schilf: "reet", stern: "weich", basalt: "hart"
+});
+
+/** Firstrichtung, Neigung und Ueberstand einer Variante. Die drei Schrittweiten
+ *  (2, 4, 3) sind teilerfremd — die Kombination wiederholt sich erst nach
+ *  zwoelf Bautypen, und zwoelf sind mehr, als eine Gasse zeigt. */
+function dachProfil(vi) {
+  return {
+    quer: (vi % 2) === 1,
+    neigung: 0.86 + ((vi * 5) % 4) * 0.19,
+    ueberstand: 1.09 + (vi % 3) * 0.05
+  };
+}
+
+/**
+ * Traufkranz: die sichtbare Dicke des Daches.
+ *
+ * Oben eine ueberstehende Platte im aufgehellten Dachton — das ist die Kante,
+ * die man von schraeg oben sieht. Darunter, einen Tick schmaler und tiefer
+ * gesetzt, ein sehr dunkles Brett: der Traufschatten.
+ *
+ * Der Schatten ist mit Absicht GEOMETRIE und nicht Schattenwurf. Die
+ * Schattenkarte deckt die ganze Karte ab; eine acht Zentimeter tiefe Traufe
+ * liegt darin unter einer Texelbreite und verschwaende ersatzlos. Gebacken
+ * traegt sie bei jeder Tageszeit und in jedem Leistungsregler-Stand.
+ */
+function traufkranz(parts, f, w, d, y, x, z, ueber, dicke) {
+  box(parts, w * ueber, dicke, d * ueber, x, y + dicke * 0.5, z, f.dachHell);
+  box(parts, w * (ueber - 0.05), dicke * 0.7, d * (ueber - 0.05),
+    x, y - dicke * 0.5, z, f.dachSchatten);
+  return y + dicke;
+}
+
+/** Satteldach als Prisma. `quer` dreht den First von z auf x. */
+function dachKoerper(parts, w, h, d, x, y, z, farbe, quer) {
+  parts.push(part(EINHEITS_PRISMA,
+    quer ? M(x, y, z, 0, PI / 2, 0, d, h, w) : M(x, y, z, 0, 0, 0, w, h, d),
+    farbe));
+}
+
+/** Firstziegel. Ohne ihn laeuft der Grat als Messerkante aus. */
+function firstZiegel(parts, farbe, w, h, d, x, y, z, quer, staerke) {
+  var laenge = (quer ? w : d) * 1.03;
+  var breite = Math.max(0.07, Math.min(w, d) * (staerke || 0.075));
+  var hoch = breite * 0.7;
+  if (quer) box(parts, laenge, hoch, breite, x, y + h - hoch * 0.3, z, farbe);
+  else box(parts, breite, hoch, laenge, x, y + h - hoch * 0.3, z, farbe);
+}
+
+/**
+ * Deckungsreihen: schmale Leisten PARALLEL zum First auf beiden Dachflaechen.
+ * Sie sind der einzige Grund, warum man einem Dach ansieht, in welche Richtung
+ * es gedeckt ist — Ziegelreihen, Reetlagen, Schindelgebinde. Zwei Reihen je
+ * Flaeche reichen; jede weitere kostet zwoelf Dreiecke und ist aus
+ * Siedlungsentfernung nicht mehr von der Nachbarreihe zu unterscheiden.
+ *
+ * Die Leiste liegt AUF der Flaeche: Versatz um die halbe Staerke laengs der
+ * Flaechennormale (sin/cos des Neigungswinkels), Drehung um genau diesen
+ * Winkel. Damit steht sie auch bei steilem Reetdach nicht in der Luft.
+ */
+function deckungsReihen(parts, farbe, w, h, d, x, y, z, quer, anzahl) {
+  var laenge = (quer ? w : d) * 0.99;
+  var spanne = (quer ? d : w) * 0.5;
+  var winkel = Math.atan2(h, spanne);
+  var staerke = Math.max(0.035, h * 0.055);
+  var tief = Math.max(0.07, spanne * 0.105);
+  var nq = Math.sin(winkel) * staerke * 0.5;
+  var ny = Math.cos(winkel) * staerke * 0.5;
+  for (var s = -1; s <= 1; s += 2) {
+    for (var i = 0; i < anzahl; i++) {
+      var t = (i + 0.8) / (anzahl + 0.75);
+      var q = spanne * (1 - t) + nq, hy = h * t + ny;
+      if (quer) {
+        parts.push(part(new THREE.BoxGeometry(1, 1, 1),
+          M(x, y + hy, z + s * q, s * winkel, 0, 0, laenge, staerke, tief), farbe));
+      } else {
+        parts.push(part(new THREE.BoxGeometry(1, 1, 1),
+          M(x + s * q, y + hy, z, 0, 0, -s * winkel, tief, staerke, laenge), farbe));
+      }
+    }
+  }
+}
+
 function baueDach(parts, stil, f, w, d, y, x, z, variantenIndex) {
   var rh = Math.max(0.72, Math.min(w, d) * 0.42);
+  var art = DACHART[stil.dach] || "weich";
+  var p = dachProfil(variantenIndex);
+  /* Kleine Nebendaecher (Turmhauben, Seitenfluegel) bekommen keine Reihen:
+     unter etwa 1.7 m Grundflaeche liegen zwei Leisten enger beieinander als
+     ein Bildpunkt sie trennen kann. */
+  var gross = Math.min(w, d) > 1.7;
+  var ueber = art === "weich" ? p.ueberstand * 0.93 : p.ueberstand;
+  var basis = y;
+  if (art !== "frei") {
+    var dicke = Math.max(0.06, rh * (art === "reet" ? 0.17 : 0.12));
+    if (art === "weich") dicke *= 0.66;
+    basis = traufkranz(parts, f, w, d, y, x, z, ueber, dicke);
+  }
+  var hoehe = rh * p.neigung;
+  var bw = w * ueber, bd = d * ueber;
+  var i, q, s;
   switch (stil.dach) {
-    case "blatt":
-      kugel(parts, w * 1.18, rh * 0.62, d * 1.10, x, y + rh * 0.18, z, f.dach);
-      box(parts, w * 0.05, rh * 0.34, d * 1.04, x, y + rh * 0.20, z, f.akzent);
-      break;
-    case "stufe":
-      box(parts, w * 1.08, rh * 0.28, d * 1.08, x, y + rh * 0.14, z, f.dach);
-      box(parts, w * 0.78, rh * 0.28, d * 0.78, x, y + rh * 0.42, z, f.dach);
-      box(parts, w * 0.46, rh * 0.24, d * 0.46, x, y + rh * 0.68, z, f.akzent);
-      break;
     case "schindel":
-      kegel(parts, w * 1.18, rh, d * 1.18, x, y + rh / 2, z, f.dach, 4, 0, PI / 4, 0);
-      break;
+      dachKoerper(parts, bw, hoehe, bd, x, basis, z, f.dach, p.quer);
+      if (gross) {
+        deckungsReihen(parts, f.dachTief, bw, hoehe, bd, x, basis, z, p.quer, 3);
+      }
+      firstZiegel(parts, f.dachHell, bw, hoehe, bd, x, basis, z, p.quer);
+      return basis + hoehe;
+    case "schilf":
+      /* Reet wird steil gedeckt, damit das Wasser laeuft — und der First wird
+         mit gekreuzten Pfloecken beschwert statt mit Ziegeln gedeckt. */
+      var sh = hoehe * 1.34;
+      dachKoerper(parts, bw, sh, bd, x, basis, z, f.dach, p.quer);
+      if (gross) {
+        deckungsReihen(parts, f.dachTief, bw, sh, bd, x, basis, z, p.quer, 1);
+      }
+      firstZiegel(parts, f.dachTief, bw, sh, bd, x, basis, z, p.quer, 0.12);
+      for (s = -1; s <= 1; s += 2) {
+        kegel(parts, Math.min(w, d) * 0.09, sh * 0.42, Math.min(w, d) * 0.09,
+          x + (p.quer ? s * w * 0.3 : 0), basis + sh * 0.94,
+          z + (p.quer ? 0 : s * d * 0.3), f.akzent, 5, 0, 0, s * 0.22);
+      }
+      return basis + sh;
+    case "stufe":
+      /* Die unterste Stufe ist jetzt der Traufkranz; die drei Absaetze setzen
+         darauf auf statt sie zu wiederholen. */
+      box(parts, w * 0.94, rh * 0.26, d * 0.94, x, basis + rh * 0.13, z, f.dach);
+      box(parts, w * 0.66, rh * 0.26, d * 0.66, x, basis + rh * 0.39, z, f.dachTief);
+      box(parts, w * 0.40, rh * 0.22, d * 0.40, x, basis + rh * 0.63, z, f.akzent);
+      return basis + rh * 0.74;
     case "zelt":
-      kegel(parts, w * 1.20, rh * 1.16, d * 1.20, x, y + rh * 0.58, z, f.dach, 6);
-      torus(parts, w * 0.46, rh * 0.20, d * 0.46, x, y + rh * 0.98, z,
-        f.akzent, TAU, PI / 2, 0, 0);
-      break;
+      kegel(parts, bw, rh * 1.12 * p.neigung, bd, x,
+        basis + rh * 0.56 * p.neigung, z, f.dach, 6);
+      torus(parts, w * 0.42, rh * 0.18, d * 0.42, x,
+        basis + rh * 0.98 * p.neigung, z, f.akzent, TAU, PI / 2, 0, 0);
+      return basis + rh * 1.12 * p.neigung;
+    case "blatt":
+      kugel(parts, bw, rh * 0.62, bd * 0.94, x, basis + rh * 0.14, z, f.dach);
+      box(parts, w * 0.05, rh * 0.34, d * 1.04, x, basis + rh * 0.18, z, f.akzent);
+      return basis + rh * 0.48;
     case "muschel":
-      kugel(parts, w * 1.18, rh * 0.78, d * 1.12, x, y, z, f.dach, true);
-      torus(parts, w * 0.94, rh * 0.40, d * 1.02, x, y + rh * 0.10, z,
+      kugel(parts, bw, rh * 0.78, bd * 0.96, x, basis, z, f.dach, true);
+      torus(parts, w * 0.94, rh * 0.40, d * 1.02, x, basis + rh * 0.10, z,
         f.akzent, PI, PI / 2, 0, 0);
-      break;
+      return basis + rh * 0.42;
     case "pilz":
-      kugel(parts, w * 1.32, rh * 0.76, d * 1.26, x, y + rh * 0.02, z, f.dach, true);
-      zylinder(parts, w * 0.78, rh * 0.10, d * 0.78, x, y + rh * 0.02, z,
-        f.akzent, 12, 1);
-      break;
+      kugel(parts, w * 1.30, rh * 0.76, d * 1.24, x, basis, z, f.dach, true);
+      zylinder(parts, w * 0.78, rh * 0.10, d * 0.78, x, basis, z, f.dachTief, 12, 1);
+      return basis + rh * 0.42;
     case "wolke":
       kugel(parts, w * 0.88, rh * 0.68, d * 0.92, x, y + rh * 0.20, z, f.dach);
       kugel(parts, w * 0.58, rh * 0.54, d * 0.60, x - w * 0.30,
-        y + rh * 0.18, z, f.dach);
+        y + rh * 0.18, z, f.dachHell);
       kugel(parts, w * 0.52, rh * 0.50, d * 0.56, x + w * 0.32,
-        y + rh * 0.16, z, f.dach);
-      break;
+        y + rh * 0.16, z, f.dachTief);
+      return y + rh * 0.56;
     case "krone":
-      kugel(parts, w * 1.12, rh * 0.54, d * 1.10, x, y + rh * 0.10, z, f.dach);
-      for (var i = -1; i <= 1; i++) {
+      kugel(parts, bw * 0.96, rh * 0.54, bd * 0.94, x, basis + rh * 0.06, z, f.dach);
+      for (i = -1; i <= 1; i++) {
         kegel(parts, w * 0.24, rh * (0.56 + 0.08 * Math.abs(i)), d * 0.24,
-          x + i * w * 0.30, y + rh * 0.44, z, f.akzent, 7);
+          x + i * w * 0.30, basis + rh * 0.40, z, f.akzent, 7);
       }
-      break;
+      return basis + rh * 0.72;
     case "kristall":
       kristall(parts, w * 1.12, rh * 1.25, d * 1.10, x, y + rh * 0.48, z,
         f.dach, 0, variantenIndex * 0.11, 0);
-      break;
-    case "schilf":
-      kegel(parts, w * 1.20, rh * 0.92, d * 1.20, x, y + rh * 0.46, z, f.dach, 8);
-      for (var s = -1; s <= 1; s += 2) {
-        kegel(parts, w * 0.10, rh * 0.64, d * 0.10, x + s * w * 0.36,
-          y + rh * 0.46, z, f.akzent, 5);
-      }
-      break;
+      return y + rh * 1.10;
     case "stern":
-      kugel(parts, w * 1.10, rh * 0.72, d * 1.10, x, y, z, f.dach, true);
-      kristall(parts, w * 0.22, rh * 0.56, d * 0.22, x, y + rh * 0.66, z, f.akzent);
-      break;
+      kugel(parts, bw * 0.94, rh * 0.72, bd * 0.94, x, basis, z, f.dach, true);
+      kristall(parts, w * 0.22, rh * 0.56, d * 0.22, x, basis + rh * 0.56, z, f.akzent);
+      return basis + rh * 0.84;
     case "basalt":
-      kegel(parts, w * 1.12, rh, d * 1.12, x, y + rh / 2, z, f.dach, 6);
-      for (var q = -1; q <= 1; q += 2) {
+      kegel(parts, bw, rh * p.neigung, bd, x, basis + rh * 0.5 * p.neigung, z,
+        f.dach, 6);
+      for (q = -1; q <= 1; q += 2) {
         kristall(parts, w * 0.18, rh * 0.62, d * 0.18, x + q * w * 0.28,
-          y + rh * 0.44, z, f.akzent, 0, 0, q * 0.12);
+          basis + rh * 0.44 * p.neigung, z, f.akzent, 0, 0, q * 0.12);
       }
-      break;
+      return basis + rh * p.neigung;
   }
-  return y + rh;
+  return basis + rh;
 }
 
 function fensterUndTuer(parts, f, w, d, h, x, z, variantenIndex) {

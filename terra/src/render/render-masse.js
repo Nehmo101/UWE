@@ -18,10 +18,22 @@ function berechneRenderMasse(breite, hoehe, geraeteDpr, skala) {
   var pixelRatio = Math.max(1, Math.min(2, dpr, budgetDpr));
   var s = (typeof skala === 'number' && skala > 0 && skala < 1) ? skala : 1;
   pixelRatio = Math.max(0.5, pixelRatio * s);
+  /* Tiefen-Prepass in VOLLER Renderaufloesung (vorher halbe).
+     Der Grund steht im Bild: aus der halben Aufloesung zeichnete der Sobel des
+     Kante-Passes seine Silhouettenlinie in 2x2-Bloecken — die Tiefentextur
+     muss NearestFilter tragen (DEPTH_COMPONENT ist in WebGL2 nicht filterbar),
+     also rastete die Linie auf genau diesen Bloecken ein und lief als vier
+     Bildpunkte breite Treppe ueber jeden Hoehenruecken. Dasselbe galt fuer den
+     Kontakthof, der die Objekte erdet, und fuer die Himmelsmaske der Godrays.
+     Gemessen kostet die volle Aufloesung nichts: alle drei Weitaufnahmen
+     bleiben bei 17 ms Median. Der Prepass ist seit dem Materialtausch ein
+     reiner Tiefendurchlauf (MeshDepthMaterial, kein Shading) — die vierfache
+     Fragmentzahl faellt neben der Geometriearbeit nicht ins Gewicht, die er
+     ohnehin schon leistet. */
   return {
     pixelRatio: pixelRatio,
-    tiefenBreite: Math.max(1, Math.round(w * pixelRatio / 2)),
-    tiefenHoehe: Math.max(1, Math.round(h * pixelRatio / 2))
+    tiefenBreite: Math.max(1, Math.round(w * pixelRatio)),
+    tiefenHoehe: Math.max(1, Math.round(h * pixelRatio))
   };
 }
 

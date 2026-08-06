@@ -44,9 +44,13 @@ function kegel(parts, w, h, d, x, y, z, farbe, segmente, rx, ry, rz) {
   ));
 }
 
+/* Wie in architektur-geometrie.js: diese beiden Formen tragen hier nur
+   Kleinzeug (Laternenkugeln, Zierringe von 9 cm Rohrstaerke) und kosteten
+   dafuer 64 bzw. 96 Dreiecke. Die gesenkte Aufloesung finanziert die
+   Requisiten weiter unten, die man aus Siedlungsentfernung wirklich sieht. */
 function kugel(parts, w, h, d, x, y, z, farbe) {
   parts.push(part(
-    new THREE.SphereGeometry(0.5, 8, 5),
+    new THREE.SphereGeometry(0.5, 6, 4),
     M(x, y, z, 0, 0, 0, w, h, d),
     farbe
   ));
@@ -54,7 +58,7 @@ function kugel(parts, w, h, d, x, y, z, farbe) {
 
 function torus(parts, w, h, d, x, y, z, farbe, bogen, rx, ry, rz) {
   parts.push(part(
-    new THREE.TorusGeometry(0.5, 0.09, 4, 12, bogen === undefined ? TAU : bogen),
+    new THREE.TorusGeometry(0.5, 0.09, 3, 10, bogen === undefined ? TAU : bogen),
     M(x, y, z, rx, ry, rz, w, h, d),
     farbe
   ));
@@ -506,6 +510,165 @@ function waldsaeuleNutzung(parts, k) {
   }
 }
 
+/* ==========================================================================
+   Siedlungsschicht — Erdanschluss, Schornstein, Requisiten
+
+   Bis hierher war ein Bau ein Baukoerper: er stand mit einer scharfen Kante
+   im Boden, hatte nichts auf dem Dach und nichts an der Wand. Fuenfzehn
+   davon nebeneinander lasen sich als Modul, nicht als Siedlung. Was in
+   anno-01, anno-08 und howl-006 eine Gasse bewohnt aussehen laesst, sind
+   genau drei Dinge, und keines davon ist der Baukoerper selbst:
+
+     1. Der ERDANSCHLUSS. Kein Haus endet als Schnittkante im Gras; darunter
+        liegt ein breiteres Fundament aus grob gesetztem Stein.
+     2. Der SCHORNSTEIN. Er bricht die Dachsilhouette, wirft einen eigenen
+        Schatten auf die Dachflaeche und sagt "hier wird gekocht".
+     3. Die REQUISITEN. Kisten, Faesser, Waesche, Markise, Blumenkasten,
+        Aussentreppe — das Zeug, das Leute vor ihre Tuer stellen.
+
+   Welche zwei Requisiten ein Bau bekommt, haengt am stabilen Muster aus Stil-
+   und Variantenindex. Damit tragen die achtzehn Bautypen EINER Kultur
+   achtzehn verschiedene Kombinationen, ohne dass ein Zufallsstrom noetig
+   waere — die Geometrie wird einmal gebacken und hundertfach instanziert.
+
+   Getragen wird die Schicht von den Rollen wohnen, handwerk und
+   gemeinschaft. Bibliothek, Tempel und Palast bekommen sie NICHT: dort waere
+   Waesche auf der Leine kein Leben, sondern ein Fehler — und in einem Dorf
+   stehen von ihnen ohnehin hoechstens einer.
+   ========================================================================== */
+
+var SIEDLUNGS_ROLLEN = new Set(["wohnen", "handwerk", "gemeinschaft"]);
+/* Haeuser auf Stelzen (schilfinseln) und schwebende Kloester (wolkenkloster)
+   haben definitionsgemaess keinen Erdanschluss. Eine Bruecke auch nicht. */
+var OHNE_SOCKEL = new Set(["schilfinseln", "wolkenkloster"]);
+
+function siedlungsBau(k) {
+  return SIEDLUNGS_ROLLEN.has(k.gruppe) && !istBruecke(k) &&
+    k.profil !== "halle" && k.profil !== "pavillon";
+}
+
+/**
+ * Fundamentkranz: ein flaches Achteck, gut zehn Prozent breiter als die Wand
+ * und nach unten ausgestellt. Es traegt die Wand optisch und ersetzt den
+ * geometrischen Schnitt in den Boden durch eine Kante, die dort hingehoert.
+ * Achteckig, weil dieselbe Form unter einem Kastenhaus wie unter einem
+ * Rundturm sitzt — ein Quadrat waere unter der Haelfte der zwoelf Kulturen
+ * falsch herum.
+ */
+function erdanschluss(parts, k) {
+  if (istBruecke(k) || OHNE_SOCKEL.has(k.stil)) return;
+  var stein = farbton(k.f.wandDunkel, 0.80);
+  zylinder(parts, k.w * 1.15, k.h * 0.062, k.d * 1.15,
+    0, k.h * 0.031, 0, stein, 8, 0.86);
+  /* Zwei unregelmaessig gesetzte Randsteine brechen die perfekte Kante. */
+  for (var s = -1; s <= 1; s += 2) {
+    var seite = s * (0.5 + muster(k, 51 + s, 3) * 0.06);
+    box(parts, k.w * 0.15, k.h * 0.045, k.d * 0.13,
+      seite * k.w, k.h * 0.022, s * k.d * 0.28,
+      farbton(stein, s > 0 ? 1.16 : 0.88), 0, s * 0.14, s * 0.05);
+  }
+}
+
+/**
+ * Schornstein. Er muss ueber den First hinaus: `k.spitze` ist die Dachhoehe,
+ * die architektur-geometrie.js aus Traufkranz und Dachkoerper zurueckmeldet.
+ * Steht er zu kurz, sieht es aus, als sei er im Dach versunken.
+ */
+function schornstein(parts, k) {
+  var b = Math.min(k.w, k.d) * 0.15;
+  var fuss = k.h * 0.92;
+  var kopf = Math.max(k.spitze, k.h * 1.15) + Math.max(0.22, k.h * 0.1);
+  var hoehe = kopf - fuss;
+  if (hoehe <= 0.1) return;
+  var x = (muster(k, 61, 2) ? 1 : -1) * k.w * 0.26;
+  var z = -k.d * (0.12 + muster(k, 62, 3) * 0.05);
+  var schaft = farbton(k.f.wandDunkel, 0.94);
+  box(parts, b, hoehe, b * 0.88, x, fuss + hoehe * 0.5, z, schaft);
+  box(parts, b * 1.35, hoehe * 0.11, b * 1.22, x, kopf, z,
+    farbton(schaft, 0.62));
+}
+
+function kisten(parts, k, s) {
+  var g = Math.min(k.w, k.d) * 0.19;
+  box(parts, g, g * 0.78, g * 0.9, s * k.w * 0.44, g * 0.39, k.d * 0.52,
+    k.f.holz, 0, s * 0.22, 0);
+  box(parts, g * 0.78, g * 0.62, g * 0.72, s * k.w * 0.4, g * 1.09,
+    k.d * 0.55, farbton(k.f.holz, 1.18), 0, -s * 0.34, s * 0.04);
+}
+
+function faesser(parts, k, s) {
+  var g = Math.min(k.w, k.d) * 0.17;
+  for (var i = 0; i < 2; i++) {
+    zylinder(parts, g * (1 - i * 0.12), g * 1.05, g * (1 - i * 0.12),
+      s * k.w * (0.42 + i * 0.12), g * 0.53, k.d * (0.48 - i * 0.16),
+      farbton(k.f.holz, i ? 0.86 : 1.1), 7, 0.9, i ? 0.1 : 0, 0, i ? s * 0.06 : 0);
+  }
+}
+
+/** Waescheleine zwischen Hauswand und einem schraegen Pfosten. */
+function waescheleine(parts, k, s) {
+  var y = k.h * 0.56, z = k.d * 0.6;
+  zylinder(parts, k.w * 0.028, k.h * 0.66, k.w * 0.028,
+    s * k.w * 0.46, k.h * 0.33, z, k.f.holz, 6, 0.78, 0, 0, -s * 0.07);
+  box(parts, k.w * 0.5, k.h * 0.012, k.d * 0.012,
+    s * k.w * 0.24, y, z, farbton(k.f.holz, 0.7));
+  for (var i = 0; i < 3; i++) {
+    box(parts, k.w * 0.085, k.h * (0.1 + (i % 2) * 0.045), k.d * 0.012,
+      s * k.w * (0.08 + i * 0.13), y - k.h * (0.06 + (i % 2) * 0.022), z,
+      i === 1 ? k.f.fenster : farbton(k.f.wand, 1.1), 0, 0, (i - 1) * 0.05);
+  }
+}
+
+/** Markise ueber der Tuer: ein geneigtes Tuch auf zwei duennen Stangen. */
+function markise(parts, k, s) {
+  var y = k.h * 0.42, z = k.d * 0.62;
+  box(parts, k.w * 0.42, k.h * 0.028, k.d * 0.3,
+    s * k.w * 0.06, y, z, k.f.akzent, -0.34, 0, 0);
+  for (var q = -1; q <= 1; q += 2) {
+    zylinder(parts, k.w * 0.022, k.h * 0.34, k.w * 0.022,
+      s * k.w * 0.06 + q * k.w * 0.19, y - k.h * 0.2, z + k.d * 0.09,
+      k.f.holz, 6, 0.8);
+  }
+}
+
+function blumenkasten(parts, k, s) {
+  var z = k.d * 0.57, y = k.h * 0.33;
+  box(parts, k.w * 0.26, k.h * 0.055, k.d * 0.075,
+    s * k.w * 0.18, y, z, k.f.holz);
+  for (var i = -1; i <= 1; i++) {
+    kugel(parts, k.w * 0.075, k.h * 0.06, k.d * 0.06,
+      s * k.w * 0.18 + i * k.w * 0.085, y + k.h * 0.05, z,
+      i ? farbton(k.f.dach, 1.24) : k.f.akzent);
+  }
+}
+
+/** Aussentreppe an der Flanke — drei Stufen und ein Podest. */
+function aussentreppe(parts, k, s) {
+  var b = k.w * 0.2;
+  for (var i = 0; i < 3; i++) {
+    box(parts, b, k.h * 0.05, k.d * 0.16 - i * k.d * 0.03,
+      s * k.w * (0.5 - i * 0.02), k.h * (0.025 + i * 0.05),
+      k.d * (0.44 - i * 0.11), farbton(k.f.wandDunkel, 0.9 + i * 0.09));
+  }
+  box(parts, b * 1.1, k.h * 0.045, k.d * 0.2,
+    s * k.w * 0.46, k.h * 0.175, k.d * 0.14, k.f.holz);
+}
+
+var REQUISITEN = [kisten, faesser, waescheleine, markise, blumenkasten, aussentreppe];
+
+/**
+ * Zwei Requisiten je Bau, auf verschiedenen Seiten. Der zweite Griff ist um
+ * eine Primzahl versetzt, damit die Paare nicht nach dem dritten Bautyp
+ * durchlaufen — sonst haetten wohnhaus und turmhaus dieselbe Kombination.
+ */
+function requisiten(parts, k) {
+  var a = muster(k, 71, REQUISITEN.length);
+  var b = (a + 1 + muster(k, 73, REQUISITEN.length - 1)) % REQUISITEN.length;
+  var seite = muster(k, 77, 2) ? 1 : -1;
+  REQUISITEN[a](parts, k, seite);
+  REQUISITEN[b](parts, k, -seite);
+}
+
 var ROLLEN_VEREDLER = {
   wohnen: rolleWohnen, gemeinschaft: rolleGemeinschaft,
   handwerk: rolleHandwerk, wissen: rolleWissen,
@@ -548,5 +711,10 @@ export function gestalteArchitekturFormensprache(parts, stil, variante, farben, 
   waldsaeuleSockel(parts, k);
   waldsaeuleMaterial(parts, k);
   waldsaeuleNutzung(parts, k);
+  erdanschluss(parts, k);
+  if (siedlungsBau(k)) {
+    schornstein(parts, k);
+    requisiten(parts, k);
+  }
   return parts.length - vorher;
 }

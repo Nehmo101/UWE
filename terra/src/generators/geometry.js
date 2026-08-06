@@ -20,6 +20,9 @@ import { veredleBestandKatalog } from '../assets/bestand-katalog-veredelung.js';
 import { veredleBestandKatalogFormensprache } from '../assets/bestand-katalog-formensprache.js';
 // I1: die Kartenzeichen. Umgekehrter Weg waere ein Zyklus — siehe unten.
 import { registriereSignaturPools } from '../render/signaturen.js';
+// Farbrampen des Blattwerks. geometrie-hilfen.js haengt nur an three — die
+// Richtung generators/ -> assets/ ist hier laengst etabliert (siehe oben).
+import { farbton, mischFarbe, laubTon } from '../assets/geometrie-hilfen.js';
 import { terrainColor, heightAt } from '../world/terrain.js';
 // B4 — Bruchdrift: render/materials.js braucht das Uniform-Buendel der
 // Bruchmaske, darf paths.js aber nicht selbst importieren (paths.js legt beim
@@ -428,14 +431,20 @@ function geoFeldreihe() {
 function geoBusch() {
   /* Detailrunde: zwei versetzte Nebenlappen und eine dritte Silhouettenkarte
      — der Busch war aus der Naehe ein einzelner Ball mit Kreuzquad, jetzt
-     liest er sich als gewachsene Gruppe. */
+     liest er sich als gewachsene Gruppe.
+
+     Bewuchsrunde: die zwei kleineren Ballen sind wieder raus. Sie lagen
+     vollstaendig unter der Lappengruppe, die `bodenForm` in
+     umwelt-formensprache.js seither darueberlegt (neun Ballen mit
+     Werthierarchie) — 40 Dreiecke je Busch, die kein Bild erzeugen, und der
+     Bodendecker-Pass verdoppelt sie danach noch einmal. Der grosse Ballen
+     bleibt als dunkler Kern stehen; er ist genau das, was in totoro-025 unter
+     der Blattmasse steht. */
   return mergeGeos([
     part(new PL(1.5, 1.25), M(0, 0.62, 0), 0x5d7845),
     part(new PL(1.5, 1.25), M(0, 0.62, 0, 0, Math.PI / 2, 0), 0x526b3d),
     part(new PL(1.2, 1.05), M(0.18, 0.5, 0.12, 0, 0.8, 0.1), 0x61804a),
-    part(new IC(0.52, 0), M(0, 0.55, 0, 0, 0.4, 0, 1.15, 0.8, 1.15), 0x587442),
-    part(new IC(0.34, 0), M(0.46, 0.38, 0.3, 0, 1.3, 0, 1.1, 0.72, 1.1), 0x5e7a48),
-    part(new IC(0.28, 0), M(-0.42, 0.32, -0.24, 0, 2.3, 0, 1.12, 0.7, 1.12), 0x516b3e)
+    part(new IC(0.52, 0), M(0, 0.5, 0, 0, 0.4, 0, 1.2, 0.78, 1.2), 0x2f4a31)
   ]);
 }
 
@@ -1380,6 +1389,22 @@ function kugelNormalen(geos, cx, cy, cz, oval) {
  * Baumart: konischer Stamm (UV auf den opaken Texturrand geklemmt) plus
  * mehrere Kronenkarten in verschiedenen Winkeln und Groessen.
  */
+/* Kronenkarten-Wert: 0 = unterste, innerste Karte (Kernschatten), 1 = oberste,
+   aeusserste (Streiflicht). Bisher trugen ALLE Karten eines Baumes exakt
+   dieselbe Farbe `o.laub` — die Krone war damit eine einfarbige Flaeche, auf
+   der nur das Terrainlicht noch etwas Modellierung leisten konnte. In den
+   Vorlagen (mononoke-010, totoro-019) traegt das Blattwerk seine Form
+   selbst: die Unterseite laeuft fast ins Schwarzgruene, die Sonnenseite ins
+   Gelbgruene. Das kostet kein Dreieck, nur eine andere Zahl im Farbattribut,
+   das ohnehin geschrieben wird. */
+function kronenTon(o, t) {
+  return laubTon({
+    kern: o.laubKern === undefined ? farbton(o.laub, 0.42) : o.laubKern,
+    mitte: o.laub,
+    licht: o.laubLicht === undefined ? mischFarbe(o.laub, 0xdfe8a8, 0.5) : o.laubLicht
+  }, t);
+}
+
 function geoBaumArt(o) {
   var parts = [];
   var stamm = part(new CY(o.stammOben, o.stammUnten, o.stammH, 6),
@@ -1395,14 +1420,25 @@ function geoBaumArt(o) {
   // wuerde er wie Laub statt wie Holz beleuchtet.
   var kronen = [];
   var cx = 0, cy = 0, cz = 0;
+  /* Die Karten werden nach ihrer Oberkante geordnet, damit `kronenTon` einen
+     echten Rang bekommt statt einer Zufallszahl: die tiefste Karte ist immer
+     der Kernschatten, die hoechste immer das Streiflicht — unabhaengig davon,
+     wie die Seed die Hoehen gerade gestreut hat. */
+  var lagen = [];
+  for (var k = 0; k < o.karten; k++) {
+    lagen.push(o.kroneY + (hashi(k, 17, o.seed) - 0.5) * o.kroneH * 0.22);
+  }
+  var sortiert = lagen.slice().sort(function (p, q) { return p - q; });
   for (var i = 0; i < o.karten; i++) {
     var a = i / o.karten * Math.PI + hashi(i, 3, o.seed) * 0.8;
     var kw = o.kroneW * (0.75 + hashi(i, 5, o.seed) * 0.5);
     var kh = o.kroneH * (0.8 + hashi(i, 7, o.seed) * 0.4);
     var ox = (hashi(i, 11, o.seed) - 0.5) * o.kroneW * 0.3 + o.lehne * 0.6;
     var oz = (hashi(i, 13, o.seed) - 0.5) * o.kroneW * 0.3;
-    var oy = o.kroneY + (hashi(i, 17, o.seed) - 0.5) * o.kroneH * 0.22;
-    var q = kronenQuad(kw, kh, ox, oy, oz, a, (hashi(i, 19, o.seed) - 0.5) * 0.16, o.laub);
+    var oy = lagen[i];
+    var rang = o.karten > 1 ? sortiert.indexOf(oy) / (o.karten - 1) : 0.5;
+    var q = kronenQuad(kw, kh, ox, oy, oz, a, (hashi(i, 19, o.seed) - 0.5) * 0.16,
+      kronenTon(o, rang));
     kronen.push(q);
     parts.push(q);
     // Zentrum aus den echten Platzierungen (Kartenfuss + halbe Hoehe) statt
@@ -1421,10 +1457,16 @@ function geoBaumArt(o) {
    damit mehr Silhouetten hintereinander, die Krone liest sich als Volumen
    statt als Fächer; die Huellkugel-Normalen buegeln das Licht wie bisher
    ueber alle Karten hinweg glatt. */
+/* laubKern/laubLicht: die Enden der Kronenrampe. Ohne Angabe leitet
+   `kronenTon` sie aus `laub` ab (0.42x bzw. halb Richtung Gelbgruen) — die
+   beiden Laubbaeume geben sie ausdruecklich an, weil sie die Karte tragen
+   und ihre Spanne dafuer weiter sein darf als die Ableitung. */
 var BAUM_LAUBBREIT = { stammOben: 0.16, stammUnten: 0.34, stammH: 2.4, rinde: 0x6f5a44,
-  karten: 6, kroneW: 4.2, kroneH: 3.4, kroneY: 2.0, lehne: 0.15, laub: 0x87a45c, seed: 41 };
+  karten: 6, kroneW: 4.2, kroneH: 3.4, kroneY: 2.0, lehne: 0.15, laub: 0x87a45c, seed: 41,
+  laubKern: 0x2c4630, laubLicht: 0xcbd88a };
 var BAUM_LAUBHOCH = { stammOben: 0.13, stammUnten: 0.26, stammH: 3.4, rinde: 0x7a6450,
-  karten: 5, kroneW: 2.6, kroneH: 4.4, kroneY: 2.6, lehne: 0.08, laub: 0x7d9a52, seed: 43 };
+  karten: 5, kroneW: 2.6, kroneH: 4.4, kroneY: 2.6, lehne: 0.08, laub: 0x7d9a52, seed: 43,
+  laubKern: 0x28402c, laubLicht: 0xbfd07e };
 // oval (Default 1, s. kugelNormalen): nur die schlanken Arten stauchen die
 // y-Differenz — Nadel ist ~1.8x, Zypresse ~4x hoeher als breit, ohne Stauchung
 // wuerden ihre Flanken fast nur Auf-/Abwaertsnormalen bekommen.

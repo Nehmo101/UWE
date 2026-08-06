@@ -90,6 +90,31 @@ function Pool(name, geo, opts) {
   this.sichtbarAb = opts.sichtbarAb === undefined ? 0 : opts.sichtbarAb;
   this.sichtbarBis = opts.sichtbarBis === undefined ? 60 : opts.sichtbarBis;
   this.karte = !!opts.karte;
+  /* ------------------------------------------------------------------
+     Wer wirft, wer empfaengt.
+
+     WERFEN kostet: jeder Werferpool geht ein zweites Mal durch die
+     Geometriestufe, einmal fuer die Schattenkarte. Deshalb eine harte
+     Schwelle statt "alles": ab Radius 1.2 (Haeuser, Baeume, Mauern,
+     Felsen, Karren, Bruecken) — darunter liegen Grasbuescheln, Blumen,
+     Kleintiere und Streugut, deren Schatten bei drei Bildpunkten
+     Instanzgroesse ohnehin niemand sieht, die aber den Loewenanteil der
+     Instanzen stellen.
+
+     EMPFANGEN kostet fuenf Texturzugriffe je Fragment. Das bekommt
+     trotzdem JEDER Koerperpool, gerade die kleinen: dass das Gras unter
+     einer Krone dunkel wird, ist die halbe Wirkung des ganzen Verfahrens.
+
+     Kartenzeichen (opts.karte) sind Tinte auf Papier und stehen aus
+     demselben Grund ausserhalb wie beim Tageszeit-Grundton: eine Karte
+     wird gelesen, nicht beleuchtet. Ihr Material ist ohnehin Basic und
+     kennt gar keine Schattenmaske.
+     `wirft: false` ueberstimmt die Schwelle fuer Pools, die trotz
+     Groesse keinen Schatten werfen sollen (Wasserflaechen, Nebelkoerper).
+     ------------------------------------------------------------------ */
+  this.wirft = !this.karte && opts.wirft !== false &&
+    (opts.wirft === true || this.radius >= 1.2);
+  this.empfaengt = !this.karte && opts.empfaengt !== false;
   this.mat = terraMat({
     // I1: Kartenzeichen bekommen ein unbeleuchtetes Material. Ein Ortsring mit
     // Lichtrichtung, Wolkenschatten und Malschicht saehe aus wie ein liegender
@@ -123,6 +148,8 @@ Pool.prototype.ensure = function (n) {
   var cap = Math.max(256, this.cap * 2, Math.ceil(n * 1.35));
   if (this.mesh) { sceneRef.scene.remove(this.mesh); this.mesh.dispose(); }
   var m = new THREE.InstancedMesh(this.geo, this.mat, cap);
+  m.castShadow = this.wirft;
+  m.receiveShadow = this.empfaengt;
   // Der echte Welt-Radius folgt nach dem Packen aus Poolradius und Instanzskala.
   m.userData.terraDepthDetail = true;
   m.frustumCulled = true;
@@ -344,6 +371,13 @@ function repack(names) {
 
 /* --- Kontaktschatten: eine InstancedMesh für die ganze Karte ---------- */
 var schattenGeo = weiteHuelle(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2));
+/* Der gemalte Kontaktfleck war bis zu dieser Runde der EINZIGE Schatten in
+   terra. Jetzt liegt ein echter Wurfschatten darunter, und beide zusammen
+   ergaeben einen doppelten, viel zu dunklen Fuss. atmosphere.js multipliziert
+   die Preset-Deckkraft deshalb mit SCHATTEN_BLOB_REST (siehe dort).
+   Weggeworfen wird der Fleck NICHT: er sitzt exakt am Fusspunkt, waehrend
+   die Schattenkarte am Kontakt durch normalBias zwangslaeufig einen kleinen
+   Spalt laesst — der Fleck schliesst genau diesen Spalt und erdet das Objekt. */
 var schattenMat = new THREE.MeshBasicMaterial({
   map: TEX.shadowBlob, color: 0x2b2318, transparent: true,
   depthWrite: false, side: THREE.DoubleSide, opacity: 0.45

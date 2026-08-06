@@ -672,8 +672,77 @@ test('I1 — das Kuestenband liegt auf der Wasserlinie', () => {
    600. Die Pruefpunkte sind deshalb von 600/599.999 auf 60/59.999 gewandert.
    Kennzahlen aufgenommen am 29.07.2026, Seed 4711 / wiese, unveraenderte
    Messpunkte. */
+/* NEU AUFGENOMMEN am 06.08.2026 (Runde Gelaendeoberflaeche), Seed 4711 /
+   wiese, unveraenderte Messpunkte. Alt: summe 1922.9031718169108,
+   quadrate 731.81426713438873 — relative Verschiebung 2.70e-3 bzw. 3.53e-3.
+
+   Die Verschiebung ist GEWOLLT und betrifft ausschliesslich den
+   Ortsmassstab. Vier Zusaetze in terrainColor bewegen sie, alle mit
+   demselben Ziel: der Nahbereich trug bis hierher die geringste
+   Detaildichte des ganzen Bildes.
+
+     * die GRASNARBE (zwei Oktaven bei 0.115 und 0.245, also 8,7 und 4,1
+       Welteinheiten) samt der gleichlaufenden Helligkeitswelle. Zwischen
+       der bisher feinsten Farboktave (0.055 = 18 Einheiten) und dem
+       Texturkorn klaffte eine ganze Groessenordnung; genau in ihr liegt
+       alles, was eine Wiese als Wiese lesbar macht.
+     * die SANDZEICHNUNG: die Sandzone war ein einziger Farbwert ueber
+       Dutzende Einheiten, weil die Narbe vor ihrem lerp steht und
+       ueberschrieben wurde.
+     * eine dritte STOEROKTAVE (0.30) an den Zonengrenzen — sie verzahnt die
+       Grenze, statt sie nur zu wellen.
+     * die SCHNEEVERTEILUNG nach Neigung und Kruemmung: statt einer
+       geschlossenen Decke oberhalb der Schneegrenze eine ungleiche Auflage.
+       Nachgemessen liegt die Umschlagstelle jetzt zwischen 25 und 35 Grad
+       Hangneigung (vorher brach der Fels erst ab 50 Grad durch).
+
+   Dass die Quadratsumme staerker steigt (+0,35 %) als die Summe (+0,27 %),
+   ist die Signatur eines Detailzuwachses: mehr Streuung bei fast gleicher
+   Lage. Die Messpunkte liegen alle fuenf Zellen, tasten die feinste neue
+   Oktave (4,1 Einheiten) also unter ihrer Wellenlaenge ab — der wahre
+   Zuwachs im Bild ist groesser als diese Kennzahl zeigt.
+
+   Die zweite Kennzahl darunter (Kartenmassstab) ist dabei BITGLEICH
+   geblieben — nachgemessen, relative Abweichung exakt 0. Das ist der
+   Beleg, dass alle vier Zusaetze sauber an dKorn haengen und die Zusage
+   „auf Kartenmassstab aendert sich nichts" nicht nur behauptet ist. */
+/* ZWEITE NEUAUFNAHME am 06.08.2026, derselbe Tag, spaeterer Stand derselben
+   Runde. Alt: summe 1928.0975293504148, quadrate 734.3970044113106.
+   Neu: -0,996 % auf der Summe, -2,47 % auf den Quadraten.
+
+   Die Quadratsumme FAELLT diesmal, und zwar staerker als die Summe — nach der
+   Lesart des Absatzes darueber also weniger Streuung, weniger Detail. Genau
+   das ist gewollt, und der Grund ist ein Ortswechsel, nicht ein Verlust:
+
+     Der Wegrand hat den Vertexschritt VERLASSEN. Bis eben stand in
+     terrainColor eine schmale Schwelle (sstep(0.24, 0.44)) auf einem mit zwei
+     Oktaven verrauschten Trittwert. Sie hat die Streuung dieser Kennzahl
+     getragen — und im Bild eine Zickzacklinie erzeugt, weil ihre feinste
+     Oktave (2,9 Welteinheiten) auf einem Gitter mit einem Vertex je Einheit
+     zwischen zwei Stuetzstellen nur eine GERADE ergeben kann. Das ist der
+     zweitschwerste Befund der letzten Abnahme. An ihrer Stelle steht jetzt ein
+     weiches Band ueber die Wegbreite; die Kante faellt im Nahfeld-Block des
+     Shaders (world/terrain.js), gebrochen an den Hoehenkanaelen der beiden
+     Bodentexturen mit 197 Texeln je Welteinheit.
+
+     Diese Kennzahl kann davon NICHTS sehen: sie misst terrainColor, also die
+     Vertexfarbe, und der ganze Zuwachs liegt eine Ebene tiefer. Der Rueckgang
+     ist deshalb kein Detailverlust, sondern die Messgroesse einer
+     Verlagerung — die Vertexfarbe traegt heute bewusst WENIGER Kontrast,
+     damit das Gitter keine Kanten mehr zeichnet, die ihm zu grob sind.
+
+   Der Rest der Verschiebung verteilt sich auf zwei kleinere Zusaetze, beide
+   ebenfalls im Nahbereich und beide an dKorn:
+     * die MULDEN — eine Oktave bei 0.085 (rund 12 Welteinheiten), die der
+       leeren Flaeche fern jedes Weges Struktur gibt (Befund "Die grosse leere
+       Flaeche im Vordergrund braucht Struktur").
+     * das STRANDBAND — Feuchtzone unter, Grobkorn ueber der Sandzone, gegen
+       dieselbe Stoergroesse verschoben wie die Sand- und Felsgrenze.
+
+   Die Kartenmassstab-Kennzahl darunter ist erneut BITGLEICH geblieben,
+   nachgemessen mit relativer Abweichung exakt 0.000e+0 auf BEIDEN Summen. */
 const BESTAND_VOR_RELIEF = {
-  summe: 1922.9031718169108, quadrate: 731.81426713438873, n: 7803,
+  summe: 1908.9018222153802, quadrate: 716.2766723035288, n: 7803,
 };
 /* Der zweite Teil der Neueichung: bei genau 600 war die Farbe frueher an den
    Bestand genagelt; dieselbe Stelle ist jetzt voll beruhigt. Von 96
