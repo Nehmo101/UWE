@@ -70,22 +70,41 @@
   margin: 0 0 1.15rem;
 }
 
+/**
+ * Überschriften im Lesetext — gleiche Werte wie in `design-v2/wiki.css`.
+ *
+ * Beide Regelsätze treffen dieselben Elemente (`class="wiki-content
+ * uwe-v2-wiki-content"`) bei gleicher Spezifität; welcher gewinnt, entscheidet
+ * allein die Import-Reihenfolge im App-Layout. Sie müssen deshalb dasselbe
+ * sagen — sonst hängt die Schriftgröße davon ab, welche App gerade rendert.
+ *
+ * Warum größer und fett: der Fließtext läuft auf `--uwe-text-base` (16–17px),
+ * die Überschriften standen auf 1.35rem/1.15rem und `medium`. Zwei bis vier
+ * Pixel Unterschied gliedern keine lange Seite.
+ */
 .wiki-content h2,
 .wiki-content h3,
 .wiki-content h4 {
   color: var(--uwe-reader-heading, var(--uwe-fg));
-  margin: 2rem 0 0.75rem;
-  line-height: 1.35;
+  margin: 2.25rem 0 0.75rem;
+  line-height: var(--uwe-leading-snug, 1.28);
+  font-weight: var(--uwe-weight-bold, 700);
 }
 
 .wiki-content h2 {
-  font-size: 1.35rem;
+  font-size: var(--uwe-text-2xl, clamp(1.375rem, 1.24rem + 0.67vw, 1.75rem));
   padding-bottom: 0.35rem;
   border-bottom: 1px solid color-mix(in srgb, var(--uwe-border) 125%, var(--uwe-muted) 0%);
 }
 
 .wiki-content h3 {
-  font-size: 1.15rem;
+  font-size: var(--uwe-text-xl, clamp(1.1875rem, 1.11rem + 0.38vw, 1.375rem));
+  margin-top: 1.75rem;
+}
+
+.wiki-content h4 {
+  font-size: var(--uwe-text-lg, clamp(1.125rem, 1.09rem + 0.18vw, 1.1875rem));
+  margin-top: 1.5rem;
 }
 
 .wiki-content ul,

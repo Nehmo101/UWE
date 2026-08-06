@@ -321,4 +321,205 @@ describe("UWE game session management", () => {
     await db.$disconnect();
   });
 
+  /**
+   * Tischrunden-Sicht: der Befund war, dass Spieler die Abende *aller* Runden
+   * derselben Welt sahen. Die Welt-Zuordnung sagt, WAS lesbar ist — die
+   * Spielergruppe aus dem Studio sagt, an welchem Tisch jemand sitzt, und ist
+   * für Sessions ab hier führend.
+   */
+  describe("Sessions je Tischrunde", () => {
+    let groupAId: string;
+    let groupBId: string;
+    let playerAId: string;
+    let playerBId: string;
+    let sessionAId: string;
+    let sessionBId: string;
+    let worldWideSessionId: string;
+
+    before(async () => {
+      const db = createPrismaClient(databaseUrl);
+      const auth = createAuthService(db);
+      const service = createGameSessionService(databaseUrl);
+
+      const playerA = await auth.createUser({
+        displayName: "Spielerin A",
+        email: "gruppe-a@test.local",
+        password: "test",
+        portalAccess: true,
+        studioAccess: false,
+      });
+      playerAId = playerA.id;
+      const playerB = await auth.createUser({
+        displayName: "Spieler B",
+        email: "gruppe-b@test.local",
+        password: "test",
+        portalAccess: true,
+        studioAccess: false,
+      });
+      playerBId = playerB.id;
+
+      for (const userId of [playerAId, playerBId]) {
+        await auth.createWorldMembership({ userId, worldId });
+      }
+
+      // Gruppen direkt über Prisma: `@uwe/player-hub` hängt an diesem Paket,
+      // nicht umgekehrt — der Service ist hier nicht importierbar.
+      const groupA = await db.playerGroup.create({
+        data: { worldId, name: "Dienstagsrunde", slug: "dienstagsrunde" },
+      });
+      groupAId = groupA.id;
+      const groupB = await db.playerGroup.create({
+        data: { worldId, name: "Freitagsrunde", slug: "freitagsrunde" },
+      });
+      groupBId = groupB.id;
+
+      await db.playerGroupMember.create({ data: { groupId: groupAId, userId: playerAId } });
+      await db.playerGroupMember.create({ data: { groupId: groupBId, userId: playerBId } });
+
+      const sessionA = await service.create({
+        worldId,
+        campaignId,
+        groupId: groupAId,
+        title: "Abend der Dienstagsrunde",
+        sessionNumber: await service.getNextSessionNumber(worldId, campaignId),
+      });
+      sessionAId = sessionA.id;
+      const sessionB = await service.create({
+        worldId,
+        campaignId,
+        groupId: groupBId,
+        title: "Abend der Freitagsrunde",
+        sessionNumber: (await service.getNextSessionNumber(worldId, campaignId)) + 1,
+      });
+      sessionBId = sessionB.id;
+      const worldWide = await service.create({
+        worldId,
+        campaignId,
+        title: "Welt-weiter Abend",
+        sessionNumber: (await service.getNextSessionNumber(worldId, campaignId)) + 2,
+      });
+      worldWideSessionId = worldWide.id;
+
+      for (const id of [sessionAId, sessionBId, worldWideSessionId]) {
+        await service.publishRecap(id);
+      }
+
+      await db.$disconnect();
+    });
+
+    async function visibleSessionIds(userId: string | null): Promise<Set<string>> {
+      const db = createPrismaClient(databaseUrl);
+      const auth = createAuthService(db);
+      const ctx = await auth.buildAccessContextForWorld(worldSlug, {
+        userId: userId ?? undefined,
+      });
+      assert.ok(ctx);
+      const sessions = await auth.listGameSessionsForViewer(worldSlug, ctx);
+      await db.$disconnect();
+      return new Set(sessions.map((session) => session.id));
+    }
+
+    it("zeigt jeder Runde nur ihre eigenen Abende — plus die welt-weiten", async () => {
+      const forA = await visibleSessionIds(playerAId);
+      assert.ok(forA.has(sessionAId), "eigene Runde fehlt");
+      assert.ok(forA.has(worldWideSessionId), "welt-weiter Abend fehlt");
+      assert.ok(!forA.has(sessionBId), "fremde Runde ist sichtbar");
+
+      const forB = await visibleSessionIds(playerBId);
+      assert.ok(forB.has(sessionBId));
+      assert.ok(forB.has(worldWideSessionId));
+      assert.ok(!forB.has(sessionAId));
+    });
+
+    it("zeigt einem Spieler ohne Tischrunde keine Gruppen-Abende", async () => {
+      // `playerUserId` sitzt in keiner Gruppe — fail-closed: nur welt-weit.
+      const visible = await visibleSessionIds(playerUserId);
+      assert.ok(visible.has(worldWideSessionId));
+      assert.ok(!visible.has(sessionAId));
+      assert.ok(!visible.has(sessionBId));
+    });
+
+    it("öffnet die Detailseite einer fremden Runde auch mit bekannter Id nicht", async () => {
+      const db = createPrismaClient(databaseUrl);
+      const auth = createAuthService(db);
+
+      const ctxA = await auth.buildAccessContextForWorld(worldSlug, { userId: playerAId });
+      assert.ok(ctxA);
+      assert.equal(await auth.getGameSessionForViewer(worldSlug, sessionBId, ctxA), null);
+      assert.ok(await auth.getGameSessionForViewer(worldSlug, sessionAId, ctxA));
+      assert.ok(await auth.getGameSessionForViewer(worldSlug, worldWideSessionId, ctxA));
+
+      // Der Spielleiter sieht die Portal-Sicht weiterhin vollständig.
+      const dmCtx = await auth.buildAccessContextForWorld(worldSlug, { userId: dmUserId });
+      assert.ok(dmCtx);
+      assert.ok(await auth.getGameSessionForViewer(worldSlug, sessionBId, dmCtx));
+
+      await db.$disconnect();
+    });
+
+    it("hängt eine Spielernotiz nicht an den Abend einer fremden Runde", async () => {
+      const db = createPrismaClient(databaseUrl);
+      const auth = createAuthService(db);
+
+      const ctxA = await auth.buildAccessContextForWorld(worldSlug, { userId: playerAId });
+      assert.ok(ctxA);
+
+      const note = await auth.createPlayerNoteForViewer(worldSlug, ctxA, {
+        campaignId,
+        content: "Versuch, an einem fremden Abend zu hängen",
+        gameSessionId: sessionBId,
+      });
+      assert.ok(note);
+      assert.equal(note.gameSessionId, null);
+
+      const ownNote = await auth.createPlayerNoteForViewer(worldSlug, ctxA, {
+        campaignId,
+        content: "Notiz zum eigenen Abend",
+        gameSessionId: sessionAId,
+      });
+      assert.ok(ownNote);
+      assert.equal(ownNote.gameSessionId, sessionAId);
+
+      await db.$disconnect();
+    });
+
+    it("lehnt eine Runde aus einer fremden Welt ab", async () => {
+      const service = createGameSessionService(databaseUrl);
+      const repo = createUweRepository(databaseUrl);
+
+      const otherWorld = await repo.createWorld({
+        name: "Fremde Welt",
+        slug: "fremde-welt-sessions",
+      });
+      const db = createPrismaClient(databaseUrl);
+      const foreignGroup = await db.playerGroup.create({
+        data: { worldId: otherWorld.id, name: "Fremde Runde", slug: "fremde-runde" },
+      });
+
+      await assert.rejects(
+        service.update(sessionAId, { groupId: foreignGroup.id }),
+        /Tischrunde nicht gefunden/,
+      );
+
+      await db.$disconnect();
+    });
+
+    it("löst sich die Runde auf, wird der Abend wieder welt-weit (SetNull)", async () => {
+      const db = createPrismaClient(databaseUrl);
+      const service = createGameSessionService(databaseUrl);
+
+      await db.playerGroup.delete({ where: { id: groupBId } });
+
+      const session = await service.getById(sessionBId);
+      assert.ok(session);
+      assert.equal(session.groupId, null);
+
+      // Ab jetzt sieht ihn auch die andere Runde — genau wie jeden anderen
+      // Abend ohne Zuordnung.
+      const visible = await visibleSessionIds(playerAId);
+      assert.ok(visible.has(sessionBId));
+
+      await db.$disconnect();
+    });
+  });
 });

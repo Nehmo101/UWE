@@ -43,6 +43,8 @@ interface Props {
   session: DmGameSessionView;
   /** Kapitel (story_arc) der Kampagne fürs Zuordnungs-Select. */
   chapters: Array<{ id: string; title: string }>;
+  /** Tischrunden der Welt fürs Zuordnungs-Select; leer = Welt ohne Gruppen. */
+  groups: Array<{ id: string; name: string }>;
   linkablePages: LinkablePage[];
   /**
    * Notizen und DM-Zusammenfassung als gerendertes HTML mit aufgelösten
@@ -71,6 +73,7 @@ export function SessionDetailClient({
   sessionId,
   session,
   chapters,
+  groups,
   linkablePages,
   richText,
   flash,
@@ -85,6 +88,11 @@ export function SessionDetailClient({
         {session.date ? (
           <span className="ml-2 text-sm text-muted-foreground">
             {session.date.toLocaleDateString("de-DE")}
+          </span>
+        ) : null}
+        {groups.length > 0 ? (
+          <span className="ml-2 text-sm text-muted-foreground">
+            · Runde: {session.groupName ?? "alle"}
           </span>
         ) : null}
         {session.storyArcPage && session.campaignSlug ? (
@@ -194,6 +202,29 @@ export function SessionDetailClient({
                 </option>
               ))}
             </select>
+          </div>
+        ) : null}
+        {groups.length > 0 ? (
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="session-detail-group">Tischrunde</Label>
+            {/* TODO(design-kit): natives Select — Leerwert „alle Runden" nötig. */}
+            <select
+              id="session-detail-group"
+              name="groupId"
+              defaultValue={session.groupId ?? ""}
+              className={cn(SELECT_CLASS, "w-full")}
+            >
+              <option value="">Alle Runden dieser Welt</option>
+              {groups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-sm text-muted-foreground">
+              Wer den Abend im Portal sieht. „Alle Runden“ zeigt ihn jedem, der die Welt
+              lesen darf — eine Runde nur deren Mitgliedern.
+            </p>
           </div>
         ) : null}
         <div className="flex flex-col gap-1.5">

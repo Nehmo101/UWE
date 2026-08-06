@@ -115,7 +115,11 @@ Fachlogik in `packages/campaign-cockpit`, Actions in
 `apps/studio/app/kampagnen-actions.ts`. „Session vorbereiten"
 (`/prepare-session`) versteht `?campaign=` (Kampagnen-Kontext samt aktuellem
 Kapitel) und `?sessionId=` (Vorauswahl). Sessions tragen ihr Kapitel
-(`GameSession.storyArcPageId`, Vorschlag = aktuelles Kapitel); der Live-Modus
+(`GameSession.storyArcPageId`, Vorschlag = aktuelles Kapitel) und ihre
+**Tischrunde** (`GameSession.groupId`, Select im Session-Formular): leer =
+„Alle Runden dieser Welt", sonst sieht den Abend im Portal nur diese Runde.
+Diese Zuordnung ist für die Spielersicht führend — wer in keiner Runde sitzt,
+sieht nur welt-weite Abende (Gruppen unter `/worlds/[slug]/gruppen`). Der Live-Modus
 zeigt darüber die **Akt-Tafel** (`SessionActBoard`): Quests mit
 Status-Schaltern (`returnTo=live`), NSC/Orte/Fraktionen aus Pins
 (`StoryArcEntityLink`, Verwaltung auf der Kapitel-Seite) plus

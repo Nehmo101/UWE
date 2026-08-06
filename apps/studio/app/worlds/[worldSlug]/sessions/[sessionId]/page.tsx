@@ -12,6 +12,7 @@ import {
 import { publishSessionRecapAction } from "../../../../session-actions";
 import {
   AVAILABILITY_LABELS,
+  createPlayerGroupService,
   createSessionAvailabilityService,
 } from "@uwe/player-hub";
 import { AiContextPanel } from "@/components/AiContextPanel";
@@ -51,6 +52,9 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
     session && (session.status === "planned" || session.status === "prepared")
       ? (await createSessionAvailabilityService(db).listForSessions([session.id])).get(session.id)
       : undefined;
+  // Tischrunden der Welt fürs Zuordnungs-Select — sie entscheiden, wer den
+  // Abend im Portal sieht.
+  const groups = session ? await createPlayerGroupService(db).listForWorld(world.id) : [];
   await db.$disconnect();
 
   if (!session) {
@@ -115,6 +119,11 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
             {session.playerVisibleSchedule && !session.recapPublished && (
               <Badge variant="secondary">Termin im Portal angekündigt</Badge>
             )}
+            {session.groupName ? (
+              <Badge variant="secondary">Nur „{session.groupName}“</Badge>
+            ) : groups.length > 0 ? (
+              <Badge>Alle Runden</Badge>
+            ) : null}
           </>
         }
         actions={!session.recapPublished ? (
@@ -174,6 +183,7 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
         sessionId={sessionId}
         session={session}
         chapters={chapters}
+        groups={groups.map((group) => ({ id: group.id, name: group.name }))}
         linkablePages={linkablePages.map((page) => ({
           id: page.id,
           title: page.title,

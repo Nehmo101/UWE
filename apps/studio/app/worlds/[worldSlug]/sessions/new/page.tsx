@@ -9,6 +9,7 @@ import {
   prisma,
 } from "@uwe/database/server";
 import { compareChapterOrder, findCurrentChapter, STORY_ARC_TYPE } from "@uwe/campaign-cockpit";
+import { createPlayerGroupService } from "@uwe/player-hub";
 import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { createGameSessionAction } from "../../../../session-actions";
@@ -45,6 +46,10 @@ export default async function StudioNewSessionPage({ params, searchParams }: Pro
       ).sort(compareChapterOrder)
     : [];
   const currentChapter = findCurrentChapter(chapters);
+
+  // Tischrunden der Welt. Gibt es keine, bleibt das Feld weg — dann ist jede
+  // Session ohnehin welt-weit.
+  const groups = await createPlayerGroupService(prisma).listForWorld(world.id);
 
   return (
     <>
@@ -105,6 +110,30 @@ export default async function StudioNewSessionPage({ params, searchParams }: Pro
             </select>
             <p className="text-sm text-muted-foreground">
               Vorausgewählt ist das aktuelle Kapitel der Kampagne.
+            </p>
+          </div>
+        ) : null}
+
+        {groups.length > 0 ? (
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="session-group">Tischrunde</Label>
+            {/* TODO(design-kit): natives Select — Leerwert „alle Runden" nötig. */}
+            <select
+              id="session-group"
+              name="groupId"
+              defaultValue=""
+              className="flex h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="">Alle Runden dieser Welt</option>
+              {groups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-sm text-muted-foreground">
+              Entscheidet, wer den Abend im Portal sieht. „Alle Runden“ zeigt ihn jedem,
+              der die Welt lesen darf; eine Runde zeigt ihn nur deren Mitgliedern.
             </p>
           </div>
         ) : null}

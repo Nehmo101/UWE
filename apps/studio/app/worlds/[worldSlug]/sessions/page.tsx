@@ -178,6 +178,11 @@ export default async function StudioSessionsPage({ params, searchParams }: Props
                   render: (session) => <GameSessionStatusBadge status={session.status} />,
                 },
                 {
+                  key: "group",
+                  label: "Runde",
+                  render: (session) => session.groupName ?? "Alle",
+                },
+                {
                   key: "portal",
                   label: "Portal",
                   render: (session) =>
