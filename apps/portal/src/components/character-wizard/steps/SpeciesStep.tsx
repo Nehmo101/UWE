@@ -31,6 +31,7 @@ import {
   type SpeciesLineage,
   type Trait,
 } from "@uwe/character-creator";
+import { artSource } from "../art";
 
 import { Button } from "@/src/components/ui/button";
 import { NavIcon } from "@/src/components/ui/icon";
@@ -337,7 +338,7 @@ function SpeciesTile({
       <span className="cw-tile__check" aria-hidden="true">
         <NavIcon name="check" width={16} height={16} />
       </span>
-      <TileArt entryKey={species.key} src={species.art} />
+      <TileArt entryKey={species.key} src={artSource(species.art)} />
       <span className="cw-tile__name">{species.name}</span>
       <span className="cw-tile__hook">{species.hook}</span>
       <span className="cw-tile__meta">

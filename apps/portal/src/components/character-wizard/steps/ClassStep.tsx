@@ -32,6 +32,7 @@ import {
   type Subclass,
   type Trait,
 } from "@uwe/character-creator";
+import { artSource } from "../art";
 
 import { Button } from "@/src/components/ui/button";
 import { NavIcon } from "@/src/components/ui/icon";
@@ -344,7 +345,7 @@ function ClassTile({
       <span className="cw-tile__check" aria-hidden="true">
         <NavIcon name="check" width={16} height={16} />
       </span>
-      <TileArt entryKey={dndClass.key} src={dndClass.art} />
+      <TileArt entryKey={dndClass.key} src={artSource(dndClass.art)} />
       <span className="cw-tile__name">{dndClass.name}</span>
       <span className="cw-tile__hook">{dndClass.hook}</span>
       <span className="cw-tile__meta">
