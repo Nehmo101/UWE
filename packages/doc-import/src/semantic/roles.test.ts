@@ -81,6 +81,18 @@ describe("classifySection", () => {
       "location",
     );
   });
+
+  it("unterscheidet spielbare Quests von Katalogen und Anleitungen", () => {
+    const campaign = {
+      profile: "campaign_book" as const,
+      parentRole: "part" as const,
+      isRoot: false,
+    };
+    assert.equal(classifySection(node("Questkatalog I: Kleine Quests"), campaign), "part");
+    assert.equal(classifySection(node("Nebenquests von Aernis"), campaign), "part");
+    assert.equal(classifySection(node("Kleine Quests führen"), campaign), "detail");
+    assert.equal(classifySection(node("Quest Q-K1 — Der letzte Brief"), campaign), "quest");
+  });
 });
 
 describe("describeStructure", () => {

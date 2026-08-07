@@ -305,6 +305,35 @@ describe("UWE game session management", () => {
     });
     assert.equal(session.storyArcPageId, chapter.id);
     assert.equal(session.storyArcPage?.title, "Akt I");
+    assert.equal(session.focuses.length, 1);
+    assert.equal(session.focuses[0].role, "chapter");
+    assert.equal(session.focuses[0].isCurrent, true);
+
+    const dungeon = await repo.createPage({
+      worldId,
+      campaignId,
+      title: "Fokus-Dungeon",
+      slug: "fokus-dungeon",
+      type: "dungeon",
+    });
+    const focused = await service.update(session.id, {
+      focuses: [
+        { pageId: chapter.id, role: "chapter" },
+        { pageId: dungeon.id, role: "dungeon", isCurrent: true },
+      ],
+    });
+    assert.equal(focused.focuses.length, 2);
+    assert.equal(focused.focuses[0].pageId, dungeon.id);
+    assert.equal(focused.storyArcPageId, chapter.id);
+    await assert.rejects(
+      service.update(session.id, {
+        focuses: [
+          { pageId: chapter.id, role: "chapter", isCurrent: true },
+          { pageId: dungeon.id, role: "dungeon", isCurrent: true },
+        ],
+      }),
+      /nur einen aktuellen Fokus/,
+    );
 
     // Keine story_arc-Seite → abgelehnt (Tenant-/Typ-Guard).
     await assert.rejects(

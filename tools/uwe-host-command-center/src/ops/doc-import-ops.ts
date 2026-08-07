@@ -1,4 +1,5 @@
 import { readdir, readFile, stat } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import path from "node:path";
 
 import type { createPrismaClient } from "@uwe/database/server";
@@ -166,6 +167,11 @@ export interface DocImportRequest {
   profile: DocProfile;
   /** Zuordnung von der lokalen KI verfeinern lassen, wenn der Maschinenraum-Host antwortet. */
   useAi: boolean;
+  /** Herkunft für Audit und reproduzierbare Neuimporte. */
+  repository?: string;
+  sourceRevision?: string;
+  /** `sync` entfernt nur Seiten, die dieser Quelle nachweislich selbst gehören. */
+  syncMode: "append" | "sync";
 }
 
 function normalizeRequest(input: unknown): DocImportRequest {
@@ -184,8 +190,19 @@ function normalizeRequest(input: unknown): DocImportRequest {
 
   // Im Bulk-Modus gibt es nichts einzuordnen: eine Datei ist eine Seite.
   const useAi = mode === "document" && source.useAi !== false;
+  const repository = typeof source.repository === "string" ? source.repository.trim() || undefined : undefined;
+  const sourceRevision = typeof source.sourceRevision === "string" ? source.sourceRevision.trim() || undefined : undefined;
+  const syncMode = source.syncMode === "sync" ? "sync" : "append";
 
-  return { path: sourcePath, worldSlug, mode, profile, useAi };
+  return { path: sourcePath, worldSlug, mode, profile, useAi, repository, sourceRevision, syncMode };
+}
+
+function digest(value: string): string {
+  return createHash("sha256").update(value, "utf8").digest("hex");
+}
+
+function draftHash(draft: { title: string; slug: string; type: string; html: string; parentKey?: string | null }): string {
+  return digest(JSON.stringify([draft.title, draft.slug, draft.type, draft.html, draft.parentKey ?? null]));
 }
 
 interface RoleHintResult {
@@ -217,6 +234,8 @@ function requestKey(request: DocImportRequest, files: DocImportSourceFile[]): st
     request.mode,
     request.profile,
     request.useAi,
+    request.sourceRevision,
+    request.syncMode,
     files.map((file) => [file.fileName, file.content.length]),
   ]);
 }
@@ -317,6 +336,7 @@ export interface DocImportPreviewResult {
   unresolvedLinks: string[];
   /** Die ersten Einträge des Baums — genug, um zu erkennen, ob es passt. */
   sample: Array<{ title: string; slug: string; type: string; depth: number; status: string }>;
+  sync: { added: number; changed: number; unchanged: number; removed: number; protected: number };
 }
 
 export async function previewDocImport(
@@ -325,6 +345,16 @@ export async function previewDocImport(
 ): Promise<DocImportPreviewResult> {
   const request = normalizeRequest(input);
   const { plan, existingPages, campaigns, files, aiWarnings } = await buildPlan(db, request);
+  const source = await db.docImportSource.findUnique({
+    where: { worldId_sourcePath: { worldId: existingPages[0]?.worldId ?? (await db.world.findUniqueOrThrow({ where: { slug: request.worldSlug } })).id, sourcePath: path.resolve(request.path) } },
+    include: { bindings: true },
+  });
+  const old = new Map(source?.bindings.map((binding) => [binding.sourceKey, binding]) ?? []);
+  const plannedKeys = new Set(plan.pages.map((draft) => draft.key));
+  const added = plan.pages.filter((draft) => !old.has(draft.key)).length;
+  const changed = plan.pages.filter((draft) => old.has(draft.key) && old.get(draft.key)?.sourceHash !== draftHash(draft)).length;
+  const unchanged = plan.pages.length - added - changed;
+  const stale = [...old.values()].filter((binding) => !plannedKeys.has(binding.sourceKey));
 
   const preview = buildDocImportPreview(plan.pages, plan.relations, {
     existingPages: existingPages.map((page) => ({
@@ -354,6 +384,13 @@ export async function previewDocImport(
       depth: item.depth,
       status: item.status,
     })),
+    sync: {
+      added,
+      changed,
+      unchanged,
+      removed: stale.filter((binding) => binding.ownedPage).length,
+      protected: stale.filter((binding) => !binding.ownedPage).length,
+    },
   };
 }
 
@@ -367,6 +404,7 @@ export interface DocImportExecuteResult {
   warnings: string[];
   /** Kennung des Rückbau-Eintrags, unter der das Studio den Lauf zurücknimmt. */
   undoToken: string | null;
+  sync: { added: number; changed: number; unchanged: number; removed: number; protected: number };
 }
 
 /**
@@ -394,6 +432,67 @@ export async function executeDocImport(
     confirmed: true,
   });
 
+  const sourcePath = path.resolve(request.path);
+  const previous = await db.docImportSource.findUnique({
+    where: { worldId_sourcePath: { worldId: world.id, sourcePath } },
+    include: { bindings: true },
+  });
+  const previousByKey = new Map(previous?.bindings.map((binding) => [binding.sourceKey, binding]) ?? []);
+  const writtenByKey = new Map(result.pages.map((page) => [page.key, page]));
+  const draftByKey = new Map(plan.pages.map((draft) => [draft.key, draft]));
+  const plannedKeys = new Set(plan.pages.map((draft) => draft.key));
+  const stale = [...previousByKey.values()].filter((binding) => !plannedKeys.has(binding.sourceKey));
+  let removed = 0;
+  if (request.syncMode === "sync") {
+    const ownedPageIds = stale.filter((binding) => binding.ownedPage).map((binding) => binding.pageId);
+    if (ownedPageIds.length > 0) {
+      removed = (await db.page.deleteMany({ where: { id: { in: ownedPageIds }, worldId: world.id } })).count;
+    }
+  }
+
+  const sourceHash = digest(files.map((file) => `${file.fileName}\0${file.content}`).join("\0\0"));
+  const campaignIds = await db.page.findMany({
+    where: { id: { in: result.pages.map((page) => page.pageId) } },
+    select: { id: true, campaignId: true },
+  });
+  const campaignByPage = new Map(campaignIds.map((page) => [page.id, page.campaignId]));
+  const distinctCampaigns = [...new Set(campaignIds.map((page) => page.campaignId).filter(Boolean))];
+  const importSource = await db.docImportSource.upsert({
+    where: { worldId_sourcePath: { worldId: world.id, sourcePath } },
+    create: { worldId: world.id, campaignId: distinctCampaigns.length === 1 ? distinctCampaigns[0] : null, sourcePath, repository: request.repository, sourceRevision: request.sourceRevision, contentHash: sourceHash },
+    update: { campaignId: distinctCampaigns.length === 1 ? distinctCampaigns[0] : null, repository: request.repository, sourceRevision: request.sourceRevision, contentHash: sourceHash, importedAt: new Date() },
+  });
+
+  for (const page of result.pages) {
+    const draft = draftByKey.get(page.key);
+    if (!draft) continue;
+    const old = previousByKey.get(page.key);
+    await db.docImportPageBinding.upsert({
+      where: { sourceId_sourceKey: { sourceId: importSource.id, sourceKey: page.key } },
+      create: { sourceId: importSource.id, pageId: page.pageId, sourceKey: page.key, sourceHash: draftHash(draft), ownedPage: page.disposition === "created", lastRevision: request.sourceRevision },
+      update: { pageId: page.pageId, sourceHash: draftHash(draft), ownedPage: old?.ownedPage ?? page.disposition === "created", lastRevision: request.sourceRevision },
+    });
+
+    const parent = draft.parentKey ? draftByKey.get(draft.parentKey) : undefined;
+    const parentWritten = draft.parentKey ? writtenByKey.get(draft.parentKey) : undefined;
+    if (draft.type === "quest" && parent?.type === "story_arc" && parentWritten) {
+      await db.page.update({ where: { id: page.pageId }, data: { questStoryArcId: parentWritten.pageId } });
+    }
+    if (draft.type === "dungeon") {
+      await db.dungeon.upsert({
+        where: { rootPageId: page.pageId },
+        create: { worldId: world.id, campaignId: campaignByPage.get(page.pageId) ?? null, rootPageId: page.pageId, storyArcPageId: parent?.type === "story_arc" ? parentWritten?.pageId : null, name: draft.title, slug: page.slug },
+        update: { campaignId: campaignByPage.get(page.pageId) ?? null, storyArcPageId: parent?.type === "story_arc" ? parentWritten?.pageId : null, name: draft.title, slug: page.slug },
+      });
+    }
+  }
+  if (request.syncMode === "sync" && stale.length > 0) {
+    await db.docImportPageBinding.deleteMany({ where: { id: { in: stale.map((binding) => binding.id) } } });
+  }
+  const added = plan.pages.filter((draft) => !previousByKey.has(draft.key)).length;
+  const changed = plan.pages.filter((draft) => previousByKey.has(draft.key) && previousByKey.get(draft.key)?.sourceHash !== draftHash(draft)).length;
+  const sync = { added, changed, unchanged: plan.pages.length - added - changed, removed, protected: stale.filter((binding) => !binding.ownedPage).length };
+
   const undoToken = await recordImportRun(db, {
     worldId: world.id,
     request,
@@ -416,6 +515,7 @@ export async function executeDocImport(
     linksCreated: result.linksCreated,
     warnings: result.warnings.slice(0, 50),
     undoToken,
+    sync,
   };
 }
 

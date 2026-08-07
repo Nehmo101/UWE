@@ -2,6 +2,7 @@ import type { PrismaClient } from "@uwe/database/server";
 import type { BrainPrismaClient } from "@uwe/database/brain-client";
 import type { FamilyPrismaClient } from "@uwe/database/family-client";
 import { createSettingsService } from "@uwe/database/server";
+import { loadInBatches } from "./batch";
 import { sanitizeBackupData, sanitizeSettingsForBackup } from "./sanitize";
 import type {
   BackupAssetPageLinkRecord,
@@ -12,6 +13,10 @@ import type {
   BackupData,
   BackupGameSessionPageLinkRecord,
   BackupGameSessionRecord,
+  BackupGameSessionFocusRecord,
+  BackupDungeonRecord,
+  BackupDocImportSourceRecord,
+  BackupDocImportPageBindingRecord,
   BackupLabelRecord,
   BackupLabelTemplateRecord,
   BackupPrintListItemRecord,
@@ -383,22 +388,25 @@ async function collectPageIds(
     pageIds.add(page.id);
   }
 
-  let changed = true;
-  while (changed) {
-    changed = false;
-    const children = await db.page.findMany({
-      where: {
-        worldId: { in: worldIds },
-        parentPageId: { in: [...pageIds] },
-      },
-      select: { id: true },
-    });
+  let parentIds = [...pageIds];
+  while (parentIds.length > 0) {
+    const children = await loadInBatches(parentIds, (batch) =>
+      db.page.findMany({
+        where: {
+          worldId: { in: worldIds },
+          parentPageId: { in: batch },
+        },
+        select: { id: true },
+      }),
+    );
+    const nextParentIds: string[] = [];
     for (const child of children) {
       if (!pageIds.has(child.id)) {
         pageIds.add(child.id);
-        changed = true;
+        nextParentIds.push(child.id);
       }
     }
+    parentIds = nextParentIds;
   }
 
   const sessionLinks = await db.gameSessionPageLink.findMany({
@@ -422,6 +430,7 @@ export async function collectBackupData(
 ): Promise<{ data: BackupData; stats: BackupStats; settings?: BackupSettingsRecord }> {
   const { worldIds, campaignIds } = await resolveScopeIds(db, scope);
   const pageIds = await collectPageIds(db, scope, worldIds, campaignIds);
+  const pageIdList = [...pageIds];
 
   const worlds = await db.world.findMany({
     where: { id: { in: worldIds } },
@@ -432,20 +441,19 @@ export async function collectBackupData(
       ? await db.campaign.findMany({ where: { id: { in: campaignIds } } })
       : await db.campaign.findMany({ where: { worldId: { in: worldIds } } });
 
-  const pages = await db.page.findMany({
-    where: { id: { in: [...pageIds] } },
-  });
+  const pages = await loadInBatches(pageIdList, (batch) =>
+    db.page.findMany({ where: { id: { in: batch } } }),
+  );
 
-  const contentBlocks = await db.contentBlock.findMany({
-    where: { pageId: { in: [...pageIds] } },
-  });
+  const contentBlocks = await loadInBatches(pageIdList, (batch) =>
+    db.contentBlock.findMany({ where: { pageId: { in: batch } } }),
+  );
 
-  const pageLinks = await db.pageLink.findMany({
-    where: {
-      sourcePageId: { in: [...pageIds] },
-      targetPageId: { in: [...pageIds] },
-    },
-  });
+  const pageLinks = (
+    await loadInBatches(pageIdList, (batch) =>
+      db.pageLink.findMany({ where: { sourcePageId: { in: batch } } }),
+    )
+  ).filter((link) => pageIds.has(link.targetPageId));
 
   const assets =
     scope.type === "campaign"
@@ -473,12 +481,11 @@ export async function collectBackupData(
 
   const assetIds = assets.map((asset) => asset.id);
 
-  const assetPageLinks = await db.assetPageLink.findMany({
-    where: {
-      assetId: { in: assetIds },
-      pageId: { in: [...pageIds] },
-    },
-  });
+  const assetPageLinks = await loadInBatches(pageIdList, (batch) =>
+    db.assetPageLink.findMany({
+      where: { assetId: { in: assetIds }, pageId: { in: batch } },
+    }),
+  );
 
   const gameSessions =
     scope.type === "campaign"
@@ -487,11 +494,19 @@ export async function collectBackupData(
 
   const gameSessionIds = gameSessions.map((session) => session.id);
 
-  const gameSessionPageLinks = await db.gameSessionPageLink.findMany({
-    where: {
-      gameSessionId: { in: gameSessionIds },
-      pageId: { in: [...pageIds] },
-    },
+  const gameSessionPageLinks = await loadInBatches(pageIdList, (batch) =>
+    db.gameSessionPageLink.findMany({
+      where: { gameSessionId: { in: gameSessionIds }, pageId: { in: batch } },
+    }),
+  );
+  const dungeons = await db.dungeon.findMany({ where: { worldId: { in: worldIds } } });
+  const gameSessionFocuses = await db.gameSessionFocus.findMany({
+    where: { gameSessionId: { in: gameSessionIds }, pageId: { in: pageIdList } },
+  });
+  const docImportSources = await db.docImportSource.findMany({ where: { worldId: { in: worldIds } } });
+  const sourceIds = docImportSources.map((source) => source.id);
+  const docImportPageBindings = await db.docImportPageBinding.findMany({
+    where: { sourceId: { in: sourceIds }, pageId: { in: pageIdList } },
   });
 
   const labelTemplates = await db.labelTemplate.findMany({
@@ -523,12 +538,11 @@ export async function collectBackupData(
 
   const soundboardButtonIds = soundboardButtons.map((button) => button.id);
 
-  const soundboardButtonPageLinks = await db.soundboardButtonPageLink.findMany({
-    where: {
-      soundboardButtonId: { in: soundboardButtonIds },
-      pageId: { in: [...pageIds] },
-    },
-  });
+  const soundboardButtonPageLinks = await loadInBatches(pageIdList, (batch) =>
+    db.soundboardButtonPageLink.findMany({
+      where: { soundboardButtonId: { in: soundboardButtonIds }, pageId: { in: batch } },
+    }),
+  );
 
   const worldMemberships = await db.worldMembership.findMany({
     where: { worldId: { in: worldIds } },
@@ -633,6 +647,7 @@ export async function collectBackupData(
         worldId: page.worldId,
         campaignId: page.campaignId,
         parentPageId: page.parentPageId,
+        questStoryArcId: page.questStoryArcId,
         title: page.title,
         slug: page.slug,
         type: page.type,
@@ -698,6 +713,8 @@ export async function collectBackupData(
         id: session.id,
         worldId: session.worldId,
         campaignId: session.campaignId,
+        storyArcPageId: session.storyArcPageId,
+        groupId: session.groupId,
         title: session.title,
         sessionNumber: session.sessionNumber,
         date: toIso(session.date),
@@ -708,6 +725,7 @@ export async function collectBackupData(
         openPlots: session.openPlots,
         playerDecisions: session.playerDecisions,
         recapPublished: session.recapPublished,
+        playerVisibleSchedule: session.playerVisibleSchedule,
         createdAt: session.createdAt.toISOString(),
         updatedAt: session.updatedAt.toISOString(),
       }),
@@ -720,6 +738,27 @@ export async function collectBackupData(
         createdAt: link.createdAt.toISOString(),
       }),
     ),
+    dungeons: dungeons.map((dungeon): BackupDungeonRecord => ({
+      ...dungeon,
+      prepStatus: dungeon.prepStatus,
+      createdAt: dungeon.createdAt.toISOString(),
+      updatedAt: dungeon.updatedAt.toISOString(),
+    })),
+    gameSessionFocuses: gameSessionFocuses.map((focus): BackupGameSessionFocusRecord => ({
+      ...focus,
+      createdAt: focus.createdAt.toISOString(),
+    })),
+    docImportSources: docImportSources.map((source): BackupDocImportSourceRecord => ({
+      ...source,
+      importedAt: source.importedAt.toISOString(),
+      createdAt: source.createdAt.toISOString(),
+      updatedAt: source.updatedAt.toISOString(),
+    })),
+    docImportPageBindings: docImportPageBindings.map((binding): BackupDocImportPageBindingRecord => ({
+      ...binding,
+      createdAt: binding.createdAt.toISOString(),
+      updatedAt: binding.updatedAt.toISOString(),
+    })),
     labelTemplates: labelTemplates.map(
       (template): BackupLabelTemplateRecord => ({
         id: template.id,

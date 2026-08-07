@@ -43,6 +43,14 @@ enum DungeonPrepStatus {
   skipped
 }
 
+enum SessionFocusRole {
+  chapter
+  dungeon
+  room
+  quest
+  reference
+}
+
 enum CanonicalStatus {
   idea
   draft
@@ -675,6 +683,8 @@ model World {
   structuredStatblocks StructuredStatblock[]
   structuredItems      StructuredItem[]
   importJobs           ImportJob[]
+  dungeons             Dungeon[]
+  docImportSources     DocImportSource[]
   rollTables           RollTable[]
   playerGroups         PlayerGroup[]
 
@@ -702,6 +712,8 @@ model Campaign {
   brainFacts        BrainFact[]
   characters        Character[]
   playerGroups      PlayerGroup[]
+  dungeons          Dungeon[]
+  docImportSources  DocImportSource[]
 
   @@unique([worldId, slug])
   @@map("campaigns")
@@ -739,6 +751,9 @@ model Page {
   /// im Studio sichtbar, im Portal nicht. Der Wert ersetzt keine
   /// Sichtbarkeitsregel; `portalReleased` gilt zusaetzlich weiter.
   questGroupId    String?               @map("quest_group_id")
+  /// Expliziter Story-Bogen einer Quest. Die Seitenhierarchie bleibt reine
+  /// Navigation und entscheidet nicht länger über die fachliche Zuordnung.
+  questStoryArcId String?               @map("quest_story_arc_id")
   tags            Json?
   aliases         Json?
   aiReviewedAt    DateTime?             @map("ai_reviewed_at")
@@ -748,6 +763,8 @@ model Page {
   world                 World                      @relation(fields: [worldId], references: [id], onDelete: Cascade)
   campaign              Campaign?                  @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   questGroup            PlayerGroup?               @relation("PageQuestGroup", fields: [questGroupId], references: [id], onDelete: SetNull)
+  questStoryArc         Page?                      @relation("QuestStoryArc", fields: [questStoryArcId], references: [id], onDelete: SetNull)
+  storyArcQuests        Page[]                     @relation("QuestStoryArc")
   parentPage            Page?                      @relation("PageHierarchy", fields: [parentPageId], references: [id], onDelete: SetNull)
   childPages            Page[]                     @relation("PageHierarchy")
   contentBlocks         ContentBlock[]
@@ -766,6 +783,10 @@ model Page {
   versions              PageVersion[]
   worldEventLinks       WorldEventEntityLink[]
   sessionsInStoryArc    GameSession[]              @relation("SessionStoryArc")
+  sessionFocuses        GameSessionFocus[]
+  dungeonRoot           Dungeon?                   @relation("DungeonRoot")
+  dungeonsInStoryArc    Dungeon[]                   @relation("DungeonStoryArc")
+  docImportBindings     DocImportPageBinding[]
   storyArcEntityLinks   StoryArcEntityLink[]       @relation("StoryArcChapter")
   storyArcPinnedIn      StoryArcEntityLink[]       @relation("StoryArcTarget")
   factionState          FactionState?
@@ -778,7 +799,31 @@ model Page {
   @@index([parentPageId])
   @@index([parentPageId, sortIndex])
   @@index([questGroupId])
+  @@index([questStoryArcId])
   @@map("pages")
+}
+
+model Dungeon {
+  id             String             @id @default(cuid())
+  worldId        String             @map("world_id")
+  campaignId     String?            @map("campaign_id")
+  rootPageId     String             @unique @map("root_page_id")
+  storyArcPageId String?            @map("story_arc_page_id")
+  name           String
+  slug           String
+  prepStatus     DungeonPrepStatus? @map("prep_status")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+
+  world        World     @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign     Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  rootPage     Page      @relation("DungeonRoot", fields: [rootPageId], references: [id], onDelete: Cascade)
+  storyArcPage Page?     @relation("DungeonStoryArc", fields: [storyArcPageId], references: [id], onDelete: SetNull)
+
+  @@unique([worldId, slug])
+  @@index([campaignId])
+  @@index([storyArcPageId])
+  @@map("dungeons")
 }
 
 model WorldCalendar {
@@ -1046,11 +1091,30 @@ model GameSession {
   availabilities SessionAvailability[]
   worldEvents    WorldEvent[]
   liveEntries    SessionLiveEntry[]
+  focuses        GameSessionFocus[]
 
   @@index([worldId, sessionNumber])
   @@index([storyArcPageId])
   @@index([groupId])
   @@map("game_sessions")
+}
+
+model GameSessionFocus {
+  id            String           @id @default(cuid())
+  gameSessionId String           @map("game_session_id")
+  pageId        String           @map("page_id")
+  role          SessionFocusRole @default(reference)
+  sortIndex     Int              @default(0) @map("sort_index")
+  isCurrent     Boolean          @default(false) @map("is_current")
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  gameSession GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  page        Page        @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([gameSessionId, pageId, role])
+  @@index([gameSessionId, isCurrent])
+  @@index([pageId])
+  @@map("game_session_focuses")
 }
 
 model GameSessionPageLink {
@@ -2268,6 +2332,46 @@ model ImportJob {
   @@index([status, createdAt])
   @@index([targetType])
   @@map("import_jobs")
+}
+
+model DocImportSource {
+  id             String   @id @default(cuid())
+  worldId        String   @map("world_id")
+  campaignId     String?  @map("campaign_id")
+  sourcePath     String   @map("source_path")
+  repository     String?
+  sourceRevision String?  @map("source_revision")
+  contentHash    String   @map("content_hash")
+  importedAt     DateTime @default(now()) @map("imported_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  world    World                  @relation(fields: [worldId], references: [id], onDelete: Cascade)
+  campaign Campaign?              @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  bindings DocImportPageBinding[]
+
+  @@unique([worldId, sourcePath])
+  @@index([campaignId])
+  @@map("doc_import_sources")
+}
+
+model DocImportPageBinding {
+  id             String   @id @default(cuid())
+  sourceId       String   @map("source_id")
+  pageId         String   @map("page_id")
+  sourceKey      String   @map("source_key")
+  sourceHash     String   @map("source_hash")
+  ownedPage      Boolean  @default(false) @map("owned_page")
+  lastRevision   String?  @map("last_revision")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  source DocImportSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  page   Page            @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, sourceKey])
+  @@index([pageId])
+  @@map("doc_import_page_bindings")
 }
 
 model DndBeyondReference {

@@ -77,6 +77,7 @@ export interface BackupPageRecord {
   worldId: string;
   campaignId: string | null;
   parentPageId: string | null;
+  questStoryArcId?: string | null;
   title: string;
   slug: string;
   type: string;
@@ -137,6 +138,8 @@ export interface BackupGameSessionRecord {
   id: string;
   worldId: string;
   campaignId: string | null;
+  storyArcPageId?: string | null;
+  groupId?: string | null;
   title: string;
   sessionNumber: number;
   date: string | null;
@@ -147,8 +150,31 @@ export interface BackupGameSessionRecord {
   openPlots: string | null;
   playerDecisions: string | null;
   recapPublished: boolean;
+  playerVisibleSchedule?: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface BackupDungeonRecord {
+  id: string; worldId: string; campaignId: string | null; rootPageId: string;
+  storyArcPageId: string | null; name: string; slug: string; prepStatus: string | null;
+  createdAt: string; updatedAt: string;
+}
+
+export interface BackupGameSessionFocusRecord {
+  id: string; gameSessionId: string; pageId: string; role: string;
+  sortIndex: number; isCurrent: boolean; createdAt: string;
+}
+
+export interface BackupDocImportSourceRecord {
+  id: string; worldId: string; campaignId: string | null; sourcePath: string;
+  repository: string | null; sourceRevision: string | null; contentHash: string;
+  importedAt: string; createdAt: string; updatedAt: string;
+}
+
+export interface BackupDocImportPageBindingRecord {
+  id: string; sourceId: string; pageId: string; sourceKey: string; sourceHash: string;
+  ownedPage: boolean; lastRevision: string | null; createdAt: string; updatedAt: string;
 }
 
 export interface BackupGameSessionPageLinkRecord {
@@ -537,6 +563,10 @@ export interface BackupData {
   assetPageLinks: BackupAssetPageLinkRecord[];
   gameSessions: BackupGameSessionRecord[];
   gameSessionPageLinks: BackupGameSessionPageLinkRecord[];
+  dungeons?: BackupDungeonRecord[];
+  gameSessionFocuses?: BackupGameSessionFocusRecord[];
+  docImportSources?: BackupDocImportSourceRecord[];
+  docImportPageBindings?: BackupDocImportPageBindingRecord[];
   labelTemplates: BackupLabelTemplateRecord[];
   labels: BackupLabelRecord[];
   printLists: BackupPrintListRecord[];

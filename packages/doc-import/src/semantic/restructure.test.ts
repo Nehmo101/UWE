@@ -197,6 +197,22 @@ describe("restructureDocument — Kapitel eines Kampagnenbuchs", () => {
     assert.notEqual(byTitle("Bestiarium")?.typeHint, "story_arc");
   });
 
+  it("macht einen untergeordneten Szenenabschnitt nicht zum eigenen Story-Bogen", () => {
+    const nested = build(
+      [
+        "# Kampagne",
+        "## BUCH I — Der Auftakt",
+        "### Die zwei Bilder",
+        "#### Szene 1 — Das Omen",
+        "Ein kurzer Auftritt.",
+      ].join("\n\n"),
+      "campaign_book",
+    ).tree.nodes[0];
+    const book = nested.children.find((child) => child.title === "Der Auftakt");
+    assert.equal(book?.typeHint, "story_arc");
+    assert.notEqual(book?.children[0]?.typeHint, "story_arc");
+  });
+
   it("lässt Dungeon-Ebenen mit Begegnungen unberührt", () => {
     const dungeon = build(DUNGEON).tree.nodes[0];
     const level = dungeon.children.find((child) => child.role === "level");

@@ -1,6 +1,7 @@
 import type {
   GameSessionStatus,
   Prisma,
+  SessionFocusRole,
 } from "./generated/prisma/client";
 import { createPrismaClient, type PrismaClient } from "./client";
 import { parseStringArray } from "./json-utils";
@@ -14,6 +15,7 @@ export type {
   GameSession,
   GameSessionPageLink,
   GameSessionStatus,
+  SessionFocusRole,
 } from "./generated/prisma/client";
 
 export {
@@ -46,6 +48,15 @@ export interface CreateGameSessionInput {
   playerDecisions?: string | null;
   playerVisibleSchedule?: boolean;
   linkedPageIds?: string[];
+  /** Mehrere fachlich typisierte Arbeitskontexte; genau einer darf aktuell sein. */
+  focuses?: SessionFocusInput[];
+}
+
+export interface SessionFocusInput {
+  pageId: string;
+  role: SessionFocusRole;
+  sortIndex?: number;
+  isCurrent?: boolean;
 }
 
 export interface UpdateGameSessionInput {
@@ -64,6 +75,7 @@ export interface UpdateGameSessionInput {
   recapPublished?: boolean;
   playerVisibleSchedule?: boolean;
   linkedPageIds?: string[];
+  focuses?: SessionFocusInput[];
 }
 
 export type GameSessionWithLinks = Prisma.GameSessionGetPayload<{
@@ -77,6 +89,9 @@ export type GameSessionWithLinks = Prisma.GameSessionGetPayload<{
           include: { campaign: true };
         };
       };
+    };
+    focuses: {
+      include: { page: true };
     };
   };
 }>;
@@ -199,6 +214,10 @@ export class GameSessionService {
           },
         },
         orderBy: { createdAt: "asc" as const },
+      },
+      focuses: {
+        include: { page: true },
+        orderBy: [{ isCurrent: "desc" as const }, { sortIndex: "asc" as const }],
       },
     };
   }
@@ -323,8 +342,26 @@ export class GameSessionService {
     }
   }
 
+  private async validateFocuses(worldId: string, focuses: SessionFocusInput[]): Promise<void> {
+    if (focuses.filter((focus) => focus.isCurrent).length > 1) {
+      throw new Error("Eine Session darf nur einen aktuellen Fokus haben.");
+    }
+    const unique = new Set(focuses.map((focus) => `${focus.pageId}:${focus.role}`));
+    if (unique.size !== focuses.length) throw new Error("Session-Fokusse dürfen nicht doppelt sein.");
+    if (focuses.length === 0) return;
+    const count = await this.db.page.count({
+      where: { worldId, id: { in: [...new Set(focuses.map((focus) => focus.pageId))] } },
+    });
+    if (count !== new Set(focuses.map((focus) => focus.pageId)).size) {
+      throw new Error("Mindestens ein Session-Fokus gehört nicht zu dieser Welt.");
+    }
+  }
+
   async create(input: CreateGameSessionInput): Promise<GameSessionWithLinks> {
     const linkedPageIds = input.linkedPageIds ?? [];
+    const focuses = input.focuses ?? (input.storyArcPageId
+      ? [{ pageId: input.storyArcPageId, role: "chapter" as const, isCurrent: true }]
+      : []);
 
     if (input.storyArcPageId) {
       await this.assertStoryArcInWorld(input.worldId, input.storyArcPageId);
@@ -332,12 +369,16 @@ export class GameSessionService {
     if (input.groupId) {
       await this.assertGroupInWorld(input.worldId, input.groupId);
     }
+    await this.validateFocuses(input.worldId, focuses);
+
+    const currentChapter = focuses.find((focus) => focus.role === "chapter" && focus.isCurrent)
+      ?? focuses.find((focus) => focus.role === "chapter");
 
     const session = await this.db.gameSession.create({
       data: {
         worldId: input.worldId,
         campaignId: input.campaignId ?? null,
-        storyArcPageId: input.storyArcPageId ?? null,
+        storyArcPageId: input.storyArcPageId ?? currentChapter?.pageId ?? null,
         groupId: input.groupId ?? null,
         title: input.title,
         sessionNumber: input.sessionNumber,
@@ -352,6 +393,16 @@ export class GameSessionService {
         linkedPages: linkedPageIds.length
           ? {
               create: linkedPageIds.map((pageId) => ({ pageId })),
+            }
+          : undefined,
+        focuses: focuses.length
+          ? {
+              create: focuses.map((focus, index) => ({
+                pageId: focus.pageId,
+                role: focus.role,
+                sortIndex: focus.sortIndex ?? index,
+                isCurrent: focus.isCurrent ?? false,
+              })),
             }
           : undefined,
       },
@@ -402,7 +453,7 @@ export class GameSessionService {
   }
 
   async update(sessionId: string, input: UpdateGameSessionInput): Promise<GameSessionWithLinks> {
-    if (input.storyArcPageId || input.groupId) {
+    if (input.storyArcPageId || input.groupId || input.focuses) {
       const existing = await this.db.gameSession.findUnique({
         where: { id: sessionId },
         select: { worldId: true },
@@ -416,6 +467,7 @@ export class GameSessionService {
       if (input.groupId) {
         await this.assertGroupInWorld(existing.worldId, input.groupId);
       }
+      if (input.focuses) await this.validateFocuses(existing.worldId, input.focuses);
     }
 
     if (input.linkedPageIds) {
@@ -430,6 +482,24 @@ export class GameSessionService {
       }
     }
 
+    if (input.focuses) {
+      await this.db.gameSessionFocus.deleteMany({ where: { gameSessionId: sessionId } });
+      if (input.focuses.length > 0) {
+        await this.db.gameSessionFocus.createMany({
+          data: input.focuses.map((focus, index) => ({
+            gameSessionId: sessionId,
+            pageId: focus.pageId,
+            role: focus.role,
+            sortIndex: focus.sortIndex ?? index,
+            isCurrent: focus.isCurrent ?? false,
+          })),
+        });
+      }
+    }
+
+    const currentChapter = input.focuses?.find((focus) => focus.role === "chapter" && focus.isCurrent)
+      ?? input.focuses?.find((focus) => focus.role === "chapter");
+
     const session = await this.db.gameSession.update({
       where: { id: sessionId },
       data: {
@@ -438,7 +508,9 @@ export class GameSessionService {
         date: input.date,
         status: input.status,
         campaignId: input.campaignId,
-        storyArcPageId: input.storyArcPageId,
+        storyArcPageId: input.storyArcPageId !== undefined
+          ? input.storyArcPageId
+          : currentChapter?.pageId,
         groupId: input.groupId,
         summaryDm: input.summaryDm,
         summaryPlayer: input.summaryPlayer,

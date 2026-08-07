@@ -66,6 +66,16 @@ const LEVEL_RULES: RoleRule[] = [
 const APPROACH_PATTERN =
   /(plattform|anfahrt|vorplatz|au(ß|ss)enbereich|au(ß|ss)engel(ä|ae)nde|\bumgebung|\bankunft|\banmarsch|zugangsebene|\bhof\b)/i;
 
+/**
+ * Quest-Verzeichnisse und redaktionelle Quest-Anleitungen sind selbst keine
+ * Quests. Die allgemeine Quest-Regel weiter unten darf sie deshalb nicht
+ * einfangen; sonst erscheinen Katalog und Anleitung neben den spielbaren
+ * Aufträgen im Kampagnen-Cockpit.
+ */
+const QUEST_CONTAINER_PATTERN = /^(questkatalog\b|nebenquests?\s+(?:von|des|der|in|im)\b)/i;
+const QUEST_GUIDANCE_PATTERN =
+  /^(kleine quests? f(ü|ue)hren\b|am tisch\b.*\bquests?\b|regeln f(ü|ue)r\b.*\bquests?\b|auf einen blick\b.*\bquests?\b)/i;
+
 const ENTITY_RULES: RoleRule[] = [
   { pattern: /^(die\s+|der\s+|das\s+)?r(ä|ae)ume\b|^r(ä|ae)umlichkeiten\b|^raum(übersicht|liste)/i, role: "room_list" },
   { pattern: /^(die\s+)?(kammern|s(ä|ae)le|hallen)\b/i, role: "room_list" },
@@ -169,6 +179,9 @@ export function classifySection(node: DocumentNode, ctx: ClassifyContext): Secti
     // Nur direkt unter dem Dungeon: sonst würde jede „Umgebung" zur Ebene.
     if (ctx.parentRole === "dungeon" && APPROACH_PATTERN.test(text)) return "level";
   }
+
+  if (QUEST_CONTAINER_PATTERN.test(text)) return "part";
+  if (QUEST_GUIDANCE_PATTERN.test(text)) return "detail";
 
   for (const rule of ENTITY_RULES) {
     if (rule.pattern.test(text)) {

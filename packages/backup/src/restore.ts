@@ -323,6 +323,28 @@ export async function executeRestore(
     });
   }
 
+  // Fachliche Quest-Zuordnung erst setzen, wenn alle Seiten-IDs bekannt sind.
+  for (const page of bundle.data.pages) {
+    if (!page.questStoryArcId) continue;
+    const pageId = idMap.get(page.id);
+    const questStoryArcId = idMap.get(page.questStoryArcId);
+    if (pageId && questStoryArcId) await db.page.update({ where: { id: pageId }, data: { questStoryArcId } });
+  }
+
+  for (const dungeon of bundle.data.dungeons ?? []) {
+    const worldId = idMap.get(dungeon.worldId);
+    const rootPageId = idMap.get(dungeon.rootPageId);
+    if (!worldId || !rootPageId) continue;
+    await db.dungeon.create({
+      data: {
+        id: remapId(idMap, dungeon.id), worldId, rootPageId,
+        campaignId: dungeon.campaignId ? idMap.get(dungeon.campaignId) ?? null : null,
+        storyArcPageId: dungeon.storyArcPageId ? idMap.get(dungeon.storyArcPageId) ?? null : null,
+        name: dungeon.name, slug: dungeon.slug, prepStatus: dungeon.prepStatus as never,
+      },
+    });
+  }
+
   for (const link of bundle.data.pageLinks) {
     const sourcePageId = idMap.get(link.sourcePageId);
     const targetPageId = idMap.get(link.targetPageId);
@@ -400,6 +422,8 @@ export async function executeRestore(
         id: remapId(idMap, session.id),
         worldId,
         campaignId: session.campaignId ? idMap.get(session.campaignId) ?? null : null,
+        storyArcPageId: session.storyArcPageId ? idMap.get(session.storyArcPageId) ?? null : null,
+        groupId: session.groupId ? idMap.get(session.groupId) ?? null : null,
         title: session.title,
         sessionNumber: session.sessionNumber,
         date: session.date ? new Date(session.date) : null,
@@ -410,6 +434,7 @@ export async function executeRestore(
         openPlots: session.openPlots,
         playerDecisions: session.playerDecisions,
         recapPublished: session.recapPublished,
+        playerVisibleSchedule: session.playerVisibleSchedule ?? false,
       },
     });
   }
@@ -426,6 +451,25 @@ export async function executeRestore(
         pageId,
       },
     });
+  }
+
+  for (const focus of bundle.data.gameSessionFocuses ?? []) {
+    const sessionId = idMap.get(focus.gameSessionId);
+    const pageId = idMap.get(focus.pageId);
+    if (!sessionId || !pageId) continue;
+    await db.gameSessionFocus.create({ data: { id: remapId(idMap, focus.id), gameSessionId: sessionId, pageId, role: focus.role as never, sortIndex: focus.sortIndex, isCurrent: focus.isCurrent } });
+  }
+
+  for (const source of bundle.data.docImportSources ?? []) {
+    const worldId = idMap.get(source.worldId);
+    if (!worldId) continue;
+    await db.docImportSource.create({ data: { id: remapId(idMap, source.id), worldId, campaignId: source.campaignId ? idMap.get(source.campaignId) ?? null : null, sourcePath: source.sourcePath, repository: source.repository, sourceRevision: source.sourceRevision, contentHash: source.contentHash, importedAt: new Date(source.importedAt) } });
+  }
+  for (const binding of bundle.data.docImportPageBindings ?? []) {
+    const sourceId = idMap.get(binding.sourceId);
+    const pageId = idMap.get(binding.pageId);
+    if (!sourceId || !pageId) continue;
+    await db.docImportPageBinding.create({ data: { id: remapId(idMap, binding.id), sourceId, pageId, sourceKey: binding.sourceKey, sourceHash: binding.sourceHash, ownedPage: binding.ownedPage, lastRevision: binding.lastRevision } });
   }
 
   for (const label of bundle.data.labels) {

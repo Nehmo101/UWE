@@ -69,6 +69,7 @@ export interface WrittenPage {
   key: string;
   pageId: string;
   slug: string;
+  disposition: "created" | "merged" | "unchanged";
 }
 
 /**
@@ -176,6 +177,13 @@ export async function writeDocImport(
       if (existingId) {
         const merged = await mergeIntoExistingPage(repo, existingId, draft, mergedById);
         keyToPageId.set(draft.key, existingId);
+        const existing = existingPages.find((page) => page.id === existingId);
+        result.pages.push({
+          key: draft.key,
+          pageId: existingId,
+          slug: existing?.slug ?? draft.slug,
+          disposition: merged === "schon-da" ? "unchanged" : "merged",
+        });
         if (merged === "schon-da") {
           result.warnings.push(
             `„${draft.title}" stand schon aus einem früheren Lauf auf der bestehenden Seite — nichts doppelt angehängt.`,
@@ -260,7 +268,7 @@ export async function writeDocImport(
 
       result.created += 1;
       result.undo.createdPageIds.push(page.id);
-      result.pages.push({ key: draft.key, pageId: page.id, slug: page.slug });
+      result.pages.push({ key: draft.key, pageId: page.id, slug: page.slug, disposition: "created" });
     } catch (error) {
       result.failed += 1;
       result.warnings.push(

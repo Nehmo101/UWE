@@ -850,6 +850,9 @@ export {
 } from "./content-block-html";
 export type { AssetBlockLike, RenderAssetBlockOptions } from "./content-block-html";
 
+export { checkCampaignConsistency } from "./campaign-consistency";
+export type { CampaignConsistencyCode, CampaignConsistencyFinding } from "./campaign-consistency";
+
 export {
   extractPdfText,
   isMissingTextLayerError,
@@ -875,6 +878,8 @@ export type {
   PortalGameSessionView,
   GameSessionWithLinks,
   GameSessionStatus,
+  SessionFocusInput,
+  SessionFocusRole,
 } from "./game-session";
 
 export {
