@@ -3,6 +3,7 @@ import { after, before, describe, it } from "node:test";
 import { createTestDatabaseUrl } from "@uwe/database/test-helpers";
 import { createUweRepository } from "@uwe/database/server";
 import { buildDocImportPlan } from "./plan";
+import type { PageDraft } from "./types";
 import { writeDocImport } from "./writer";
 
 const PELLAR = `---
@@ -54,6 +55,22 @@ Der Splitter ist nie Beute, sondern Verantwortung.
 
 :::
 `;
+
+function draft(input: Pick<PageDraft, "key" | "parentKey" | "title" | "slug" | "type">): PageDraft {
+  return {
+    ...input,
+    sortIndex: 0,
+    summary: null,
+    canonicalStatus: null,
+    tags: [],
+    aliases: [],
+    html: `<p>${input.title}</p>`,
+    campaigns: [],
+    seeAlso: [],
+    metadata: {},
+    warnings: [],
+  };
+}
 
 describe("writeDocImport", () => {
   let databaseUrl: string;
@@ -143,6 +160,30 @@ describe("writeDocImport", () => {
     assert.equal(level1.sortIndex, 0);
     assert.equal(level2.sortIndex, 1);
     assert.equal(root.sortIndex, null);
+  });
+
+  it("preconfigures imported quests with their chapter and lifecycle status", async () => {
+    const repo = createUweRepository(databaseUrl);
+    await repo.createWorld({ name: "Kapitelwelt", slug: "kapitelwelt" });
+    const pages = [
+      draft({ key: "root", parentKey: null, title: "Die Kampagne", slug: "die-kampagne", type: "lore" }),
+      draft({ key: "arc", parentKey: "root", title: "Akt I — Aufbruch", slug: "akt-i", type: "story_arc" }),
+      draft({ key: "section", parentKey: "arc", title: "Aufträge", slug: "auftraege", type: "lore" }),
+      draft({ key: "quest", parentKey: "section", title: "Die Glocke", slug: "die-glocke", type: "quest" }),
+    ];
+
+    await writeDocImport(repo, pages, [], {
+      worldSlug: "kapitelwelt",
+      confirmed: true,
+    });
+
+    const arc = await repo.getPageBySlug("kapitelwelt", "akt-i");
+    const quest = await repo.getPageBySlug("kapitelwelt", "die-glocke");
+    assert.equal(arc?.type, "story_arc");
+    assert.equal(arc?.prepStatus, "unprepared");
+    assert.equal(quest?.type, "quest");
+    assert.equal(quest?.questStatus, "open");
+    assert.equal(quest?.questStoryArcId, arc?.id);
   });
 
   it("ergänzt eine gleichnamige Seite, statt eine zweite anzulegen", async () => {

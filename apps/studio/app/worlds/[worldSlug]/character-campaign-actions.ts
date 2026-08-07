@@ -45,9 +45,22 @@ export async function assignCharacterToCampaignAction(formData: FormData) {
       }
     }
 
-    await db.character.updateMany({
+    const character = await db.character.findFirst({
       where: { id: characterId, worldId: world.id },
-      data: { campaignId: campaignId || null },
+      select: { id: true, pageId: true },
+    });
+    if (!character) throw new Error("Charakter nicht gefunden.");
+    await db.$transaction(async (tx) => {
+      await tx.character.update({
+        where: { id: character.id },
+        data: { campaignId: campaignId || null },
+      });
+      if (character.pageId) {
+        await tx.page.update({
+          where: { id: character.pageId },
+          data: { campaignId: campaignId || null },
+        });
+      }
     });
   } finally {
     await db.$disconnect();

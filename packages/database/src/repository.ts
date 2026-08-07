@@ -86,6 +86,7 @@ export interface CreatePageInput {
   worldId: string;
   campaignId?: string | null;
   parentPageId?: string | null;
+  questStoryArcId?: string | null;
   /** Lesereihenfolge unter Geschwistern; `null` sortiert ans Ende (nach Titel). */
   sortIndex?: number | null;
   title: string;
@@ -109,6 +110,7 @@ export interface UpdatePageInput {
   summary?: string | null;
   campaignId?: string | null;
   parentPageId?: string | null;
+  questStoryArcId?: string | null;
   sortIndex?: number | null;
   canonicalStatus?: CanonicalStatus;
   /** Freigegeben fuers Portal — siehe `filterPagesForViewer`. */
@@ -235,6 +237,7 @@ export class UweRepository {
         worldId: input.worldId,
         campaignId: input.campaignId ?? null,
         parentPageId: input.parentPageId ?? null,
+        questStoryArcId: input.questStoryArcId ?? null,
         sortIndex: input.sortIndex ?? null,
         title: input.title,
         slug: input.slug,
@@ -275,6 +278,7 @@ export class UweRepository {
         summary: input.summary,
         campaignId: input.campaignId,
         parentPageId: input.parentPageId,
+        questStoryArcId: input.questStoryArcId,
         sortIndex: input.sortIndex,
         canonicalStatus: input.canonicalStatus,
         portalReleased: input.portalReleased,

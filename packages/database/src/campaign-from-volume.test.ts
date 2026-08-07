@@ -50,6 +50,27 @@ describe("Kampagne aus einem Band", () => {
       slug: "ein-kapitel",
       type: "lore",
     });
+    const storyArc = await repo.createPage({
+      worldId: world.id,
+      parentPageId: teil.id,
+      title: "Akt I",
+      slug: "akt-i",
+      type: "story_arc",
+    });
+    const questSection = await repo.createPage({
+      worldId: world.id,
+      parentPageId: storyArc.id,
+      title: "Aufträge",
+      slug: "auftraege",
+      type: "lore",
+    });
+    await repo.createPage({
+      worldId: world.id,
+      parentPageId: questSection.id,
+      title: "Die Probe",
+      slug: "die-probe",
+      type: "quest",
+    });
 
     const dungeon = await repo.createPage({
       worldId: world.id,
@@ -86,7 +107,7 @@ describe("Kampagne aus einem Band", () => {
   it("findet die Bände einer Welt und zählt ihre Seiten", async () => {
     const bände = await service.listVolumeCandidates("terra");
     const namen = bände.map((b) => `${b.slug}:${b.pageCount}${b.isDungeon ? ":dungeon" : ""}`);
-    assert.deepEqual(namen.sort(), ["dunkelsonne:3", "himmelsrouten:2", "steinhaus:2:dungeon"]);
+    assert.deepEqual(namen.sort(), ["dunkelsonne:6", "himmelsrouten:2", "steinhaus:2:dungeon"]);
   });
 
   it("legt die Kampagne an und ordnet Band und Dungeon zu", async () => {
@@ -98,12 +119,32 @@ describe("Kampagne aus einem Band", () => {
 
     assert.equal(result.name, "Dunkelsonne", "ohne Namen gewinnt der Titel des Bandes");
     assert.equal(result.slug, "dunkelsonne");
-    assert.equal(result.assigned, 5, "drei Seiten Band plus zwei Seiten Dungeon");
+    assert.equal(result.assigned, 8, "sechs Seiten Band plus zwei Seiten Dungeon");
     assert.equal(result.dungeonsAttached, 1);
 
     const seiten = await repo.listPagesByWorld("terra");
     const inKampagne = seiten.filter((p) => p.campaign?.slug === "dunkelsonne").map((p) => p.slug);
-    assert.deepEqual(inKampagne.sort(), ["dunkelsonne", "ebene-1", "ein-kapitel", "steinhaus", "teil-1"]);
+    assert.deepEqual(inKampagne.sort(), [
+      "akt-i",
+      "auftraege",
+      "die-probe",
+      "dunkelsonne",
+      "ebene-1",
+      "ein-kapitel",
+      "steinhaus",
+      "teil-1",
+    ]);
+
+    const db = createPrismaClient(url);
+    const quest = await db.page.findUnique({ where: { worldId_slug: { worldId: (await db.world.findUniqueOrThrow({ where: { slug: "terra" } })).id, slug: "die-probe" } } });
+    const arc = await db.page.findUniqueOrThrow({ where: { worldId_slug: { worldId: quest!.worldId, slug: "akt-i" } } });
+    assert.equal(quest?.questStoryArcId, arc.id, "Quest findet den nächsten Story-Bogen über Lore-Zwischenknoten");
+    assert.equal(quest?.questStatus, "open");
+    assert.equal(arc.prepStatus, "unprepared");
+    const dungeon = await db.dungeon.findUnique({ where: { rootPageId: dungeonId } });
+    assert.equal(dungeon?.campaignId, result.id);
+    assert.equal(dungeon?.prepStatus, "unprepared");
+    await db.$disconnect();
   });
 
   it("lässt fremde Bände in Ruhe", async () => {

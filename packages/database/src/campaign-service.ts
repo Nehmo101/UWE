@@ -50,6 +50,21 @@ export interface CampaignService {
   createFromVolume(input: CreateFromVolumeInput): Promise<CreateFromVolumeResult>;
   /** Einen vorhandenen Band nachträglich einer Kampagne zuschlagen. */
   attachVolume(input: AttachVolumeInput): Promise<{ assigned: number }>;
+  /** Bereitet Kapitel, Quests und Dungeons einer bestehenden Kampagne vor. */
+  configure(input: ConfigureCampaignInput): Promise<ConfigureCampaignResult>;
+}
+
+export interface ConfigureCampaignInput {
+  worldSlug: string;
+  campaignId: string;
+}
+
+export interface ConfigureCampaignResult {
+  storyArcs: number;
+  quests: number;
+  questsAssigned: number;
+  questsUnassigned: number;
+  dungeons: number;
 }
 
 /** Ein Band: eine Seite ohne Elternteil, die Unterseiten trägt. */
@@ -349,6 +364,7 @@ export function createCampaignService(db: PrismaClient): CampaignService {
       for (const dungeon of dungeons) {
         assigned += await zuordnen(db, dungeon.id, kinder, campaign.id);
       }
+      await vorkonfigurieren(db, world.id, campaign.id);
 
       return {
         id: campaign.id,
@@ -373,7 +389,15 @@ export function createCampaignService(db: PrismaClient): CampaignService {
         );
       }
 
-      return { assigned: await zuordnen(db, band.id, kinder, campaign.id) };
+      const assigned = await zuordnen(db, band.id, kinder, campaign.id);
+      await vorkonfigurieren(db, world.id, campaign.id);
+      return { assigned };
+    },
+
+    async configure({ worldSlug, campaignId }) {
+      const world = await requireWorld(worldSlug);
+      await requireCampaign(world.id, campaignId);
+      return vorkonfigurieren(db, world.id, campaignId);
     },
   };
 }
@@ -473,4 +497,106 @@ async function zuordnen(
     n += result.count;
   }
   return n;
+}
+
+/**
+ * Macht aus einem zugeordneten Seitenbaum eine sofort benutzbare Kampagne.
+ *
+ * Der Import bewahrt die feine Buchhierarchie. Eine Quest kann deshalb unter
+ * einem Lore-Unterkapitel liegen, das seinerseits unter einem Story-Bogen
+ * liegt. `questStoryArcId` zeigt auf den nächsten Bogen in dieser Ahnenkette,
+ * ohne die feinere `parentPageId`-Struktur zu zerstören.
+ */
+async function vorkonfigurieren(
+  db: PrismaClient,
+  worldId: string,
+  campaignId: string,
+): Promise<ConfigureCampaignResult> {
+  const pages = await db.page.findMany({
+    where: { worldId, campaignId },
+    select: {
+      id: true,
+      parentPageId: true,
+      title: true,
+      slug: true,
+      type: true,
+      prepStatus: true,
+      questStatus: true,
+      questStoryArcId: true,
+    },
+  });
+  const byId = new Map(pages.map((page) => [page.id, page]));
+
+  const nearestStoryArc = (startId: string | null): string | null => {
+    const visited = new Set<string>();
+    let currentId = startId;
+    while (currentId && !visited.has(currentId)) {
+      visited.add(currentId);
+      const current = byId.get(currentId);
+      if (!current) return null;
+      if (current.type === "story_arc") return current.id;
+      currentId = current.parentPageId;
+    }
+    return null;
+  };
+
+  const storyArcs = pages.filter((page) => page.type === "story_arc");
+  if (storyArcs.length > 0) {
+    await db.page.updateMany({
+      where: { id: { in: storyArcs.map((page) => page.id) }, prepStatus: null },
+      data: { prepStatus: "unprepared" },
+    });
+  }
+
+  const quests = pages.filter((page) => page.type === "quest");
+  let questsAssigned = 0;
+  for (const quest of quests) {
+    const storyArcId = nearestStoryArc(quest.parentPageId);
+    if (storyArcId) questsAssigned += 1;
+    if (quest.questStoryArcId !== storyArcId || quest.questStatus === null) {
+      await db.page.update({
+        where: { id: quest.id },
+        data: {
+          questStoryArcId: storyArcId,
+          questStatus: quest.questStatus ?? "open",
+        },
+      });
+    }
+  }
+
+  const dungeonPages = pages.filter((page) => page.type === "dungeon");
+  for (const dungeon of dungeonPages) {
+    const storyArcPageId = nearestStoryArc(dungeon.parentPageId);
+    const prepStatus = dungeon.prepStatus ?? "unprepared";
+    if (dungeon.prepStatus === null) {
+      await db.page.update({ where: { id: dungeon.id }, data: { prepStatus } });
+    }
+    await db.dungeon.upsert({
+      where: { rootPageId: dungeon.id },
+      create: {
+        worldId,
+        campaignId,
+        rootPageId: dungeon.id,
+        storyArcPageId,
+        name: dungeon.title,
+        slug: dungeon.slug,
+        prepStatus,
+      },
+      update: {
+        campaignId,
+        storyArcPageId,
+        name: dungeon.title,
+        slug: dungeon.slug,
+        prepStatus,
+      },
+    });
+  }
+
+  return {
+    storyArcs: storyArcs.length,
+    quests: quests.length,
+    questsAssigned,
+    questsUnassigned: quests.length - questsAssigned,
+    dungeons: dungeonPages.length,
+  };
 }

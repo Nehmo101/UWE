@@ -49,6 +49,20 @@ export interface CreateOwnCharacterInput {
   displayName: string;
 }
 
+export interface CreateAssignedCharacterInput {
+  worldId: string;
+  ownerUserId: string;
+  displayName: string;
+  campaignId?: string | null;
+}
+
+export interface UpdateCharacterAssignmentInput {
+  worldId: string;
+  characterId: string;
+  ownerUserId: string;
+  campaignId?: string | null;
+}
+
 export type CreateOwnCharacterResult =
   | { ok: true; characterId: string; pageSlug: string }
   | { ok: false; error: string };
@@ -160,6 +174,112 @@ export class PlayerCharacterService {
     });
 
     return { ok: true, ...created };
+  }
+
+  /** Spielleitung legt einen leeren Bogen an und weist ihn direkt einem Weltmitglied zu. */
+  async createAssignedCharacter(
+    input: CreateAssignedCharacterInput,
+  ): Promise<CreateOwnCharacterResult> {
+    const displayName = input.displayName.trim().slice(0, CHARACTER_NAME_MAX);
+    if (!displayName) return { ok: false, error: "Der Charakter braucht einen Namen." };
+
+    const target = await this.validateStudioAssignment(
+      input.worldId,
+      input.ownerUserId,
+      input.campaignId ?? null,
+    );
+    if (!target.ok) return target;
+
+    const slug = await this.pickPageSlug(input.worldId, displayName);
+    const campaignId = input.campaignId ?? null;
+    const created = await this.db.$transaction(async (tx) => {
+      const page = await tx.page.create({
+        data: {
+          worldId: input.worldId,
+          campaignId,
+          title: displayName,
+          slug,
+          type: "player_character",
+          portalReleased: true,
+        },
+        select: { id: true, slug: true },
+      });
+      await tx.contentBlock.create({
+        data: { pageId: page.id, type: "player_text", sortOrder: 0, content: "" },
+      });
+      const character = await tx.character.create({
+        data: {
+          worldId: input.worldId,
+          pageId: page.id,
+          ownerUserId: input.ownerUserId,
+          campaignId,
+          displayName,
+          abilities: DEFAULT_ABILITY_SCORES as unknown as Prisma.InputJsonValue,
+        },
+        select: { id: true },
+      });
+      return { characterId: character.id, pageSlug: page.slug };
+    });
+    return { ok: true, ...created };
+  }
+
+  /** Spielleitung kann Besitzer und Kampagne später gemeinsam korrigieren. */
+  async updateAssignment(input: UpdateCharacterAssignmentInput): Promise<CharacterMutationResult> {
+    const target = await this.validateStudioAssignment(
+      input.worldId,
+      input.ownerUserId,
+      input.campaignId ?? null,
+    );
+    if (!target.ok) return target;
+
+    const character = await this.db.character.findFirst({
+      where: { id: input.characterId, worldId: input.worldId },
+      select: { id: true, pageId: true },
+    });
+    if (!character) return { ok: false, error: "Charakter nicht gefunden." };
+
+    await this.db.$transaction(async (tx) => {
+      await tx.character.update({
+        where: { id: character.id },
+        data: { ownerUserId: input.ownerUserId, campaignId: input.campaignId ?? null },
+      });
+      if (character.pageId) {
+        await tx.page.update({
+          where: { id: character.pageId },
+          data: { campaignId: input.campaignId ?? null },
+        });
+      }
+    });
+    return { ok: true };
+  }
+
+  private async validateStudioAssignment(
+    worldId: string,
+    ownerUserId: string,
+    campaignId: string | null,
+  ): Promise<CharacterMutationResult> {
+    const world = await this.db.world.findFirst({
+      where: { id: worldId, isSandbox: false },
+      select: { id: true },
+    });
+    if (!world) return { ok: false, error: "Welt nicht gefunden." };
+
+    const membership = await this.db.worldMembership.findUnique({
+      where: { userId_worldId: { userId: ownerUserId, worldId } },
+      select: { user: { select: { status: true } } },
+    });
+    if (!membership || membership.user.status !== "active") {
+      return { ok: false, error: "Der Spieler ist dieser Welt nicht aktiv zugeordnet." };
+    }
+
+    if (campaignId) {
+      const campaign = await this.db.campaign.findFirst({
+        where: { id: campaignId, worldId },
+        select: { id: true },
+      });
+      if (!campaign) return { ok: false, error: "Kampagne gehört nicht zu dieser Welt." };
+    }
+    return { ok: true };
   }
 
   /**
