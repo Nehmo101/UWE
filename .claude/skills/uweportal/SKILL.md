@@ -100,6 +100,15 @@ besteht daneben weiter, für alle, die ihre Werte schon auf Papier haben. Die
 Kampagnen-Zuweisung bleibt in beiden Fällen im Studio (Kampagnen-Cockpit).
 Offene Punkte: [docs/engineering/character-creator-offene-punkte.md](../../../docs/engineering/character-creator-offene-punkte.md).
 
+Das Charakterprofil (Biografie, Gesinnung, Sprachen) pflegen Besitzer im
+Portal nach — `updateCharacterProfileAction`
+(`apps/portal/app/character-profile-actions.ts`) prüft Gesinnung und Sprachen
+erneut gegen den SRD-Katalog. Eigene Charaktere lassen sich zudem
+duplizieren (inklusive Seite, Zaubern und Inventar) oder löschen —
+`duplicateOwnCharacterAction` / `deleteOwnCharacterAction`
+(`apps/portal/app/character-actions.ts`), Domain-Logik in
+`packages/player-hub`.
+
 Der frühere Tischmodus (Offline-Snapshot, Service Worker, `/auth/tisch`) und
 „Fragen an den DM" sind 2026-08 ersatzlos entfernt. Fragen an den Spielleiter
 laufen über Spielernotizen mit Sichtbarkeit „Nur GM".
