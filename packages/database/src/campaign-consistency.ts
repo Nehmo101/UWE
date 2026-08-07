@@ -21,11 +21,24 @@ export interface CampaignConsistencyFinding {
 }
 
 const normalize = (value: string) => value.trim().normalize("NFKC").toLocaleLowerCase("de");
-const decodeHtml = (value: string) => value
-  .replace(/&#x([0-9a-f]+);/gi, (_match, code: string) => String.fromCodePoint(Number.parseInt(code, 16)))
-  .replace(/&#(\d+);/g, (_match, code: string) => String.fromCodePoint(Number.parseInt(code, 10)))
-  .replaceAll("&quot;", '"').replaceAll("&#39;", "'").replaceAll("&amp;", "&")
-  .replaceAll("&lt;", "<").replaceAll("&gt;", ">");
+const NAMED_HTML_ENTITIES: Record<string, string> = {
+  amp: "&",
+  apos: "'",
+  gt: ">",
+  lt: "<",
+  quot: '"',
+};
+
+/** Dekodiert jede Entity genau einmal; neu entstehende Zeichen werden nicht erneut verarbeitet. */
+const decodeHtml = (value: string) => value.replace(
+  /&(?:#x[0-9a-f]+|#\d+|amp|apos|gt|lt|quot);/gi,
+  (entity) => {
+    const body = entity.slice(1, -1).toLocaleLowerCase("en");
+    if (body.startsWith("#x")) return String.fromCodePoint(Number.parseInt(body.slice(2), 16));
+    if (body.startsWith("#")) return String.fromCodePoint(Number.parseInt(body.slice(1), 10));
+    return NAMED_HTML_ENTITIES[body] ?? entity;
+  },
+);
 
 /** Fachliche Konsistenzprüfung; der Seitenbaum ist ausdrücklich nicht die Zuordnungsquelle. */
 export async function checkCampaignConsistency(

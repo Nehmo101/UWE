@@ -32,4 +32,20 @@ describe("campaign consistency gate", () => {
     const findings = await checkCampaignConsistency(db, { campaignId });
     assert.ok(findings.some((finding) => finding.code === "quest_without_story_arc" && finding.entityId === quest.id));
   });
+
+  it("dekodiert doppelt kodierte Wikilink-Ziele nicht zweimal", async () => {
+    await db.page.create({ data: { worldId, campaignId, title: "A<B", slug: "a-b", type: "lore" } });
+    const source = await db.page.create({
+      data: {
+        worldId,
+        campaignId,
+        title: "Kodierte Quelle",
+        slug: "kodierte-quelle",
+        type: "lore",
+        contentBlocks: { create: { type: "rich_text", sortOrder: 0, content: "[[A&amp;lt;B]]" } },
+      },
+    });
+    const findings = await checkCampaignConsistency(db, { campaignId });
+    assert.ok(findings.some((finding) => finding.code === "dead_wikilink" && finding.entityId === source.id));
+  });
 });
