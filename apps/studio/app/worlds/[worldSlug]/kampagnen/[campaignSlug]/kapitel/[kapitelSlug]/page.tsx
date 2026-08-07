@@ -16,6 +16,7 @@ import { requireStudioWorldRead } from "@/src/lib/authz";
 import {
   assignDungeonToArcAction,
   assignQuestToArcAction,
+  createStoryArcAction,
   pinPageToStoryArcAction,
   preparePrintListFromChapterAction,
   unpinPageFromStoryArcAction,
@@ -29,6 +30,9 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  Input,
+  Label,
+  Textarea,
   buttonVariants,
 } from "@/src/components/ui";
 
@@ -127,6 +131,22 @@ export default async function ChapterCockpitPage({ params, searchParams }: Props
         summary={chapter.summary ?? `Kapitel der Kampagne „${campaign.name}".`}
         actions={
           <span className="inline-flex flex-wrap gap-2">
+            {chapter.parentChapterId === null ? (
+              <>
+                <Link
+                  href={`${base}/prepare-session?campaign=${campaignSlug}&chapter=${chapter.slug}`}
+                  className={buttonVariants()}
+                >
+                  Akt vorbereiten
+                </Link>
+                <Link
+                  href={`${base}/sessions/new?campaign=${campaignSlug}&chapter=${chapter.slug}`}
+                  className={buttonVariants({ variant: "outline" })}
+                >
+                  Session anlegen
+                </Link>
+              </>
+            ) : null}
             <Link
               href={`/api/worlds/${worldSlug}/kampagnen/kapitel-druck?kapitelId=${chapter.id}&variante=dm`}
               target="_blank"
@@ -200,6 +220,59 @@ export default async function ChapterCockpitPage({ params, searchParams }: Props
             </form>
           </CardContent>
         </Card>
+
+        {chapter.parentChapterId === null ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Ablauf dieses Akts</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {view.subchapters.length > 0 ? (
+                <ol className="ml-5 flex list-decimal flex-col gap-3 text-sm">
+                  {view.subchapters.map((subchapter) => (
+                  <li key={subchapter.id}>
+                    <Link href={subchapter.href} className="font-medium">
+                      {subchapter.title}
+                    </Link>
+                    {subchapter.summary ? (
+                      <p className="mb-0 mt-1 text-muted-foreground">{subchapter.summary}</p>
+                    ) : (
+                      <p className="mb-0 mt-1 text-muted-foreground">
+                        Noch kein DM-Leitsatz für diesen Abschnitt.
+                      </p>
+                    )}
+                  </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Noch keine Unterkapitel. Der Akt kann trotzdem direkt für eine Session genutzt werden.
+                </p>
+              )}
+              <details className="mt-4 rounded-md border border-border p-3">
+                <summary className="cursor-pointer text-sm font-medium">Unterkapitel ergänzen</summary>
+                <form action={createStoryArcAction} className="mt-3 flex flex-col gap-3">
+                  <input type="hidden" name="worldSlug" value={worldSlug} />
+                  <input type="hidden" name="campaignSlug" value={campaignSlug} />
+                  <input type="hidden" name="parentChapterId" value={chapter.id} />
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="subchapter-title">Titel</Label>
+                    <Input id="subchapter-title" name="title" required maxLength={160} />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="subchapter-summary">Was muss der DM hier erreichen?</Label>
+                    <Input id="subchapter-summary" name="summary" maxLength={500} />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="subchapter-content">Leitfaden (Wikitext)</Label>
+                    <Textarea id="subchapter-content" name="content" rows={4} />
+                  </div>
+                  <Button type="submit" className="self-start">Unterkapitel anlegen</Button>
+                </form>
+              </details>
+            </CardContent>
+          </Card>
+        ) : null}
 
         {view.html ? (
           <Card>

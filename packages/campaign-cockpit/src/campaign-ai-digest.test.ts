@@ -37,6 +37,7 @@ describe("buildCampaignAiDigest (pure)", () => {
         chapters: [
           {
             id: "ch1",
+            parentChapterId: null,
             title: "Akt I",
             slug: "akt-i",
             summary: "Der Aufbruch.",

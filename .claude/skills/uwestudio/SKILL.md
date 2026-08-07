@@ -102,20 +102,24 @@ externe Callbacks.
 Verwaltung, Cockpit-Einstieg; `/campaigns` und `/radar` sind nur noch Redirects —
 der frühere Kampagnen-Radar ist im Kampagnen-Überblick aufgegangen, die Weltuhr
 im Welt-Dashboard-Widget). Der Überblick `/kampagnen/[slug]` folgt der
-Dungeon-Analogie — Kampagne → Story-Bögen/Kapitel (`PageType.story_arc`, Status
-über `prepStatus`, Reihenfolge über `sortIndex`) → Quests (`kapitel/[slug]`, mit
+Dungeon-Analogie — Kampagne → wenige tragende Akte → Unterkapitel/Questpools
+(`PageType.story_arc`, Hierarchie über `parentPageId`, Status über `prepStatus`,
+Reihenfolge über `sortIndex`) → Quests (`kapitel/[slug]`, mit
 Beziehungen aus den `[[Wiki-Links]]` und Chronik-Verknüpfungen
 `Auslöser`/`Folge`) und zeigt zusätzlich Dungeons und NSC-Stand der Kampagne.
-Die Kapitel-Seite trägt die Akt-Tafel „Im Akt wichtig" (NSCs/Orte/Fraktionen
-aus Kapitel- **und** Quest-Texten, `actRelations`). `/kampagnen/[slug]/abschluss`
+Nur Story-Arcs ohne Story-Arc-Eltern zählen für Fortschritt und Session-Vorauswahl
+als Akte; ihre Akt-Tafel aggregiert Unterkapitel, Questpools, Quests, Dungeons und
+Beziehungen rekursiv. Die Akt-Seite trägt „Ablauf dieses Akts" und „Im Akt wichtig"
+(NSCs/Orte/Fraktionen aus Akt-, Kapitel- **und** Quest-Texten, `actRelations`).
+`/kampagnen/[slug]/abschluss`
 ist der Session-Abschluss-Flow (Ereignisse, Quests, Weltuhr, geteilte
 Spielernotizen — private erreichen den Flow nie). Kapitel-Druck
 (DM-/Spieler-Variante, Markdown) über `/api/worlds/[w]/kampagnen/kapitel-druck`;
 Fachlogik in `packages/campaign-cockpit`, Actions in
 `apps/studio/app/kampagnen-actions.ts`. „Session vorbereiten"
-(`/prepare-session`) versteht `?campaign=` (Kampagnen-Kontext samt aktuellem
-Kapitel) und `?sessionId=` (Vorauswahl). Sessions tragen ihr Kapitel
-(`GameSession.storyArcPageId`, Vorschlag = aktuelles Kapitel) und ihre
+(`/prepare-session`) versteht `?campaign=` und `?chapter=` (Kampagnen- und
+Akt-Kontext) sowie `?sessionId=` (Vorauswahl). Sessions tragen ihren Akt
+(`GameSession.storyArcPageId`, Vorschlag = aktueller oberer Akt) und ihre
 **Tischrunde** (`GameSession.groupId`, Select im Session-Formular): leer =
 „Alle Runden dieser Welt", sonst sieht den Abend im Portal nur diese Runde.
 Diese Zuordnung ist für die Spielersicht führend — wer in keiner Runde sitzt,

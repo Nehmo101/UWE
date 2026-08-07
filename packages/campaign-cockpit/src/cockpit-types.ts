@@ -15,6 +15,8 @@ import type { QuestRelations, QuestRelationTarget } from "./quest-relations";
 
 export interface ChapterSummary {
   id: string;
+  /** Null means a top-level playable act; nested story arcs are chapters or quest pools. */
+  parentChapterId: string | null;
   title: string;
   slug: string;
   summary: string | null;
@@ -93,6 +95,7 @@ export interface ChapterView {
   campaign: Campaign;
   chapter: {
     id: string;
+    parentChapterId: string | null;
     title: string;
     slug: string;
     summary: string | null;
@@ -100,6 +103,8 @@ export interface ChapterView {
     sortIndex: number | null;
   };
   html: string;
+  /** Nested story arcs that provide the act's playable chapter/quest-pool outline. */
+  subchapters: ChapterSummary[];
   quests: ChapterQuest[];
   backlinks: QuestRelationTarget[];
   /** Kampagnen-Quests außerhalb dieses Kapitels — fürs „Quest zuordnen"-Select. */

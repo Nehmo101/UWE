@@ -10,18 +10,13 @@ import {
   formatInGameDate,
   parseInGameDate,
   parseWorldCalendarMonths,
-  renderPageContentHtml,
   suggestSlugFromTitle,
 } from "@uwe/database/server";
 import { buildPageUrl } from "@uwe/database/page-types";
 import type { WorldWikiGraph } from "@uwe/database/page-service";
 import { chapterProgress, compareChapterOrder } from "./chapter-helpers";
-import {
-  deriveQuestBacklinks,
-  deriveQuestRelations,
-  mergeQuestRelations,
-  type QuestRelations,
-} from "./quest-relations";
+import { rollupChapterQuestCounts, rootChapters } from "./chapter-hierarchy";
+import { getCampaignChapterView } from "./chapter-view-service";
 
 /*
  * Kampagnen-Cockpit — die Kampagne als Wurzel-Entität, exakte Analogie zum
@@ -50,21 +45,11 @@ export type {
 import type {
   CampaignCockpitSummary,
   CampaignOverview,
-  ChapterQuest,
   ChapterSummary,
   ChapterView,
   CockpitQuest,
   CockpitSessionRef,
 } from "./cockpit-types";
-
-const EVENT_ROLE_LABELS: Record<string, string> = {
-  primary: "Hauptakteur",
-  involved: "Beteiligt",
-  location: "Ort",
-  faction: "Fraktion",
-  trigger: "Auslöser",
-  consequence: "Folge",
-};
 
 function questStatus(value: string | null): QuestLifecycleStatus {
   return (value ?? "open") as QuestLifecycleStatus;
@@ -87,7 +72,7 @@ export class CampaignCockpitService {
     const [chapters, quests, sessions] = await Promise.all([
       this.db.page.findMany({
         where: { worldId: world.id, type: STORY_ARC_TYPE, campaignId: { not: null } },
-        select: { campaignId: true, prepStatus: true },
+        select: { id: true, campaignId: true, parentPageId: true, prepStatus: true, sortIndex: true, title: true },
       }),
       this.db.page.findMany({
         where: {
@@ -124,14 +109,26 @@ export class CampaignCockpitService {
       return summary;
     };
 
-    const chaptersByCampaign = new Map<string, Array<{ prepStatus: DungeonPrepStatus | null }>>();
+    const chaptersByCampaign = new Map<string, Array<{
+      id: string;
+      parentChapterId: string | null;
+      prepStatus: DungeonPrepStatus | null;
+      sortIndex: number | null;
+      title: string;
+    }>>();
     for (const chapter of chapters) {
       const list = chaptersByCampaign.get(chapter.campaignId as string) ?? [];
-      list.push({ prepStatus: chapter.prepStatus });
+      list.push({
+        id: chapter.id,
+        parentChapterId: chapter.parentPageId,
+        prepStatus: chapter.prepStatus,
+        sortIndex: chapter.sortIndex,
+        title: chapter.title,
+      });
       chaptersByCampaign.set(chapter.campaignId as string, list);
     }
     for (const [campaignId, list] of chaptersByCampaign) {
-      ensure(campaignId).progress = chapterProgress(list);
+      ensure(campaignId).progress = chapterProgress(rootChapters(list));
     }
     for (const quest of quests) {
       ensure(quest.campaignId as string).openQuests += 1;
@@ -175,6 +172,7 @@ export class CampaignCockpitService {
             title: true,
             slug: true,
             summary: true,
+            parentPageId: true,
             prepStatus: true,
             sortIndex: true,
           },
@@ -284,15 +282,22 @@ export class CampaignCockpitService {
       }
     }
 
-    const orderedChapters = [...chapters].sort(compareChapterOrder).map((chapter) => ({
+    const directCounts = countsByChapter;
+    const hierarchyInput = chapters.map((chapter) => ({
+      ...chapter,
+      parentChapterId: chapterIds.has(chapter.parentPageId ?? "") ? chapter.parentPageId : null,
+    }));
+    const rolledCounts = rollupChapterQuestCounts(hierarchyInput, directCounts);
+    const orderedChapters = hierarchyInput.sort(compareChapterOrder).map((chapter) => ({
       id: chapter.id,
+      parentChapterId: chapter.parentChapterId,
       title: chapter.title,
       slug: chapter.slug,
       summary: chapter.summary,
       prepStatus: chapter.prepStatus,
       sortIndex: chapter.sortIndex,
       href: `${base}/kampagnen/${campaign.slug}/kapitel/${chapter.slug}`,
-      questCounts: countsByChapter.get(chapter.id) ?? {
+      questCounts: rolledCounts.get(chapter.id) ?? {
         open: 0,
         completed: 0,
         failed: 0,
@@ -341,7 +346,7 @@ export class CampaignCockpitService {
         })),
       noteQueueCount,
       canonConflicts,
-      progress: chapterProgress(chapters),
+      progress: chapterProgress(rootChapters(orderedChapters)),
       dungeons: dungeons.map((dungeon) => ({
         id: dungeon.id,
         title: dungeon.title,
@@ -362,163 +367,13 @@ export class CampaignCockpitService {
   ): Promise<ChapterView | null> {
     const campaign = await this.getCampaign(worldSlug, campaignSlug);
     if (!campaign) return null;
-
-    const chapter = await this.db.page.findFirst({
-      where: {
-        worldId: campaign.worldId,
-        campaignId: campaign.id,
-        slug: kapitelSlug,
-        type: STORY_ARC_TYPE,
-      },
-      include: { contentBlocks: { orderBy: { sortOrder: "asc" } }, campaign: true },
-    });
-    if (!chapter) return null;
-
-    const [quests, campaignQuests, pinLinks, chapterDungeons, worldDungeons] = await Promise.all([
-      this.db.page.findMany({
-        where: {
-          worldId: campaign.worldId,
-          type: "quest",
-          OR: [
-            { questStoryArcId: chapter.id },
-            { questStoryArcId: null, parentPageId: chapter.id },
-          ],
-        },
-        include: { contentBlocks: { orderBy: { sortOrder: "asc" } }, campaign: true },
-        orderBy: { title: "asc" },
-      }),
-      this.db.page.findMany({
-        where: {
-          worldId: campaign.worldId,
-          campaignId: campaign.id,
-          type: "quest",
-          NOT: {
-            OR: [
-              { questStoryArcId: chapter.id },
-              { questStoryArcId: null, parentPageId: chapter.id },
-            ],
-          },
-        },
-        select: { id: true, title: true },
-        orderBy: { title: "asc" },
-      }),
-      this.db.storyArcEntityLink.findMany({
-        where: { storyArcPageId: chapter.id },
-        include: { page: { select: { id: true, title: true, slug: true, type: true } } },
-        orderBy: [{ sortIndex: "asc" }, { createdAt: "asc" }],
-      }),
-      this.db.page.findMany({
-        where: { worldId: campaign.worldId, parentPageId: chapter.id, type: "dungeon" },
-        select: { id: true, title: true, slug: true, summary: true, prepStatus: true },
-        orderBy: { title: "asc" },
-      }),
-      this.db.page.findMany({
-        where: {
-          worldId: campaign.worldId,
-          type: "dungeon",
-          NOT: { parentPageId: chapter.id },
-        },
-        select: { id: true, title: true },
-        orderBy: { title: "asc" },
-      }),
-    ]);
-
-    const questIds = quests.map((quest) => quest.id);
-    const eventLinks = questIds.length
-      ? await this.db.worldEventEntityLink.findMany({
-          where: { pageId: { in: questIds }, event: { worldId: campaign.worldId } },
-          include: { event: { select: { id: true, title: true } } },
-        })
-      : [];
-    const eventsByQuest = new Map<string, ChapterQuest["linkedEvents"]>();
-    for (const link of eventLinks) {
-      const list = eventsByQuest.get(link.pageId) ?? [];
-      list.push({
-        eventId: link.event.id,
-        title: link.event.title,
-        role: link.role,
-        roleLabel: EVENT_ROLE_LABELS[link.role] ?? link.role,
-      });
-      eventsByQuest.set(link.pageId, list);
-    }
-
-    const emptyRelations: QuestRelations = { npcs: [], locations: [], factions: [] };
-
-    const questViews = quests.map((quest) => ({
-      id: quest.id,
-      title: quest.title,
-      slug: quest.slug,
-      href: buildPageUrl(worldSlug, quest.type, quest.slug),
-      status: questStatus(quest.questStatus),
-      chapterId: chapter.id,
-      relations: context.graph
-        ? deriveQuestRelations(worldSlug, quest, context.graph)
-        : emptyRelations,
-      linkedEvents: eventsByQuest.get(quest.id) ?? [],
-    }));
-
-    // Kapiteltext + Quest-Texte: die abgeleiteten Beziehungen des ganzen Akts.
-    const chapterRelations = context.graph
-      ? deriveQuestRelations(worldSlug, chapter, context.graph)
-      : emptyRelations;
-
-    // Explizit gepinnte Seiten (Rolle wurde beim Pinnen aus dem Typ abgeleitet).
-    const pins = pinLinks.map((link) => ({
-      id: link.id,
-      role: link.role as string,
-      target: {
-        id: link.page.id,
-        title: link.page.title,
-        slug: link.page.slug,
-        type: link.page.type,
-        href: buildPageUrl(worldSlug, link.page.type, link.page.slug),
-      },
-    }));
-    const pinnedRelations: QuestRelations = { npcs: [], locations: [], factions: [] };
-    for (const pin of pins) {
-      if (pin.role === "npc") pinnedRelations.npcs.push(pin.target);
-      else if (pin.role === "location") pinnedRelations.locations.push(pin.target);
-      else if (pin.role === "faction") pinnedRelations.factions.push(pin.target);
-      // handout-Pins erscheinen nur in der Pin-Liste, nicht in den drei Gruppen.
-    }
-
-    return {
-      campaign,
-      chapter: {
-        id: chapter.id,
-        title: chapter.title,
-        slug: chapter.slug,
-        summary: chapter.summary,
-        prepStatus: chapter.prepStatus,
-        sortIndex: chapter.sortIndex,
-      },
-      html: renderPageContentHtml(chapter, context.wikiIndex),
-      quests: questViews,
-      backlinks: context.graph
-        ? deriveQuestBacklinks(worldSlug, chapter.id, context.graph)
-        : [],
-      assignableQuests: campaignQuests,
-      actRelations: mergeQuestRelations(
-        pinnedRelations,
-        chapterRelations,
-        ...questViews.map((q) => q.relations),
-      ),
-      pins,
-      dungeons: chapterDungeons.map((dungeon) => ({
-        id: dungeon.id,
-        title: dungeon.title,
-        slug: dungeon.slug,
-        href: `/worlds/${worldSlug}/dungeons/${dungeon.slug}`,
-        summary: dungeon.summary,
-        prepStatus: dungeon.prepStatus,
-      })),
-      assignableDungeons: worldDungeons,
-    };
+    return getCampaignChapterView(this.db, campaign, worldSlug, kapitelSlug, context);
   }
 
   async createChapter(input: {
     worldId: string;
     campaignId: string;
+    parentChapterId?: string | null;
     title: string;
     summary?: string | null;
     content?: string;
@@ -533,8 +388,26 @@ export class CampaignCockpitService {
       suffix += 1;
     }
 
+    if (input.parentChapterId) {
+      const parent = await this.db.page.findFirst({
+        where: {
+          id: input.parentChapterId,
+          worldId: input.worldId,
+          campaignId: input.campaignId,
+          type: STORY_ARC_TYPE,
+        },
+        select: { id: true },
+      });
+      if (!parent) throw new Error("Übergeordneter Akt nicht gefunden.");
+    }
+
     const maxSortIndex = await this.db.page.aggregate({
-      where: { worldId: input.worldId, campaignId: input.campaignId, type: STORY_ARC_TYPE },
+      where: {
+        worldId: input.worldId,
+        campaignId: input.campaignId,
+        type: STORY_ARC_TYPE,
+        parentPageId: input.parentChapterId ?? null,
+      },
       _max: { sortIndex: true },
     });
 
@@ -542,6 +415,7 @@ export class CampaignCockpitService {
       data: {
         worldId: input.worldId,
         campaignId: input.campaignId,
+        parentPageId: input.parentChapterId ?? null,
         title: input.title,
         slug,
         type: STORY_ARC_TYPE,
@@ -578,8 +452,18 @@ export class CampaignCockpitService {
     chapterId: string,
     direction: "up" | "down",
   ): Promise<void> {
+    const selected = await this.db.page.findFirst({
+      where: { id: chapterId, worldId, campaignId, type: STORY_ARC_TYPE },
+      select: { parentPageId: true },
+    });
+    if (!selected) throw new Error("Kapitel nicht gefunden.");
     const chapters = await this.db.page.findMany({
-      where: { worldId, campaignId, type: STORY_ARC_TYPE },
+      where: {
+        worldId,
+        campaignId,
+        type: STORY_ARC_TYPE,
+        parentPageId: selected.parentPageId,
+      },
       select: { id: true, title: true, sortIndex: true },
     });
     const ordered = chapters.sort(compareChapterOrder);

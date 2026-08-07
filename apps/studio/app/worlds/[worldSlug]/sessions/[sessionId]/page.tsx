@@ -9,6 +9,7 @@ import {
   getAppRepository,
   navCategoryForPageType,
 } from "@uwe/database/server";
+import { rootChapters } from "@uwe/campaign-cockpit";
 import { publishSessionRecapAction } from "../../../../session-actions";
 import {
   AVAILABILITY_LABELS,
@@ -79,9 +80,16 @@ export default async function StudioSessionDetailPage({ params, searchParams }: 
   const linkablePages = allPages.filter((p) => !linkedIds.has(p.id));
   // Kapitel der Kampagne fürs Zuordnungs-Select (F3) — story_arc-Seiten.
   const chapters = session.campaignId
-    ? allPages
-        .filter((page) => page.type === "story_arc")
-        .map((page) => ({ id: page.id, title: page.title }))
+    ? rootChapters(
+        allPages
+          .filter((page) => page.type === "story_arc")
+          .map((page) => ({
+            id: page.id,
+            parentChapterId: page.parentPageId,
+            sortIndex: page.sortIndex,
+            title: page.title,
+          })),
+      ).map((page) => ({ id: page.id, title: page.title }))
     : [];
 
   return (

@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { buildPageUrl, createCharacterService, getAppRepository, prisma } from "@uwe/database/server";
-import { createCampaignCockpitService, findCurrentChapter } from "@uwe/campaign-cockpit";
+import {
+  buildChapterTree,
+  createCampaignCockpitService,
+  findCurrentChapter,
+} from "@uwe/campaign-cockpit";
 import { createPlayerGroupService } from "@uwe/player-hub";
 import { DungeonPrepStatusBadge, QuestStatusBadge, SidebarSection, StatGrid } from "@uwe/shared-ui";
 import { PageHeader, ShellBreadcrumb, ShellContextPanel } from "@/src/components/shell";
@@ -84,15 +88,10 @@ export default async function CampaignCockpitPage({ params, searchParams }: Prop
   const base = `/worlds/${worldSlug}`;
   const cockpitPath = `${base}/kampagnen/${campaignSlug}`;
   const { campaign, chapters, unassignedQuests, factions, dungeons, progress } = overview;
+  const actTree = buildChapterTree(chapters);
+  const acts = actTree.map((node) => node.chapter);
   // Das erste noch nicht gespielte Kapitel in Lesereihenfolge — Druck-Einstieg.
-  const currentChapter = findCurrentChapter(
-    chapters.map((chapter) => ({
-      id: chapter.id,
-      title: chapter.title,
-      sortIndex: chapter.sortIndex,
-      prepStatus: chapter.prepStatus,
-    })),
-  );
+  const currentAct = findCurrentChapter(acts);
 
   return (
     <>
@@ -102,15 +101,15 @@ export default async function CampaignCockpitPage({ params, searchParams }: Prop
         ])}
       />
       <ShellContextPanel>
-        <SidebarSection title="Kapitel">
-          {chapters.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Noch keine Kapitel.</p>
+        <SidebarSection title="Akte">
+          {acts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Noch keine Akte.</p>
           ) : (
             <ul className="flex flex-col gap-1.5 text-sm">
-              {chapters.map((chapter, index) => (
-                <li key={chapter.id}>
-                  <Link href={chapter.href}>
-                    {index + 1}. {chapter.title}
+              {acts.map((act, index) => (
+                <li key={act.id}>
+                  <Link href={act.href}>
+                    {index + 1}. {act.title}
                   </Link>
                 </li>
               ))}
@@ -157,13 +156,13 @@ export default async function CampaignCockpitPage({ params, searchParams }: Prop
         }
         actions={
           <span className="inline-flex flex-wrap gap-2">
-            {currentChapter ? (
+            {currentAct ? (
               <Link
-                href={`/api/worlds/${worldSlug}/kampagnen/kapitel-druck?kapitelId=${currentChapter.id}&variante=dm`}
+                href={`/api/worlds/${worldSlug}/kampagnen/kapitel-druck?kapitelId=${currentAct.id}&variante=dm`}
                 target="_blank"
                 className={buttonVariants({ variant: "outline" })}
               >
-                Aktuelles Kapitel drucken
+                Aktuellen Akt drucken
               </Link>
             ) : null}
             <Link href={`${cockpitPath}/abschluss`} className={buttonVariants()}>
@@ -203,15 +202,15 @@ export default async function CampaignCockpitPage({ params, searchParams }: Prop
       <StatGrid
         stats={[
           {
-            label: "Kapitel",
-            value: chapters.length,
+            label: "Akte",
+            value: acts.length,
             hint: progress.label || undefined,
             href: "#cockpit-kapitel",
           },
           {
             label: "Offene Quests",
             value:
-              chapters.reduce((sum, chapter) => sum + chapter.questCounts.open, 0) +
+              acts.reduce((sum, act) => sum + act.questCounts.open, 0) +
               unassignedQuests.filter((quest) => quest.status === "open").length,
             href: "#cockpit-quests",
           },
@@ -238,63 +237,95 @@ export default async function CampaignCockpitPage({ params, searchParams }: Prop
       <div className="flex flex-col gap-6">
         <Card id="cockpit-kapitel">
           <CardHeader>
-            <CardTitle>Story-Bögen &amp; Kapitel</CardTitle>
+            <CardTitle>Kampagnen-Akte</CardTitle>
           </CardHeader>
           <CardContent>
-            {chapters.length === 0 ? (
+            {acts.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Noch keine Kapitel. Lege unten das erste an — oder importiere ein Kampagnenbuch,
-                dessen Kapitel hier ankommen.
+                Noch keine Akte. Lege unten den ersten an — importierte Unterkapitel bleiben
+                darunter vollständig erhalten.
               </p>
             ) : (
               <ol className="flex flex-col gap-3">
-                {chapters.map((chapter, index) => (
+                {actTree.map(({ chapter: act, children }, index) => (
                   <li
-                    key={chapter.id}
-                    className="flex flex-wrap items-center gap-3 rounded-md border border-border p-3"
+                    key={act.id}
+                    className="flex flex-col gap-3 rounded-md border border-border p-4"
                   >
-                    <span className="text-sm text-muted-foreground">{index + 1}.</span>
-                    <Link href={chapter.href} className="font-medium">
-                      {chapter.title}
-                    </Link>
-                    <DungeonPrepStatusBadge status={chapter.prepStatus} />
-                    <span className="text-sm text-muted-foreground">
-                      {chapter.questCounts.total > 0
-                        ? `${chapter.questCounts.open} offen · ${chapter.questCounts.completed} erledigt${chapter.questCounts.failed > 0 ? ` · ${chapter.questCounts.failed} gescheitert` : ""}`
-                        : "keine Quests"}
-                    </span>
-                    <span className="ml-auto inline-flex gap-1">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="text-sm text-muted-foreground">Akt {index + 1}</span>
+                      <Link href={act.href} className="font-semibold">
+                        {act.title}
+                      </Link>
+                      <DungeonPrepStatusBadge status={act.prepStatus} />
+                      <span className="text-sm text-muted-foreground">
+                        {act.questCounts.total > 0
+                          ? `${act.questCounts.open} offen · ${act.questCounts.completed} erledigt${act.questCounts.failed > 0 ? ` · ${act.questCounts.failed} gescheitert` : ""}`
+                          : "keine Quests"}
+                      </span>
+                      <span className="ml-auto inline-flex gap-1">
                       <form action={moveStoryArcAction}>
                         <input type="hidden" name="worldSlug" value={worldSlug} />
                         <input type="hidden" name="campaignSlug" value={campaignSlug} />
-                        <input type="hidden" name="chapterId" value={chapter.id} />
+                        <input type="hidden" name="chapterId" value={act.id} />
                         <input type="hidden" name="direction" value="up" />
-                        <Button type="submit" variant="ghost" size="sm" aria-label={`${chapter.title} nach oben`}>
+                        <Button type="submit" variant="ghost" size="sm" aria-label={`${act.title} nach oben`}>
                           ↑
                         </Button>
                       </form>
                       <form action={moveStoryArcAction}>
                         <input type="hidden" name="worldSlug" value={worldSlug} />
                         <input type="hidden" name="campaignSlug" value={campaignSlug} />
-                        <input type="hidden" name="chapterId" value={chapter.id} />
+                        <input type="hidden" name="chapterId" value={act.id} />
                         <input type="hidden" name="direction" value="down" />
-                        <Button type="submit" variant="ghost" size="sm" aria-label={`${chapter.title} nach unten`}>
+                        <Button type="submit" variant="ghost" size="sm" aria-label={`${act.title} nach unten`}>
                           ↓
                         </Button>
                       </form>
-                    </span>
+                      </span>
+                    </div>
+                    <p className="m-0 text-sm">
+                      <span className="font-medium">DM-Auftrag:</span>{" "}
+                      {act.summary ?? "Für diesen Akt fehlt noch eine handlungsleitende Kurzbeschreibung."}
+                    </p>
+                    {children.length > 0 ? (
+                      <ol className="ml-5 flex list-decimal flex-col gap-2 text-sm">
+                        {children.map(({ chapter }) => (
+                          <li key={chapter.id}>
+                            <Link href={chapter.href} className="font-medium">{chapter.title}</Link>
+                            {chapter.summary ? (
+                              <span className="text-muted-foreground"> — {chapter.summary}</span>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ol>
+                    ) : null}
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        href={`${base}/prepare-session?campaign=${campaignSlug}&chapter=${act.slug}`}
+                        className={buttonVariants({ variant: "outline", size: "sm" })}
+                      >
+                        Diesen Akt vorbereiten
+                      </Link>
+                      <Link
+                        href={`${base}/sessions/new?campaign=${campaignSlug}&chapter=${act.slug}`}
+                        className={buttonVariants({ variant: "ghost", size: "sm" })}
+                      >
+                        Session in diesem Akt anlegen
+                      </Link>
+                    </div>
                   </li>
                 ))}
               </ol>
             )}
 
             <details className="mt-4 rounded-md border border-border p-3">
-              <summary className="cursor-pointer text-sm font-medium">Neues Kapitel</summary>
+              <summary className="cursor-pointer text-sm font-medium">Neuer Akt</summary>
               <form action={createStoryArcAction} className="mt-3 flex flex-col gap-3">
                 <input type="hidden" name="worldSlug" value={worldSlug} />
                 <input type="hidden" name="campaignSlug" value={campaignSlug} />
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="new-chapter-title">Titel</Label>
+                  <Label htmlFor="new-chapter-title">Akt-Titel</Label>
                   <Input
                     id="new-chapter-title"
                     name="title"
@@ -304,15 +335,15 @@ export default async function CampaignCockpitPage({ params, searchParams }: Prop
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="new-chapter-summary">Kurzbeschreibung (optional)</Label>
+                  <Label htmlFor="new-chapter-summary">DM-Auftrag / Ziel des Akts</Label>
                   <Input id="new-chapter-summary" name="summary" maxLength={240} />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="new-chapter-content">Kapiteltext (optional, Wikitext)</Label>
+                  <Label htmlFor="new-chapter-content">Akt-Leitfaden (optional, Wikitext)</Label>
                   <Textarea id="new-chapter-content" name="content" rows={4} />
                 </div>
                 <Button type="submit" className="self-start">
-                  Kapitel anlegen
+                  Akt anlegen
                 </Button>
               </form>
             </details>
