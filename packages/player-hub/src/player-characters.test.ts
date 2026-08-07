@@ -105,4 +105,48 @@ describe("player character lifecycle", () => {
     assert.equal(await db.inventoryItem.count({ where: { characterId: copy.characterId } }), 0);
     await db.$disconnect();
   });
+
+  it("lets Studio create a character for a player and reassign owner plus campaign", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const service = createPlayerCharacterService(db);
+    const campaign = await db.campaign.create({
+      data: { worldId, name: "Spielrunde", slug: "spielrunde" },
+    });
+
+    const created = await service.createAssignedCharacter({
+      worldId,
+      ownerUserId: playerId,
+      campaignId: campaign.id,
+      displayName: "Mara Sturm",
+    });
+    assert.equal(created.ok, true);
+    if (!created.ok) return;
+
+    const character = await db.character.findUniqueOrThrow({
+      where: { id: created.characterId },
+      include: { page: true },
+    });
+    assert.equal(character.ownerUserId, playerId);
+    assert.equal(character.campaignId, campaign.id);
+    assert.equal(character.page?.campaignId, campaign.id);
+    assert.equal(character.page?.portalReleased, true);
+
+    assert.deepEqual(
+      await service.updateAssignment({
+        worldId,
+        characterId: character.id,
+        ownerUserId: otherPlayerId,
+        campaignId: null,
+      }),
+      { ok: true },
+    );
+    const reassigned = await db.character.findUniqueOrThrow({
+      where: { id: character.id },
+      include: { page: true },
+    });
+    assert.equal(reassigned.ownerUserId, otherPlayerId);
+    assert.equal(reassigned.campaignId, null);
+    assert.equal(reassigned.page?.campaignId, null);
+    await db.$disconnect();
+  });
 });

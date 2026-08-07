@@ -150,6 +150,12 @@ export function worldNav(worldSlug: string): NavGroup[] {
           "tischrunde",
           "party",
         ]),
+        item("world-characters", "Charaktere", `${base}/characters`, "contact-round", "Spiel", [
+          "charaktere",
+          "spielercharaktere",
+          "charakterbogen",
+          "spieler zuweisen",
+        ]),
         item("world-treasury", "Gruppenschatz", `${base}/treasury`, "coins", "Spiel", [
           "gruppenschatz",
           "treasury",

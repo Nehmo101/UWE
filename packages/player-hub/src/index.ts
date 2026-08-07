@@ -18,9 +18,11 @@ export {
 export {
   createPlayerCharacterService,
   PlayerCharacterService,
+  type CreateAssignedCharacterInput,
   type CreateOwnCharacterInput,
   type CharacterMutationResult,
   type CreateOwnCharacterResult,
+  type UpdateCharacterAssignmentInput,
 } from "./player-characters";
 export {
   CHARACTER_NAME_MAX,

@@ -168,6 +168,21 @@ export async function writeDocImport(
   const mergeOn = options.mergeIntoExisting !== false;
   /** Ergänzte Seiten dieses Laufs — mehrere Entwürfe dürfen dieselbe treffen. */
   const mergedById = new Map<string, MergedPageRecord>();
+  const draftByKey = new Map(drafts.map((draft) => [draft.key, draft]));
+  const effectiveType = (draft: PageDraft): PageType =>
+    options.typeOverrides?.[draft.key] ?? draft.type;
+  const nearestStoryArcKey = (draft: PageDraft): string | null => {
+    const visited = new Set<string>();
+    let parentKey = draft.parentKey;
+    while (parentKey && !visited.has(parentKey)) {
+      visited.add(parentKey);
+      const parent = draftByKey.get(parentKey);
+      if (!parent) return null;
+      if (effectiveType(parent) === "story_arc") return parent.key;
+      parentKey = parent.parentKey;
+    }
+    return null;
+  };
 
   for (const draft of drafts) {
     if (selected && !selected.has(draft.key)) continue;
@@ -205,12 +220,15 @@ export async function writeDocImport(
         );
       }
 
-      const pageType = options.typeOverrides?.[draft.key] ?? draft.type;
+      const pageType = effectiveType(draft);
+      const storyArcKey = pageType === "quest" ? nearestStoryArcKey(draft) : null;
+      const questStoryArcId = storyArcKey ? (keyToPageId.get(storyArcKey) ?? null) : null;
 
       const page = await repo.createPage({
         worldId: world.id,
         campaignId,
         parentPageId,
+        questStoryArcId,
         sortIndex: draft.sortIndex,
         title: draft.title,
         slug,
@@ -219,7 +237,9 @@ export async function writeDocImport(
         canonicalStatus: draft.canonicalStatus ?? undefined,
         // Ein frisch importiertes Kapitel ist noch nicht vorbereitet. Ohne
         // Status zeigt das Kampagnen-Cockpit den Bogen ohne Fortschrittsangabe.
-        prepStatus: pageType === "story_arc" ? "unprepared" : undefined,
+        prepStatus:
+          pageType === "story_arc" || pageType === "dungeon" ? "unprepared" : undefined,
+        questStatus: pageType === "quest" ? "open" : undefined,
         tags: draft.tags,
         aliases: draft.aliases,
         contentBlocks: draft.html

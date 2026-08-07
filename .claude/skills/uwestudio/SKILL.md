@@ -132,6 +132,14 @@ Etappen: `docs/kampagnen-modul.md`. Die KI-Werkstatt des Cockpits (AiContextPane
 Kontext ist der Kompakt-Digest aus `buildCampaignAiDigest`
 (`@uwe/campaign-cockpit`) — DM-Material, nie player-safe.
 
+**Charakterverwaltung:** `/worlds/[slug]/characters` ist der DM-Arbeitsplatz für
+Spielercharaktere. Dort entsteht ein leerer, sofort portal-sichtbarer Bogen samt
+Wiki-Seite; beim Anlegen wird ein aktives Weltmitglied als Besitzer gewählt und
+optional eine Kampagne gesetzt. Besitzer und Kampagne lassen sich später gemeinsam
+ändern. Die Fachlogik liegt in `@uwe/player-hub`, die Studio-Actions prüfen zusätzlich
+`requireStudioWorldEdit`. Die Kampagnenzuordnung muss immer an `Character` **und**
+der verknüpften `Page` geschrieben werden.
+
 ## Fallen
 
 - **Neue Einstellung? Nie am Host konfigurieren.** Das Muster ist
