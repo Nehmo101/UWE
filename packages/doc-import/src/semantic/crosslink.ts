@@ -98,13 +98,39 @@ function buildCandidates(targets: LinkTarget[], exclude: string): Candidate[] {
  * und Markdown-Linkziele als gesperrte Bereiche einsammelt. Danach ist die
  * Ersetzung eine reine Indexfrage.
  */
+/**
+ * Führende Zitatzeichen und Einrückung abziehen: `>   > | a |` → `| a |`.
+ *
+ * Von Hand statt per Muster. `^(?:\s*>)+\s*` lässt zwei Quantoren um dieselben
+ * Leerzeichen streiten und ist auf einer Zeile aus lauter Leerraum quadratisch —
+ * derselbe Grund wie bei `stripTags` und `parseWikiLinks`.
+ */
+function stripQuoteMarkers(line: string): string {
+  let index = 0;
+  for (;;) {
+    while (index < line.length && (line[index] === " " || line[index] === "\t")) index += 1;
+    if (line[index] !== ">") break;
+    index += 1;
+  }
+  return line.slice(index).trim();
+}
+
 function blockedRanges(markdown: string): Array<[number, number]> {
   const ranges: Array<[number, number]> = [];
   let offset = 0;
   let inFence = false;
 
   for (const line of markdown.split("\n")) {
-    const trimmed = line.trim();
+    // Zitatzeichen zuerst abziehen. Eine Tabelle in einem Blockzitat ist immer
+    // noch eine Tabelle — `> | a | b |` beginnt aber mit `>`, und ohne diesen
+    // Schritt fiel sie durch die Sperre unten hindurch. Gemessen an einem
+    // Handout, dessen Zeile danach eine Spalte verloren hatte:
+    //
+    //     | Gesa Lemm | Validori, Rauchring | schuldet Wett |
+    //     → <td>Validori, [[Der Rauchring</td><td>Rauchring]]</td>
+    //
+    // Dasselbe gilt für zitierte Überschriften und Codezäune.
+    const trimmed = stripQuoteMarkers(line);
 
     if (FENCE.test(trimmed)) {
       inFence = !inFence;
