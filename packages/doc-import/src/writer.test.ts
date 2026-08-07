@@ -145,7 +145,7 @@ describe("writeDocImport", () => {
     assert.equal(root.sortIndex, null);
   });
 
-  it("gives a colliding slug a suffix instead of failing", async () => {
+  it("ergänzt eine gleichnamige Seite, statt eine zweite anzulegen", async () => {
     const repo = createUweRepository(databaseUrl);
     const world = await repo.createWorld({ name: "Kollision", slug: "kollision" });
     await repo.createPage({ worldId: world.id, title: "Ferlor", slug: "ferlor", type: "location" });
@@ -158,6 +158,33 @@ describe("writeDocImport", () => {
     const result = await writeDocImport(repo, plan.pages, plan.relations, {
       worldSlug: "kollision",
       confirmed: true,
+    });
+
+    assert.equal(result.created, 0);
+    assert.equal(result.merged, 1);
+    assert.equal(result.failed, 0);
+
+    const pages = await repo.listPagesByWorld("kollision");
+    assert.equal(pages.filter((page) => page.title === "Ferlor").length, 1);
+  });
+
+  it("gives a colliding slug a suffix instead of failing", async () => {
+    // Der Anhänge-Mechanismus bleibt nötig: Er greift, sobald jemand das
+    // Verschmelzen ausdrücklich abschaltet — und immer dann, wenn nur der Slug
+    // kollidiert, ohne dass die Titel übereinstimmen.
+    const repo = createUweRepository(databaseUrl);
+    const world = await repo.createWorld({ name: "Kollision2", slug: "kollision2" });
+    await repo.createPage({ worldId: world.id, title: "Ferlor", slug: "ferlor", type: "location" });
+
+    const plan = buildDocImportPlan([{ fileName: "f.md", content: "# Ferlor\n\nEin Dorf." }], {
+      mode: "wiki_pages",
+      profile: "plain",
+    });
+
+    const result = await writeDocImport(repo, plan.pages, plan.relations, {
+      worldSlug: "kollision2",
+      confirmed: true,
+      mergeIntoExisting: false,
     });
 
     assert.equal(result.created, 1);

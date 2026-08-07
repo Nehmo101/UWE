@@ -322,7 +322,7 @@ export async function executeImportDocJobAction(
       worldId: world.id,
       jobId,
       createdPageIds: result.undo.createdPageIds,
-      updatedPages: [],
+      updatedPages: result.undo.updatedPages,
     });
 
     const undoToken = undoEntry?.id ?? null;

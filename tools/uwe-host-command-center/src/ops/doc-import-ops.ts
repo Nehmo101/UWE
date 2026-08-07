@@ -360,6 +360,8 @@ export async function previewDocImport(
 export interface DocImportExecuteResult {
   worldSlug: string;
   created: number;
+  /** Entwürfe, die eine bestehende Seite ergänzt haben statt eine zweite anzulegen. */
+  merged: number;
   failed: number;
   linksCreated: number;
   warnings: string[];
@@ -397,8 +399,10 @@ export async function executeDocImport(
     request,
     fileCount: files.length,
     createdPageIds: result.undo.createdPageIds,
+    updatedPages: result.undo.updatedPages,
     resultSummary: {
       created: result.created,
+      merged: result.merged,
       failed: result.failed,
       linksCreated: result.linksCreated,
     },
@@ -407,6 +411,7 @@ export async function executeDocImport(
   return {
     worldSlug: request.worldSlug,
     created: result.created,
+    merged: result.merged,
     failed: result.failed,
     linksCreated: result.linksCreated,
     warnings: result.warnings.slice(0, 50),
@@ -440,6 +445,7 @@ async function recordImportRun(
     request: DocImportRequest;
     fileCount: number;
     createdPageIds: string[];
+    updatedPages: Awaited<ReturnType<typeof writeDocImport>>["undo"]["updatedPages"];
     resultSummary: Record<string, number>;
   },
 ): Promise<string | null> {
@@ -475,7 +481,7 @@ async function recordImportRun(
       worldId: input.worldId,
       jobId,
       createdPageIds: input.createdPageIds,
-      updatedPages: [],
+      updatedPages: input.updatedPages,
     });
     undoToken = undoEntry?.id ?? null;
   } catch {
