@@ -146,27 +146,27 @@ wichtigsten Satz des Bildschirms.
 
 ## 3. Bekannte Fehler außerhalb des Erstellers
 
-Beim Bauen gefunden, **nicht** behoben, weil außerhalb des Auftrags — aber der
-Ersteller ist jetzt der Hauptlieferant dieser Daten:
+Beim Bauen gefunden; die erledigten Punkte bleiben als Entscheidungsprotokoll stehen.
+Der Ersteller ist der Hauptlieferant dieser Daten:
 
-1. **Zauberplätze werden für manche Klassen falsch gerechnet.**
-   `character-spell-service.ts` vergleicht Klassennamen gegen einen Satz ohne
-   Umlaute (`"waldlaufer"`), der Ersteller schreibt aber den Anzeigenamen
-   (`"Waldläufer"`). Die Erkennung greift dann nicht. `spellcasting.ability`
-   wird explizit geschrieben, SG und Angriffsbonus stimmen also — die
-   **Plätze** nicht.
-2. **Warlock als Halbzauberer.** Derselbe Dienst behandelt den
-   Hexenpakt-Magier als Halb- statt Pakt-Zauberer.
+1. **Erledigt: lokalisierte Klassennamen bei Zauberplätzen.**
+   Klassennamen werden diakritik- und trennzeichenfest normalisiert; damit
+   werden unter anderem `Waldläufer` und `Waldlaufer` gleich erkannt.
+2. **Erledigt: Paktmagie.** Warlock/Hexenpakt-Magier nutzt eine eigene
+   Paktplatz-Tabelle statt der Halbzauberer-Fortschreibung; Mischklassen addieren
+   Paktplätze zur normalen Zauberplatz-Tabelle.
 3. **`DndRulesEdition` verzweigt nichts.** Der Wert wird gespeichert, alle
    Formeln sind fest auf 2024 verdrahtet. Ein Charakter mit `dnd5e_2014` wird
    heute schlicht falsch gerechnet.
-4. **`PortalCharacterView` gibt Volk, Hintergrund, Merkmale und Biografie
-   nicht heraus.** Sie stehen jetzt in der Datenbank, der Bogen im Portal kann
-   sie trotzdem nicht anzeigen.
-5. **`CharacterService.update()` kann diese vier Spalten nicht ändern.** Wer
-   seinen Hintergrund korrigieren will, kann es nicht.
-6. **Mehrklassencharaktere sind unmöglich.** `bumpClasses` hebt bei unbekannter
-   Klasse still die **erste** an, statt eine zweite anzulegen.
+4. **Erledigt: Portal-Profilansicht.** `PortalCharacterView` liefert Klasse,
+   Spezies, Hintergrund, Merkmale und Biografie; der Bogen zeigt Herkunft,
+   Sprachen, Gesinnung und Beschreibungsfelder und exportiert sie mit.
+5. **Teilweise erledigt: Profiländerungen.** `CharacterService.update()` kann
+   alle vier JSON-Spalten ändern. Der Portal-Editor schreibt Biografie,
+   Gesinnung und Sprachen schemaerhaltend. Katalogwechsel von Klasse, Spezies
+   oder Hintergrund bleiben bewusst dem vollständigen Regel-Neuaufbau vorbehalten.
+6. **Erledigt im Regeldienst:** `bumpClasses` legt eine neu gewählte Klasse auf
+   Stufe 1 an, statt still die erste Klasse zu erhöhen.
 7. **Rüstungsklasse wird nie gerechnet.** Die Vorschau zeigt bewusst
    `10 + GES`; die gewählte Rüstung fließt nicht ein. Solange
    `EquipmentLine` keine strukturierten Rüstungswerte hat, geht es auch nicht.
@@ -215,8 +215,7 @@ absichtlichen Waagerecht-Scrollers müssen ausgenommen sein.
 
 1. **§ 1.1 + § 1.2** — dunkles Thema aufnehmen, a11y-Prüfung laufen lassen.
    Billig, und beides kann heute Fehler verstecken.
-2. **§ 3.1** — die Zauberplatz-Erkennung. Ein falscher Bogen am Spieltisch
-   wiegt schwerer als eine unschöne Kachel.
-3. **§ 2.1** — Optionen über die Falz holen.
-4. **§ 4** — sichtbare CC-BY-Nennung. Rechtliche Schuld, kleiner Aufwand.
+2. **§ 2.1** — Optionen über die Falz holen.
+3. **§ 4** — sichtbare CC-BY-Nennung. Rechtliche Schuld, kleiner Aufwand.
+4. **§ 3.7** — Rüstungsklasse aus strukturierter Ausrüstung ableiten.
 5. Alles Weitere nach Geschmack.

@@ -83,11 +83,27 @@ describe("character level-up service", () => {
     assert.equal(payload.combat?.currentHp, undefined);
   });
 
+  it("adds a newly picked multiclass instead of bumping the first class", () => {
+    const suggestions = buildLevelUpSuggestions(
+      {
+        level: 2,
+        classes: [{ name: "Kämpfer", level: 2 }],
+        abilities: { constitution: 12 },
+        combat: { maxHp: 20, currentHp: 20 },
+      },
+      { pickedClass: "Zauberer" },
+    );
+    assert.ok(suggestions);
+    assert.equal(
+      suggestions.fields.find((field) => field.key === "classes")?.suggestedDisplay,
+      "Kämpfer 2, Zauberer 1",
+    );
+  });
   it("returns null when max level reached", () => {
     assert.equal(
       buildLevelUpSuggestions({
-        level: 30,
-        classes: [{ name: "Fighter", level: 30 }],
+        level: 20,
+        classes: [{ name: "Fighter", level: 20 }],
         abilities: {},
         combat: {},
       }),

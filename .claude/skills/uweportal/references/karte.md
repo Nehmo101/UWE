@@ -26,9 +26,9 @@ und ob etwas Neues dazugekommen ist. Für das Warum die `SKILL.md` von /uweporta
 
 `admin` (1) · `assets` (1) · `auth` (19) · `health` (3) · `maintenance` (2) · `worlds` (2)
 
-**Server Actions** (`apps/portal/app/*-actions.ts`, 6)
+**Server Actions** (`apps/portal/app/*-actions.ts`, 7)
 
-`character-actions.ts` · `character-sheet-actions.ts` · `note-actions.ts` · `player-hub-actions.ts` · `terra-actions.ts` · `treasury-actions.ts`
+`character-actions.ts` · `character-profile-actions.ts` · `character-sheet-actions.ts` · `note-actions.ts` · `player-hub-actions.ts` · `terra-actions.ts` · `treasury-actions.ts`
 
 **Pakete** (`@uwe/*` aus `apps/portal/package.json`, 12)
 

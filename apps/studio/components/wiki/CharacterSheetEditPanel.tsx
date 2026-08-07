@@ -103,7 +103,7 @@ export async function CharacterSheetEditPanel({ worldSlug, pageId, pageSlug, cat
 
           <label>
             Startstufe
-            <input name="level" type="number" min={1} max={30} defaultValue={1} required />
+            <input name="level" type="number" min={1} max={20} defaultValue={1} required />
           </label>
 
           <Button type="submit" disabled={worldPlayers.length === 0}>
@@ -175,7 +175,7 @@ export async function CharacterSheetEditPanel({ worldSlug, pageId, pageSlug, cat
             name="level"
             type="number"
             min={1}
-            max={30}
+            max={20}
             defaultValue={sheet.level}
             required
           />
@@ -224,6 +224,18 @@ export async function CharacterSheetEditPanel({ worldSlug, pageId, pageSlug, cat
             max={20}
             defaultValue={sheet.combat.initiativeBonus ?? 0}
           />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="character-sheet-max-hp">Maximale Trefferpunkte</Label>
+          <Input id="character-sheet-max-hp" name="maxHp" type="number" min={1} max={999} defaultValue={sheet.combat.maxHp ?? ""} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="character-sheet-current-hp">Aktuelle Trefferpunkte</Label>
+          <Input id="character-sheet-current-hp" name="currentHp" type="number" min={0} max={999} defaultValue={sheet.combat.currentHp ?? ""} />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="character-sheet-speed">Bewegungsrate</Label>
+          <Input id="character-sheet-speed" name="speed" type="number" min={0} max={200} defaultValue={sheet.combat.speed ?? ""} />
         </div>
 
         <div className="flex flex-col gap-1.5">

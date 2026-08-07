@@ -159,9 +159,7 @@ function bumpClasses(
     );
   }
 
-  return classes.map((entry, index) =>
-    index === 0 ? { ...entry, level: entry.level + 1 } : entry,
-  );
+  return [...classes, { name: className, level: 1 }];
 }
 
 function formatSpellSlotMap(slots: Record<number, number>): string {
@@ -202,7 +200,7 @@ export function buildLevelUpSuggestions(
   options?: { pickedClass?: string },
 ): LevelUpSuggestions | null {
   const fromLevel = Math.floor(input.level);
-  if (fromLevel >= 30) {
+  if (fromLevel >= 20) {
     return null;
   }
 

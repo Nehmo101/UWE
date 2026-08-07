@@ -47,12 +47,18 @@ function buildUpdateInput(parsed: CharacterSheetForm): UpdateCharacterInput {
 
   const hasAbilityInput = ABILITY_KEYS.some((key) => parsed[key] !== undefined);
   const combat =
-    parsed.armorClass !== undefined || parsed.initiativeBonus !== undefined
+    parsed.armorClass !== undefined ||
+    parsed.initiativeBonus !== undefined ||
+    parsed.maxHp !== undefined || parsed.currentHp !== undefined ||
+    parsed.speed !== undefined
       ? {
           ...(parsed.armorClass !== undefined ? { armorClass: parsed.armorClass } : {}),
           ...(parsed.initiativeBonus !== undefined
             ? { initiativeBonus: parsed.initiativeBonus }
             : {}),
+          ...(parsed.maxHp !== undefined ? { maxHp: parsed.maxHp } : {}),
+          ...(parsed.currentHp !== undefined ? { currentHp: parsed.currentHp } : {}),
+          ...(parsed.speed !== undefined ? { speed: parsed.speed } : {}),
         }
       : undefined;
 

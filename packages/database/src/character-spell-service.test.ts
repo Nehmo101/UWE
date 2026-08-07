@@ -78,6 +78,17 @@ describe("character spell service", () => {
     assert.equal(summary.byLevel[3], 2);
   });
 
+  it("normalizes localized class names for spell slots", () => {
+    const ranger = computeSpellSlots(6, [{ name: "Waldläufer", level: 6 }]);
+    assert.equal(ranger.casterLevel, 3);
+    assert.equal(ranger.byLevel[2], 2);
+  });
+
+  it("uses pact-magic progression for warlocks", () => {
+    const warlock = computeSpellSlots(5, [{ name: "Hexenpakt-Magier", level: 5 }]);
+    assert.equal(warlock.casterLevel, 0);
+    assert.deepEqual(warlock.byLevel, { 3: 2 });
+  });
   it("parses character classes from JSON", () => {
     assert.deepEqual(parseCharacterClasses([{ name: "Wizard", level: 4 }]), [
       { name: "Wizard", level: 4 },

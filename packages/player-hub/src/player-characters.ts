@@ -53,6 +53,8 @@ export type CreateOwnCharacterResult =
   | { ok: true; characterId: string; pageSlug: string }
   | { ok: false; error: string };
 
+export type CharacterMutationResult = { ok: true } | { ok: false; error: string };
+
 export class PlayerCharacterService {
   constructor(private readonly db: PrismaClient) {}
 
@@ -308,6 +310,123 @@ export class PlayerCharacterService {
     });
 
     return { ok: true, ...created };
+  }
+
+  async duplicateOwnCharacter(
+    worldSlug: string,
+    ctx: AccessContext,
+    characterId: string,
+  ): Promise<CreateOwnCharacterResult> {
+    const world = await this.resolveWorldForCreation(worldSlug, ctx);
+    if (!world.ok) return { ok: false, error: world.error };
+    const ownerUserId = ctx.user!.id;
+    const source = await this.db.character.findFirst({
+      where: { id: characterId, worldId: world.worldId, ownerUserId },
+      include: {
+        page: { include: { contentBlocks: { orderBy: { sortOrder: "asc" } } } },
+        spells: true,
+        inventoryItems: true,
+      },
+    });
+    if (!source) return { ok: false, error: "Charakter nicht gefunden." };
+
+    const displayName = `${source.displayName} (Kopie)`.slice(0, CHARACTER_NAME_MAX);
+    const slug = await this.pickPageSlug(world.worldId, displayName);
+    const created = await this.db.$transaction(async (tx) => {
+      const page = await tx.page.create({
+        data: {
+          worldId: world.worldId,
+          title: displayName,
+          slug,
+          type: "player_character",
+          portalReleased: true,
+        },
+        select: { id: true, slug: true },
+      });
+      const playerText = source.page?.contentBlocks.find((block) => block.type === "player_text")?.content ?? "";
+      await tx.contentBlock.create({
+        data: { pageId: page.id, type: "player_text", sortOrder: 0, content: playerText },
+      });
+      const json = (value: Prisma.JsonValue | null): Prisma.InputJsonValue | undefined =>
+        value === null ? undefined : (value as Prisma.InputJsonValue);
+      const character = await tx.character.create({
+        data: {
+          worldId: world.worldId,
+          pageId: page.id,
+          ownerUserId,
+          displayName,
+          rulesEdition: source.rulesEdition,
+          level: source.level,
+          abilities: source.abilities as Prisma.InputJsonValue,
+          skills: json(source.skills),
+          combat: json(source.combat),
+          spellcasting: json(source.spellcasting),
+          classes: json(source.classes),
+          species: json(source.species),
+          background: json(source.background),
+          features: json(source.features),
+          bio: json(source.bio),
+          notes: source.notes,
+        },
+        select: { id: true },
+      });
+      if (source.spells.length > 0) {
+        await tx.characterSpell.createMany({
+          data: source.spells.map((spell) => ({
+            characterId: character.id,
+            spellKey: spell.spellKey,
+            spellLevel: spell.spellLevel,
+            prepared: spell.prepared,
+            source: spell.source,
+            displayName: spell.displayName,
+            school: spell.school,
+            description: spell.description,
+            notes: spell.notes,
+          })),
+        });
+      }
+      if (source.inventoryItems.length > 0) {
+        await tx.inventoryItem.createMany({
+          data: source.inventoryItems.map((item) => ({
+            worldId: world.worldId,
+            characterId: character.id,
+            pageId: null,
+            name: item.name,
+            quantity: item.quantity,
+            weight: item.weight,
+            value: json(item.value),
+            properties: json(item.properties),
+            notes: item.notes,
+            sortOrder: item.sortOrder,
+          })),
+        });
+      }
+      return { characterId: character.id, pageSlug: page.slug };
+    });
+    return { ok: true, ...created };
+  }
+
+  async deleteOwnCharacter(
+    worldSlug: string,
+    ctx: AccessContext,
+    characterId: string,
+  ): Promise<CharacterMutationResult> {
+    const world = await this.resolveWorldForCreation(worldSlug, ctx);
+    if (!world.ok) return { ok: false, error: world.error };
+    const ownerUserId = ctx.user!.id;
+    const character = await this.db.character.findFirst({
+      where: { id: characterId, worldId: world.worldId, ownerUserId },
+      select: { id: true, pageId: true },
+    });
+    if (!character) return { ok: false, error: "Charakter nicht gefunden." };
+
+    await this.db.$transaction(async (tx) => {
+      await tx.character.delete({ where: { id: character.id } });
+      if (character.pageId) {
+        await tx.page.deleteMany({ where: { id: character.pageId, worldId: world.worldId } });
+      }
+    });
+    return { ok: true };
   }
 }
 

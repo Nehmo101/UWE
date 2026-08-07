@@ -27,20 +27,6 @@ function formatModifier(value: number): string {
   return value >= 0 ? `+${value}` : String(value);
 }
 
-function isOwnMembershipCharacter(
-  characterDisplayName: string,
-  membershipCharacterName: string | null | undefined,
-): boolean {
-  if (!membershipCharacterName?.trim()) {
-    return false;
-  }
-
-  return (
-    characterDisplayName.trim().toLocaleLowerCase("de-DE") ===
-    membershipCharacterName.trim().toLocaleLowerCase("de-DE")
-  );
-}
-
 export default async function PortalCharactersPage({ params }: Props) {
   const { worldSlug } = await params;
   const ctx = await getAccessContextForWorld(worldSlug);
@@ -59,7 +45,6 @@ export default async function PortalCharactersPage({ params }: Props) {
     await db.$disconnect();
   }
 
-  const membershipCharacterName = ctx.worldMembership?.characterName ?? null;
   const staffView = isDm(ctx);
   // Dieselbe Regel wie beim Kartenbau: die Welt-Zuordnung entscheidet,
   // Vorschau-Sitzungen sind draußen.
@@ -68,7 +53,7 @@ export default async function PortalCharactersPage({ params }: Props) {
   return (
     <>
       <PageHeader
-        title="Meine Charaktere"
+        title={staffView ? "Charaktere" : "Meine Charaktere"}
         summary="Strukturierte Charakterbögen in dieser Welt — mit automatisch berechneten Modifikatoren und Initiative."
       />
 
@@ -134,11 +119,14 @@ export default async function PortalCharactersPage({ params }: Props) {
       ) : null}
 
       <ul className="grid gap-2">
-        {characters.map((character) => {
-          const isOwnCharacter = isOwnMembershipCharacter(
-            character.displayName,
-            membershipCharacterName,
-          );
+        {[...characters]
+          .sort(
+            (left, right) =>
+              Number(right.ownerUserId === ctx.user?.id) -
+              Number(left.ownerUserId === ctx.user?.id),
+          )
+          .map((character) => {
+            const isOwnCharacter = character.ownerUserId === ctx.user?.id;
           const stats = (
             <span className="mt-1 block text-sm text-muted-foreground">
               Stufe {character.sheet.level} · RK {character.sheet.armorClass ?? "—"} · Init{" "}
@@ -151,9 +139,8 @@ export default async function PortalCharactersPage({ params }: Props) {
             <>
               <div className="flex flex-wrap items-center gap-2">
                 <strong>{character.displayName}</strong>
-                {isOwnCharacter ? (
-                  <Badge variant="accent">Dein Charakter</Badge>
-                ) : null}
+                {isOwnCharacter ? <Badge variant="accent">Dein Charakter</Badge> : null}
+                {!character.pageSlug ? <Badge variant="warning">Seite fehlt</Badge> : null}
               </div>
               {stats}
             </>
@@ -179,6 +166,9 @@ export default async function PortalCharactersPage({ params }: Props) {
                   )}
                 >
                   {content}
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Der Bogen ist nicht mit einer Charakterseite verknüpft.
+                  </p>
                 </div>
               )}
             </li>
