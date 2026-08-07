@@ -150,6 +150,16 @@ export interface PageLinksForPage {
 
 export type PublicPage = PageWithBlocks;
 
+/**
+ * Wie viele Seiten-IDs höchstens in ein `IN (…)` gehen.
+ *
+ * SQLite begrenzt die Zahl der Bind-Parameter einer Anweisung
+ * (`SQLITE_MAX_VARIABLE_NUMBER`, je nach Übersetzung 999). Prisma meldet den
+ * Überlauf als `P2029`, und zwar erst zur Laufzeit — es gibt keine Warnung
+ * beim Schreiben der Abfrage. 500 lässt Luft für die übrigen Parameter.
+ */
+const PAGE_ID_BATCH = 500;
+
 export class UweRepository {
   private settingsService?: SettingsService;
 
@@ -405,6 +415,19 @@ export class UweRepository {
     });
   }
 
+  /**
+   * Alle Seiten einer Welt samt Inhaltsblöcken — die Grundlage des Wiki-Graphen.
+   *
+   * **Warum die Blöcke einzeln nachgeladen werden.** Als `include` setzt Prisma
+   * dafür eine zweite Abfrage `… WHERE page_id IN (?, ?, …)` ab, mit **einem
+   * Bind-Parameter je Seite**. SQLite bricht oberhalb von rund tausend
+   * Parametern mit `P2029` ab — und weil diese Abfrage unter jedem Seitenaufruf
+   * liegt, war damit nicht eine Seite kaputt, sondern das ganze Studio.
+   * Gemessen am 07.08.2026, als die Welt `terra` auf 1.511 Seiten wuchs.
+   *
+   * Die Scheibengröße ist bewusst klein: Der Parameterrahmen gehört zur
+   * SQLite-Übersetzung, nicht zum Schema, und eine Welt wächst weiter.
+   */
   async listPagesWithBlocksForGraphUnfiltered(
     worldSlug: string,
     options?: { campaignId?: string | null; types?: PageType[] },
@@ -418,14 +441,28 @@ export class UweRepository {
         ...(options?.campaignId ? { campaignId: options.campaignId } : {}),
         ...(options?.types?.length ? { type: { in: options.types } } : {}),
       },
-      include: {
-        contentBlocks: { orderBy: { sortOrder: "asc" } },
-        campaign: true,
-      },
+      include: { campaign: true },
       orderBy: [{ title: "asc" }],
     });
+    if (pages.length === 0) return [];
 
-    return pages.map((page) => withParsedArrays(page));
+    const blocksByPage = new Map<string, PageWithBlocks["contentBlocks"]>();
+    for (let from = 0; from < pages.length; from += PAGE_ID_BATCH) {
+      const ids = pages.slice(from, from + PAGE_ID_BATCH).map((page) => page.id);
+      const blocks = await this.db.contentBlock.findMany({
+        where: { pageId: { in: ids } },
+        orderBy: [{ pageId: "asc" }, { sortOrder: "asc" }],
+      });
+      for (const block of blocks) {
+        const bucket = blocksByPage.get(block.pageId);
+        if (bucket) bucket.push(block);
+        else blocksByPage.set(block.pageId, [block]);
+      }
+    }
+
+    return pages.map((page) =>
+      withParsedArrays({ ...page, contentBlocks: blocksByPage.get(page.id) ?? [] }),
+    );
   }
 
   /**
