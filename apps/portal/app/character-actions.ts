@@ -7,6 +7,8 @@ import { createAuthService, prisma } from "@uwe/database/server";
 import { createPlayerCharacterService } from "@uwe/player-hub";
 import {
   characterDraftPayloadSchema,
+  deleteOwnedCharacterSchema,
+  ownedCharacterMutationSchema,
   parseFormDataOrThrow,
   playerCharacterBlockSchema,
 } from "@uwe/security";
@@ -149,4 +151,47 @@ export async function updatePlayerCharacterBlockAction(formData: FormData) {
 
   revalidatePath(path);
   revalidatePath(`/auth/worlds/${worldSlug}`);
+}
+export async function duplicateOwnCharacterAction(formData: FormData) {
+  await requirePortalActionAuth();
+  const { worldSlug, characterId } = parseFormDataOrThrow(
+    formData,
+    ownedCharacterMutationSchema,
+  );
+  const user = await getCurrentUser();
+  const ctx = await getAccessContextForWorld(worldSlug);
+  if (!user || !ctx) throw new Error("Nicht angemeldet");
+
+  const result = await createPlayerCharacterService(prisma).duplicateOwnCharacter(
+    worldSlug,
+    ctx,
+    characterId,
+  );
+  if (!result.ok) throw new Error(result.error);
+
+  revalidatePath(`/auth/worlds/${worldSlug}/characters`);
+  revalidatePath(`/auth/worlds/${worldSlug}`);
+  redirect(`/auth/worlds/${worldSlug}/${result.pageSlug}`);
+}
+
+export async function deleteOwnCharacterAction(formData: FormData) {
+  await requirePortalActionAuth();
+  const { worldSlug, characterId } = parseFormDataOrThrow(
+    formData,
+    deleteOwnedCharacterSchema,
+  );
+  const user = await getCurrentUser();
+  const ctx = await getAccessContextForWorld(worldSlug);
+  if (!user || !ctx) throw new Error("Nicht angemeldet");
+
+  const result = await createPlayerCharacterService(prisma).deleteOwnCharacter(
+    worldSlug,
+    ctx,
+    characterId,
+  );
+  if (!result.ok) throw new Error(result.error);
+
+  revalidatePath(`/auth/worlds/${worldSlug}/characters`);
+  revalidatePath(`/auth/worlds/${worldSlug}`);
+  redirect(`/auth/worlds/${worldSlug}/characters`);
 }

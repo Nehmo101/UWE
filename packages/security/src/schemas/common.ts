@@ -442,7 +442,7 @@ export const characterSheetUpdateSchema = z.object({
   pageSlug: slugSchema.optional(),
   returnPath: z.string().trim().max(500).optional(),
   displayName: z.string().trim().min(1).max(200).optional(),
-  level: z.coerce.number().int().min(1).max(30).optional(),
+  level: z.coerce.number().int().min(1).max(20).optional(),
   strength: abilityScoreField.optional(),
   dexterity: abilityScoreField.optional(),
   constitution: abilityScoreField.optional(),
@@ -451,6 +451,9 @@ export const characterSheetUpdateSchema = z.object({
   charisma: abilityScoreField.optional(),
   armorClass: z.coerce.number().int().min(1).max(99).optional(),
   initiativeBonus: z.coerce.number().int().min(-10).max(20).optional(),
+  maxHp: z.coerce.number().int().min(1).max(999).optional(),
+  currentHp: z.coerce.number().int().min(0).max(999).optional(),
+  speed: z.coerce.number().int().min(0).max(200).optional(),
   spellcastingAbility: z
     .enum(["auto", "none", "strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"])
     .optional(),
@@ -494,7 +497,7 @@ export const studioCharacterSheetCreateSchema = z.object({
   category: slugSchema,
   displayName: z.string().trim().min(1).max(200),
   ownerUserId: idSchema,
-  level: z.coerce.number().int().min(1).max(30).optional(),
+  level: z.coerce.number().int().min(1).max(20).optional(),
 });
 
 const spellLevelField = z.coerce.number().int().min(0).max(9);

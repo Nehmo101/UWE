@@ -79,6 +79,7 @@ export {
 
 export * from "./schemas/common";
 export * from "./schemas/actions";
+export * from "./schemas/character-profile";
 
 export {
   canUseAi,

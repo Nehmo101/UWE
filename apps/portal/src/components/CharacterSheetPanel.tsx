@@ -20,6 +20,7 @@ import {
   updateCharacterSheetAction,
 } from "../../app/character-sheet-actions";
 import { returnTreasuryItemFromCharacterAction } from "../../app/treasury-actions";
+import { CharacterProfilePanel } from "./CharacterProfilePanel";
 
 interface CharacterSheetPanelProps {
   worldSlug: string;
@@ -121,6 +122,14 @@ export function CharacterSheetPanel({
       />
 
       <CharacterDerivedStatsSection derived={sheet.derived} />
+      <CharacterProfilePanel
+        worldSlug={worldSlug}
+        characterId={character.id}
+        level={sheet.level}
+        profile={character.profile}
+        canEdit={canEdit}
+        returnPath={returnPath}
+      />
 
       {canEdit ? (
         <form action={updateCharacterSheetAction} className="auth-note-form auth-character-sheet-form">
@@ -137,7 +146,7 @@ export function CharacterSheetPanel({
               name="level"
               type="number"
               min={1}
-              max={30}
+              max={20}
               defaultValue={sheet.level}
               required
             />
@@ -183,6 +192,24 @@ export function CharacterSheetPanel({
               max={20}
               defaultValue={sheet.combat.initiativeBonus ?? 0}
             />
+          </label>
+          <label>
+            Maximale Trefferpunkte
+            <input name="maxHp" type="number" min={1} max={999} defaultValue={sheet.combat.maxHp ?? ""} />
+          </label>
+          <label>
+            Aktuelle Trefferpunkte
+            <input
+              name="currentHp"
+              type="number"
+              min={0}
+              max={999}
+              defaultValue={sheet.combat.currentHp ?? ""}
+            />
+          </label>
+          <label>
+            Bewegungsrate
+            <input name="speed" type="number" min={0} max={200} defaultValue={sheet.combat.speed ?? ""} />
           </label>
 
           <CharacterProficiencyFields derived={sheet.derived} />

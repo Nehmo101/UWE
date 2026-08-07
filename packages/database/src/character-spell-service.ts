@@ -78,8 +78,6 @@ const HALF_CASTER_CLASS_NAMES = new Set([
   "paladin",
   "ranger",
   "waldlaufer",
-  "warlock",
-  "hexenpakt",
 ]);
 
 const THIRD_CASTER_CLASS_NAMES = new Set([
@@ -88,9 +86,26 @@ const THIRD_CASTER_CLASS_NAMES = new Set([
   "arcane trickster",
   "arkane trickster",
 ]);
+const PACT_CASTER_CLASS_NAMES = new Set([
+  "warlock",
+  "hexenpakt",
+  "hexenpakt magier",
+]);
+
+const PACT_SLOT_TABLE: ReadonlyArray<readonly [number, number]> = [
+  [0, 0], [1, 1], [1, 2], [2, 2], [2, 2], [3, 2], [3, 2], [4, 2], [4, 2],
+  [5, 2], [5, 2], [5, 3], [5, 3], [5, 3], [5, 3], [5, 3], [5, 3], [5, 4],
+  [5, 4], [5, 4], [5, 4],
+];
 
 function normalizeClassName(name: string): string {
-  return name.trim().toLowerCase();
+  return name
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[-_]+/g, " ")
+    .replace(/\s+/g, " ");
 }
 
 export function parseCharacterClasses(raw: unknown): CharacterClassEntry[] {
@@ -138,15 +153,20 @@ export function effectiveCasterLevel(level: number, classes: unknown): number {
 }
 
 export function computeSpellSlots(level: number, classes: unknown): SpellSlotSummary {
+  const parsed = parseCharacterClasses(classes);
   const casterLevel = effectiveCasterLevel(level, classes);
   const row = FULL_CASTER_SLOT_TABLE[casterLevel] ?? FULL_CASTER_SLOT_TABLE[0];
   const byLevel: Record<number, number> = {};
 
   row.forEach((slots, index) => {
-    if (slots > 0) {
-      byLevel[index + 1] = slots;
-    }
+    if (slots > 0) byLevel[index + 1] = slots;
   });
+
+  for (const entry of parsed) {
+    if (!PACT_CASTER_CLASS_NAMES.has(normalizeClassName(entry.name))) continue;
+    const [slotLevel, slots] = PACT_SLOT_TABLE[Math.max(0, Math.min(20, entry.level))] ?? [0, 0];
+    if (slotLevel > 0 && slots > 0) byLevel[slotLevel] = (byLevel[slotLevel] ?? 0) + slots;
+  }
 
   return { byLevel, casterLevel };
 }

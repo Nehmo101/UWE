@@ -19,6 +19,7 @@ export {
   createPlayerCharacterService,
   PlayerCharacterService,
   type CreateOwnCharacterInput,
+  type CharacterMutationResult,
   type CreateOwnCharacterResult,
 } from "./player-characters";
 export {

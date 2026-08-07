@@ -34,6 +34,55 @@ function escapeHtml(text: string): string {
     .replace(/"/g, "&quot;");
 }
 
+function profileRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function profileText(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function profileList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => typeof entry === "string" ? entry.trim() : profileText(profileRecord(entry).name))
+    .filter(Boolean);
+}
+
+function exportProfile(character: PortalCharacterView) {
+  const classEntry = Array.isArray(character.profile.classes)
+    ? profileRecord(character.profile.classes[0])
+    : {};
+  const species = profileRecord(character.profile.species);
+  const background = profileRecord(character.profile.background);
+  const features = profileRecord(character.profile.features);
+  const bio = profileRecord(character.profile.bio);
+  return {
+    className: profileText(classEntry.name),
+    subclass: profileText(classEntry.subclass),
+    species: profileText(species.name),
+    background: profileText(background.name),
+    alignment: profileText(profileRecord(bio.alignment).name) || profileText(features.alignment),
+    languages: profileList(features.languages),
+    equipment: profileList(features.equipment),
+    pronouns: profileText(bio.pronouns),
+    age: profileText(bio.age),
+    height: profileText(bio.height),
+    weight: profileText(bio.weight),
+    eyes: profileText(bio.eyes),
+    hair: profileText(bio.hair),
+    skin: profileText(bio.skin),
+    appearance: profileText(bio.appearance),
+    personality: profileText(bio.personality),
+    ideals: profileText(bio.ideals),
+    bonds: profileText(bio.bonds),
+    flaws: profileText(bio.flaws),
+    backstory: profileText(bio.backstory),
+  };
+}
+
 function renderSpellList(spells: CharacterSpellView[]): string {
   if (spells.length === 0) {
     return "<p class=\"cs-muted\">Keine Zauber eingetragen.</p>";
@@ -123,6 +172,7 @@ export function buildCharacterSheetPrintStyles(): string {
 export function buildCharacterSheetMarkdown(input: CharacterSheetExportInput): string {
   const { character, inventoryItems = [], worldName } = input;
   const { sheet, spells, spellSlots } = character;
+  const profile = exportProfile(character);
   const lines: string[] = [];
 
   lines.push(`# ${character.displayName}`);
@@ -134,6 +184,18 @@ export function buildCharacterSheetMarkdown(input: CharacterSheetExportInput): s
   lines.push(`- Übungsbonus: ${formatModifier(sheet.proficiencyBonus)}`);
   lines.push(`- RK: ${sheet.armorClass ?? "—"}`);
   lines.push(`- Initiative: ${formatModifier(sheet.initiative)}`);
+  if (profile.species) lines.push(`- Spezies: ${profile.species}`);
+  if (profile.background) lines.push(`- Hintergrund: ${profile.background}`);
+  if (profile.className) lines.push(`- Klasse: ${profile.className}${profile.subclass ? ` (${profile.subclass})` : ""}`);
+  if (profile.alignment) lines.push(`- Gesinnung: ${profile.alignment}`);
+  if (profile.languages.length) lines.push(`- Sprachen: ${profile.languages.join(", ")}`);
+  if (profile.pronouns) lines.push(`- Pronomen: ${profile.pronouns}`);
+  if (profile.age) lines.push(`- Alter: ${profile.age}`);
+  if (profile.height) lines.push(`- Größe: ${profile.height}`);
+  if (profile.weight) lines.push(`- Gewicht: ${profile.weight}`);
+  if (profile.eyes) lines.push(`- Augen: ${profile.eyes}`);
+  if (profile.hair) lines.push(`- Haare: ${profile.hair}`);
+  if (profile.skin) lines.push(`- Haut: ${profile.skin}`);
   if (sheet.combat.maxHp != null) {
     lines.push(`- TP: ${sheet.combat.currentHp ?? "?"}/${sheet.combat.maxHp}`);
   }
@@ -177,6 +239,24 @@ export function buildCharacterSheetMarkdown(input: CharacterSheetExportInput): s
       lines.push(`- ${qty}${item.name}${notes}`);
     }
   }
+  if (profile.equipment.length) {
+    lines.push("");
+    lines.push("## Startausrüstung");
+    for (const item of profile.equipment) lines.push(`- ${item}`);
+  }
+  const biography = [
+    ["Erscheinung", profile.appearance],
+    ["Persönlichkeit", profile.personality],
+    ["Ideale", profile.ideals],
+    ["Bindungen", profile.bonds],
+    ["Makel", profile.flaws],
+    ["Hintergrundgeschichte", profile.backstory],
+  ].filter((entry) => entry[1]);
+  for (const [heading, content] of biography) {
+    lines.push("");
+    lines.push(`## ${heading}`);
+    lines.push(content);
+  }
   if (character.notes.trim()) {
     lines.push("");
     lines.push("## Notizen");
@@ -192,6 +272,7 @@ export function buildCharacterSheetPrintHtml(
 ): string {
   const { character, inventoryItems = [], worldName } = input;
   const { sheet, spells, spellSlots } = character;
+  const profile = exportProfile(character);
   const includeToolbar = options?.includeToolbar ?? true;
   const markdownExport = options?.markdownExport ?? true;
   const layout = options?.layout ?? "full";
@@ -233,6 +314,19 @@ export function buildCharacterSheetPrintHtml(
         <textarea class="cs-markdown-export" readonly>${escapeHtml(markdown)}</textarea>
       </div>`
     : "";
+  const biographyHtml = [
+    ["Erscheinung", profile.appearance],
+    ["Persönlichkeit", profile.personality],
+    ["Ideale", profile.ideals],
+    ["Bindungen", profile.bonds],
+    ["Makel", profile.flaws],
+    ["Hintergrundgeschichte", profile.backstory],
+  ]
+    .filter((entry) => entry[1])
+    .map(([heading, content]) =>
+      `<section class="cs-section"><h2>${heading}</h2><p>${escapeHtml(content).replace(/\n/g, "<br />")}</p></section>`,
+    )
+    .join("");
 
   return `<!DOCTYPE html>
 <html lang="de">
@@ -252,6 +346,14 @@ export function buildCharacterSheetPrintHtml(
         <div><dt>Übungsbonus</dt><dd>${formatModifier(sheet.proficiencyBonus)}</dd></div>
         <div><dt>RK</dt><dd>${sheet.armorClass ?? "—"}</dd></div>
         <div><dt>Initiative</dt><dd>${formatModifier(sheet.initiative)}</dd></div>
+        ${profile.species ? `<div><dt>Spezies</dt><dd>${escapeHtml(profile.species)}</dd></div>` : ""}
+        ${profile.background ? `<div><dt>Hintergrund</dt><dd>${escapeHtml(profile.background)}</dd></div>` : ""}
+        ${profile.className ? `<div><dt>Klasse</dt><dd>${escapeHtml(profile.className)}${profile.subclass ? ` (${escapeHtml(profile.subclass)})` : ""}</dd></div>` : ""}
+        ${profile.alignment ? `<div><dt>Gesinnung</dt><dd>${escapeHtml(profile.alignment)}</dd></div>` : ""}
+        ${profile.pronouns ? `<div><dt>Pronomen</dt><dd>${escapeHtml(profile.pronouns)}</dd></div>` : ""}
+        ${profile.age ? `<div><dt>Alter</dt><dd>${escapeHtml(profile.age)}</dd></div>` : ""}
+        ${profile.height ? `<div><dt>Größe</dt><dd>${escapeHtml(profile.height)}</dd></div>` : ""}
+        ${profile.weight ? `<div><dt>Gewicht</dt><dd>${escapeHtml(profile.weight)}</dd></div>` : ""}
         ${
           sheet.combat.maxHp != null
             ? `<div><dt>TP</dt><dd>${sheet.combat.currentHp ?? "?"} / ${sheet.combat.maxHp}</dd></div>`
@@ -267,6 +369,12 @@ export function buildCharacterSheetPrintHtml(
         <tbody>${abilityRows}</tbody>
       </table>
     </section>
+
+    ${profile.languages.length || profile.equipment.length ? `<section class="cs-section">
+      <h2>Herkunft &amp; Ausrüstung</h2>
+      ${profile.languages.length ? `<p><strong>Sprachen:</strong> ${profile.languages.map(escapeHtml).join(", ")}</p>` : ""}
+      ${profile.equipment.length ? `<ul class="cs-inventory-list">${profile.equipment.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}
+    </section>` : ""}
 
     ${
       compact
@@ -292,6 +400,7 @@ export function buildCharacterSheetPrintHtml(
         : ""
     }`
     }
+    ${compact ? "" : biographyHtml}
 
     ${markdownBlock}
   </div>

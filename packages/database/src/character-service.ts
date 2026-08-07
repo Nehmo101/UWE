@@ -84,6 +84,10 @@ export interface UpdateCharacterInput {
   abilities?: AbilityScores;
   combat?: CharacterCombat;
   classes?: Prisma.InputJsonValue;
+  species?: Prisma.InputJsonValue;
+  background?: Prisma.InputJsonValue;
+  features?: Prisma.InputJsonValue;
+  bio?: Prisma.InputJsonValue;
   skills?: CharacterSkillProfile;
   spellcasting?: SpellcastingConfig;
   notes?: string;
@@ -508,6 +512,13 @@ export interface PortalCharacterView {
   sheet: CharacterSheetSnapshot;
   spells: CharacterSpellView[];
   spellSlots: SpellSlotSummary;
+  profile: {
+    classes: unknown;
+    species: unknown;
+    background: unknown;
+    features: unknown;
+    bio: unknown;
+  };
 }
 
 export function toPortalCharacterView(
@@ -520,6 +531,10 @@ export function toPortalCharacterView(
     | "abilities"
     | "combat"
     | "classes"
+    | "species"
+    | "background"
+    | "features"
+    | "bio"
     | "skills"
     | "spellcasting"
     | "ownerUserId"
@@ -570,6 +585,13 @@ export function toPortalCharacterView(
     sheet: buildCharacterSheetSnapshot(character),
     spells,
     spellSlots: computeSpellSlots(character.level, character.classes),
+    profile: {
+      classes: character.classes,
+      species: character.species,
+      background: character.background,
+      features: character.features,
+      bio: character.bio,
+    },
   };
 }
 
@@ -702,6 +724,10 @@ export class CharacterService {
         abilities: abilities as unknown as Prisma.InputJsonValue,
         combat: combat as unknown as Prisma.InputJsonValue,
         classes: input.classes,
+        species: input.species,
+        background: input.background,
+        features: input.features,
+        bio: input.bio,
         skills: input.skills
           ? (parseCharacterSkillProfile(input.skills) as unknown as Prisma.InputJsonValue)
           : undefined,

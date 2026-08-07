@@ -393,7 +393,7 @@ Kein dedizierter „Kanon-Konflikt“-Screen — verteilt über Inspector, Gener
 
 | Feature | Status | Pfade |
 |---------|--------|-------|
-| Charaktersheet (Voll 5e, Kern) | Beta — offen: SRD/Open5e-Zauberkatalog-Import, einzelne derived Stats (Folge-PR in Arbeit) | `Character`-Modell, `character-service.ts`, `character-level-up-service.ts`, `character-spell-service.ts`, Print-Route |
+| Charaktersheet (Voll 5e, Kern) | Beta — 9-Schritt-Ersteller, Profilansicht/-pflege, Duplizieren/Löschen, Level 1–20, Paktmagie und Voll-Export; offen bleiben Katalogausbau und einzelne derived Stats | `Character`-Modell, `CharacterWizard`, `character-service.ts`, `player-characters.ts`, `character-level-up-service.ts`, `character-spell-service.ts`, Print-Route |
 | Party-Treasury / Inventar | Beta | `PartyTreasury`/`InventoryItem`, `party-treasury-service.ts`, `/worlds/[slug]/treasury` |
 | Strukturierte Generatoren | Beta — Quest-/Magic-Item-Builder-UI (strukturierte Felder) fehlen | `generator-service.ts` (`generate_npc`/`generate_quest`/`generate_item`, reviewRequired), `GeneratorPreset`/`GeneratorOutput`, `StructuredGeneratorSection` |
 | Statblock Studio (strukturiert) | Stabil — visueller Feld-Editor mit JSON-Fallback | `StructuredStatblock`, `StatblockStudioPanel` (Formular + JSON), `statblock-structured-model.ts`, `statblock-structured-export.ts` (JSON/5e.tools/Homebrewery), `createStatblockLabelAction` |
