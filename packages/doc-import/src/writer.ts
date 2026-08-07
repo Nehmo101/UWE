@@ -21,7 +21,12 @@
  * ausdrücklich als Beziehung hingeschrieben hat, wird eine Kante.
  */
 
-import type { PageType, Prisma, UweRepository } from "@uwe/database/server";
+import type {
+  ImportPageUpdateSnapshot,
+  PageType,
+  Prisma,
+  UweRepository,
+} from "@uwe/database/server";
 import { normalizeLookupKey, pickUniqueSlug } from "@uwe/shared-utils/slug";
 import { extractMagicItemData } from "./semantic/item-extract";
 import type { PageDraft, RelationDraft } from "./types";
@@ -41,6 +46,23 @@ export interface WriteDocImportOptions {
    * Seiten einzeln nachbessern müssen.
    */
   typeOverrides?: Record<string, PageType>;
+  /**
+   * Trägt ein Entwurf den Namen einer Seite, die es in der Zielwelt schon gibt,
+   * wird deren Text **ergänzt** statt eine zweite Seite anzulegen. Standard: an.
+   *
+   * **Warum das der Standardfall sein muss.** Ein Kampagnenband beschreibt
+   * zwangsläufig Personen, Orte und Mächte, die die Welt längst kennt. Ohne
+   * diese Regel entstand für jede von ihnen eine zweite Seite — beim Import von
+   * *Dunkelsonne* waren das 22 Doppelungen, darunter der Imperator, Nepurga,
+   * alle vier Inquisitoren und eine Spielerfigur. Die Vorschau meldete das
+   * lediglich als `duplicate`, was harmlos klingt und es nicht ist: Von da an
+   * gibt es zwei Seiten mit demselben Namen, und der Crosslinker trifft ohne
+   * Warnung eine davon.
+   *
+   * `false` legt die alte Fassung wieder frei — nützlich, wenn ein Band
+   * absichtlich neben den Bestand gesetzt und danach von Hand verglichen wird.
+   */
+  mergeIntoExisting?: boolean;
 }
 
 export interface WrittenPage {
@@ -49,8 +71,20 @@ export interface WrittenPage {
   slug: string;
 }
 
+/**
+ * Was der Rückbau braucht, um eine ergänzte Seite wieder herzustellen.
+ *
+ * Bewusst der Typ des Undo-Dienstes und keine eigene Form: Der Rückbau konnte
+ * ergänzte Seiten immer schon zurücknehmen (`undoImportExecute` stellt die
+ * Skalare wieder her und löscht die hinzugefügten Blöcke) — der Schreibpfad hat
+ * es nur nie befüllt.
+ */
+export type MergedPageRecord = ImportPageUpdateSnapshot;
+
 export interface WriteDocImportResult {
   created: number;
+  /** Entwürfe, die in eine bestehende Seite gewandert sind. */
+  merged: number;
   failed: number;
   linksCreated: number;
   /** Gegenstandsseiten, für die Werkbank-Daten aus dem Text entstanden sind. */
@@ -58,7 +92,7 @@ export interface WriteDocImportResult {
   pages: WrittenPage[];
   warnings: string[];
   /** Für den Rückbau über das Aktivitätsprotokoll. */
-  undo: { createdPageIds: string[]; createdLinkIds: string[] };
+  undo: { createdPageIds: string[]; createdLinkIds: string[]; updatedPages: MergedPageRecord[] };
 }
 
 interface LookupIndex {
@@ -120,20 +154,38 @@ export async function writeDocImport(
 
   const result: WriteDocImportResult = {
     created: 0,
+    merged: 0,
     failed: 0,
     linksCreated: 0,
     itemsStructured: 0,
     pages: [],
     warnings: [],
-    undo: { createdPageIds: [], createdLinkIds: [] },
+    undo: { createdPageIds: [], createdLinkIds: [], updatedPages: [] },
   };
 
   const keyToPageId = new Map<string, string>();
+  const mergeOn = options.mergeIntoExisting !== false;
+  /** Ergänzte Seiten dieses Laufs — mehrere Entwürfe dürfen dieselbe treffen. */
+  const mergedById = new Map<string, MergedPageRecord>();
 
   for (const draft of drafts) {
     if (selected && !selected.has(draft.key)) continue;
 
     try {
+      const existingId = mergeOn ? lookup.byKey.get(normalizeLookupKey(draft.title)) : undefined;
+      if (existingId) {
+        const merged = await mergeIntoExistingPage(repo, existingId, draft, mergedById);
+        keyToPageId.set(draft.key, existingId);
+        if (merged === "schon-da") {
+          result.warnings.push(
+            `„${draft.title}" stand schon aus einem früheren Lauf auf der bestehenden Seite — nichts doppelt angehängt.`,
+          );
+        } else {
+          result.merged += 1;
+        }
+        continue;
+      }
+
       const slug = pickUniqueSlug(draft.slug, takenSlugs, { fallback: "seite", maxLength: 80 });
       const campaignId = resolveCampaignId(draft, campaignByName);
 
@@ -217,6 +269,8 @@ export async function writeDocImport(
     }
   }
 
+  result.undo.updatedPages = [...mergedById.values()];
+
   for (const relation of relations) {
     const sourcePageId = keyToPageId.get(relation.sourceKey);
     if (!sourcePageId) continue;
@@ -241,6 +295,96 @@ export async function writeDocImport(
   }
 
   return result;
+}
+
+/** Kennzeichen, unter dem ein angehängter Abschnitt seinen Entwurf wiedererkennt. */
+function mergeMarker(draft: PageDraft): string {
+  return `doc-import:${draft.key}`;
+}
+
+/**
+ * Hängt einen Entwurf an eine bestehende Seite, statt eine zweite anzulegen.
+ *
+ * **Was übernommen wird:** der Text als eigener Abschnitt mit Überschrift, die
+ * Aliase des Entwurfs und sein Titel (damit Verweise darauf die Seite finden).
+ *
+ * **Was ausdrücklich nicht:** Typ, Kampagne, Kanon-Status und Portal-Freigabe
+ * der bestehenden Seite. Wer eine gepflegte, freigegebene Weltseite um ein
+ * Kapitel ergänzt, will sie erweitern — nicht sie zum Entwurf zurückstufen.
+ *
+ * **Zweimal importieren hängt nichts doppelt an.** Jeder Abschnitt trägt in
+ * seinen Metadaten das Kennzeichen seines Entwurfs; ist es schon da, passiert
+ * nichts. Ohne diese Sperre wüchse jede Seite bei jedem Lauf um ihren eigenen
+ * Text.
+ */
+async function mergeIntoExistingPage(
+  repo: UweRepository,
+  pageId: string,
+  draft: PageDraft,
+  mergedById: Map<string, MergedPageRecord>,
+): Promise<"ergaenzt" | "schon-da"> {
+  const page = await repo.getPageById(pageId);
+  if (!page) throw new Error(`Seite ${pageId} verschwand während des Imports.`);
+
+  const marker = mergeMarker(draft);
+  const schonDa = page.contentBlocks.some(
+    (block) => (block.metadata as { docImportMerge?: string } | null)?.docImportMerge === marker,
+  );
+
+  // Der Zustand vor dem ersten Eingriff dieses Laufs — für den Rückbau.
+  let record = mergedById.get(pageId);
+  if (!record) {
+    record = {
+      pageId,
+      page: {
+        id: page.id,
+        worldId: page.worldId,
+        campaignId: page.campaignId,
+        parentPageId: page.parentPageId,
+        title: page.title,
+        slug: page.slug,
+        type: page.type,
+        summary: page.summary,
+        canonicalStatus: page.canonicalStatus,
+        aiReviewedAt: page.aiReviewedAt,
+        tags: page.tags,
+        aliases: page.aliases,
+      },
+      previousBlockIds: page.contentBlocks.map((block) => block.id),
+      addedBlockIds: [],
+    };
+    mergedById.set(pageId, record);
+  }
+
+  if (schonDa) return "schon-da";
+
+  if (draft.html?.trim()) {
+    const sortOrder = page.contentBlocks.reduce((max, block) => Math.max(max, block.sortOrder), -1) + 1;
+    const block = await repo.createContentBlock(pageId, {
+      type: "rich_text",
+      sortOrder,
+      content: `<h2>${escapeHeading(draft.title)}</h2>\n${draft.html}`,
+      metadata: { ...(draft.metadata as Record<string, unknown>), docImportMerge: marker },
+    });
+    record.addedBlockIds.push(block.id);
+  }
+
+  const aliases = new Set<string>(
+    Array.isArray(page.aliases) ? page.aliases.filter((a): a is string => typeof a === "string") : [],
+  );
+  const vorher = aliases.size;
+  for (const alias of draft.aliases) aliases.add(alias);
+  if (normalizeLookupKey(draft.title) !== normalizeLookupKey(page.title)) aliases.add(draft.title);
+  if (aliases.size !== vorher) {
+    await repo.updatePage(pageId, { aliases: [...aliases] });
+  }
+
+  return "ergaenzt";
+}
+
+/** Nur das Nötigste — der Titel steht danach in einer Überschrift. */
+function escapeHeading(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 /**
