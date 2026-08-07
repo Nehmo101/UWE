@@ -147,6 +147,21 @@ describe("mapDocumentTree — Typprofile", () => {
     assert.equal(pages[0].type, "npc");
     assert.equal(pages[1].type, "lore");
   });
+
+  it("keeps structural document roots out of the campaign chapter list", () => {
+    const campaign = mapSource(
+      "---\ntyp: kapitel\n---\n\n# Himmelsrouten\n\n## Kapitel 1: Aufbruch\n\nText.",
+      { profile: "campaign_book" },
+    );
+    const dungeon = mapSource(
+      "---\ntyp: kapitel\n---\n\n# Der Magisterturm\n\n## Ebene 1\n\nText.",
+      { profile: "dungeon" },
+    );
+
+    assert.equal(campaign.pages[0].type, "lore");
+    assert.equal(campaign.pages[1].type, "story_arc");
+    assert.equal(dungeon.pages[0].type, "dungeon");
+  });
 });
 
 describe("mapDocumentTree — Kanon-Status", () => {

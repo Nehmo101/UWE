@@ -37,7 +37,14 @@ export function sanitizeRecord<T extends object>(record: T): T {
       continue;
     }
 
-    if (value && typeof value === "object" && !Array.isArray(value)) {
+    if (Array.isArray(value)) {
+      result[key] = value.map((entry) =>
+        entry && typeof entry === "object" ? sanitizeRecord(entry as Record<string, unknown>) : entry,
+      );
+      continue;
+    }
+
+    if (value && typeof value === "object") {
       result[key] = sanitizeRecord(value as Record<string, unknown>);
       continue;
     }
@@ -63,6 +70,10 @@ export function sanitizeBackupData(data: BackupData): BackupData {
     assetPageLinks: data.assetPageLinks.map((link) => sanitizeRecord(link)),
     gameSessions: data.gameSessions.map((session) => sanitizeRecord(session)),
     gameSessionPageLinks: data.gameSessionPageLinks.map((link) => sanitizeRecord(link)),
+    dungeons: (data.dungeons ?? []).map((dungeon) => sanitizeRecord(dungeon)),
+    gameSessionFocuses: (data.gameSessionFocuses ?? []).map((focus) => sanitizeRecord(focus)),
+    docImportSources: (data.docImportSources ?? []).map((source) => sanitizeRecord(source)),
+    docImportPageBindings: (data.docImportPageBindings ?? []).map((binding) => sanitizeRecord(binding)),
     labelTemplates: data.labelTemplates.map((template) => sanitizeRecord(template)),
     labels: data.labels.map((label) => sanitizeRecord(label)),
     printLists: (data.printLists ?? []).map((list) => sanitizeRecord(list)),
@@ -121,22 +132,40 @@ export function sanitizeExportModels<K extends string>(
 }
 
 export function findSecretIssuesInJson(json: string): string[] {
-  const issues: string[] = [];
-  const lowered = json.toLowerCase();
-
-  for (const field of SECRET_FIELD_NAMES) {
-    if (lowered.includes(`"${field}"`)) {
-      issues.push(`Enthält verbotenes Feld: ${field}`);
-    }
+  const issues = new Set<string>();
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    return ["Backup-JSON ist ungültig"];
   }
 
-  for (const pattern of SECRET_VALUE_PATTERNS) {
-    if (pattern.test(json)) {
-      issues.push(`Enthält verdächtigen Secret-Wert (${pattern.source})`);
+  const visit = (value: unknown): void => {
+    if (typeof value === "string") {
+      for (const pattern of SECRET_VALUE_PATTERNS) {
+        if (pattern.test(value)) {
+          issues.add(`Enthält verdächtigen Secret-Wert (${pattern.source})`);
+        }
+      }
+      return;
     }
-  }
+    if (Array.isArray(value)) {
+      value.forEach(visit);
+      return;
+    }
+    if (!value || typeof value !== "object") return;
 
-  return issues;
+    for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+      const normalized = key.toLowerCase();
+      if (SECRET_FIELD_NAMES.has(normalized)) {
+        issues.add(`Enthält verbotenes Feld: ${normalized}`);
+      }
+      visit(entry);
+    }
+  };
+
+  visit(parsed);
+  return [...issues];
 }
 
 function looksLikeSecretValue(value: string): boolean {

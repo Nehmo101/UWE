@@ -200,24 +200,39 @@ function applyTypes(nodes: DocumentNode[], stats: Partial<Record<SectionRole, nu
  * liest. Bis hierher kam jedes importierte Kapitel als `lore` an und musste von
  * Hand umgestellt werden, damit das Cockpit die Kampagne überhaupt zeigt.
  *
- * Das Erkennungsmerkmal ist bewusst eng: Es zählt nur, was ohnehin `lore`
- * würde (Rolle `section` oder `part`) **und** mindestens eine Begegnung direkt
- * unter sich hat. Ein Bestiarium (Rolle `statblock_list`), eine Dungeon-Ebene
- * (Rolle `level`) und ein Weltkapitel ohne Szenen bleiben damit unberührt.
+ * Das stärkste Erkennungsmerkmal ist das beim Aufräumen bewahrte Etikett
+ * `BUCH …` oder `KAPITEL …`. So bleibt auch ein erzählerisches Buch ohne direkt
+ * darunterliegende Szene ein Story-Bogen. Als Rückfall für unnummerierte
+ * Manuskripte gilt die bisherige Szenenregel, aber nur für direkte Kinder des
+ * Bandes. Dadurch wird ein Unterabschnitt mit einer Begegnung nicht mehr
+ * irrtümlich zu einem eigenen Kampagnenkapitel.
  */
-function markStoryArcs(nodes: DocumentNode[]): number {
+const STORY_LABEL = /^(buch\b|kapitel\s+k\d+\b)/i;
+
+function markStoryArcs(
+  nodes: DocumentNode[],
+  depth = 0,
+  hasLabeledStructure =
+    depth === 0 && nodes.some((root) => root.children.some((child) => child.aliases?.some((alias) => STORY_LABEL.test(alias)))),
+): number {
   let count = 0;
 
   for (const node of nodes) {
     const role = node.role ?? "section";
     const hasEncounterChild = node.children.some((child) => child.role === "encounter");
+    const hasStoryLabel = (node.aliases ?? []).some((alias) => STORY_LABEL.test(alias));
+    const isNarrativeSection =
+      (role === "section" || role === "part") && node.typeHint === "lore";
 
-    if ((role === "section" || role === "part") && node.typeHint === "lore" && hasEncounterChild) {
+    if (
+      isNarrativeSection &&
+      (hasStoryLabel || (!hasLabeledStructure && depth === 1 && hasEncounterChild))
+    ) {
       node.typeHint = "story_arc";
       count += 1;
     }
 
-    count += markStoryArcs(node.children);
+    count += markStoryArcs(node.children, depth + 1, hasLabeledStructure);
   }
 
   return count;

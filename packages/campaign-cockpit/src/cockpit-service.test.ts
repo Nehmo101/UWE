@@ -98,6 +98,8 @@ describe("campaign cockpit (integration)", () => {
 
     const quest = overview.unassignedQuests[0];
     await service.assignQuestToChapter(worldId, quest.id, first.id);
+    const explicitlyAssigned = await db.page.findUnique({ where: { id: quest.id } });
+    assert.equal(explicitlyAssigned?.questStoryArcId, first.id);
     overview = await service.getCampaignOverview(worldSlug, "himmelsrouten");
     assert.ok(overview);
     assert.equal(overview.unassignedQuests.length, 0);
@@ -246,6 +248,9 @@ describe("campaign cockpit (integration)", () => {
     const assigned = await db.page.findUnique({ where: { id: mine.id } });
     assert.equal(assigned?.campaignId, campaignId);
     assert.equal(assigned?.parentPageId, chapter.id);
+    const dungeonDomain = await db.dungeon.findUnique({ where: { rootPageId: mine.id } });
+    assert.equal(dungeonDomain?.storyArcPageId, chapter.id);
+    assert.equal(dungeonDomain?.campaignId, campaignId);
 
     // Lösen: Kante fällt, die Kampagnen-Zuordnung bleibt bewusst stehen.
     await service.assignDungeonToChapter(worldId, mine.id, null);
@@ -257,6 +262,7 @@ describe("campaign cockpit (integration)", () => {
     const detached = await db.page.findUnique({ where: { id: mine.id } });
     assert.equal(detached?.parentPageId, null);
     assert.equal(detached?.campaignId, campaignId);
+    assert.equal((await db.dungeon.findUnique({ where: { rootPageId: mine.id } }))?.storyArcPageId, null);
 
     // Nur echte Dungeons: eine Quest-Seite wird abgelehnt.
     const quest = await db.page.findFirst({ where: { worldId, type: "quest" } });

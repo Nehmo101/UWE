@@ -104,14 +104,19 @@ export function resolveNodePageType(
   node: Pick<DocumentNode, "title"> & Partial<Pick<DocumentNode, "typeHint">>,
   ctx: ResolveNodeTypeContext,
 ): PageType {
+  // The document root is structural: a campaign book is the volume around
+  // its chapters, and a dungeon document is the dungeon around its levels.
+  // Legacy frontmatter such as `typ: kapitel` must not turn that container
+  // into an extra story arc (Himmelsrouten previously showed 13 instead of 12).
+  if (ctx.isRoot && ctx.profile === "campaign_book") return "lore";
+  if (ctx.isRoot && ctx.profile === "dungeon") return "dungeon";
+
   if (ctx.declaredType) {
     const declared = resolvePageTypeLabel(ctx.declaredType);
     if (declared) return declared;
   }
 
   if (node.typeHint) return node.typeHint;
-
-  if (ctx.isRoot && ctx.profile === "dungeon") return "dungeon";
 
   for (const rule of PROFILE_RULES[ctx.profile]) {
     if (rule.pattern.test(node.title)) return rule.type;

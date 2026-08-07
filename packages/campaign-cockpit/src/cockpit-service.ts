@@ -188,6 +188,7 @@ export class CampaignCockpitService {
             type: true,
             questStatus: true,
             parentPageId: true,
+            questStoryArcId: true,
           },
           orderBy: { title: "asc" },
         }),
@@ -263,9 +264,10 @@ export class CampaignCockpitService {
     const unassignedQuests: CockpitQuest[] = [];
     for (const quest of quests) {
       const status = questStatus(quest.questStatus);
-      const inChapter = quest.parentPageId && chapterIds.has(quest.parentPageId);
+      const chapterId = quest.questStoryArcId ?? quest.parentPageId;
+      const inChapter = chapterId && chapterIds.has(chapterId);
       if (inChapter) {
-        const counts = countsByChapter.get(quest.parentPageId as string);
+        const counts = countsByChapter.get(chapterId as string);
         if (counts) {
           counts.total += 1;
           counts[status] += 1;
@@ -374,7 +376,14 @@ export class CampaignCockpitService {
 
     const [quests, campaignQuests, pinLinks, chapterDungeons, worldDungeons] = await Promise.all([
       this.db.page.findMany({
-        where: { worldId: campaign.worldId, parentPageId: chapter.id, type: "quest" },
+        where: {
+          worldId: campaign.worldId,
+          type: "quest",
+          OR: [
+            { questStoryArcId: chapter.id },
+            { questStoryArcId: null, parentPageId: chapter.id },
+          ],
+        },
         include: { contentBlocks: { orderBy: { sortOrder: "asc" } }, campaign: true },
         orderBy: { title: "asc" },
       }),
@@ -383,7 +392,12 @@ export class CampaignCockpitService {
           worldId: campaign.worldId,
           campaignId: campaign.id,
           type: "quest",
-          NOT: { parentPageId: chapter.id },
+          NOT: {
+            OR: [
+              { questStoryArcId: chapter.id },
+              { questStoryArcId: null, parentPageId: chapter.id },
+            ],
+          },
         },
         select: { id: true, title: true },
         orderBy: { title: "asc" },
@@ -610,7 +624,7 @@ export class CampaignCockpitService {
     }
     await this.db.page.update({
       where: { id: questId },
-      data: { parentPageId: chapterId },
+      data: { questStoryArcId: chapterId, parentPageId: chapterId },
     });
   }
 
@@ -640,11 +654,31 @@ export class CampaignCockpitService {
       if (!chapter) throw new Error("Kapitel nicht gefunden.");
       campaignId = chapter.campaignId;
     }
-    await this.db.page.update({
+    const root = await this.db.page.update({
       where: { id: dungeonId },
       data: {
         parentPageId: chapterId,
         ...(campaignId !== undefined ? { campaignId } : {}),
+      },
+      select: { worldId: true, campaignId: true, title: true, slug: true, prepStatus: true },
+    });
+    await this.db.dungeon.upsert({
+      where: { rootPageId: dungeonId },
+      create: {
+        worldId: root.worldId,
+        campaignId: root.campaignId,
+        rootPageId: dungeonId,
+        storyArcPageId: chapterId,
+        name: root.title,
+        slug: root.slug,
+        prepStatus: root.prepStatus,
+      },
+      update: {
+        campaignId: root.campaignId,
+        storyArcPageId: chapterId,
+        name: root.title,
+        slug: root.slug,
+        prepStatus: root.prepStatus,
       },
     });
   }
