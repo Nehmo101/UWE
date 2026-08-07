@@ -9,10 +9,14 @@ import { Card, CardContent, EmptyState } from "@/src/components/ui";
 import { VolumeSearchForm, VolumeSearchHits, matchLabel } from "@/src/components/wiki";
 import { worldSectionBreadcrumb } from "@/src/lib/world-breadcrumbs";
 import { listVolumes, searchVolumes } from "@/src/lib/volume-reader";
+import { createCampaignService } from "@uwe/database/campaign";
+import { prisma } from "@uwe/database/server";
+
+import { VolumeCampaignForm } from "./VolumeCampaignForm";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; hinweis?: string; fehler?: string }>;
 }
 
 export const dynamic = "force-dynamic";
@@ -30,15 +34,23 @@ export const dynamic = "force-dynamic";
  */
 export default async function StudioVolumesPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
-  const { q } = await searchParams;
+  const { q, hinweis, fehler } = await searchParams;
   const world = await getAppRepository().getWorldBySlug(worldSlug);
   if (!world) notFound();
 
   const query = normalizeQuery(q);
-  const [volumes, groups] = await Promise.all([
+  const campaignService = createCampaignService(prisma);
+  const [volumes, groups, candidates, campaigns] = await Promise.all([
     listVolumes(worldSlug),
     searchVolumes(worldSlug, query),
+    campaignService.listVolumeCandidates(worldSlug),
+    campaignService.listOverview(worldSlug),
   ]);
+
+  // Nach Seiten-ID nachschlagen: `listVolumes` liefert den Lesetext, der Service
+  // die Kampagnenzuordnung. Beide meinen dieselbe Wurzelseite.
+  const candidateById = new Map(candidates.map((entry) => [entry.pageId, entry]));
+  const freieDungeons = candidates.filter((entry) => entry.isDungeon && !entry.campaignId);
 
   const totalMatches = groups.reduce((total, group) => total + group.matches, 0);
   const base = `/worlds/${worldSlug}/lesen`;
@@ -50,6 +62,17 @@ export default async function StudioVolumesPage({ params, searchParams }: Props)
         title="Lesen"
         summary="Kampagnen, Dungeons und Bände am Stück — in der Reihenfolge, in der sie geschrieben wurden."
       />
+
+      {hinweis ? (
+        <p className="mb-4 rounded-md border border-emerald-600/40 bg-emerald-600/10 px-3 py-2 text-sm">
+          {hinweis}
+        </p>
+      ) : null}
+      {fehler ? (
+        <p className="mb-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm">
+          {fehler}
+        </p>
+      ) : null}
 
       <VolumeSearchForm
         action={base}
@@ -126,6 +149,14 @@ export default async function StudioVolumesPage({ params, searchParams }: Props)
                 <p className="mt-1 text-sm text-muted-foreground">
                   {volume.pageCount} Abschnitte
                 </p>
+                {candidateById.has(volume.id) ? (
+                  <VolumeCampaignForm
+                    worldSlug={worldSlug}
+                    volume={candidateById.get(volume.id)!}
+                    dungeons={freieDungeons.filter((entry) => entry.pageId !== volume.id)}
+                    campaigns={campaigns.map((entry) => ({ id: entry.id, name: entry.name }))}
+                  />
+                ) : null}
               </CardContent>
             </Card>
           ))}
