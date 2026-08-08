@@ -7,7 +7,7 @@ const browser = await chromium.launch({ args:['--use-gl=angle','--use-angle=swif
 const page = await browser.newPage({ viewport:{width:1100,height:700} });
 const fehler=[]; page.on('pageerror',e=>fehler.push(String(e)));
 const S=[]; function melde(n,ok,z){S.push(ok);console.log((ok?'OK  ':'FEHL')+'  '+n+(z===undefined?'':'  — '+z));}
-await page.goto('http://localhost:8123/index.html',{waitUntil:'load',timeout:90000});
+await page.goto('http://localhost:8123/index.html?schau=demo',{waitUntil:'load',timeout:90000});
 const start = await page.waitForFunction(()=>window.__terraOk===true,{timeout:90000}).then(()=>true).catch(()=>false);
 melde('Editor startet', start);
 if(!start){fehler.slice(0,6).forEach(f=>console.log(f)); await browser.close(); process.exit(1);}

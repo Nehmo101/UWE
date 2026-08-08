@@ -80,6 +80,15 @@ function plateauPunkt(ev) {
   return null;
 }
 
+/* Bedienungsrunde: die Welt-Landmarken sind EINZELSETZUNGEN, keine Streuung.
+   Ihr Aufbau ist schwer (eigene Geometrie, Tick, Pool-Licht) — ein Zug, der
+   wie bei Baeumen Punkte hintereinander setzt, wuerde die Karte mit
+   Landmarken pflastern und jeden Frame neu bauen. Darum: Klick setzt EINE
+   Landmarke, der Zeiger ist danach "done". */
+function istLandmarkenVariante(v) {
+  return v === "weltschildkroete" || v === "weltschloss";
+}
+
 /** Bricht eine begonnene Suche ab. Liefert true, wenn wirklich eine lief. */
 function wegAbbrechen() {
   if (!wegStart) return false;
@@ -148,7 +157,8 @@ export function initPointer(cv) {
        platziert dann ueber die Blattoberflaeche statt ueber heightAt, auch
        bei jedem spaeteren Neuaufbau. Kein snapPt: das Raster gehoert zum
        Boden, auf einem Blatt schoebe es den Punkt womoeglich ueber den Rand. */
-    if (ed.tool === "objekt" && ed.variantOf.objekt !== "inseln") {
+    if (ed.tool === "objekt" && ed.variantOf.objekt !== "inseln"
+        && !istLandmarkenVariante(ed.variantOf.objekt)) {
       var pp = plateauPunkt(e);
       if (pp) {
         ptr.mode = "scatter";
@@ -196,6 +206,19 @@ export function initPointer(cv) {
       return;
     }
     if (ed.tool === "objekt") {
+      if (istLandmarkenVariante(ed.variantOf.objekt)) {
+        /* Einzelsetzung: Klick baut genau EINE Landmarke, danach ist der
+           Zeiger fertig — kein scatter-Zug, der Punkte nachlegt. */
+        ptr.mode = "done";
+        pushUndo();
+        var lsp = snapPt(p);
+        var lel = mkElement("objekt", ed.variantOf.objekt, [lsp],
+          copyParams(curParams()), nextSeed());
+        S.elements.push(lel);
+        commit(lel, true);
+        select(lel);
+        return;
+      }
       ptr.mode = "scatter";
       pushUndo();
       var sp = snapPt(p);

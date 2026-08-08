@@ -167,7 +167,7 @@ export const SHOTS = [
     bereich: "karte",
     titel: "Kartenmodus · gezeichnete Chronikkarte",
     frage: "Gezeichnete Karte: Linienfuehrung, Signaturen, Papier, Beschriftung.",
-    url: "?karte=1",
+    url: "?schau=demo&karte=1",
     bedienung: true,
     warteMs: 2600,
     rahmen: null

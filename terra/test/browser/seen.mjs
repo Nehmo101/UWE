@@ -27,7 +27,7 @@ function melde(n, ok, z) {
   console.log((ok ? 'OK  ' : 'FEHL') + '  ' + n + (z === undefined ? '' : '  — ' + z));
 }
 
-await page.goto('http://localhost:8123/index.html', { waitUntil: 'load', timeout: 90000 });
+await page.goto('http://localhost:8123/index.html?schau=demo', { waitUntil: 'load', timeout: 90000 });
 await page.waitForFunction(() => window.__terraOk === true, { timeout: 90000 });
 await page.waitForTimeout(3500);
 melde('Editor startet ohne Fehler', fehler.length === 0, fehler.slice(0, 2).join(' | '));
