@@ -1,0 +1,123 @@
+{
+  "workstreamId": "species",
+  "verdict": "APPROVED",
+  "criticModel": "composer-2.5-fast",
+  "defects": [
+    {
+      "id": "S-04",
+      "severity": "minor",
+      "summary": "legacy-species-inventory.json is stale (catalogSpeciesCount: 9, no SPECIES_EXTENDED, sizeChoice list omits seven extended sizeChoice species). npc-species-migration-plan.md references it as live inventar — agents may undercount the 23-key catalog."
+    },
+    {
+      "id": "S-05",
+      "severity": "minor",
+      "summary": "No catalog-integrity assertion that all SPECIES_EXTENDED (+ goblinkin lineages) use OWNER_NOTES_SOURCE; backgrounds/feats workstreams already flagged the same gap (B-04 / F-02)."
+    },
+    {
+      "id": "S-06",
+      "severity": "minor",
+      "summary": "Seven extended entries expose sizeChoice (fukuro, felin, lepoling, iso-tera, godling, embeku, lamia) but wizard/draft gap: buildSpeciesJson uses catalog default unless lineage.size override; sizeChoice player pick not wired. Goblin lineage size (S-03) is resolved; sizeChoice species still default-only."
+    },
+    {
+      "id": "S-07",
+      "severity": "minor",
+      "summary": "Hobgoblin Spite (Gabe der Herrschaft): extract limits disadvantage to „the next attack roll within the next minute“; German prose says only „nächsten Angriff“ without the one-minute window."
+    },
+    {
+      "id": "S-08",
+      "severity": "minor",
+      "summary": "No art SVG paths on any SPECIES_EXTENDED entry (SRD nine still have art). Non-blocking for mechanics but visible in wizard."
+    },
+    {
+      "id": "S-09",
+      "severity": "minor",
+      "summary": "Lepoling flavour retains source ritual name „Wyld-Hunt“ (species-extended.ts). Acceptable fantasy tone but borders Tegora import; prefer Terra-neutral rite label if further rewrite pass runs."
+    },
+    {
+      "id": "S-10",
+      "severity": "minor",
+      "summary": "Godling hook meta-references „kein Aasimar im SRD“ — accurate product note but breaks immersion vs other extended hooks; consider DM-doc comment only."
+    }
+  ],
+  "resolvedDefects": [
+    {
+      "id": "S-01",
+      "severity": "major",
+      "summary": "Embeku „Panzerdeckung“ omitted Shell Defence mechanics — RESOLVED: species-extended.ts L451–453 now lists Dex save disadvantage, no reactions, prone does not grant attack advantage, bonus action to emerge."
+    },
+    {
+      "id": "S-02",
+      "severity": "major",
+      "summary": "Lamia hook carried Tegora term „vrael olo“ — RESOLVED: hook rewritten to Terra-neutral serpent-temple idiom (species-extended.ts L503); no vrael/auvrael/duthrael in player copy."
+    },
+    {
+      "id": "S-03",
+      "severity": "major",
+      "summary": "Goblin lineage Small size not persisted — RESOLVED: GOBLIN_LINEAGE.size = small; SpeciesLineage.size optional; resolveSpeciesSize in derive.ts; buildSpeciesJson + ReviewStep use resolveSpeciesSize; species-size.test.ts green."
+    }
+  ],
+  "acceptanceConditions": [
+    "Fix S-01: Embeku Panzerdeckung trait prose matches extract Shell Defence (Dex save disadvantage, no reactions, prone does not grant attack advantage against you, emerge as bonus action). — MET",
+    "Fix S-02: Remove vrael olo / Tegora ethnonym from Lamia player-facing hook and description; keep Validori/Arbor-Saum/Inneres Meer tone per uwe-canon-brief §1.1. — MET",
+    "Fix S-03: Model Goblin Small size — lineage.size or documented derive/buildSpeciesJson override when lineageKey=goblin; ReviewStep and persisted Character.species.size must reflect Small for goblin, Medium for hobgoblin/bugbear. — MET",
+    "Keep all nine SRD keys (drachenblutige … tiefling) in species.ts — no Phase-1 deletion; Drascari/Arkadia/Sun Elves remap per species-discovered.json and npc-species-migration-plan §2.2.",
+    "Keep fourteen imported species keys ASCII-lowercase and disjoint from SRD nine: goblinkin, lizardfolk, minotaur, centaur, fukuro, felin, lepoling, morgawr, iso-tera, godling, jotnar, embeku, amphin, lamia; goblin/hobgoblin/bugbear remain lineages under goblinkin.",
+    "Mechanics prose: ability display names English (Strength, Dexterity, Constitution, Intelligence, Wisdom, Charisma); skill/spell names English where extract uses English (Animal Handling, Gust of Wind, …).",
+    "source: OWNER_NOTES_SOURCE on every SPECIES_EXTENDED and goblinkin lineage entry; SRD 5.2.1 label only on SPECIES_SRD.",
+    "species-discovered.json outcomes stay authoritative: 12 blocked (collapsed PDF / wizard limits), Phase-2 discovered (ifrit, kathai, ipotan, automaton, lupull, ganeshi, oodoon, mucosi), Godling as celestial stand-in for missing Aasimar extract.",
+    "pnpm --filter @uwe/character-creator test green; add optional catalog-integrity OWNER_NOTES guard for extended species (S-05).",
+    "Refresh legacy-species-inventory.json catalog counts after extended import or add banner that SPECIES_EXTENDED lives outside that snapshot (S-04).",
+    "Optional: sizeChoice wizard step + draft.size before calling Phase 1 complete for all seven sizeChoice extended species (S-06)."
+  ],
+  "mechanicsReview": {
+    "goblinkin": "PASS — lineages match extract; parent darkvision 60 OK; goblin Small via lineage.size (S-03 resolved)",
+    "goblin": "PASS — traits match extract; size Small wired through resolveSpeciesSize → buildSpeciesJson → ReviewStep",
+    "hobgoblin": "PASS — Help bonus action, Fortune +3 cap, Hospitality/Passage/Spite; S-07 Spite minute window omitted",
+    "bugbear": "PASS — reach +5, Powerful Build, Stealth, 2d6 surprise once per combat",
+    "lizardfolk": "PASS — Bite 1d6+Str slashing, Hold Breath 1h, Hungry Jaws PB temp HP, Natural Armor 13+Dex, swim 30, Nature's Intuition two skills",
+    "minotaur": "PASS — Horns 1d6+Str piercing, Goring Rush after Dash 20 ft, Hammering Horns shove, Labyrinthine Recall north + Survival advantage",
+    "centaur": "PASS — 40 ft speed, Charge 20 ft + melee then hoof bonus, Hooves 1d6+Str, Equine Build grapple/carry/climb 4×, Survivor one skill",
+    "fukuro": "PASS — Superior DV 120, fly = walk, no fly in medium/heavy armor, Talons 1d6+Str, Flyby Disengage, Wind Caller Gust of Wind L5 Int/Wis/Cha",
+    "felin": "PASS — DV 60, climb = walk, claws 1d6+Str, Feline Agility double speed once until 0 ft move, two skills from list",
+    "lepoling": "PASS — Hare-Trigger PB initiative, Perception, Lucky Footwork d4 reaction, Rabbit Hop 5×PB bonus PB/long rest",
+    "morgawr": "PASS — swim 30, Amphibious, Superior DV 120, Cold resistance, Black Blood reroll 1–2 on Hit Die, Master of the Sea spells L1/L3/L7 Int/Wis/Cha (follows traits block size Medium 5 ft, not 7–8 ft lore)",
+    "iso-tera": "PASS — Chameleon AC 13+Dex + Stealth action, Secondary Arms light/Tiny, Telepathy 120 ft, DV 60; creature type Monstrosity not in schema (acceptable)",
+    "godling": "PASS — Necrotic/Radiant resistance, DV 60, Healing Hands PB d4, Light (Charisma per extract), Celestial Revelation L3 PB damage",
+    "jotnar": "PASS — Powerful Build grapple/carry, Large Form L5, Spirit Blessing six spirits PB/long rest (matches extract mapping Wolf→Prone, Fox→Fire, …)",
+    "embeku": "PASS — Shell Defence complete (S-01 resolved); Claws, Hold Breath, AC 17 no Dex, Genetic Memory two skills/tools",
+    "amphin": "PASS — Small 25 ft walk/swim/climb walls, Amphibious, Poison resistance + advantage vs poisoned, Frog Jump, Poisonous Tongue Con save poisoned+incapacitated",
+    "lamia": "PASS — Magic Resistance, Poison resistance/advantage, Poison Spray + Charm Person L3 + Suggestion L5 Int/Wis/Cha; hook Terra-clean (S-02 resolved)"
+  },
+  "loreReview": {
+    "tegoraLeaks": "PASS — no vrael/auvrael/duthrael in player copy; module comments may name Kanka/Tegora as exclusion note (OK)",
+    "canonPlaces": "PASS — Validori, Nepurga as Reich, Arbor-Saum, Inneres Meer, Magister, Precursor-Ruinen (Amphin) align uwe-canon-brief §1.1 defaults",
+    "forbiddenLeaks": "PASS — no Shagottar, Weltbaum cosmology, Legacy goddess/fairy Nepurga in player copy",
+    "abilityNamesEn": "PASS — trait prose uses English ability names; no Stärke/Geschicklichkeit in extended descriptions",
+    "germanQuality": "PASS with notes — hooks/descriptions read naturally; S-09 Wyld-Hunt borderline; S-10 Godling SRD meta in hook"
+  },
+  "wiringReview": {
+    "speciesTsSpread": "PASS — SPECIES = SPECIES_SRD + SPECIES_EXTENDED (species.ts line 391)",
+    "duplicateKeys": "PASS — fourteen extended keys disjoint from nine SRD keys; jotnar coexists with goliath (intentional, not duplicate key)",
+    "legacyPreservation": "PASS — npc-species-migration-plan §1 and §2.2 keep SRD keys; remap Drascari→drachenblutige, Arkadia→tiefling; no Phase-1 key deletion",
+    "speciesDiscoveredIndex": "PASS — 40 entries, 14 imported + 3 lineages, 12 blocked with reasons, Phase-2 discovered list consistent with extracts",
+    "ownerNotesSource": "PASS manual — all extended entries tagged OWNER_NOTES_SOURCE; add automated test (S-05)",
+    "migrationPlan": "PASS — 0 Character rows documented; remap script idle; NPC wiki scan inventory-only; Portal dm_only noted",
+    "tests": "PASS — pnpm --filter @uwe/character-creator test 61/61 (13 suites, includes resolveSpeciesSize)",
+    "sizeAndLineagePersistence": "PASS goblin Small (S-03 resolved); OPEN S-06 sizeChoice wizard step for seven extended species"
+  },
+  "discoveredJsonReview": {
+    "summaryCounts": "PASS — existingSrd 9, imported 14, blocked 12, lineageEntries 12 (includes goblinkin triple + SRD lineages in count — index mixes player pages with catalog lineages; acceptable for discovery artifact)",
+    "remapPolicy": "PASS — Drascari/Arkadia/Sun Elves→SRD keys; Godling documents Aasimar substitute; gem Drascari lineages blocked pending owner",
+    "blockedEntries": "PASS — collapsed PDF traits (Kenku, Vättir, Satyr, Rodeni, Genasi, Riftborn, Silvan), Chithári level-gated size, Moon Elf custom elf lineages",
+    "phase2Queue": "PASS — ifrit, kathai, ipotan, automaton, lupull, ganeshi, oodoon, mucosi marked discovered with full traits in extract"
+  },
+  "migrationPlanReview": {
+    "noLegacyDeletion": "PASS — explicit Phase-1 no-delete for drachenblutige…tiefling",
+    "remapTable": "PASS — aligns with species-discovered.json mapsTo/catalogKey",
+    "npcScan": "PASS — text inventory only; Jötnar vs Goliath context disambiguation; no JSON backfill Phase 1",
+    "risks": "PASS — duplicate-name mitigation, collapsed PDF blocked, zero-row idle script",
+    "staleCrossRef": "MINOR — cites legacy-species-inventory.json pre-extended (S-04)"
+  },
+  "reviewedAt": "2026-08-08T15:50:00+02:00",
+  "notes": "Re-review after S-01/S-02/S-03 fixes: Embeku Panzerdeckung complete, Lamia hook Terra-clean (no vrael olo), Goblin Small wired via lineage.size → resolveSpeciesSize → buildSpeciesJson/ReviewStep with regression test. Phase-1 import substantively complete; nine SRD keys preserved. Approved; S-04–S-10 are non-blocking follow-ups."
+}

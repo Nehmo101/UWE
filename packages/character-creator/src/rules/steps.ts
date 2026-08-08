@@ -12,6 +12,7 @@
  *      Spieler glaubt, etwas verpasst zu haben.
  */
 
+import { findInvention, inventionsForLevel } from "../content";
 import type {
   Background,
   CharacterDraft,
@@ -113,8 +114,17 @@ function validateSpecies(ctx: ValidationContext): StepValidation {
   const issues: string[] = [];
   if (!ctx.species) {
     issues.push("Wähle ein Volk.");
-  } else if (ctx.species.lineages?.length && !ctx.draft.lineageKey) {
-    issues.push(`Wähle eine ${ctx.species.lineageLabel ?? "Abstammung"}.`);
+  } else {
+    if (ctx.species.lineages?.length && !ctx.draft.lineageKey) {
+      issues.push(`Wähle eine ${ctx.species.lineageLabel ?? "Abstammung"}.`);
+    }
+    if (ctx.species.sizeChoice?.length) {
+      if (!ctx.draft.sizeKey) {
+        issues.push("Wähle die Größe deines Charakters.");
+      } else if (!ctx.species.sizeChoice.includes(ctx.draft.sizeKey)) {
+        issues.push("Die gewählte Größe passt nicht zu diesem Volk.");
+      }
+    }
   }
   return { step: "species", complete: issues.length === 0, issues, skipped: false };
 }
@@ -123,8 +133,20 @@ function validateClass(ctx: ValidationContext): StepValidation {
   const issues: string[] = [];
   if (!ctx.dndClass) {
     issues.push("Wähle eine Klasse.");
-  } else if (ctx.dndClass.subclassLevel <= 1 && !ctx.draft.subclassKey) {
-    issues.push(`Wähle ${ctx.dndClass.subclassLabel}.`);
+  } else {
+    if (ctx.dndClass.subclassLevel <= 1 && !ctx.draft.subclassKey) {
+      issues.push(`Wähle ${ctx.dndClass.subclassLabel}.`);
+    }
+    if (ctx.dndClass.key === "erfinder") {
+      const invention = ctx.draft.inventionKey
+        ? findInvention(ctx.draft.inventionKey)
+        : null;
+      if (!invention) {
+        issues.push("Wähle deine erste Invention.");
+      } else if (!inventionsForLevel(1).some((entry) => entry.key === invention.key)) {
+        issues.push("Diese Invention ist auf Stufe 1 noch nicht verfügbar.");
+      }
+    }
   }
   return { step: "class", complete: issues.length === 0, issues, skipped: false };
 }

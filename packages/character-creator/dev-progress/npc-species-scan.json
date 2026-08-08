@@ -1,0 +1,66 @@
+{
+  "scannedAt": "2026-08-08T16:07:05+02:00",
+  "agent": "composer-2.5-fast",
+  "command": "pnpm exec tsx packages/character-creator/dev-progress/_scan-npc-species.mjs",
+  "database": "packages/database/data/uwe.db",
+  "databaseState": {
+    "seeded": true,
+    "seedCommand": "pnpm --filter @uwe/database db:seed",
+    "seededAt": "2026-08-08T16:06:00+02:00",
+    "worldCount": 1,
+    "totalPageCount": 8,
+    "worlds": [
+      {
+        "id": "cmskg6exs000i5k7g88c83xy6",
+        "slug": "terra",
+        "name": "Terra"
+      }
+    ],
+    "note": "Local uwe.db seeded with demo world Terra (region/location/faction pages only; no NPC or Character rows)."
+  },
+  "characterSpecies": {
+    "totalCharacters": 0,
+    "withSpeciesJson": 0,
+    "migrationStatus": "N/A — no Character rows to remap"
+  },
+  "npcPages": {
+    "totalAllWorlds": 0,
+    "totalTerraWorld": 0,
+    "terraWorldId": "cmskg6exs000i5k7g88c83xy6",
+    "sample": [],
+    "allTitlesSlugs": []
+  },
+  "speciesTermHits": {
+    "inNpcPageContent": [],
+    "npcPagesWithHits": 0,
+    "inTerraSeedSource": {
+      "file": "packages/database/src/terra-seed.ts",
+      "hasNpcPageSeed": false,
+      "seedPageTypes": ["region", "location", "faction"],
+      "seedPageSlugs": ["schatten-ueber-validori", "arbor", "validori", "nepurga", "shagottar", "magister-turm-von-validori"],
+      "hits": [],
+      "note": "terra-seed.ts defines no Page.type=npc entries and no species-like terms in seeded prose (locations/regions/factions only)."
+    }
+  },
+  "catalogKeyPolicy": {
+    "legacySrdKeysRetained": true,
+    "mergedAsExistingSrd": [
+      "drachenblutige",
+      "zwerg",
+      "elf",
+      "gnom",
+      "goliath",
+      "halbling",
+      "mensch",
+      "ork",
+      "tiefling"
+    ],
+    "duplicateRewrittenEntries": false,
+    "keyDeletionApplicable": false,
+    "reason": "No Character.species rows and NPCs lack structured species JSON; legacy catalog keys stay in SPECIES_SRD — no duplicate rewritten entries to remove."
+  },
+  "nextSteps": [
+    "Optional later: manual wiki prose review when Terra NPC corpus grows",
+    "Structured species on NPC pages remains out of scope for Phase 1"
+  ]
+}

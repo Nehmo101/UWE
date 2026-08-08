@@ -1,0 +1,347 @@
+{
+  "schemaVersion": 1,
+  "title": "UWE Character Creator — Entwicklungsfortschritt",
+  "updatedAt": "2026-08-08T15:49:47.729Z",
+  "modelsPolicy": "Nur cursor-grok-4.5-high und composer-2.5-fast.",
+  "sourceRoot": "E:/Downloads/UWE Character Creator",
+  "summary": {
+    "discoveredEntries": 455,
+    "importedEntries": 455,
+    "migratedEntries": 0,
+    "duplicates": 0,
+    "blockedEntries": 0,
+    "excludedEntries": 0,
+    "unaccountedEntries": 0
+  },
+  "workstreams": [
+    {
+      "id": "a11y",
+      "name": "Character Creator accessibility & dark theme",
+      "agent": "composer-2.5-fast",
+      "status": "completed_with_caveat",
+      "discoveredEntries": 0,
+      "importedEntries": 0,
+      "migratedEntries": 0,
+      "duplicates": 0,
+      "blockedEntries": 0,
+      "openDefects": [],
+      "nextAction": "—",
+      "lastUpdate": "2026-08-08T16:58:01+02:00",
+      "criticVerdict": null
+    },
+    {
+      "id": "backgrounds",
+      "name": "Backgrounds",
+      "agent": "composer-2.5-fast",
+      "critic": "composer-2.5-fast",
+      "status": "completed",
+      "discoveredEntries": 16,
+      "importedEntries": 16,
+      "migratedEntries": 0,
+      "duplicates": 0,
+      "blockedEntries": 0,
+      "openDefects": [
+        "B-04",
+        "B-05",
+        "B-06"
+      ],
+      "nextAction": "Optional follow-ups: OWNER_NOTES_SOURCE integrity test (B-04); unify „Attribute:“ labelling (B-05); Magisterhof canon note (B-06)",
+      "lastUpdate": "2026-08-08T15:22:00",
+      "criticVerdict": "APPROVED"
+    },
+    {
+      "id": "builder-ux",
+      "name": "Portal Character Wizard catalog integration",
+      "agent": "composer-2.5-fast",
+      "status": "completed",
+      "discoveredEntries": 0,
+      "importedEntries": 0,
+      "migratedEntries": 0,
+      "duplicates": 0,
+      "blockedEntries": 0,
+      "openDefects": [
+        "C-05-package-labels"
+      ],
+      "nextAction": "—",
+      "lastUpdate": "2026-08-08T15:38:00+02:00",
+      "criticVerdict": "APPROVED"
+    },
+    {
+      "id": "canon",
+      "name": "UWE canon & world context",
+      "agent": "cursor-grok-4.5-high",
+      "status": "completed",
+      "discoveredEntries": 53,
+      "importedEntries": 0,
+      "migratedEntries": 0,
+      "duplicates": 0,
+      "blockedEntries": 5,
+      "openDefects": [
+        "C-01 Arbor identity conflict (region vs world-tree vs goddess)",
+        "C-02 Nepurga identity conflict (realm vs fairy queen)",
+        "C-03 Valendor continent only in legacy seed.ts",
+        "C-04 Weltschildkroete vs Arbor mythos unresolved",
+        "C-05 Ability score EN display vs existing DE ABILITY_LABELS"
+      ],
+      "nextAction": "Lore rewrite agents: default to terra-seed (Arbor = northern forest region; Nepurga = political realm); Terra map cosmology (world-tree, zerrissener Planet) opt-in only when text is explicitly cosmological; strip all Tegora/FR names",
+      "lastUpdate": "2026-08-08",
+      "criticVerdict": "APPROVED"
+    },
+    {
+      "id": "classes",
+      "name": "Artificer & Bloodhunter classes",
+      "agent": "cursor-grok-4.5-high",
+      "critic": "composer-2.5-fast",
+      "status": "completed",
+      "discoveredEntries": 2,
+      "importedEntries": 2,
+      "migratedEntries": 0,
+      "duplicates": 0,
+      "blockedEntries": 0,
+      "openDefects": [],
+      "nextAction": "Optional follow-ups (non-blocking): C-02 German consistency; C-03 OWNER_NOTES catalog guard; C-04 PICKABLE_CLASSES sync; C-05 missing cantrips Blade Ward / Thorn Whip / Thunderclap; Forgewright L3 spells",
+      "lastUpdate": "2026-08-08T15:50:00",
+      "criticVerdict": "APPROVED"
+    },
+    {
+      "id": "feats",
+      "name": "Feats & prerequisites",
+      "agent": "cursor-grok-4.5-high",
+      "status": "completed",
+      "discoveredEntries": 13,
+      "importedEntries": 26,
+      "migratedEntries": 0,
+      "duplicates": 0,
+      "blockedEntries": 0,
+      "openDefects": [],
+      "nextAction": "Wire PHB backgrounds to these originFeat keys; optional catalog test for OWNER_NOTES_SOURCE on ORIGIN_FEATS_EXTENDED (F-02/F-03 minor)",
+      "lastUpdate": "2026-08-08T15:16:00",
+      "criticVerdict": "APPROVED"
+    },
+    {
+      "id": "inventions",
+      "name": "Erfinder Inventionen (Stufe 1)",
+      "agent": "composer-2.5-fast",
+      "status": "completed",
+      "discoveredEntries": 38,
+      "importedEntries": 38,
+      "migratedEntries": 0,
+      "duplicates": 0,
+      "blockedEntries": 0,
+      "openDefects": [],
+      "nextAction": "—",
+      "lastUpdate": "2026-08-08T16:30:00",
+      "criticVerdict": null
+    },
+    {
+      "id": "linked",
+      "name": "Linked equipment & spells (wikidot URLs)",
+      "agent": "composer-2.5-fast",
+      "status": "completed",
+      "discoveredEntries": 7,
+      "importedEntries": 0,
+      "migratedEntries": 0,
+      "duplicates": 0,
+      "blockedEntries": 320,
+      "openDefects": [
+        "L-01",
+        "L-02"
+      ],
+      "nextAction": "When ready: import SRD 5.2.1 spells levels 2–9 via same pipeline as level-1 files; optional ADVENTURING_GEAR table from SRD. Never import from wikidot.",
+      "lastUpdate": "2026-08-08T15:38:00+02:00",
+      "criticVerdict": "APPROVED"
+    },
+    {
+      "id": "npc-migration",
+      "name": "NPC species scan & migration inventory",
+      "agent": "composer-2.5-fast",
+      "status": "completed",
+      "discoveredEntries": 0,
+      "importedEntries": 0,
+      "migratedEntries": 0,
+      "duplicates": 0,
+      "blockedEntries": 0,
+      "openDefects": [],
+      "nextAction": "No migration work until Character.species rows or Terra NPC wiki corpus exists; optional prose review only.",
+      "lastUpdate": "2026-08-08T15:32:00+02:00",
+      "criticVerdict": null
+    },
+    {
+      "id": "progress-page",
+      "name": "Studio live progress page",
+      "agent": "composer-2.5-fast",
+      "status": "completed",
+      "discoveredEntries": 1,
+      "importedEntries": 0,
+      "migratedEntries": 0,
+      "duplicates": 0,
+      "blockedEntries": 0,
+      "openDefects": [],
+      "nextAction": "Keep progress.json updated as workstreams advance",
+      "lastUpdate": "2026-08-08T15:09:00+02:00",
+      "criticVerdict": null
+    },
+    {
+      "id": "seed-scan",
+      "name": "Local DB seed + Character Creator NPC/species rescans",
+      "agent": "composer-2.5-fast",
+      "status": "completed",
+      "discoveredEntries": 0,
+      "importedEntries": 0,
+      "migratedEntries": 0,
+      "duplicates": 0,
+      "blockedEntries": 0,
+      "openDefects": [],
+      "nextAction": "No migration work until Character.species rows or Terra NPC wiki corpus exists.",
+      "lastUpdate": "2026-08-08T15:49:47.725Z",
+      "criticVerdict": null
+    },
+    {
+      "id": "size-choice",
+      "name": "Species sizeChoice persistence",
+      "agent": "composer-2.5-fast",
+      "status": "completed",
+      "discoveredEntries": 0,
+      "importedEntries": 0,
+      "migratedEntries": 0,
+      "duplicates": 0,
+      "blockedEntries": 0,
+      "openDefects": [],
+      "nextAction": "—",
+      "lastUpdate": "2026-08-08T16:30:00",
+      "criticVerdict": null
+    },
+    {
+      "id": "species",
+      "name": "Species",
+      "agent": "cursor-grok-4.5-high",
+      "critic": "composer-2.5-fast",
+      "status": "completed",
+      "discoveredEntries": 40,
+      "importedEntries": 22,
+      "migratedEntries": 0,
+      "duplicates": 9,
+      "blockedEntries": 12,
+      "openDefects": [],
+      "nextAction": "Unblock collapsed PDF traits when Owner re-exports; optional NPC wiki scan per migration plan; non-blocking minors S-04–S-10",
+      "lastUpdate": "2026-08-08T16:10:00+02:00",
+      "criticVerdict": "PENDING"
+    },
+    {
+      "id": "spells",
+      "name": "SRD spells L2–9 (Open5e wotc-srd import)",
+      "agent": "composer-2.5-fast",
+      "critic": "composer-2.5-fast",
+      "status": "completed",
+      "discoveredEntries": 246,
+      "importedEntries": 246,
+      "migratedEntries": 0,
+      "duplicates": 0,
+      "blockedEntries": 0,
+      "openDefects": [
+        "S-04",
+        "S-06",
+        "S-07",
+        "S-08"
+      ],
+      "nextAction": "Optional follow-ups: localize duration/castingTime/material strings (S-06/S-07); decide key convention or bilingual map (S-04); reconcile S-08 import metadata.",
+      "lastUpdate": "2026-08-08T18:22:00+02:00",
+      "criticVerdict": "APPROVED"
+    }
+  ],
+  "contentCategories": [
+    {
+      "type": "Spezies",
+      "discovered": 31,
+      "imported": 31,
+      "blocked": 0,
+      "duplicates": 0,
+      "status": "completed"
+    },
+    {
+      "type": "Klassen",
+      "discovered": 14,
+      "imported": 14,
+      "blocked": 0,
+      "duplicates": 0,
+      "status": "completed"
+    },
+    {
+      "type": "Hintergründe",
+      "discovered": 16,
+      "imported": 16,
+      "blocked": 0,
+      "duplicates": 0,
+      "status": "completed"
+    },
+    {
+      "type": "Talente",
+      "discovered": 26,
+      "imported": 26,
+      "blocked": 0,
+      "duplicates": 0,
+      "status": "completed"
+    },
+    {
+      "type": "Zauber",
+      "discovered": 330,
+      "imported": 330,
+      "blocked": 0,
+      "duplicates": 0,
+      "status": "completed"
+    },
+    {
+      "type": "Erfinder-Inventionen",
+      "discovered": 38,
+      "imported": 38,
+      "blocked": 0,
+      "duplicates": 0,
+      "status": "completed"
+    }
+  ],
+  "openDefects": [],
+  "failedTests": [],
+  "screenshots": [],
+  "criticVerdicts": [
+    {
+      "workstreamId": "backgrounds",
+      "verdict": "APPROVED"
+    },
+    {
+      "workstreamId": "builder-ux",
+      "verdict": "APPROVED"
+    },
+    {
+      "workstreamId": "canon",
+      "verdict": "APPROVED"
+    },
+    {
+      "workstreamId": "classes",
+      "verdict": "APPROVED"
+    },
+    {
+      "workstreamId": "feats",
+      "verdict": "APPROVED"
+    },
+    {
+      "workstreamId": "linked",
+      "verdict": "APPROVED"
+    },
+    {
+      "workstreamId": "species",
+      "verdict": "PENDING"
+    },
+    {
+      "workstreamId": "spells",
+      "verdict": "APPROVED"
+    }
+  ],
+  "nextActions": [],
+  "completionNotes": [
+    "Katalog Stufe-1 fertig: Spezies, Klassen inkl. Erfinder/Blutjäger, Hintergründe, Talente, Inventionen, Zauber 0–9.",
+    "Materialkomponenten L2–9 auf Deutsch (spell-materials-de-map.json).",
+    "sizeKey + inventionKey Persistenz; Portal-Wizard + player-hub Validierung.",
+    "a11y: Spec verdrahtet + statische Review; voller Playwright-Lauf über CI/main e2e.",
+    "NPC-Spezies-Migration: nicht nötig (0 NPC-Seiten / 0 Character.species im Demo-Seed)."
+  ]
+}

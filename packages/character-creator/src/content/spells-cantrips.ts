@@ -31,7 +31,7 @@ export const CANTRIPS: Spell[] = [
     duration: "Augenblicklich",
     concentration: false,
     ritual: false,
-    lists: ["hexenmeister", "zauberer"],
+    lists: ["hexenmeister", "zauberer", "erfinder"],
   },
   {
     key: "frostberuehrung",
@@ -133,7 +133,7 @@ export const CANTRIPS: Spell[] = [
     duration: "Augenblicklich",
     concentration: false,
     ritual: false,
-    lists: ["hexenmeister", "zauberer"],
+    lists: ["hexenmeister", "zauberer", "erfinder"],
   },
   {
     key: "fuehrung",
@@ -150,7 +150,7 @@ export const CANTRIPS: Spell[] = [
     duration: "Konzentration, bis zu 1 Minute",
     concentration: true,
     ritual: false,
-    lists: ["kleriker", "druide"],
+    lists: ["kleriker", "druide", "erfinder"],
   },
   {
     key: "licht",
@@ -167,7 +167,7 @@ export const CANTRIPS: Spell[] = [
     duration: "1 Stunde",
     concentration: false,
     ritual: false,
-    lists: ["barde", "kleriker", "hexenmeister", "zauberer"],
+    lists: ["barde", "kleriker", "hexenmeister", "zauberer", "erfinder"],
   },
   {
     key: "magierhand",
@@ -184,7 +184,7 @@ export const CANTRIPS: Spell[] = [
     duration: "1 Minute",
     concentration: false,
     ritual: false,
-    lists: ["barde", "hexenmeister", "hexenpakt_magier", "zauberer"],
+    lists: ["barde", "hexenmeister", "hexenpakt_magier", "zauberer", "erfinder"],
   },
   {
     key: "ausbessern",
@@ -201,7 +201,7 @@ export const CANTRIPS: Spell[] = [
     duration: "Augenblicklich",
     concentration: false,
     ritual: false,
-    lists: ["barde", "kleriker", "druide", "hexenmeister", "zauberer"],
+    lists: ["barde", "kleriker", "druide", "hexenmeister", "zauberer", "erfinder"],
   },
   {
     key: "botschaft",
@@ -218,7 +218,7 @@ export const CANTRIPS: Spell[] = [
     duration: "1 Runde",
     concentration: false,
     ritual: false,
-    lists: ["barde", "druide", "hexenmeister", "zauberer"],
+    lists: ["barde", "druide", "hexenmeister", "zauberer", "erfinder"],
   },
   {
     key: "kleine_illusion",
@@ -252,7 +252,7 @@ export const CANTRIPS: Spell[] = [
     duration: "Augenblicklich",
     concentration: false,
     ritual: false,
-    lists: ["druide", "hexenmeister", "hexenpakt_magier", "zauberer"],
+    lists: ["druide", "hexenmeister", "hexenpakt_magier", "zauberer", "erfinder"],
   },
   {
     key: "zaubertrick",
@@ -269,7 +269,7 @@ export const CANTRIPS: Spell[] = [
     duration: "Bis zu 1 Stunde",
     concentration: false,
     ritual: false,
-    lists: ["barde", "hexenmeister", "hexenpakt_magier", "zauberer"],
+    lists: ["barde", "hexenmeister", "hexenpakt_magier", "zauberer", "erfinder"],
   },
   {
     key: "flamme_erschaffen",
@@ -303,7 +303,7 @@ export const CANTRIPS: Spell[] = [
     duration: "Augenblicklich",
     concentration: false,
     ritual: false,
-    lists: ["hexenmeister", "zauberer"],
+    lists: ["hexenmeister", "zauberer", "erfinder"],
   },
   {
     key: "widerstand",
@@ -320,7 +320,7 @@ export const CANTRIPS: Spell[] = [
     duration: "Konzentration, bis zu 1 Minute",
     concentration: true,
     ritual: false,
-    lists: ["kleriker", "druide"],
+    lists: ["kleriker", "druide", "erfinder"],
   },
   {
     key: "heilige_flamme",
@@ -354,7 +354,7 @@ export const CANTRIPS: Spell[] = [
     duration: "1 Minute",
     concentration: false,
     ritual: false,
-    lists: ["druide"],
+    lists: ["druide", "erfinder"],
   },
   {
     key: "schockgriff",
@@ -405,7 +405,7 @@ export const CANTRIPS: Spell[] = [
     duration: "Augenblicklich",
     concentration: false,
     ritual: false,
-    lists: ["kleriker", "druide"],
+    lists: ["kleriker", "druide", "erfinder"],
   },
   {
     key: "sternenfunke",

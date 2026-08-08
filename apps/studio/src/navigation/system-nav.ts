@@ -25,6 +25,10 @@ export const ADMIN_HUB_SECTIONS = [
     links: [
       { href: "/admin/ai-gateway", label: "KI-Gateway" },
       { href: "/admin/ai-prompt", label: "AI-Prompt" },
+      {
+        href: "/admin/character-creator-progress",
+        label: "Charakter-Ersteller Fortschritt",
+      },
     ],
   },
   {

@@ -26,6 +26,19 @@ import {
 const PAGES = [
   { path: "/auth/worlds", heading: "Meine Welten" },
   { path: "/auth/worlds/terra", heading: "Terra" },
+  {
+    path: "/auth/worlds/terra/characters/neu",
+    heading: "Charakter erstellen",
+  },
+] as const;
+
+/** Shell-Matrix: Seiten mit dichtem UI, die Hell/Dunkel und alle Viewports tragen müssen. */
+const SHELL_MATRIX_PAGES = [
+  { path: "/auth/worlds/terra", heading: "Terra" },
+  {
+    path: "/auth/worlds/terra/characters/neu",
+    heading: "Charakter erstellen",
+  },
 ] as const;
 
 test.describe("Portal accessibility", () => {
@@ -44,21 +57,23 @@ test.describe("Portal accessibility", () => {
     });
   }
 
-  for (const viewport of AUDIT_VIEWPORTS) {
-    for (const mode of ["hell", "dunkel"] as const) {
-      test(`/auth/worlds/terra trägt auf ${viewport.name} (${mode})`, async ({ page }) => {
-        await page.setViewportSize({ width: viewport.width, height: viewport.height });
-        await page.goto("/auth/worlds/terra");
-        await expect(page.getByRole("heading", { name: "Terra" })).toBeVisible();
-        await applyTheme(page, mode);
+  for (const target of SHELL_MATRIX_PAGES) {
+    for (const viewport of AUDIT_VIEWPORTS) {
+      for (const mode of ["hell", "dunkel"] as const) {
+        test(`${target.path} trägt auf ${viewport.name} (${mode})`, async ({ page }) => {
+          await page.setViewportSize({ width: viewport.width, height: viewport.height });
+          await page.goto(target.path);
+          await expect(page.getByRole("heading", { name: target.heading })).toBeVisible();
+          await applyTheme(page, mode);
 
-        const result = await auditShell(page, MIN_TOUCH_AA_PX);
-        expectShellAuditClean(
-          result,
-          `Portal /auth/worlds/terra ${viewport.name} ${mode}`,
-          MIN_TOUCH_AA_PX,
-        );
-      });
+          const result = await auditShell(page, MIN_TOUCH_AA_PX);
+          expectShellAuditClean(
+            result,
+            `Portal ${target.path} ${viewport.name} ${mode}`,
+            MIN_TOUCH_AA_PX,
+          );
+        });
+      }
     }
   }
 });
@@ -85,5 +100,19 @@ test.describe("Portal accessibility — Touch", () => {
 
     const result = await auditShell(page, MIN_TOUCH_COARSE_PX);
     expectShellAuditClean(result, "Portal /auth/worlds/terra Touch 390px", MIN_TOUCH_COARSE_PX);
+  });
+
+  test("/auth/worlds/terra/characters/neu erreicht auf dem Telefon das Daumenmaß", async ({
+    page,
+  }) => {
+    await page.goto("/auth/worlds/terra/characters/neu");
+    await expect(page.getByRole("heading", { name: "Charakter erstellen" })).toBeVisible();
+
+    const result = await auditShell(page, MIN_TOUCH_COARSE_PX);
+    expectShellAuditClean(
+      result,
+      "Portal /auth/worlds/terra/characters/neu Touch 390px",
+      MIN_TOUCH_COARSE_PX,
+    );
   });
 });

@@ -480,7 +480,7 @@ export function SpeciesStep({ draft, patch, set, resolved, validation, goTo }: S
   /** Ein Volkswechsel macht die Abstammung ungültig — beides in einem Zug. */
   function chooseSpecies(next: Species) {
     if (draft.speciesKey === next.key) return;
-    patch({ speciesKey: next.key, lineageKey: null });
+    patch({ speciesKey: next.key, lineageKey: null, sizeKey: null });
   }
 
   return (
@@ -597,6 +597,38 @@ export function SpeciesStep({ draft, patch, set, resolved, validation, goTo }: S
               </div>
             </details>
           ) : null}
+        </section>
+      ) : null}
+
+      {species?.sizeChoice && species.sizeChoice.length >= 2 ? (
+        <section>
+          <h3 id="cw-size-heading">Größe wählen</h3>
+          <p className="cw-prose">
+            {draft.sizeKey
+              ? `${species.name} kann ${sizeLabel(species)} sein — deine Wahl steht.`
+              : `${species.name} erlaubt ${sizeLabel(species)}. Wähle, was zu deinem Charakter passt.`}
+          </p>
+          <div className="cw-grid" role="group" aria-labelledby="cw-size-heading">
+            {species.sizeChoice.map((size) => (
+              <button
+                key={size}
+                type="button"
+                className="cw-tile"
+                aria-pressed={draft.sizeKey === size}
+                onClick={() => set("sizeKey", size)}
+              >
+                <span className="cw-tile__check" aria-hidden="true">
+                  <NavIcon name="check" width={16} height={16} />
+                </span>
+                <span className="cw-tile__name">{SIZE_LABELS[size]}</span>
+                <span className="cw-tile__hook">
+                  {size === "medium"
+                    ? "Standardgröße — keine Einschränkungen durch Größe."
+                    : "Klein — passt durch enge Gänge, kürzere Reichweite mit schweren Waffen."}
+                </span>
+              </button>
+            ))}
+          </div>
         </section>
       ) : null}
 

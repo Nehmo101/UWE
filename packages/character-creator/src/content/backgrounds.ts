@@ -2,21 +2,15 @@
  * Hintergründe — der Ort, an dem in den Regeln von 2024 die Attributspunkte
  * verteilt werden.
  *
- * Wichtig für alle, die die Liste für zu kurz halten: **SRD 5.2.1 enthält
- * genau vier Hintergründe** — Acolyte, Criminal, Sage, Soldier. Die sechzehn
- * Hintergründe des Spielerhandbuchs 2024 (Artisan, Charlatan, Entertainer,
- * Farmer, Guard, Guide, Hermit, Merchant, Noble, Sailor, Scribe, Wayfarer)
- * stehen **nicht** im SRD und sind damit weder nachprüfbar noch unter
- * CC-BY-4.0 verwendbar. Geprüft am 2026-08-06 direkt gegen die offizielle
- * PDF `SRD_CC_v5.2.1` (Abschnitt „Character Origins → Character Backgrounds“,
- * S. 82) sowie gegen zwei unabhängige Markdown-Konversionen derselben Datei.
+ * **SRD 5.2.1** liefert genau vier Hintergründe (Acolyte, Criminal, Sage,
+ * Soldier) unter CC-BY-4.0 — sie stehen in `BACKGROUNDS_SRD` unten.
  *
- * // TODO(unverified): Artisan, Charlatan, Entertainer, Farmer, Guard, Guide,
- * // Hermit, Merchant, Noble, Sailor, Scribe, Wayfarer — nur im PHB 2024,
- * // nicht im SRD 5.2.1. Erst aufnehmen, wenn eine lizenzkonforme Quelle
- * // vorliegt; nicht aus dem Gedächtnis nachbauen.
+ * **Zusätzlich** liegen zwölf Hintergründe aus Owner-Notizen in
+ * `backgrounds-extended.ts` (`OWNER_NOTES_SOURCE`). Mechanik aus dem
+ * Kanka-Export, Flavour für Terra umgeschrieben. Das ist installations-
+ * eigener Inhalt, kein SRD-Claim.
  *
- * Was ein Hintergrund laut SRD mitbringt:
+ * Was ein Hintergrund laut Regeln mitbringt:
  * - drei Attribute; darin +2/+1 oder +1/+1/+1 (max. 20)
  * - ein Ursprungstalent
  * - Übung in zwei Fertigkeiten
@@ -28,13 +22,14 @@
  * eigenes Feld; sie steht deshalb im Fließtext jedes Eintrags, damit sie in
  * der Oberfläche nicht verlorengeht.
  *
- * Deutsche Namen und Begriffe folgen der deutschen SRD-5.2.1-Fassung, damit
- * Charakterbogen, Wiki und Ersteller dieselben Wörter benutzen.
+ * Ability-Anzeigenamen in neuer Prosa: Strength, Dexterity, Constitution,
+ * Intelligence, Wisdom, Charisma (englisch). Keys bleiben ASCII-klein.
  */
 
 import { SRD_SOURCE, type Background } from "../types";
+import { BACKGROUNDS_EXTENDED } from "./backgrounds-extended";
 
-export const BACKGROUNDS: Background[] = [
+const BACKGROUNDS_SRD: Background[] = [
   // ───────────────────────────── Akolyth ─────────────────────────────
   {
     key: "akolyth",
@@ -181,6 +176,12 @@ export const BACKGROUNDS: Background[] = [
     startingGold: 14,
     source: SRD_SOURCE,
   },
+];
+
+/** SRD-Viererset plus Owner-Notizen (12 weitere Hintergründe). */
+export const BACKGROUNDS: Background[] = [
+  ...BACKGROUNDS_SRD,
+  ...BACKGROUNDS_EXTENDED,
 ];
 
 /** Hintergrund per Schlüssel nachschlagen. */

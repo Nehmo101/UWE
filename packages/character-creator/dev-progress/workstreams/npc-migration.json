@@ -1,0 +1,38 @@
+{
+  "id": "npc-migration",
+  "name": "NPC species scan & migration inventory",
+  "agent": "composer-2.5-fast",
+  "critic": null,
+  "criticVerdict": null,
+  "status": "completed",
+  "scannedAt": "2026-08-08T15:32:00+02:00",
+  "counts": {
+    "npcPagesAllWorlds": 0,
+    "npcPagesTerra": 0,
+    "charactersTotal": 0,
+    "charactersWithSpeciesJson": 0,
+    "npcPagesWithSpeciesTermHits": 0,
+    "terraSeedNpcPages": 0,
+    "terraSeedSpeciesTermHits": 0
+  },
+  "findings": {
+    "localDbSeeded": false,
+    "structuredSpeciesMigration": "N/A",
+    "npcStructuredSpeciesField": false,
+    "legacyCatalogKeysRetained": true,
+    "mergedAsExistingSrd": true,
+    "duplicateRewrittenCatalogEntries": false,
+    "keyDeletionApplicable": false,
+    "terraSeedHasNpcPages": false,
+    "optionalWikiProseReview": "deferred until Terra NPC corpus exists"
+  },
+  "deliverables": [
+    "packages/character-creator/dev-progress/npc-species-scan.json",
+    "packages/character-creator/dev-progress/npc-species-migration-plan.md",
+    "packages/character-creator/dev-progress/_scan-npc-species.mjs",
+    "packages/character-creator/dev-progress/workstreams/npc-migration.json"
+  ],
+  "blockers": [],
+  "nextAction": "No migration work until Character.species rows or Terra NPC wiki corpus exists; optional prose review only.",
+  "lastUpdate": "2026-08-08T15:32:00+02:00"
+}

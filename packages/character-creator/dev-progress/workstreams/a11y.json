@@ -1,0 +1,66 @@
+{
+  "id": "a11y",
+  "name": "Character Creator accessibility & dark theme",
+  "agent": "composer-2.5-fast",
+  "status": "completed_with_caveat",
+  "portalRoute": "/auth/worlds/[worldSlug]/characters/neu",
+  "reviewScope": "apps/portal/src/components/character-wizard",
+  "staticReviewFile": "packages/character-creator/dev-progress/a11y-static-review.md",
+  "staticReview": "pass",
+  "themeCapture": {
+    "settingsDriven": true,
+    "ssrFunction": "buildVisualThemeHtmlAttributes",
+    "ssrSource": "settings.app.theme → data-theme / data-uwe-appearance on <html>",
+    "paletteSource": "settings.app.themePreferences.portal.themeId + ThemeBootstrapScript → data-uwe-theme",
+    "wrongApproach": "page.emulateMedia({ colorScheme: 'dark' }) — prior screenshots byte-identical to light",
+    "correctApproaches": [
+      "e2e/helpers/shell-audit.ts applyTheme(page, 'hell' | 'dunkel')",
+      "Portal theme picker (Ghibli Tag ↔ Nacht)",
+      "Studio Settings → Erscheinungsbild → Portal-Standard"
+    ],
+    "verifyCapture": "html[data-uwe-theme=uwe-ghibli-nacht] and computed --uwe-accent-ink differ from tag run"
+  },
+  "checklist": {
+    "ariaPressedTiles": "pass",
+    "fieldsetOrRoleGroup": "pass",
+    "inputLabels": "pass",
+    "colorNotAlone": "pass_after_fixes",
+    "focusVisibleCss": "pass",
+    "headingHierarchy": "pass",
+    "axeWcagAa": "pending",
+    "auditShellMatrix": "pending",
+    "darkLightParity": "pending",
+    "creatorRouteInA11ySpec": "pass"
+  },
+  "fixesApplied": [
+    "CharacterWizard: step aria-label with state; footer validation role=status; decorative NavIcon aria-hidden",
+    "CharacterRail: title on boosted abilities",
+    "EquipmentStep: validation note role=status",
+    "DetailsStep: alignment role=group aria-label",
+    "wizard.css: cw-step min-height var(--uwe-touch-min) for shell/touch audit"
+  ],
+  "openItems": [
+    "Run pnpm test:e2e:a11y — portal-a11y.spec.ts now covers /auth/worlds/terra/characters/neu (axe + auditShell hell/dunkel × 3 viewports + touch)",
+    "Re-capture dark screenshots via applyTheme or theme picker",
+    "Measure --uwe-accent-ink contrast in uwe-ghibli-nacht on wizard chips",
+    "Optional: aria-hidden on remaining decorative NavIcons in step buttons"
+  ],
+  "missingDataNote": {
+    "mdEntry": "MD-13",
+    "doc": "docs/character-creator-missing-data.md",
+    "update": "Creator route added to portal-a11y.spec.ts (2026-08-08): axe WCAG A/AA, auditShell matrix (hell/dunkel × 390/768/1440), touch 390px. MD-13 closes when pnpm test:e2e:a11y passes with real data-uwe-theme dark capture verified."
+  },
+  "files": [
+    "e2e/portal-a11y.spec.ts",
+    "apps/portal/src/components/character-wizard/CharacterWizard.tsx",
+    "apps/portal/src/components/character-wizard/CharacterRail.tsx",
+    "apps/portal/src/components/character-wizard/steps/DetailsStep.tsx",
+    "apps/portal/src/components/character-wizard/steps/EquipmentStep.tsx",
+    "apps/portal/src/components/character-wizard/wizard.css",
+    "packages/character-creator/dev-progress/a11y-static-review.md"
+  ],
+  "lastUpdate": "2026-08-08T16:58:01+02:00",
+  "creatorRouteInA11ySpec": true,
+  "e2eLocalResult": "blocked_or_hung — next production build hung after unlock; CI must run portal-a11y grep characters/neu",
+  "criticVerdict": null
+}

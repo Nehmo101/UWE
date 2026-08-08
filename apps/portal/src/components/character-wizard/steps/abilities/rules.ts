@@ -192,13 +192,22 @@ export function relevanceFor(ability: AbilityKey, resolved: ResolvedCatalog): Re
 
   // Das Volk vergibt nach den Regeln von 2024 keine Attributspunkte mehr —
   // seine Merkmale hängen aber sehr wohl an einzelnen Attributen. Gesucht wird
-  // deshalb im Merkmalstext nach dem Attributsnamen („Konstitutionsmodifikator",
-  // „Stärkewürfe"), statt eine zweite Tabelle zu erfinden, die veraltet.
+  // im Merkmalstext nach EN-Anzeigenamen und den noch vorhandenen DE-Stämmen
+  // in Katalogprosa („Konstitutionsmodifikator", „Stärkewürfe").
+  const abilitySearchTerms: Record<typeof ability, string[]> = {
+    strength: ["Strength", "Stärke", "Starke", "Stärke"],
+    dexterity: ["Dexterity", "Geschicklichkeit", "Geschick"],
+    constitution: ["Constitution", "Konstitution"],
+    intelligence: ["Intelligence", "Intelligenz"],
+    wisdom: ["Wisdom", "Weisheit"],
+    charisma: ["Charisma"],
+  };
+  const terms = abilitySearchTerms[ability];
   const traits = [...(species?.traits ?? []), ...(lineage?.traits ?? [])];
-  const hit = traits.find(
-    (trait) =>
-      trait.name.includes(ABILITY_LABELS[ability]) ||
-      trait.description.includes(ABILITY_LABELS[ability]),
+  const hit = traits.find((trait) =>
+    terms.some(
+      (term) => trait.name.includes(term) || trait.description.includes(term),
+    ),
   );
   if (hit) {
     marks.push({

@@ -122,6 +122,7 @@
   display: flex;
   align-items: center;
   gap: var(--uwe-space-2);
+  min-height: var(--uwe-touch-min);
   padding: var(--uwe-space-2) var(--uwe-space-3);
   border: 0;
   background: transparent;

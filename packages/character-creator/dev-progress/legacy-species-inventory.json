@@ -1,0 +1,305 @@
+{
+  "generatedAt": "2026-08-08T13:03:02.157Z",
+  "schemaVersion": 1,
+  "summary": {
+    "catalogSpeciesCount": 9,
+    "catalogLineageCount": 24,
+    "speciesWithLineagesCount": 5,
+    "speciesWithoutLineagesCount": 4,
+    "speciesWithSizeChoiceCount": 2,
+    "databaseQueried": true,
+    "databasePath": "packages/database/data/uwe.db",
+    "auditScriptMjs": "packages/character-creator/dev-progress/_query-species.mjs",
+    "auditScriptTs": "packages/character-creator/dev-progress/_query-species.ts",
+    "totalCharacters": 0,
+    "charactersWithSpeciesJson": 0,
+    "charactersWithoutSpeciesJson": 0,
+    "legacySpeciesKeysInDb": [],
+    "unknownSpeciesKeysInDb": []
+  },
+  "sizeChoicePersistence": {
+    "catalogSpeciesWithSizeChoice": ["mensch", "tiefling"],
+    "allowedSizes": ["medium", "small"],
+    "characterDraftCapturesSize": false,
+    "buildSpeciesJsonUsesDefaultSizeOnly": true,
+    "persistedField": "Character.species.size mirrors catalog Species.size (default medium), not player choice",
+    "wizardGap": "Portal draft stores speciesKey/lineageKey only; no sizeKey until wizard step added"
+  },
+  "dataModel": {
+    "hasSpeciesTable": false,
+    "hasNpcTable": false,
+    "speciesStorage": "Character.species (Json?, nullable)",
+    "npcStorage": "Page.type = npc (wiki pages, no Character.species linkage)",
+    "playerCharacterStorage": "Character row + optional Page.type = player_character",
+    "speciesJsonSchemaVersion": 1,
+    "speciesJsonContract": "packages/player-hub/src/character-json.ts CharacterSpeciesJson"
+  },
+  "catalog": {
+    "source": "SRD 5.2.1 (CC-BY-4.0)",
+    "speciesFiles": [
+      "packages/character-creator/src/content/species.ts",
+      "packages/character-creator/src/content/species-lineages.ts"
+    ],
+    "species": [
+      {
+        "key": "drachenblutige",
+        "name": "Drachenblütige",
+        "nameEn": "Dragonborn",
+        "lineageCount": 10,
+        "lineageLabel": "Drakonische Abstammung",
+        "hasSizeChoice": false
+      },
+      {
+        "key": "zwerg",
+        "name": "Zwerg",
+        "nameEn": "Dwarf",
+        "lineageCount": 0,
+        "lineageLabel": null,
+        "hasSizeChoice": false
+      },
+      {
+        "key": "elf",
+        "name": "Elf",
+        "nameEn": "Elf",
+        "lineageCount": 3,
+        "lineageLabel": "Elfische Abstammung",
+        "hasSizeChoice": false
+      },
+      {
+        "key": "gnom",
+        "name": "Gnom",
+        "nameEn": "Gnome",
+        "lineageCount": 2,
+        "lineageLabel": "Gnomische Abstammung",
+        "hasSizeChoice": false
+      },
+      {
+        "key": "goliath",
+        "name": "Goliath",
+        "nameEn": "Goliath",
+        "lineageCount": 6,
+        "lineageLabel": "Riesische Abstammung",
+        "hasSizeChoice": false
+      },
+      {
+        "key": "halbling",
+        "name": "Halbling",
+        "nameEn": "Halfling",
+        "lineageCount": 0,
+        "lineageLabel": null,
+        "hasSizeChoice": false
+      },
+      {
+        "key": "mensch",
+        "name": "Mensch",
+        "nameEn": "Human",
+        "lineageCount": 0,
+        "lineageLabel": null,
+        "hasSizeChoice": true
+      },
+      {
+        "key": "ork",
+        "name": "Ork",
+        "nameEn": "Orc",
+        "lineageCount": 0,
+        "lineageLabel": null,
+        "hasSizeChoice": false
+      },
+      {
+        "key": "tiefling",
+        "name": "Tiefling",
+        "nameEn": "Tiefling",
+        "lineageCount": 3,
+        "lineageLabel": "Unholdisches Erbe",
+        "hasSizeChoice": true
+      }
+    ],
+    "lineages": [
+      {
+        "key": "drache-schwarz",
+        "name": "Schwarzer Drache",
+        "nameEn": "Black Dragon",
+        "parentSpeciesKey": "drachenblutige"
+      },
+      {
+        "key": "drache-kupfer",
+        "name": "Kupferdrache",
+        "nameEn": "Copper Dragon",
+        "parentSpeciesKey": "drachenblutige"
+      },
+      {
+        "key": "drache-blau",
+        "name": "Blauer Drache",
+        "nameEn": "Blue Dragon",
+        "parentSpeciesKey": "drachenblutige"
+      },
+      {
+        "key": "drache-bronze",
+        "name": "Bronzedrache",
+        "nameEn": "Bronze Dragon",
+        "parentSpeciesKey": "drachenblutige"
+      },
+      {
+        "key": "drache-messing",
+        "name": "Messingdrache",
+        "nameEn": "Brass Dragon",
+        "parentSpeciesKey": "drachenblutige"
+      },
+      {
+        "key": "drache-gold",
+        "name": "Golddrache",
+        "nameEn": "Gold Dragon",
+        "parentSpeciesKey": "drachenblutige"
+      },
+      {
+        "key": "drache-rot",
+        "name": "Roter Drache",
+        "nameEn": "Red Dragon",
+        "parentSpeciesKey": "drachenblutige"
+      },
+      {
+        "key": "drache-gruen",
+        "name": "Grüner Drache",
+        "nameEn": "Green Dragon",
+        "parentSpeciesKey": "drachenblutige"
+      },
+      {
+        "key": "drache-silber",
+        "name": "Silberdrache",
+        "nameEn": "Silver Dragon",
+        "parentSpeciesKey": "drachenblutige"
+      },
+      {
+        "key": "drache-weiss",
+        "name": "Weißer Drache",
+        "nameEn": "White Dragon",
+        "parentSpeciesKey": "drachenblutige"
+      },
+      {
+        "key": "drow",
+        "name": "Drow",
+        "nameEn": "Drow",
+        "parentSpeciesKey": "elf"
+      },
+      {
+        "key": "hochelf",
+        "name": "Hochelf",
+        "nameEn": "High Elf",
+        "parentSpeciesKey": "elf"
+      },
+      {
+        "key": "waldelf",
+        "name": "Waldelf",
+        "nameEn": "Wood Elf",
+        "parentSpeciesKey": "elf"
+      },
+      {
+        "key": "waldgnom",
+        "name": "Waldgnom",
+        "nameEn": "Forest Gnome",
+        "parentSpeciesKey": "gnom"
+      },
+      {
+        "key": "felsengnom",
+        "name": "Felsengnom",
+        "nameEn": "Rock Gnome",
+        "parentSpeciesKey": "gnom"
+      },
+      {
+        "key": "wolkenriese",
+        "name": "Wolkenriese",
+        "nameEn": "Cloud Giant",
+        "parentSpeciesKey": "goliath"
+      },
+      {
+        "key": "feuerriese",
+        "name": "Feuerriese",
+        "nameEn": "Fire Giant",
+        "parentSpeciesKey": "goliath"
+      },
+      {
+        "key": "frostriese",
+        "name": "Frostriese",
+        "nameEn": "Frost Giant",
+        "parentSpeciesKey": "goliath"
+      },
+      {
+        "key": "huegelriese",
+        "name": "Hügelriese",
+        "nameEn": "Hill Giant",
+        "parentSpeciesKey": "goliath"
+      },
+      {
+        "key": "steinriese",
+        "name": "Steinriese",
+        "nameEn": "Stone Giant",
+        "parentSpeciesKey": "goliath"
+      },
+      {
+        "key": "sturmriese",
+        "name": "Sturmriese",
+        "nameEn": "Storm Giant",
+        "parentSpeciesKey": "goliath"
+      },
+      {
+        "key": "abyssisch",
+        "name": "Abyssisches Erbe",
+        "nameEn": "Abyssal Legacy",
+        "parentSpeciesKey": "tiefling"
+      },
+      {
+        "key": "chthonisch",
+        "name": "Chthonisches Erbe",
+        "nameEn": "Chthonic Legacy",
+        "parentSpeciesKey": "tiefling"
+      },
+      {
+        "key": "infernalisch",
+        "name": "Infernalisches Erbe",
+        "nameEn": "Infernal Legacy",
+        "parentSpeciesKey": "tiefling"
+      }
+    ]
+  },
+  "characterReferences": [],
+  "codeReferences": {
+    "catalog": [
+      "packages/character-creator/src/content/species.ts",
+      "packages/character-creator/src/content/species-lineages.ts",
+      "packages/character-creator/src/content/index.ts",
+      "packages/character-creator/src/types.ts"
+    ],
+    "rules": [
+      "packages/character-creator/src/rules/steps.ts",
+      "packages/character-creator/src/rules/derive.ts"
+    ],
+    "persistence": [
+      "packages/database/prisma/schema.prisma",
+      "packages/database/prisma/migrations/20260701120000_wave_c0b_character_inventory/migration.sql",
+      "packages/player-hub/src/character-json.ts",
+      "packages/player-hub/src/character-draft-validation.ts",
+      "packages/player-hub/src/player-characters.ts",
+      "packages/database/src/character-service.ts",
+      "packages/database/src/character-sheet-export.ts"
+    ],
+    "portalUi": [
+      "apps/portal/app/auth/worlds/[worldSlug]/characters/neu/page.tsx",
+      "apps/portal/app/character-actions.ts",
+      "apps/portal/src/components/character-wizard/CharacterWizard.tsx",
+      "apps/portal/src/components/character-wizard/steps/SpeciesStep.tsx",
+      "apps/portal/src/components/CharacterProfilePanel.tsx"
+    ],
+    "validation": [
+      "packages/security/src/schemas/common.ts"
+    ],
+    "tests": [
+      "packages/character-creator/src/content/catalog-integrity.test.ts",
+      "packages/player-hub/src/player-characters.test.ts",
+      "packages/database/src/character-sheet-export.test.ts"
+    ]
+  },
+  "npcNote": {
+    "migratedViaSpeciesJson": false,
+    "reason": "NPCs are wiki Page records (type npc), not Character rows. No species JSON exists on NPC pages today."
+  }
+}

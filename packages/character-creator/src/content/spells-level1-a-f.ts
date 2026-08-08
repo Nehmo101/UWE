@@ -35,7 +35,7 @@ export const LEVEL1_SPELLS_A_F: Spell[] = [
     duration: "8 Stunden",
     concentration: false,
     ritual: true,
-    lists: ["waldlaeufer", "zauberer"],
+    lists: ["waldlaeufer", "zauberer", "erfinder"],
   },
   {
     key: "tierfreundschaft",
@@ -222,7 +222,7 @@ export const LEVEL1_SPELLS_A_F: Spell[] = [
     duration: "Augenblicklich",
     concentration: false,
     ritual: false,
-    lists: ["barde", "kleriker", "druide", "paladin", "waldlaeufer"],
+    lists: ["barde", "kleriker", "druide", "paladin", "waldlaeufer", "erfinder"],
   },
   {
     key: "gut_und_boese_entdecken",
@@ -256,7 +256,7 @@ export const LEVEL1_SPELLS_A_F: Spell[] = [
     duration: "Konzentration, bis zu 10 Minuten",
     concentration: true,
     ritual: true,
-    lists: ["barde", "kleriker", "druide", "paladin", "waldlaeufer", "hexenmeister", "hexenpakt_magier", "zauberer"],
+    lists: ["barde", "kleriker", "druide", "paladin", "waldlaeufer", "hexenmeister", "hexenpakt_magier", "zauberer", "erfinder"],
   },
   {
     key: "gift_und_krankheit_entdecken",
@@ -290,7 +290,7 @@ export const LEVEL1_SPELLS_A_F: Spell[] = [
     duration: "1 Stunde",
     concentration: false,
     ritual: false,
-    lists: ["barde", "hexenmeister", "zauberer"],
+    lists: ["barde", "hexenmeister", "zauberer", "erfinder"],
   },
   {
     key: "dissonantes_fluestern",
@@ -392,7 +392,7 @@ export const LEVEL1_SPELLS_A_F: Spell[] = [
     duration: "Konzentration, bis zu 10 Minuten",
     concentration: true,
     ritual: false,
-    lists: ["hexenmeister", "hexenpakt_magier", "zauberer"],
+    lists: ["hexenmeister", "hexenpakt_magier", "zauberer", "erfinder"],
   },
   {
     key: "feenfeuer",
@@ -409,7 +409,7 @@ export const LEVEL1_SPELLS_A_F: Spell[] = [
     duration: "Konzentration, bis zu 1 Minute",
     concentration: true,
     ritual: false,
-    lists: ["barde", "druide"],
+    lists: ["barde", "druide", "erfinder"],
   },
   {
     key: "falsches_leben",
@@ -426,7 +426,7 @@ export const LEVEL1_SPELLS_A_F: Spell[] = [
     duration: "Augenblicklich",
     concentration: false,
     ritual: false,
-    lists: ["hexenmeister", "zauberer"],
+    lists: ["hexenmeister", "zauberer", "erfinder"],
   },
   {
     key: "federfall",
@@ -443,7 +443,7 @@ export const LEVEL1_SPELLS_A_F: Spell[] = [
     duration: "1 Minute",
     concentration: false,
     ritual: false,
-    lists: ["barde", "hexenmeister", "zauberer"],
+    lists: ["barde", "hexenmeister", "zauberer", "erfinder"],
   },
   {
     key: "vertrauten_herbeirufen",

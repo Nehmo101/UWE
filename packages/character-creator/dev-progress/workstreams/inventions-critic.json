@@ -1,0 +1,133 @@
+{
+  "workstreamId": "inventions",
+  "verdict": "APPROVED",
+  "criticModel": "composer-2.5-fast",
+  "scope": {
+    "filesReviewed": [
+      "packages/character-creator/src/content/inventions-erfinder.ts",
+      "packages/character-creator/src/content/inventions-erfinder.test.ts",
+      "packages/character-creator/src/content/index.ts",
+      "packages/character-creator/src/types.ts",
+      "packages/character-creator/src/rules/steps.ts",
+      "apps/portal/src/components/character-wizard/steps/ClassStep.tsx",
+      "apps/portal/src/components/character-wizard/steps/ReviewStep.tsx",
+      "packages/player-hub/src/character-json.ts",
+      "packages/player-hub/src/character-draft-validation.ts",
+      "packages/player-hub/src/character-draft-validation.test.ts",
+      "tmp/character-creator-source-extract/Klassen__Artificer - Notizen.pdf.txt"
+    ],
+    "catalogCount": 38,
+    "level1Pickable": 12
+  },
+  "defects": [
+    {
+      "id": "I-01",
+      "severity": "blocker",
+      "status": "fixed",
+      "summary": "power_whip now includes L11/L17 +1/+2 attack-and-damage scaling (line 122)."
+    },
+    {
+      "id": "I-02",
+      "severity": "major",
+      "status": "fixed",
+      "summary": "gem_of_warding now states gem HP = Erfinderstufe, AC = Intelligence-Wert, 1-minute active window, return-to-wielder on destroy (line 156)."
+    },
+    {
+      "id": "I-03",
+      "severity": "major",
+      "status": "fixed",
+      "summary": "homunculus_servant now covers Dodge-by-default unless Bonus Action orders statblock action; prior Homunculus turns to ash on recreate; incapacitated autonomous defense; one-line Evasion / Might of the Master / Acidic Spittle (line 100)."
+    },
+    {
+      "id": "I-04",
+      "severity": "major",
+      "status": "fixed",
+      "summary": "light_blade now states helles Licht 4,5 m und schwaches Licht weitere 4,5 m (line 202)."
+    },
+    {
+      "id": "I-05",
+      "severity": "minor",
+      "status": "fixed",
+      "summary": "goggles_of_clearsight hook now uses 36 m (line 87), matching description metric."
+    },
+    {
+      "id": "I-06",
+      "severity": "minor",
+      "status": "fixed",
+      "summary": "repulsion_gauntlets and guardian_gauntlets now use „Panzerhandschuhe“ (lines 248–250, 428–430)."
+    },
+    {
+      "id": "I-07",
+      "severity": "minor",
+      "status": "open",
+      "summary": "inventions-erfinder.test.ts asserts inventionsForLevel(1).length >= 12, not === 12; no extract nameEn/prerequisiteLevel snapshot; no OWNER_NOTES_SOURCE guard on all 38 entries."
+    }
+  ],
+  "passingCriteria": {
+    "catalogCount": "PASS — 38 inventions; keys match Artificer Infusions table names (snake_case EN).",
+    "level1Count": "PASS — 12 prerequisiteLevel 1 entries; ClassStep uses inventionsForLevel(1).",
+    "prerequisiteLevels": "PASS — L1/L5/L11/L17 gates align with extract Prerequisites.",
+    "attunementFlags": "PASS — requiresAttunement matches extract „requires attunement“ notes on spot-check.",
+    "abilityNamesEn": "PASS — Intelligence / Dexterity / Strength / Constitution in player-facing copy; no Stärke/Geschicklichkeit.",
+    "tegoraLeaks": "PASS — no Tegora/Kanka/Eberron/House Cannith in player-facing invention copy; Validori/Gilden Terra flavour only.",
+    "draftWiring": "PASS — CharacterDraft.inventionKey; ClassStep tile picker + clear on class change; steps.validateClass; player-hub validateFullDraft + buildFeaturesJson.",
+    "ownerNotesSource": "PASS manual — every entry uses OWNER_NOTES_SOURCE (automate in I-07).",
+    "tests": "PASS — pnpm --filter @uwe/character-creator test: 68 pass / 0 fail / 14 suites (includes INVENTIONS_ERFINDER suite)."
+  },
+  "mechanicsReview": {
+    "arm_launcher": "PASS — load Tiny objects; BA fire; 20 ft → 6 m",
+    "enhanced_arcane_focus": "PASS — +1 spell attack, ignore half cover; +2/+3 at 11/17; attunement",
+    "enhanced_defense": "PASS — armor/shield +1 AC; scales 11/17",
+    "enhanced_weapon": "PASS — +1 attack/damage; scales 11/17",
+    "featherweight_belt": "PASS — 1/10 then 1/100 weight; attunement",
+    "featherweight_weapon": "PASS — remove heavy/two-handed else gain light; scales 11/17",
+    "goggles_of_clearsight": "PASS — 36 m see through obscurement; metric hook",
+    "homunculus_servant": "PASS — Dodge-default; recreate→ash; incapacitated defense; Evasion/Might/Acidic Spittle one-liners; spell-slot repair; death-ash",
+    "lightning_cannon": "PASS — replace attack; INT spell attack 60 ft → 18 m; 2d6 lightning",
+    "power_whip": "PASS — d10 damage, prone on Large or smaller; scales 11/17",
+    "repeating_shot": "PASS — ignore loading; magic ammo; scales 11/17; attunement",
+    "returning_weapon": "PASS — thrown return; scales 11/17",
+    "gem_of_warding": "PASS — HP/AC/1-minute/return; pulse temp HP; charges",
+    "homing_weapon": "PASS — ignore long-range disadvantage; scales 11/17",
+    "immovable_boots": "PASS — DC 30 Strength fix in place; attunement",
+    "infiltrator_armor": "PASS — formfitting Stealth adv; AC scale 11/17",
+    "light_blade": "PASS — bright 4,5 m + dim additional 4,5 m; scales 11/17",
+    "many_handed_pouch": "PASS — INT-mod pouches; 100 miles → 160 km",
+    "mind_sharpener": "PASS — Con concentration reaction; INT-mod charges",
+    "radiant_weapon": "PASS — light + blind charge; scales 11/17",
+    "repulsion_gauntlets": "PASS — knock back 4,5 m; scales 11/17; Panzerhandschuhe",
+    "repulsion_shield": "PASS — knock back + prone; AC scale",
+    "shield_wall": "PASS — wall of stone panels = INT mod, no concentration; 4 charges",
+    "armor_of_strength": "PASS — INT for Strength checks/saves; charge vs forced move; +2 AC at 17",
+    "arcane_propulsion_armor": "PASS — +5 ft speed → +1,5 m; force gauntlets thrown return; limb replace",
+    "chameleon_armor": "PASS — disguise self / invisibility / greater invisibility charge costs",
+    "elemental_armor": "PASS — resistance list + psychic/force option at 17",
+    "elemental_ring": "PASS — maximize damage spell ≤3 (≤5 at 17); once/dawn",
+    "elemental_weapon": "PASS — +1d6 / +2d6 elemental on command word",
+    "helm_of_awareness": "PASS — no surprise unless incapacitated; INT to initiative (min +1)",
+    "metamorphosis_armor": "PASS — enlarge/reduce self no concentration; 2 categories at 17",
+    "ring_of_spell_refueling": "PASS — BA recover ≤3rd slot once/dawn",
+    "vampiric_weapon": "PASS — crit +2d6 necrotic / +4d6 at 17; undead immune",
+    "voyager_boots": "PASS — BA teleport 15/30 ft → 4,5/9 m",
+    "boots_of_destruction": "PASS — destructive wave; short/long rest",
+    "guardian_gauntlets": "PASS — reaction pull 30 ft; optional melee; Huge+ adv; Panzerhandschuhe",
+    "masterwork_homunculus": "PASS — clone as Artificer spell; 12-day maturity; replace fails",
+    "mind_shield": "PASS — psychic resistance; charmed/frightened; thought-read; telepathy consent"
+  },
+  "wiringReview": {
+    "typesDraftField": "PASS — inventionKey on CharacterDraft + emptyCharacterDraft",
+    "indexExports": "PASS — INVENTIONS_ERFINDER, inventionsForLevel, findInvention",
+    "classStepUi": "PASS — erfinder-only section; inventionsForLevel(1); clears inventionKey on class change",
+    "stepsValidation": "PASS — require invention for erfinder; reject non-L1 keys",
+    "playerHub": "PASS — validateFullDraft + feature JSON persistence",
+    "reviewStep": "PASS — shows chosen invention name"
+  },
+  "acceptanceConditions": [
+    "DONE — I-01..I-06 all fixed; homunculus L1 pick now complete per extract.",
+    "OPTIONAL I-07 — tighten tests (exactly 12 L1; OWNER_NOTES_SOURCE; nameEn snapshot).",
+    "KEEP — ability names English; Terra Validori/Gilden only; OWNER_NOTES_SOURCE; draft/ClassStep/player-hub wiring.",
+    "KEEP — pnpm --filter @uwe/character-creator test green."
+  ],
+  "reviewedAt": "2026-08-08T16:40:00+02:00",
+  "notes": "Re-review after I-03 homunculus expansion: Dodge-by-default, recreate→ash, incapacitated defense, and Evasion/Might/Acidic Spittle one-liners all present (line 100). I-01–I-06 clear. Tests green (68/68). I-07 remains optional test-hardening. Approved."
+}

@@ -1,0 +1,125 @@
+{
+  "id": "classes",
+  "name": "Artificer & Bloodhunter classes",
+  "agent": "cursor-grok-4.5-high",
+  "status": "completed",
+  "criticVerdict": "APPROVED",
+  "criticModel": "composer-2.5-fast",
+  "discoveredEntries": 2,
+  "importedEntries": 2,
+  "blockedEntries": 0,
+  "openDefects": [],
+  "keysAdded": ["erfinder", "blutjaeger"],
+  "subclassKeysAdded": {
+    "erfinder": [
+      "alchimist",
+      "ruestungsschmied",
+      "artillerist",
+      "kampfschmied",
+      "schmiedekrieger",
+      "kartograph"
+    ],
+    "blutjaeger": [
+      "orden-der-alchemisten",
+      "orden-der-ketzer",
+      "orden-des-blassen-mondes",
+      "orden-von-salz-und-eisen",
+      "orden-des-unsterblichen-durstes",
+      "orden-der-hexenritter"
+    ]
+  },
+  "alreadyPresent": [],
+  "source": "OWNER_NOTES_SOURCE; Klassen__Artificer - Notizen.pdf.txt; Klassen__Bloodhunter - Notizen.pdf.txt",
+  "files": [
+    "packages/character-creator/src/content/classes-erfinder.ts",
+    "packages/character-creator/src/content/classes-blutjaeger.ts",
+    "packages/character-creator/src/content/index.ts",
+    "packages/character-creator/src/content/spells-cantrips.ts",
+    "packages/character-creator/src/content/spells-level1-a-f.ts",
+    "packages/character-creator/src/content/spells-level1-g-z.ts"
+  ],
+  "spellListWiring": {
+    "classKey": "erfinder",
+    "attachedExistingKeys": {
+      "cantrips": [
+        "saeurespritzer",
+        "tanzende_lichter",
+        "feuerblitz",
+        "fuehrung",
+        "licht",
+        "magierhand",
+        "ausbessern",
+        "botschaft",
+        "giftschwall",
+        "zaubertrick",
+        "froststrahl",
+        "widerstand",
+        "schockgriff",
+        "sterbende_stabilisieren",
+        "thaumaturgie",
+        "wahrer_schlag"
+      ],
+      "level1": [
+        "alarm",
+        "brennende_haende",
+        "chromatische_kugel",
+        "farbspruehen",
+        "wunden_heilen",
+        "magie_entdecken",
+        "gift_und_krankheit_entdecken",
+        "selbstverkleidung",
+        "eiliger_rueckzug",
+        "feenfeuer",
+        "falsches_leben",
+        "federfall",
+        "nebelwolke",
+        "schmierfett",
+        "identifizieren",
+        "illusionaere_schrift",
+        "sprung",
+        "weitschritt",
+        "magisches_geschoss",
+        "speis_und_trank_reinigen",
+        "zufluchtsort",
+        "donnerwoge"
+      ]
+    },
+    "blockedMissingFromCatalog": {
+      "cantrips": ["Blade Ward", "Thorn Whip", "Thunderclap"],
+      "reason": "Named on Artificer spell list in notes; no SPELLS key exists yet — not invented"
+    },
+    "blockedHigherLevel": {
+      "reason": "Creator only catalogs cantrips + level-1; Artificer list levels 2–5 and subclass prepared spells above level 1 are not wired",
+      "level2PlusExamples": [
+        "Aid",
+        "Blur",
+        "Heat Metal",
+        "Invisibility",
+        "Web",
+        "Haste",
+        "Lightning Bolt",
+        "Fly",
+        "Fabricate",
+        "Greater Invisibility"
+      ],
+      "subclassPreparedAboveL1": [
+        "Alchemist L5+: Flaming Sphere, Melf’s Acid Arrow, …",
+        "Armorer L5+: Mirror Image, Shatter, …",
+        "Artillerist L5+: Scorching Ray, Blur, …",
+        "Battle Smith L5+: Aid, Warding Bond, …",
+        "Forgewright L3 Compelled Duel / Zephyr Strike (not in level-1 catalog)",
+        "Cartographer L5+: Locate Object, Mind Spike, …"
+      ]
+    },
+    "blutjaeger": "No class spell list at level 1; Witch Knight Pact Magic (Warlock list, Constitution) starts at subclass level 3 — not attached to SPELLS.lists"
+  },
+  "flavourNotes": "Eberron/House Cannith/Last War/Tegora rewritten to Validori Magister/Gilden; Bloodhunter orders anchored to Arbor-Saum / Nepurga / Validori shadows",
+  "nextAction": "Optional follow-ups (non-blocking): C-02 German consistency; C-03 OWNER_NOTES catalog guard; C-04 PICKABLE_CLASSES sync; C-05 missing cantrips Blade Ward / Thorn Whip / Thunderclap; Forgewright L3 spells",
+  "lastUpdate": "2026-08-08T15:50:00",
+  "testSummary": {
+    "command": "pnpm --filter @uwe/character-creator test",
+    "pass": 61,
+    "fail": 0,
+    "suites": 13
+  }
+}

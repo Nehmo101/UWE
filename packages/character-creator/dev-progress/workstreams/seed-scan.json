@@ -1,0 +1,75 @@
+{
+  "id": "seed-scan",
+  "name": "Local DB seed + Character Creator NPC/species rescans",
+  "agent": "composer-2.5-fast",
+  "status": "completed",
+  "startedAt": "2026-08-08T16:04:00+02:00",
+  "completedAt": "2026-08-08T16:07:05+02:00",
+  "seed": {
+    "required": true,
+    "priorState": {
+      "seeded": false,
+      "worldCount": 0,
+      "pageCount": 0,
+      "characterCount": 0
+    },
+    "actions": [
+      "pnpm --filter @uwe/database db:deploy",
+      "pnpm --filter @uwe/database db:deploy:brain",
+      "pnpm --filter @uwe/database db:deploy:family",
+      "pnpm --filter @uwe/database db:seed"
+    ],
+    "result": {
+      "success": true,
+      "worldCount": 1,
+      "pageCount": 8,
+      "characterCount": 0,
+      "worlds": ["terra"],
+      "seedUsers": ["dm@uwe.local", "aman@uwe.local", "lazul@uwe.local", "veldrin@uwe.local", "finnion@uwe.local"]
+    }
+  },
+  "scans": {
+    "querySpecies": {
+      "script": "packages/character-creator/dev-progress/_query-species.mjs",
+      "command": "pnpm exec tsx packages/character-creator/dev-progress/_query-species.mjs",
+      "counts": {
+        "totalCharacters": 0,
+        "withSpeciesJson": 0,
+        "withoutSpeciesJson": 0
+      }
+    },
+    "npcSpecies": {
+      "script": "packages/character-creator/dev-progress/_scan-npc-species.mjs",
+      "command": "pnpm exec tsx packages/character-creator/dev-progress/_scan-npc-species.mjs",
+      "output": "packages/character-creator/dev-progress/npc-species-scan.json",
+      "counts": {
+        "npcPagesAllWorlds": 0,
+        "npcPagesTerra": 0,
+        "charactersTotal": 0,
+        "charactersWithSpeciesJson": 0,
+        "npcPagesWithSpeciesTermHits": 0,
+        "terraSeedNpcPages": 0,
+        "terraSeedSpeciesTermHits": 0
+      }
+    }
+  },
+  "migrationMap": {
+    "required": false,
+    "reason": "0 Character.species rows — no old→new mapping rows to produce",
+    "outputFile": null
+  },
+  "deliverables": [
+    "packages/character-creator/dev-progress/npc-species-scan.json",
+    "packages/character-creator/dev-progress/npc-species-migration-plan.md",
+    "packages/character-creator/dev-progress/workstreams/seed-scan.json"
+  ],
+  "findings": {
+    "localDbSeeded": true,
+    "structuredSpeciesMigration": "N/A",
+    "npcStructuredSpeciesField": false,
+    "legacyCatalogKeysRetained": true,
+    "keyDeletionApplicable": false
+  },
+  "blockers": [],
+  "nextAction": "No migration work until Character.species rows or Terra NPC wiki corpus exists."
+}

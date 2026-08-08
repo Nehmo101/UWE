@@ -1,0 +1,59 @@
+{
+  "id": "builder-ux",
+  "name": "Portal Character Wizard catalog integration",
+  "agent": "composer-2.5-fast",
+  "status": "completed",
+  "portalRoute": "/auth/worlds/[worldSlug]/characters/neu",
+  "catalogSource": "@uwe/character-creator",
+  "catalogCounts": {
+    "species": 23,
+    "classes": 14,
+    "backgrounds": 16
+  },
+  "integrationChecks": {
+    "speciesStepUsesCatalog": true,
+    "classStepUsesCatalog": true,
+    "backgroundStepUsesCatalog": true,
+    "hardcodedCatalogLimits": false,
+    "searchThresholdDynamic": true,
+    "backgroundGapClosed": true,
+    "strandedClasses": []
+  },
+  "changes": [
+    "SpeciesStep, ClassStep, BackgroundStep already import SPECIES/CLASSES/BACKGROUNDS from @uwe/character-creator — extended entries appear automatically",
+    "background-gap.ts comments + BackgroundStep/ClassStep/CustomBackgroundBuilder copy updated: full catalog closes Paladin/Mönch/Waldläufer gap; stranded UI only when CLASSES_WITHOUT_BACKGROUND is non-empty",
+    "abilities/ability-display.ts: English Strength…Charisma + STR…CHA in AbilityRow, BackgroundBonus, AbilitiesStep point-buy aria-labels; German validation/hints unchanged",
+    "Empty-state copy: SRD-Hintergründe → Katalog-Hintergründe where filter empties the grid"
+  ],
+  "openDefects": ["C-05-package-labels"],
+  "openDefectNotes": {
+    "C-05-package-labels": "ABILITY_LABELS in @uwe/character-creator still German for ClassStep rules text, BackgroundStep filters, CharacterRail — portal abilities step uses local EN display names only"
+  },
+  "files": [
+    "apps/portal/src/components/character-wizard/background-gap.ts",
+    "apps/portal/src/components/character-wizard/steps/SpeciesStep.tsx",
+    "apps/portal/src/components/character-wizard/steps/ClassStep.tsx",
+    "apps/portal/src/components/character-wizard/steps/BackgroundStep.tsx",
+    "apps/portal/src/components/character-wizard/steps/background/CustomBackgroundBuilder.tsx",
+    "apps/portal/src/components/character-wizard/steps/abilities/ability-display.ts",
+    "apps/portal/src/components/character-wizard/steps/abilities/AbilityRow.tsx",
+    "apps/portal/src/components/character-wizard/steps/abilities/BackgroundBonus.tsx",
+    "apps/portal/src/components/character-wizard/steps/AbilitiesStep.tsx"
+  ],
+  "testSummary": {
+    "characterCreator": {
+      "command": "pnpm --filter @uwe/character-creator test",
+      "pass": 61,
+      "fail": 0,
+      "suites": 13
+    },
+    "portalTypecheck": {
+      "command": "pnpm --filter @uwe/portal typecheck",
+      "pass": true
+    }
+  },
+  "criticVerdict": "APPROVED",
+  "criticReviewedAt": "2026-08-08T15:38:00+02:00",
+  "criticFile": "packages/character-creator/dev-progress/workstreams/builder-ux-critic.json",
+  "lastUpdate": "2026-08-08T15:38:00+02:00"
+}

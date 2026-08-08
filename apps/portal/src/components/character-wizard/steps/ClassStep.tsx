@@ -11,11 +11,9 @@
  * Vier Entscheidungshilfen sind hier eingebaut: „Gut für den Anfang“ auf
  * allen Klassen mit `complexity === 1`; die Passung zu bereits verteilten
  * Attributen, weil der Ersteller ausdrücklich erlaubt, zuerst zu würfeln; die
- * Ansage, wann die Unterklasse fällt — im SRD 2024 auf Stufe 3, also nicht
- * jetzt; und die Vorwarnung für die drei Klassen, denen der Hintergrund-
- * Katalog nichts Passendes anbietet (`background-gap.ts`). Letztere steht
- * schon hier und nicht erst im Hintergrund-Schritt, weil sie dort eine
- * Enttäuschung wäre und hier eine Information ist.
+ * Vorwarnung für Klassen, denen der Katalog (nur SRD) nichts Passendes
+ * anbietet (`background-gap.ts`). Mit dem vollen Katalog ist die Liste leer;
+ * der Chip erscheint dann nicht mehr.
  *
  * Die Wappen zeichnet `TileArt` (`class/ClassArt.tsx`).
  */
@@ -26,9 +24,11 @@ import {
   ABILITY_LABELS,
   ABILITY_SHORT,
   CLASSES,
+  inventionsForLevel,
   type AbilityKey,
   type AbilityScoreMap,
   type DndClass,
+  type Invention,
   type Subclass,
   type Trait,
 } from "@uwe/character-creator";
@@ -252,6 +252,41 @@ function SubclassTile({
   );
 }
 
+function InventionTile({
+  invention,
+  selected,
+  onSelect,
+}: {
+  invention: Invention;
+  selected: boolean;
+  onSelect: (invention: Invention) => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="cw-tile"
+      aria-pressed={selected}
+      onClick={() => onSelect(invention)}
+    >
+      <span className="cw-tile__check" aria-hidden="true">
+        <NavIcon name="check" width={16} height={16} />
+      </span>
+      <span className="cw-tile__name">{invention.name}</span>
+      <span className="cw-tile__hook">{invention.hook}</span>
+      <span className="cw-tile__meta">
+        <span className="cw-chip">
+          Gegenstand <span className="cw-chip__value">{invention.itemType}</span>
+        </span>
+        {invention.requiresAttunement ? (
+          <span className="cw-chip" data-tone="accent">
+            Einstimmung
+          </span>
+        ) : null}
+      </span>
+    </button>
+  );
+}
+
 // ───────────────────────────── Regeltext ─────────────────────────────
 
 function FeatureList({ features }: { features: readonly Trait[] }) {
@@ -384,12 +419,18 @@ export function ClassStep({ draft, patch, set, resolved, preview, goTo }: StepPr
     patch({
       classKey: next.key,
       subclassKey: null,
+      inventionKey: null,
       chosenSkills: [],
       equipmentChoice: null,
       cantrips: [],
       spells: [],
     });
   }
+
+  const levelOneInventions = useMemo(
+    () => (dndClass?.key === "erfinder" ? inventionsForLevel(1) : []),
+    [dndClass?.key],
+  );
 
   return (
     <>
@@ -518,6 +559,27 @@ export function ClassStep({ draft, patch, set, resolved, preview, goTo }: StepPr
               ))}
             </div>
           </details>
+        </section>
+      ) : null}
+
+      {dndClass?.key === "erfinder" ? (
+        <section>
+          <h3 id="cw-invention-heading">Invention wählen</h3>
+          <p className="cw-prose">
+            Auf Stufe 1 lernst du eine Invention aus der Liste — magische Prototypen,
+            mit denen du Alltagsgegenstände auflädst. Später kannst du sie nach langer Rast
+            austauschen.
+          </p>
+          <div className="cw-grid" role="group" aria-labelledby="cw-invention-heading">
+            {levelOneInventions.map((invention) => (
+              <InventionTile
+                key={invention.key}
+                invention={invention}
+                selected={draft.inventionKey === invention.key}
+                onSelect={(next) => set("inventionKey", next.key)}
+              />
+            ))}
+          </div>
         </section>
       ) : null}
 

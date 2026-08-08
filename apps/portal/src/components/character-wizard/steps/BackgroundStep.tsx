@@ -20,12 +20,10 @@
  * Talent, Ausrüstung, Hintergrundtext. Ein `<details>` darf nicht in einen
  * `<button>`, deshalb liegen beide zusammen in `.cw-choice`.
  *
- * **Die fünfte Kachel ist keine fünfte Kachel.** Das SRD liefert vier
- * Hintergründe, und ihre Attributstripel lassen Paladin, Mönch und Waldläufer
- * ohne passende Wahl zurück (siehe `background-gap.ts`). Der Bauplan für
- * eigene Hintergründe steht im SRD selbst — er hängt hier als gestrichelte
- * Kachel neben dem Katalog und klappt an Ort und Stelle auf, wie die
- * Abstammung beim Volk.
+ * **Die gestrichelte Kachel ist kein sechster Katalogeintrag.** Sie folgt dem
+ * Bauplan für eigene Hintergründe im SRD — für Geschichten, die in keinem
+ * fertigen Eintrag stehen. Mit dem vollen Katalog findet jede Klasse passende
+ * Attribute; der Eigenbau bleibt optional (siehe `background-gap.ts`).
  */
 
 import { useMemo, useState } from "react";
@@ -50,7 +48,7 @@ import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { NavIcon } from "@/src/components/ui/icon";
 import { SKILL_LABELS } from "../CharacterRail";
-import { lacksMatchingBackground, STRANDED_CLASS_SUMMARY } from "../background-gap";
+import { lacksMatchingBackground, CLASSES_WITHOUT_BACKGROUND, STRANDED_CLASS_SUMMARY } from "../background-gap";
 import { CustomBackgroundBuilder } from "./background/CustomBackgroundBuilder";
 import { FeatText } from "./background/FeatText";
 import type { StepProps } from "../types";
@@ -234,9 +232,9 @@ function CustomBackgroundTile({
         </span>
         <span className="cw-tile__name">Eigener Hintergrund</span>
         <span className="cw-tile__hook">
-          Selbst zusammenstellen — nach dem Bauplan, der im Regelwerk neben den
-          vier fertigen Hintergründen steht. Du bestimmst, welche Attribute er
-          anhebt.
+          Selbst zusammenstellen — nach dem Bauplan im Regelwerk. Du bestimmst,
+          welche drei Attribute der Hintergrund anhebt, welche Fertigkeiten und
+          welches Ursprungstalent dazukommen.
         </span>
 
         {/* Dieselbe Stelle wie auf den Katalogkacheln — dort steht das
@@ -278,18 +276,26 @@ function CustomBackgroundTile({
         <summary>Warum es den Eigenbau gibt</summary>
         <div className="cw-prose">
           <p>
-            Das SRD 5.2.1 enthält {BACKGROUNDS.length} Hintergründe. Seit der
-            Fassung von 2024 hängt am Hintergrund aber die Attributsverteilung,
-            und ihre Attributstripel decken nicht jede Klasse ab: Für{" "}
-            {STRANDED_CLASS_SUMMARY} gibt es darunter keinen, der beide
-            Primärattribute anhebt.
+            Der Katalog enthält {BACKGROUNDS.length} fertige Hintergründe. Seit
+            der Fassung von 2024 hängt an jedem die Attributsverteilung — du
+            legst +2/+1 oder +1/+1/+1 auf drei seiner Attribute.
           </p>
-          <p>
-            Die zwölf fehlenden Hintergründe des Spielerhandbuchs
-            nachzuschreiben, wäre keine Lösung: Sie stehen nicht unter CC-BY. Der
-            Ausweg steht im SRD selbst — es beschreibt, wie man einen Hintergrund
-            baut. Genau diesen Bauplan bedient diese Kachel.
-          </p>
+          {CLASSES_WITHOUT_BACKGROUND.length > 0 ? (
+            <p>
+              Nur die vier SRD-Hintergründe decken nicht jede Klasse ab: Für{" "}
+              {STRANDED_CLASS_SUMMARY} gibt es keinen, der beide Primärattribute
+              anhebt. Die zwölf fehlenden Hintergründe des Spielerhandbuchs
+              nachzuschreiben wäre keine Option — sie stehen nicht unter
+              CC-BY. Der Ausweg steht im SRD selbst: einen Hintergrund bauen.
+            </p>
+          ) : (
+            <p>
+              Alle Klassen finden im Katalog einen Hintergrund, der beide
+              Primärattribute abdeckt — Paladin, Mönch und Waldläufer inklusive.
+              Der Eigenbau bleibt für eigene Geschichten, die in keinem fertigen
+              Eintrag stehen.
+            </p>
+          )}
           <p>
             Ergebnis ist ein ganz normaler Hintergrund. Alles dahinter —
             Vorschau, Prüfung, Charakterbogen — sieht keinen Unterschied zu einem
@@ -439,10 +445,9 @@ export function BackgroundStep({ draft, patch, resolved, goTo }: StepProps) {
             </strong>{" "}
             {dndClass.name} steht auf{" "}
             {dndClass.primaryAbilities.map((key) => ABILITY_LABELS[key]).join(" und ")}
-            , und die {BACKGROUNDS.length} Hintergründe des SRD bieten dieses Paar
-            nicht zusammen an. Das ist kein Fehler des Erstellers, sondern eine
-            Lücke des Regelwerks — und das Regelwerk schließt sie selbst: Es
-            beschreibt, wie man sich einen Hintergrund baut.{" "}
+            , und keiner der {BACKGROUNDS.length} Katalog-Hintergründe bietet dieses Paar
+            zusammen an. Das Regelwerk schließt die Lücke selbst: Es beschreibt,
+            wie man sich einen Hintergrund baut.{" "}
             {custom ? (
               "Genau das tust du gerade — der Bauplan steht unter den Kacheln."
             ) : (
@@ -505,7 +510,7 @@ export function BackgroundStep({ draft, patch, resolved, goTo }: StepProps) {
             Kein Katalog-Eintrag hebt{" "}
             {ability === "all" ? "das gesuchte Attribut" : ABILITY_LABELS[ability]} an und
             trifft zugleich deine Suche. Nimm den Filter heraus, um wieder alle{" "}
-            {BACKGROUNDS.length} SRD-Hintergründe zu sehen — oder bau dir einen, der
+            {BACKGROUNDS.length} Katalog-Hintergründe zu sehen — oder bau dir einen, der
             genau dieses Attribut anhebt.
           </p>
           <Button variant="outline" onClick={resetFilters}>

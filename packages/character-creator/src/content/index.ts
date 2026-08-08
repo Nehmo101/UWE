@@ -20,7 +20,10 @@ import type {
 
 import { SPECIES } from "./species";
 import { CLASSES_BARBARIAN_BARD_CLERIC } from "./classes-barbarian-bard-cleric";
+import { CLASSES_BLUTJAEGER } from "./classes-blutjaeger";
 import { CLASSES_DRUID_FIGHTER_MONK } from "./classes-druid-fighter-monk";
+import { CLASSES_ERFINDER } from "./classes-erfinder";
+import { INVENTIONS_ERFINDER, inventionsForLevel } from "./inventions-erfinder";
 import { CLASSES_PALADIN_RANGER_ROGUE } from "./classes-paladin-ranger-rogue";
 import { CLASSES_SORCERER_WARLOCK_WIZARD } from "./classes-sorcerer-warlock-wizard";
 import { BACKGROUNDS } from "./backgrounds";
@@ -29,6 +32,14 @@ import { ALIGNMENTS, LANGUAGES } from "./misc";
 import { ARMOR, EQUIPMENT_PACKS, WEAPONS } from "./equipment";
 import { CANTRIPS } from "./spells-cantrips";
 import { LEVEL1_SPELLS } from "./spells-level1";
+import { LEVEL2_SPELLS } from "./spells-level2";
+import { LEVEL3_SPELLS } from "./spells-level3";
+import { LEVEL4_SPELLS } from "./spells-level4";
+import { LEVEL5_SPELLS } from "./spells-level5";
+import { LEVEL6_SPELLS } from "./spells-level6";
+import { LEVEL7_SPELLS } from "./spells-level7";
+import { LEVEL8_SPELLS } from "./spells-level8";
+import { LEVEL9_SPELLS } from "./spells-level9";
 import {
   buildCustomBackground,
   CUSTOM_BACKGROUND_KEY,
@@ -37,17 +48,42 @@ import {
 
 export const CLASSES: DndClass[] = [
   ...CLASSES_BARBARIAN_BARD_CLERIC,
+  ...CLASSES_BLUTJAEGER,
   ...CLASSES_DRUID_FIGHTER_MONK,
+  ...CLASSES_ERFINDER,
   ...CLASSES_PALADIN_RANGER_ROGUE,
   ...CLASSES_SORCERER_WARLOCK_WIZARD,
 ];
 
-/** Zaubertricks und Zauber des 1. Grades — mehr braucht Stufe 1 nicht. */
-export const SPELLS: Spell[] = [...CANTRIPS, ...LEVEL1_SPELLS];
+/** Zaubertricks und Zauber Grad 1–9 (SRD). */
+export const SPELLS: Spell[] = [
+  ...CANTRIPS,
+  ...LEVEL1_SPELLS,
+  ...LEVEL2_SPELLS,
+  ...LEVEL3_SPELLS,
+  ...LEVEL4_SPELLS,
+  ...LEVEL5_SPELLS,
+  ...LEVEL6_SPELLS,
+  ...LEVEL7_SPELLS,
+  ...LEVEL8_SPELLS,
+  ...LEVEL9_SPELLS,
+];
 
 export { SPECIES, BACKGROUNDS, FEATS, LANGUAGES, ALIGNMENTS };
 export { EQUIPMENT_PACKS, WEAPONS, ARMOR };
-export { CANTRIPS, LEVEL1_SPELLS };
+export { INVENTIONS_ERFINDER, inventionsForLevel };
+export {
+  CANTRIPS,
+  LEVEL1_SPELLS,
+  LEVEL2_SPELLS,
+  LEVEL3_SPELLS,
+  LEVEL4_SPELLS,
+  LEVEL5_SPELLS,
+  LEVEL6_SPELLS,
+  LEVEL7_SPELLS,
+  LEVEL8_SPELLS,
+  LEVEL9_SPELLS,
+};
 
 /**
  * Nachschlagen per Schlüssel.
@@ -119,6 +155,10 @@ export function findLineage(speciesKey: string, lineageKey: string) {
 /** Die Unterklasse innerhalb einer Klasse. */
 export function findSubclass(classKey: string, subclassKey: string) {
   return findClass(classKey)?.subclasses.find((entry) => entry.key === subclassKey);
+}
+
+export function findInvention(key: string) {
+  return INVENTIONS_ERFINDER.find((entry) => entry.key === key);
 }
 
 /** Alle Zauber, die diese Klasse auf der genannten Stufe wählen darf. */

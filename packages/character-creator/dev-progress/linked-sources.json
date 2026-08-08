@@ -1,0 +1,214 @@
+{
+  "schemaVersion": 1,
+  "title": "Linked wikidot dependencies — inventory vs @uwe/character-creator catalog",
+  "sourceListFile": "E:\\Downloads\\UWE Character Creator\\Items,Spells,Armor Links to scalp.txt",
+  "catalogRoot": "packages/character-creator/src/content",
+  "inventoriedAt": "2026-08-08T15:35:00+02:00",
+  "agent": "composer-2.5-fast",
+  "policy": "Do not scrape dnd2024.wikidot.com into the repo. Compare names only; legal text import from SRD 5.2.1 (CC-BY-4.0) when gaps are SRD-safe.",
+  "catalogSnapshot": {
+    "equipmentPacks": 7,
+    "weapons": 38,
+    "armor": 13,
+    "adventuringGearTable": 0,
+    "magicalItems": 0,
+    "mountsAndVehicles": 0,
+    "poisons": 0,
+    "spellsCantrips": 27,
+    "spellsLevel1": 57,
+    "spellsLevel2Through9": 0
+  },
+  "outcomeLegend": {
+    "already-in-catalog": "SRD subset referenced by this URL is present in equipment.ts / spells-*.ts",
+    "blocked-copyright": "URL is a PHB 2024 fan mirror — not an authorized import path",
+    "blocked-needs-fetch": "SRD-safe content missing locally; must be imported from SRD 5.2.1, not wikidot",
+    "excluded": "Out of scope for the level-1 creator or explicitly deferred in missing-data"
+  },
+  "urls": [
+    {
+      "url": "http://dnd2024.wikidot.com/magic-item:all",
+      "category": "magic-items",
+      "outcome": "excluded",
+      "reason": "Magical items are not in the character-creator catalog and are not required for level-1 creation. The page mirrors PHB 2024 magic items (mostly non-SRD).",
+      "catalogFiles": [],
+      "catalogMatch": "none",
+      "crossRefs": [
+        "docs/engineering/character-creator-missing-data.md §1 (Magische Gegenstände ❌)"
+      ],
+      "legalNote": "blocked-copyright as scrape source; no wikidot import."
+    },
+    {
+      "url": "http://dnd2024.wikidot.com/equipment:armor",
+      "category": "armor",
+      "outcome": "already-in-catalog",
+      "reason": "Full SRD 5.2.1 armor table (12 armor types + shield) is in ARMOR.",
+      "catalogFiles": ["packages/character-creator/src/content/equipment.ts"],
+      "catalogMatch": "ARMOR — 13 lines (light/medium/heavy + Schild)",
+      "crossRefs": [
+        "docs/engineering/character-creator-missing-data.md §1 (13 Rüstungen ✅)"
+      ],
+      "legalNote": "Catalog text from SRD 5.2.1, not wikidot. Wikidot URL is blocked-copyright if used as source."
+    },
+    {
+      "url": "http://dnd2024.wikidot.com/equipment:weapon",
+      "category": "weapons",
+      "outcome": "already-in-catalog",
+      "reason": "Full SRD 5.2.1 weapon table is in WEAPONS.",
+      "catalogFiles": ["packages/character-creator/src/content/equipment.ts"],
+      "catalogMatch": "WEAPONS — 38 entries (simple + martial, melee + ranged)",
+      "crossRefs": [
+        "docs/engineering/character-creator-missing-data.md §1 (38 Waffen ✅)"
+      ],
+      "legalNote": "Catalog text from SRD 5.2.1, not wikidot."
+    },
+    {
+      "url": "http://dnd2024.wikidot.com/equipment:adventuring-gear",
+      "category": "adventuring-gear",
+      "outcome": "blocked-needs-fetch",
+      "reason": "No standalone adventuring-gear catalog export. Items appear only as free-text names inside EQUIPMENT_PACKS and background starting gear (e.g. Seil, Laterne, Heilerkit). Tools and instruments are not a pickable list.",
+      "catalogFiles": [
+        "packages/character-creator/src/content/equipment.ts",
+        "packages/character-creator/dev-progress/backgrounds-equipment.json"
+      ],
+      "catalogMatch": "partial — pack contents + background strings only",
+      "crossRefs": [
+        "docs/engineering/character-creator-missing-data.md §1 (Werkzeuge & Instrumente als eigene Liste ❌)",
+        "docs/engineering/character-creator-missing-data.md §2 (structured weapon/armor values still open)"
+      ],
+      "legalNote": "SRD adventuring gear is CC-BY-safe; import from SRD 5.2.1 PDF/markdown, not wikidot.",
+      "nextAction": "Optional follow-up: ADVENTURING_GEAR[] + TOOLS[] tables from SRD when inventory/structured AC is wired."
+    },
+    {
+      "url": "http://dnd2024.wikidot.com/equipment:mounts-and-vehicles",
+      "category": "mounts-and-vehicles",
+      "outcome": "excluded",
+      "reason": "Mounts and vehicles are not referenced by the level-1 creator, class kits, or the sixteen background equipment strings. No catalog slot exists.",
+      "catalogFiles": [],
+      "catalogMatch": "none",
+      "crossRefs": [],
+      "legalNote": "blocked-copyright as scrape source. Revisit only if travel/campaign inventory becomes a creator step."
+    },
+    {
+      "url": "http://dnd2024.wikidot.com/equipment:poison",
+      "category": "poisons",
+      "outcome": "excluded",
+      "reason": "Poisons are not used in the level-1 wizard or starting equipment wiring.",
+      "catalogFiles": [],
+      "catalogMatch": "none",
+      "crossRefs": [],
+      "legalNote": "blocked-copyright as scrape source."
+    },
+    {
+      "url": "http://dnd2024.wikidot.com/spell:all",
+      "category": "spells",
+      "outcome": "blocked-needs-fetch",
+      "reason": "Cantrips and level-1 spells are cataloged (84 total). Levels 2–9 have zero entries — see spellsBlockedByLevel.",
+      "catalogFiles": [
+        "packages/character-creator/src/content/spells-cantrips.ts",
+        "packages/character-creator/src/content/spells-level1-a-f.ts",
+        "packages/character-creator/src/content/spells-level1-g-z.ts",
+        "packages/character-creator/src/content/spells-level1.ts"
+      ],
+      "catalogMatch": "partial — level 0–1 only (27 + 57)",
+      "crossRefs": [
+        "docs/engineering/character-creator-missing-data.md §3",
+        "packages/character-creator/dev-progress/workstreams/classes.json (blockedHigherLevel spell wiring)"
+      ],
+      "legalNote": "blocked-copyright as scrape source. Same SRD import pipeline as existing spells-level1-*.ts.",
+      "partialAlreadyInCatalog": {
+        "cantrips": 27,
+        "level1": 57
+      }
+    }
+  ],
+  "spellsBlockedByLevel": {
+    "intro": "The creator catalogs Grad 0 and 1 only. Grad 2–9 are entirely absent — not individual spell omissions. Import must come from SRD 5.2.1 (CC-BY-4.0), matching the verified level-0/1 pipeline; do not copy PHB text from wikidot.",
+    "totalBlocked": "~320",
+    "totalBlockedSource": "docs/engineering/character-creator-missing-data.md §3 (~320 Zauber im SRD)",
+    "catalogVerified": {
+      "levels0And1": 84,
+      "verification": "Two independent SRD markdown conversions, field-for-field; lists extracted and rechecked (84/84)."
+    },
+    "byLevel": [
+      {
+        "level": 2,
+        "outcome": "blocked-needs-fetch",
+        "catalogCount": 0,
+        "why": "No spells-level2*.ts module. Blocks class spell lists above level 1 (e.g. Artificer L2+, Wizard spellbook growth, subclass prepared spells).",
+        "blockedExamples": ["Aid", "Blur", "Heat Metal", "Invisibility", "Web", "Scorching Ray", "Mirror Image", "Shatter"],
+        "crossRefs": ["missing-data.md §3", "workstreams/classes.json → blockedHigherLevel.level2PlusExamples"]
+      },
+      {
+        "level": 3,
+        "outcome": "blocked-needs-fetch",
+        "catalogCount": 0,
+        "why": "No level-3 catalog file. Required for full caster progression after first tier.",
+        "blockedExamples": ["Fireball", "Lightning Bolt", "Haste", "Fly", "Counterspell"],
+        "crossRefs": ["missing-data.md §3"]
+      },
+      {
+        "level": 4,
+        "outcome": "blocked-needs-fetch",
+        "catalogCount": 0,
+        "why": "No level-4 catalog file.",
+        "blockedExamples": ["Polymorph", "Greater Invisibility", "Banishment"],
+        "crossRefs": ["missing-data.md §3", "workstreams/classes.json → blockedHigherLevel (Greater Invisibility)"]
+      },
+      {
+        "level": 5,
+        "outcome": "blocked-needs-fetch",
+        "catalogCount": 0,
+        "why": "No level-5 catalog file. Gates mid-tier full-caster lists and many subclass features.",
+        "blockedExamples": ["Cone of Cold", "Hold Monster", "Telekinesis"],
+        "crossRefs": ["missing-data.md §3"]
+      },
+      {
+        "level": 6,
+        "outcome": "blocked-needs-fetch",
+        "catalogCount": 0,
+        "why": "No level-6 catalog file.",
+        "blockedExamples": ["Chain Lightning", "Heal", "Disintegrate"],
+        "crossRefs": ["missing-data.md §3"]
+      },
+      {
+        "level": 7,
+        "outcome": "blocked-needs-fetch",
+        "catalogCount": 0,
+        "why": "No level-7 catalog file.",
+        "blockedExamples": ["Teleport", "Plane Shift", "Forcecage"],
+        "crossRefs": ["missing-data.md §3"]
+      },
+      {
+        "level": 8,
+        "outcome": "blocked-needs-fetch",
+        "catalogCount": 0,
+        "why": "No level-8 catalog file.",
+        "blockedExamples": ["Dominate Monster", "Mind Blank", "Sunburst"],
+        "crossRefs": ["missing-data.md §3"]
+      },
+      {
+        "level": 9,
+        "outcome": "blocked-needs-fetch",
+        "catalogCount": 0,
+        "why": "No level-9 catalog file.",
+        "blockedExamples": ["Meteor Swarm", "Power Word Kill", "Wish"],
+        "crossRefs": ["missing-data.md §3"]
+      }
+    ],
+    "srdSafeGap": true,
+    "srdSafeGapNote": "All blocked grades are SRD 5.2.1 content (CC-BY-4.0) — same license as the existing 84 spells. The gap is engineering scope, not copyright.",
+    "phbOnlyOnWikidot": "The wikidot spell index also lists non-SRD PHB spells; those must never be imported without a license. Only SRD keys belong in the catalog.",
+    "downstreamImpact": [
+      "CharacterSpell stores denormalized copies without full casting metadata — see missing-data.md §3",
+      "Level-up and prepared-spell counts beyond level 1 cannot be validated",
+      "Artificer / subclass spell wiring in workstreams/classes.json remains blocked until level 2+ files exist"
+    ]
+  },
+  "summaryCounts": {
+    "urlsTotal": 7,
+    "alreadyInCatalog": 2,
+    "blockedNeedsFetch": 2,
+    "excluded": 3,
+    "wikidotScrapeBlocked": 7
+  }
+}

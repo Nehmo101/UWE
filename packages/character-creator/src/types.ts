@@ -70,6 +70,12 @@ export const SRD_SOURCE: ContentSource = {
   license: "CC-BY-4.0",
 };
 
+/** Owner-Notizen-Import (PHB-Hintergrund-Ursprungstalente außerhalb des SRD). */
+export const OWNER_NOTES_SOURCE: ContentSource = {
+  book: "Owner-Notizen (UWE-Import)",
+  license: "Installationseigen — nicht SRD",
+};
+
 /** Gemeinsamer Kopf jedes Katalogeintrags. */
 export interface CatalogEntry {
   /** Stabiler technischer Schlüssel, kleingeschrieben, ASCII (z. B. "hochelf"). */
@@ -122,6 +128,8 @@ export interface Species extends CatalogEntry {
 
 export interface SpeciesLineage extends CatalogEntry {
   traits: Trait[];
+  /** Überschreibt die Größe des Eltern-Volks, wenn die Abstammung abweicht (z. B. Goblin = Small). */
+  size?: CreatureSize;
   darkvision?: number | null;
   speed?: number;
 }
@@ -181,6 +189,15 @@ export interface DndClass extends CatalogEntry {
 
 export interface Subclass extends CatalogEntry {
   features: Trait[];
+}
+
+/** Erfinder-Invention (Infusion) — Owner-Notizen, Stufe-1-Ersteller wählt eine mit prerequisiteLevel 1. */
+export interface Invention extends CatalogEntry {
+  /** Mindest-Erfinderstufe zum Erlernen (1 = ab Stufe 1 wählbar). */
+  prerequisiteLevel: number;
+  /** Objekttypen aus den Notizen (z. B. „Rüstung oder Schild“). */
+  itemType: string;
+  requiresAttunement?: boolean;
 }
 
 // ─────────────────────────── Hintergründe ───────────────────────────
@@ -304,8 +321,12 @@ export interface CharacterDraft {
   name: string;
   speciesKey: string | null;
   lineageKey: string | null;
+  /** Gewählte Größe, wenn das Volk sizeChoice anbietet (z. B. Mensch, Tiefling). */
+  sizeKey: CreatureSize | null;
   classKey: string | null;
   subclassKey: string | null;
+  /** Erste Invention auf Stufe 1, wenn Klasse erfinder. */
+  inventionKey: string | null;
   backgroundKey: string | null;
   /**
    * Der selbst gebaute Hintergrund, falls `backgroundKey` auf den Eigenbau
@@ -366,8 +387,10 @@ export function emptyDraft(): CharacterDraft {
     name: "",
     speciesKey: null,
     lineageKey: null,
+    sizeKey: null,
     classKey: null,
     subclassKey: null,
+    inventionKey: null,
     backgroundKey: null,
     customBackground: null,
     abilities: null,

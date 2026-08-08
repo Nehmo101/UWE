@@ -348,7 +348,7 @@ export function SkillsStep({ draft, set, resolved, preview, goTo }: StepProps) {
           </p>
           <p>
             Deshalb lohnt der Blick auf die Attribute, bevor man hier wählt. Heimlichkeit mit
-            Geschicklichkeit −1 ist auch mit Übung kein Werkzeug, auf das man einen Plan baut.
+            Dexterity −1 ist auch mit Übung kein Werkzeug, auf das man einen Plan baut.
           </p>
         </div>
       </details>

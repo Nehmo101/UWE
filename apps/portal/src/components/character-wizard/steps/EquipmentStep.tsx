@@ -399,8 +399,8 @@ export function EquipmentStep({ draft, set, resolved, validation, goTo }: StepPr
         )}
 
         {validation.issues.length > 0 ? (
-          <div className="cw-note" data-tone="blocked">
-            <NavIcon name="triangle-alert" width={18} height={18} />
+          <div className="cw-note" data-tone="blocked" role="status">
+            <NavIcon name="triangle-alert" width={18} height={18} aria-hidden="true" />
             <span className="cw-note__text">{validation.issues[0]}</span>
           </div>
         ) : null}

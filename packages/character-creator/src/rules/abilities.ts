@@ -188,23 +188,26 @@ export function modifierMap(scores: AbilityScoreMap): AbilityScoreMap {
   return result;
 }
 
-/** Deutsche Beschriftungen — eine Quelle für alle Schritte. */
+/**
+ * Anzeigenamen der sechs Attribute — Produktregel: englisch
+ * (Strength … Charisma). Keys bleiben ASCII-klein.
+ */
 export const ABILITY_LABELS: Record<AbilityKey, string> = {
-  strength: "Stärke",
-  dexterity: "Geschicklichkeit",
-  constitution: "Konstitution",
-  intelligence: "Intelligenz",
-  wisdom: "Weisheit",
+  strength: "Strength",
+  dexterity: "Dexterity",
+  constitution: "Constitution",
+  intelligence: "Intelligence",
+  wisdom: "Wisdom",
   charisma: "Charisma",
 };
 
 /** Dreibuchstabige Kürzel für enge Stellen (Vorschau-Leiste, Chips). */
 export const ABILITY_SHORT: Record<AbilityKey, string> = {
-  strength: "STÄ",
-  dexterity: "GES",
-  constitution: "KON",
+  strength: "STR",
+  dexterity: "DEX",
+  constitution: "CON",
   intelligence: "INT",
-  wisdom: "WEI",
+  wisdom: "WIS",
   charisma: "CHA",
 };
 

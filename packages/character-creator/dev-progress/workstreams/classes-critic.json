@@ -1,0 +1,103 @@
+{
+  "workstreamId": "classes",
+  "verdict": "APPROVED",
+  "criticModel": "composer-2.5-fast",
+  "defects": [
+    {
+      "id": "C-02",
+      "severity": "minor",
+      "summary": "Deutsche UX-Uneinheitlichkeit: Hexenritter-Multiclass sagt „Warlock-Stufen“ statt Hexenpakt-Magier; Rüstungsschmied-Modellblock und Blutjäger-Subclass-Texte mischen stark Englisch (Force/Fire/Thunder, Stealth, Reach, Topple, Vital Sacrifice, Rite Die, Personality/Int/Wis/Cha, eldritchen). Ability-Namen EN sind korrekt; restliche Prosa angleichen."
+    },
+    {
+      "id": "C-03",
+      "severity": "minor",
+      "summary": "Kein catalog-integrity-Test, dass CLASSES_ERFINDER / CLASSES_BLUTJAEGER (Klasse + alle Unterklassen) OWNER_NOTES_SOURCE tragen — analog F-02 / B-04 / S-05."
+    },
+    {
+      "id": "C-04",
+      "severity": "minor",
+      "summary": "PICKABLE_CLASSES in packages/database/src/character-level-up-service.ts listet Erfinder/Blutjäger noch nicht — in classes.json nextAction dokumentiert; nur relevant, wenn Level-up-UI die neuen Klassen anbieten soll."
+    },
+    {
+      "id": "C-05",
+      "severity": "minor",
+      "summary": "Fehlende Artificer-Zaubertricks Blade Ward / Thorn Whip / Thunderclap korrekt blockiert (kein Erfinden); Forgewright L3 Compelled Duel / Zephyr Strike nur englisch genannt. Optional nachziehen, wenn Katalog erweitert wird."
+    }
+  ],
+  "resolvedDefects": [
+    {
+      "id": "C-01",
+      "severity": "major",
+      "summary": "Erfinder L1-Merkmal „Invention“ verweist spielersichtbar auf „Liste am Klassenende der Notizen“ — RESOLVED: player-facing text now references „Inventionen-Liste dieser Klasse“; no Notizen/PDF/Kanka meta in feature prose (classes-erfinder.ts L59–62)."
+    }
+  ],
+  "acceptanceConditions": [
+    "Fix C-01: Invention-Beschreibung ohne „Notizen“/Import-Metatext; Spielerprosa darf auf eine Klassen-Inventionen-Liste verweisen, nicht auf Owner-PDF/Kanka-Export. — MET",
+    "Keep keys stable: erfinder; subclasses alchimist, ruestungsschmied, artillerist, kampfschmied, schmiedekrieger, kartograph; blutjaeger; subclasses orden-der-alchemisten, orden-der-ketzer, orden-des-blassen-mondes, orden-von-salz-und-eisen, orden-des-unsterblichen-durstes, orden-der-hexenritter.",
+    "Keep source: OWNER_NOTES_SOURCE on both classes and every subclass; never SRD_SOURCE.",
+    "Keep player-facing lore free of Tegora/Kanka/Eberron/House Cannith/Last War/warforged; Terra defaults Validori / Nepurga (Reich) / Arbor-Saum / Inneres Meer / Magister-Turm / Gilden.",
+    "Keep ability display names English in owner-note class copy (Intelligence, Strength, Constitution, Charisma, …).",
+    "Wire into CLASSES via index.ts spreads; spellList \"erfinder\" for Artificer; blutjaeger spellcasting null at class level.",
+    "Spell list: all notes L1 Artificer spells that exist in SPELLS keep lists including erfinder; do not invent Blade Ward / Thorn Whip / Thunderclap or L2+ catalog entries.",
+    "Subclass completeness vs notes: six Artificer specializations + six Bloodhunter occult orders with level-3 features retained.",
+    "pnpm --filter @uwe/character-creator test green; add optional OWNER_NOTES catalog guard (C-03).",
+    "Optional polish: C-02 German consistency; C-04 PICKABLE_CLASSES; C-05 missing cantrips / Forgewright L3 spells when catalog grows."
+  ],
+  "mechanicsReview": {
+    "erfinder": "PASS — d8, INT primary, Con/Int saves, tools/armor/weapons, half caster prepared INT, L1 Spellcasting/Magical Tinkering/Invention match extract; Invention prose clean (C-01 resolved)",
+    "alchimist": "PASS — tools, L3 spells (Acid Splash/Healing Word/Ray of Sickness), Experimental Elixir, Homunculus +1 infusion",
+    "ruestungsschmied": "PASS — heavy armor + smith tools, Shield/Thunderwave, Arcane Armor, three models (Dreadnaught/Guardian/Infiltrator); C-02 English density",
+    "artillerist": "PASS — martial ranged + woodcarver, Magic Missile/Thunderwave, Arcane Firearm three modes",
+    "kampfschmied": "PASS — smith tools, Shield of Faith/Shield, Steel Defender modular humanoid/quad; no Battle Ready in this extract",
+    "schmiedekrieger": "PASS — Arcane Armament crit 19–20, infusion, thrown return; L3 spells named but not in L1 catalog (C-05)",
+    "kartograph": "PASS — calligrapher/cartographer tools, Faerie Fire/Guiding Bolt/Healing Word, Adventurer's Atlas, Mapping Magic",
+    "blutjaeger": "PASS — d12, Con primary, Con/Int saves, martial + alchemist supplies, spellcasting null, L1 Hunter's Bane / Fighting Style / Weapon Mastery; equipment A/B match",
+    "orden-der-alchemisten": "PASS — Aberrant Alchemy mutagens, Monstrous Awareness",
+    "orden-der-ketzer": "PASS — Blasphemous Prayer Channel Divinity, Heretical Knowledge (present in extract though omitted from L3 order intro list)",
+    "orden-des-blassen-mondes": "PASS — Wild Senses, Lycanthropy shift",
+    "orden-von-salz-und-eisen": "PASS — Spectral Nature, Dawn Warrior / radiant Crimson Offering",
+    "orden-des-unsterblichen-durstes": "PASS — Blood Magic Specialist d6 rite, Vampiric Nature",
+    "orden-der-hexenritter": "PASS — Pact Magic Con + Warlock list, Crimson Blade focus; multiclass rounded up matches Witch Knight section (not Profane Soul rounded-down leftover)"
+  },
+  "loreReview": {
+    "tegoraLeaks": "PASS — Tegora/Kanka only in file-header comments; no player-facing Tegora",
+    "eberronLeaks": "PASS — Eberron/Cannith/Last War/warforged rewritten to Validori Magister/Gilden; comment-only exclusion OK",
+    "canonPlaces": "PASS — Validori, Magister-Turm, Gilden, Nepurga (Reich), Arbor-Saum, Inneres Meer",
+    "forbiddenLeaks": "PASS — no Shagottar, Weltbaum, or Legacy goddess/fairy Nepurga",
+    "abilityNamesEn": "PASS — Intelligence/Strength/Constitution/Charisma in prose",
+    "ownerNotesSource": "PASS manual — class + all twelve subclasses tagged OWNER_NOTES_SOURCE; add automated test (C-03)",
+    "germanQuality": "PASS — C-01 resolved; C-02 polish notes remain (Warlock-Stufen, English damage/mastery clusters, Sinistere/Sinisterer)"
+  },
+  "wiringReview": {
+    "classesTsSpread": "PASS — CLASSES_BLUTJAEGER + CLASSES_ERFINDER spread into CLASSES in content/index.ts",
+    "duplicateKeys": "PASS — erfinder/blutjaeger and subclass keys ASCII-lowercase, disjoint from SRD twelve",
+    "spellListErfinder": "PASS — 16 cantrips + 22 level-1 spells with lists including erfinder; matches notes L1 list minus three missing cantrips (documented)",
+    "spellcastingBlutjaeger": "PASS — null at class level; Witch Knight pact called out in subclass only",
+    "findClass": "PASS — catalog-integrity subclass/equipment/spell-budget tests cover both classes",
+    "pickableClassesDb": "OPEN C-04 — database PICKABLE_CLASSES still twelve SRD names only",
+    "tests": "PASS — pnpm --filter @uwe/character-creator test (61/61, 13 suites)"
+  },
+  "subclassCompleteness": {
+    "erfinderExpected": ["Alchemist", "Armorer", "Artillerist", "Battle Smith", "Forgewright", "Cartographer"],
+    "erfinderPresent": ["alchimist", "ruestungsschmied", "artillerist", "kampfschmied", "schmiedekrieger", "kartograph"],
+    "blutjaegerExpected": [
+      "Order of the Alchemist",
+      "Order of Heretics",
+      "Order of the Pale Moon",
+      "Order of Salt & Iron",
+      "Order of Undying Thirst",
+      "Order of the Witch Knight"
+    ],
+    "blutjaegerPresent": [
+      "orden-der-alchemisten",
+      "orden-der-ketzer",
+      "orden-des-blassen-mondes",
+      "orden-von-salz-und-eisen",
+      "orden-des-unsterblichen-durstes",
+      "orden-der-hexenritter"
+    ],
+    "level3Features": "PASS — each subclass has extract-aligned L3 feature set (tools/spells/signature ability)"
+  },
+  "reviewedAt": "2026-08-08T15:50:00+02:00",
+  "notes": "Re-review after C-01 fix: Invention L1 feature references „Inventionen-Liste dieser Klasse“ with no Notizen/PDF/Kanka leak; file-header Owner-Notizen comments only. Six Artificer + six Bloodhunter subclasses, Terra rewrite clean, OWNER_NOTES_SOURCE correct, CLASSES + erfinder spell-list wiring green, tests 61/61. Approved; C-02–C-05 are non-blocking follow-ups."
+}

@@ -1,0 +1,84 @@
+{
+  "workstreamId": "size-choice",
+  "verdict": "APPROVED",
+  "criticModel": "cursor-grok-4.5-high",
+  "scope": {
+    "filesReviewed": [
+      "packages/character-creator/src/types.ts",
+      "packages/character-creator/src/rules/derive.ts",
+      "packages/character-creator/src/rules/species-size.test.ts",
+      "packages/character-creator/src/rules/steps.ts",
+      "apps/portal/src/components/character-wizard/steps/SpeciesStep.tsx",
+      "apps/portal/src/components/character-wizard/steps/ReviewStep.tsx",
+      "packages/player-hub/src/character-json.ts",
+      "packages/player-hub/src/character-draft-validation.ts",
+      "packages/player-hub/src/character-draft-validation.test.ts"
+    ],
+    "speciesWithSizeChoice": [
+      "mensch",
+      "tiefling",
+      "fukuro",
+      "felin",
+      "lepoling",
+      "iso-tera",
+      "godling",
+      "embeku",
+      "lamia",
+      "automaton",
+      "mucosi"
+    ]
+  },
+  "defects": [
+    {
+      "id": "Z-01",
+      "severity": "minor",
+      "status": "open",
+      "summary": "SpeciesStep Small tile copy says „kürzere Reichweite mit schweren Waffen“ — 5e effect of Small + Heavy is disadvantage on attack rolls, not shortened reach. Non-blocking flavour imprecision."
+    },
+    {
+      "id": "Z-02",
+      "severity": "minor",
+      "status": "open",
+      "summary": "No character-creator unit test for validateSpecies sizeKey path (steps.ts); coverage lives in resolveSpeciesSize tests + player-hub validateFullDraft. Optional mirror test in package."
+    }
+  ],
+  "resolvedDefects": [
+    {
+      "id": "S-06",
+      "severity": "minor",
+      "status": "fixed",
+      "summary": "Prior species-critic S-06 / phase2 S-P2-01: sizeChoice player pick now wired via draft.sizeKey → SpeciesStep → resolveSpeciesSize → buildSpeciesJson / ReviewStep / player-hub validation."
+    }
+  ],
+  "passingCriteria": {
+    "draftField": "PASS — CharacterDraft.sizeKey + emptyCharacterDraft null default",
+    "resolveOrder": "PASS — sizeKey (if in sizeChoice) > lineage.size > species.size (derive.resolveSpeciesSize)",
+    "speciesCoverage": "PASS — all 11 listed species expose sizeChoice [medium, small]",
+    "speciesStepUi": "PASS — size tiles when sizeChoice.length ≥ 2; cleared on species change",
+    "stepsValidation": "PASS — require sizeKey when sizeChoice set; reject out-of-list",
+    "playerHub": "PASS — validateFullDraft rejects mensch without sizeKey; rejects sizeKey on non-choice species; buildSpeciesJson uses sizeKey",
+    "reviewStep": "PASS — displays resolveSpeciesSize(..., draft.sizeKey)",
+    "goblinLineage": "PASS — lineage.size small still wins when sizeKey null; sizeKey ignored without sizeChoice (zwerg test)",
+    "tests": "PASS — pnpm --filter @uwe/character-creator test: 68 pass / 0 fail / 14 suites (resolveSpeciesSize suite included)"
+  },
+  "wiringReview": {
+    "types": "PASS",
+    "derive": "PASS",
+    "steps": "PASS",
+    "speciesStep": "PASS",
+    "reviewStep": "PASS",
+    "characterJson": "PASS — buildSpeciesJson / buildCharacterJsonColumns options.sizeKey",
+    "draftValidation": "PASS"
+  },
+  "acceptanceConditions": [
+    "DONE — Persist sizeKey for every sizeChoice species through draft → validation → character JSON.",
+    "DONE — resolveOrder sizeKey > lineage.size > species.size.",
+    "DONE — Portal SpeciesStep choice UI; ReviewStep shows resolved size.",
+    "DONE — Goblin lineage Small still works without sizeChoice on goblinkin.",
+    "OPTIONAL Z-01 — Fix Small-tile Heavy-weapon copy (disadvantage, not reach).",
+    "OPTIONAL Z-02 — Package-level validateSpecies sizeKey regression test.",
+    "KEEP — pnpm --filter @uwe/character-creator test green."
+  ],
+  "reviewedAt": "2026-08-08T16:29:00+02:00",
+  "notes": "Size-choice workstream is complete and correctly closes the prior sizeChoice persistence gap. Approve with two non-blocking polish notes on Small-tile rules copy and optional steps.ts unit coverage."
+}

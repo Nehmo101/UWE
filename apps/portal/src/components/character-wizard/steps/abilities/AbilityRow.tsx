@@ -13,14 +13,13 @@
 
 import {
   ABILITY_HINTS,
-  ABILITY_LABELS,
-  ABILITY_SHORT,
   abilityModifier,
   formatModifier,
   type AbilityKey,
 } from "@uwe/character-creator";
 
 import type { ResolvedCatalog } from "../../types";
+import { ABILITY_DISPLAY_NAMES, ABILITY_DISPLAY_SHORT } from "./ability-display";
 import { relevanceFor } from "./rules";
 
 /**
@@ -43,7 +42,8 @@ export function AbilityLead({
   const marks = relevanceFor(ability, resolved);
   const caption = (
     <>
-      {ABILITY_LABELS[ability]} <span className="cw-ability__short">({ABILITY_SHORT[ability]})</span>
+      {ABILITY_DISPLAY_NAMES[ability]}{" "}
+      <span className="cw-ability__short">({ABILITY_DISPLAY_SHORT[ability]})</span>
     </>
   );
   return (
@@ -85,7 +85,7 @@ export function BonusCell({ ability, value }: { ability: AbilityKey; value: numb
     <span
       className="cw-chip"
       data-tone="accent"
-      title={`Hintergrund-Bonus auf ${ABILITY_LABELS[ability]}`}
+      title={`Hintergrund-Bonus auf ${ABILITY_DISPLAY_NAMES[ability]}`}
     >
       +{value}
     </span>

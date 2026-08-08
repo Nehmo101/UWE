@@ -1,0 +1,437 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-08T15:25:00+02:00",
+  "sourceFiles": [
+    "tmp/character-creator-source-extract/Spezies__Spezien 1.pdf.txt",
+    "tmp/character-creator-source-extract/Spezies__Spezies 2.pdf.txt"
+  ],
+  "canonBrief": "packages/character-creator/dev-progress/uwe-canon-brief.md",
+  "summary": {
+    "playerSpeciesPages": 40,
+    "lineageEntries": 12,
+    "discovered": 40,
+    "existingSrd": 9,
+    "imported": 22,
+    "blocked": 12,
+    "notInSource": ["aasimar", "gnom", "goliath", "tiefling"],
+    "notInSourceNote": "Aasimar fehlt im Extract; Godling deckt celestial-Mechanik ab. Gnom/Goliath/Tiefling nur im SRD-Katalog, nicht als eigene Kanka-Player-Species-Seite."
+  },
+  "existingSrdKeys": [
+    "drachenblutige",
+    "zwerg",
+    "elf",
+    "gnom",
+    "goliath",
+    "halbling",
+    "mensch",
+    "ork",
+    "tiefling"
+  ],
+  "importedKeys": [
+    "goblinkin",
+    "lizardfolk",
+    "minotaur",
+    "centaur",
+    "fukuro",
+    "felin",
+    "lepoling",
+    "morgawr",
+    "iso-tera",
+    "godling",
+    "jotnar",
+    "embeku",
+    "amphin",
+    "lamia",
+    "ifrit",
+    "kathai",
+    "ipotan",
+    "automaton",
+    "lupull",
+    "ganeshi",
+    "oodoon",
+    "mucosi"
+  ],
+  "importedLineageKeys": [
+    "goblin",
+    "hobgoblin",
+    "bugbear",
+    "dynamics",
+    "statics",
+    "synergetics"
+  ],
+  "entries": [
+    {
+      "key": "fukuro",
+      "nameEn": "Fukuro",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "fukuro"
+    },
+    {
+      "key": "felin",
+      "nameEn": "Felin",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "felin"
+    },
+    {
+      "key": "drascari",
+      "nameEn": "Drascari",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "existing-srd",
+      "mapsTo": "drachenblutige",
+      "note": "Dragonborn-Variante mit Chromatic/Metallic/Gematic und extra Gem-Drachen-Tabelle — SRD-Drachenblütige bleibt Kanon; Gem-Linien blocked bis Owner-Entscheidung."
+    },
+    {
+      "key": "jotnar",
+      "nameEn": "Jötnar",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "jotnar",
+      "note": "Mechanisch nah Goliath, eigenständiger Owner-Eintrag."
+    },
+    {
+      "key": "amphin",
+      "nameEn": "Amphin",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "amphin"
+    },
+    {
+      "key": "lizardfolk",
+      "nameEn": "Lizardfolk",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "lizardfolk"
+    },
+    {
+      "key": "embeku",
+      "nameEn": "Embeku",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "embeku"
+    },
+    {
+      "key": "lamia",
+      "nameEn": "Lamia",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "lamia"
+    },
+    {
+      "key": "minotaur",
+      "nameEn": "Minotaur",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "minotaur"
+    },
+    {
+      "key": "centaur",
+      "nameEn": "Centaur",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "centaur"
+    },
+    {
+      "key": "lepoling",
+      "nameEn": "Lepoling",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "lepoling"
+    },
+    {
+      "key": "godling",
+      "nameEn": "Godling",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "godling",
+      "note": "Celestial/Aasimar-Äquivalent im Owner-Material; kein separater Aasimar-Treffer."
+    },
+    {
+      "key": "dwarves",
+      "nameEn": "Dwarf",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "existing-srd",
+      "mapsTo": "zwerg",
+      "note": "Lore-Variante Karlikariate; SRD-Zwerg bleibt Legacy-Eintrag."
+    },
+    {
+      "key": "ifrit",
+      "nameEn": "Ifrit",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "ifrit"
+    },
+    {
+      "key": "kathai",
+      "nameEn": "Kathai",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "kathai",
+      "note": "College-Wahl als Abstammungen dynamics/statics/synergetics."
+    },
+    {
+      "key": "halflings",
+      "nameEn": "Halfling",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "existing-srd",
+      "mapsTo": "halbling",
+      "note": "Custom Halfling Toughtweft/Telepathie — SRD-Halbling unverändert."
+    },
+    {
+      "key": "humans",
+      "nameEn": "Human",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "existing-srd",
+      "mapsTo": "mensch"
+    },
+    {
+      "key": "arkadia",
+      "nameEn": "Arkadia",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "existing-srd",
+      "mapsTo": "tiefling",
+      "note": "Fiendish Legacy — mechanisch Tiefling; eigener Name blocked für Katalog-Duplikat."
+    },
+    {
+      "key": "chithari",
+      "nameEn": "Chithári",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "blocked",
+      "reason": "Forced Evolution (Stufe 3/7) und Größenwechsel Stufe 7 — Ersteller-Wizard unterstützt keine stufenabhängigen Spezies-Optionen."
+    },
+    {
+      "key": "ipotan",
+      "nameEn": "Ipotan",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "ipotan"
+    },
+    {
+      "key": "automaton",
+      "nameEn": "Automaton",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "automaton"
+    },
+    {
+      "key": "lupull",
+      "nameEn": "Lupull",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "lupull"
+    },
+    {
+      "key": "ganeshi",
+      "nameEn": "Ganeshi",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "ganeshi"
+    },
+    {
+      "key": "iso-tera",
+      "nameEn": "Iso-Tera",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "iso-tera"
+    },
+    {
+      "key": "goblinkin",
+      "nameEn": "Goblinkin",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "goblinkin"
+    },
+    {
+      "key": "goblin",
+      "nameEn": "Goblin",
+      "parentSpecies": "goblinkin",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "goblin",
+      "kind": "lineage"
+    },
+    {
+      "key": "hobgoblin",
+      "nameEn": "Hobgoblin",
+      "parentSpecies": "goblinkin",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "hobgoblin",
+      "kind": "lineage"
+    },
+    {
+      "key": "bugbear",
+      "nameEn": "Bugbear",
+      "parentSpecies": "goblinkin",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "bugbear",
+      "kind": "lineage"
+    },
+    {
+      "key": "dynamics",
+      "nameEn": "College of Dynamics",
+      "parentSpecies": "kathai",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "dynamics",
+      "kind": "lineage"
+    },
+    {
+      "key": "statics",
+      "nameEn": "College of Statics",
+      "parentSpecies": "kathai",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "statics",
+      "kind": "lineage"
+    },
+    {
+      "key": "synergetics",
+      "nameEn": "College of Synergetics",
+      "parentSpecies": "kathai",
+      "sourceFile": "Spezies__Spezien 1.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "synergetics",
+      "kind": "lineage"
+    },
+    {
+      "key": "tengu-kenku",
+      "nameEn": "Tengu / Kenku",
+      "sourceFile": "Spezies__Spezies 2.pdf.txt",
+      "outcome": "blocked",
+      "reason": "Kombi-Seite; Traits-Sektion im PDF-Export eingeklappt (kein Creature Type / Speed-Block)."
+    },
+    {
+      "key": "vattir",
+      "nameEn": "Vättir (Firbolg)",
+      "sourceFile": "Spezies__Spezies 2.pdf.txt",
+      "outcome": "blocked",
+      "reason": "Traits-Sektion eingeklappt — nur Lore, keine übernehmbare Mechanik."
+    },
+    {
+      "key": "morgawr",
+      "nameEn": "Morgawr",
+      "sourceFile": "Spezies__Spezies 2.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "morgawr"
+    },
+    {
+      "key": "satyr",
+      "nameEn": "Satyr",
+      "sourceFile": "Spezies__Spezies 2.pdf.txt",
+      "outcome": "blocked",
+      "reason": "Traits-Sektion eingeklappt im PDF-Export."
+    },
+    {
+      "key": "rodeni",
+      "nameEn": "Rodeni (Ratfolk / Skoriti)",
+      "sourceFile": "Spezies__Spezies 2.pdf.txt",
+      "outcome": "blocked",
+      "reason": "Traits-Sektion eingeklappt; ysoki/Skoriti-Doppeltext ohne Mechanikblock."
+    },
+    {
+      "key": "sun-elves",
+      "nameEn": "Sun Elves",
+      "sourceFile": "Spezies__Spezies 2.pdf.txt",
+      "outcome": "existing-srd",
+      "mapsTo": "elf",
+      "note": "Traits eingeklappt; SRD-Elf deckt ab."
+    },
+    {
+      "key": "silvan",
+      "nameEn": "Silvan (Ghoran)",
+      "sourceFile": "Spezies__Spezies 2.pdf.txt",
+      "outcome": "blocked",
+      "reason": "Traits-Sektion eingeklappt; Tegora-Ghoran-Lore nicht importierbar ohne Mechanik."
+    },
+    {
+      "key": "moon-elf",
+      "nameEn": "Moon Elf",
+      "sourceFile": "Spezies__Spezies 2.pdf.txt",
+      "outcome": "blocked",
+      "reason": "Custom Elven Lineages (Dark/Faerie Fire/Dusk) weichen von SRD-Elf-Abstammungen ab — blocked bis Owner-Mapping."
+    },
+    {
+      "key": "sylph",
+      "nameEn": "Sylph (Air Genasi)",
+      "sourceFile": "Spezies__Spezies 2.pdf.txt",
+      "outcome": "blocked",
+      "reason": "Traits-Sektion eingeklappt."
+    },
+    {
+      "key": "undine",
+      "nameEn": "Undine (Water Genasi)",
+      "sourceFile": "Spezies__Spezies 2.pdf.txt",
+      "outcome": "blocked",
+      "reason": "Traits-Sektion eingeklappt nach Genasi-Header."
+    },
+    {
+      "key": "oread",
+      "nameEn": "Oread (Earth Genasi)",
+      "sourceFile": "Spezies__Spezies 2.pdf.txt",
+      "outcome": "blocked",
+      "reason": "Traits-Sektion eingeklappt."
+    },
+    {
+      "key": "oodoon",
+      "nameEn": "Oodoon",
+      "sourceFile": "Spezies__Spezies 2.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "oodoon"
+    },
+    {
+      "key": "orcs",
+      "nameEn": "Orc",
+      "sourceFile": "Spezies__Spezies 2.pdf.txt",
+      "outcome": "existing-srd",
+      "mapsTo": "ork"
+    },
+    {
+      "key": "riftborn",
+      "nameEn": "Riftborn",
+      "sourceFile": "Spezies__Spezies 2.pdf.txt",
+      "outcome": "blocked",
+      "reason": "Traits-Sektion eingeklappt."
+    },
+    {
+      "key": "mucosi",
+      "nameEn": "Mucosi",
+      "sourceFile": "Spezies__Spezies 2.pdf.txt",
+      "outcome": "imported",
+      "catalogKey": "mucosi"
+    },
+    {
+      "key": "aasimar",
+      "nameEn": "Aasimar",
+      "sourceFile": null,
+      "outcome": "blocked",
+      "reason": "Nicht im Kanka-Spezies-Extract — PHB-2024-Name fehlt; Godling als celestial-Ersatz importiert."
+    },
+    {
+      "key": "gnom",
+      "nameEn": "Gnome",
+      "sourceFile": null,
+      "outcome": "existing-srd",
+      "mapsTo": "gnom",
+      "note": "Nur SRD-Katalog, keine Owner-Player-Species-Seite."
+    },
+    {
+      "key": "goliath",
+      "nameEn": "Goliath",
+      "sourceFile": null,
+      "outcome": "existing-srd",
+      "mapsTo": "goliath",
+      "note": "Nur Erwähnung via Firbolg/Vättir-Lore; SRD-Goliath unverändert."
+    },
+    {
+      "key": "tiefling",
+      "nameEn": "Tiefling",
+      "sourceFile": null,
+      "outcome": "existing-srd",
+      "mapsTo": "tiefling",
+      "note": "Arkadia-Seite ist Tiefling-Mechanik unter anderem Namen."
+    }
+  ]
+}

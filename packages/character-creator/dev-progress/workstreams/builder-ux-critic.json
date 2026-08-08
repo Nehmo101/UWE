@@ -1,0 +1,45 @@
+{
+  "workstreamId": "builder-ux",
+  "verdict": "APPROVED",
+  "criticModel": "composer-2.5-fast",
+  "defects": [
+    {
+      "id": "C-05-package-labels",
+      "severity": "minor",
+      "status": "open",
+      "summary": "ABILITY_LABELS / ABILITY_SHORT from @uwe/character-creator remain German in ClassStep rules prose, BackgroundStep attribute filters, and stranded-note copy — only the abilities step uses ability-display.ts English names. Documented in builder-ux openDefectNotes; non-blocking for this workstream scope."
+    },
+    {
+      "id": "UX-02",
+      "severity": "minor",
+      "status": "open",
+      "summary": "CustomBackgroundBuilder.tsx tool hint still says „die vier Katalog-Hintergründe“ — should say „vier SRD-Hintergründe“ now that sixteen catalog backgrounds exist; misleading gap-era wording."
+    },
+    {
+      "id": "UX-03",
+      "severity": "minor",
+      "status": "open",
+      "summary": "Stale developer comments only: SpeciesStep header „Neun Kacheln“, ClassStep „Katalog (nur SRD)“, BackgroundStep CustomTile „vier Katalogkarten“ — runtime UI is dynamic; polish comments for maintainers."
+    }
+  ],
+  "acceptanceConditions": [
+    "DONE — SpeciesStep, ClassStep, BackgroundStep import SPECIES / CLASSES / BACKGROUNDS from @uwe/character-creator; counts 23 / 14 / 16 match catalog snapshot.",
+    "DONE — No hardcoded catalog caps; SEARCH_THRESHOLD and empty-state copy use SPECIES.length / CLASSES.length / BACKGROUNDS.length.",
+    "DONE — background-gap.ts computes CLASSES_WITHOUT_BACKGROUND from full BACKGROUNDS; custom-background.test.ts asserts empty stranded list; stranded UI gated and hidden with full catalog.",
+    "DONE — BackgroundStep disclosure shows post-import message (Paladin/Mönch/Waldläufer covered) when CLASSES_WITHOUT_BACKGROUND is empty; empty filter copy uses „Katalog-Hintergründe“.",
+    "DONE — abilities/ability-display.ts exports English Strength…Charisma and STR…CHA; wired in AbilityRow, BackgroundBonus, AbilitiesStep point-buy aria-labels; ABILITY_HINTS / validation German unchanged.",
+    "Optional — Extend English ability labels to ClassStep/BackgroundStep via shared display map or package export (C-05-package-labels).",
+    "Optional — Fix CustomBackgroundBuilder „vier Katalog-Hintergründe“ → „vier SRD-Hintergründe“ (UX-02)."
+  ],
+  "integrationReview": {
+    "speciesStepUsesCatalog": "PASS — SPECIES import; dynamic grid and search",
+    "classStepUsesCatalog": "PASS — CLASSES import; dynamic grid; stranded chip conditional on lacksMatchingBackground (never shown with full catalog)",
+    "backgroundStepUsesCatalog": "PASS — BACKGROUNDS import; dynamic counts and filters",
+    "backgroundGapClosed": "PASS — classesWithoutMatchingBackground(CLASSES, BACKGROUNDS) empty; test green",
+    "abilityDisplayEn": "PASS — ability-display.ts + AbilityRow + BackgroundBonus + AbilitiesStep aria-labels",
+    "gapMessaging": "PASS with UX-02 — main stranded paths updated; one Eigenbau hint still references „vier Katalog-Hintergründe“",
+    "tests": "PASS — pnpm --filter @uwe/character-creator test (61/61); portal typecheck reported green in workstream"
+  },
+  "reviewedAt": "2026-08-08T15:38:00+02:00",
+  "notes": "Independent verification: portal wizard steps consume the extended @uwe/character-creator catalog without slice caps; abilities step shows English score names per C-05 product rule; background gap UI correctly collapses when sixteen backgrounds cover all classes. No blockers. C-05 and UX-02/UX-03 are follow-up polish outside approval gate."
+}
