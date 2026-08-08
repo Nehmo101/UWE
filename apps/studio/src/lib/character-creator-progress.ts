@@ -7,12 +7,6 @@ const PROGRESS_REL = join(
   "dev-progress",
   "progress.json",
 );
-const WORKSTREAMS_REL = join(
-  "packages",
-  "character-creator",
-  "dev-progress",
-  "workstreams",
-);
 
 export interface CharacterCreatorProgressSummary {
   discoveredEntries: number;
@@ -108,7 +102,8 @@ function readJsonFile<T>(path: string): T | null {
     return null;
   }
   try {
-    return JSON.parse(readFileSync(path, "utf8")) as T;
+    const text = readFileSync(path, "utf8").replace(/^\uFEFF/, "");
+    return JSON.parse(text) as T;
   } catch {
     return null;
   }

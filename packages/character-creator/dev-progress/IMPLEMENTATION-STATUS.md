@@ -1,6 +1,6 @@
 # Character Creator — Implementation Status
 
-Stand: 2026-08-08T16:48:43+02:00
+Stand: 2026-08-08T17:50:00+02:00
 
 ## Katalog
 | Typ | Anzahl |
@@ -22,9 +22,9 @@ Siehe workstreams/*-critic.json — Kern-Workstreams APPROVED.
 - Legacy-SRD-Spezies-Keys: behalten (nicht gelöscht)
 
 ## Rollback
-Git revert der Katalog-/Wizard-Dateien unter packages/character-creator, packages/player-hub, pps/portal/src/components/character-wizard.
+Git revert der Katalog-/Wizard-Dateien unter `packages/character-creator`, `packages/player-hub`, `apps/portal/src/components/character-wizard`.
 
 ## Bekannte Grenzen
-- a11y e2e: Spec enthält /auth/worlds/terra/characters/neu hell+dunkel; lokaler Lauf kann an Windows .next EBUSY scheitern — CI ist maßgeblich.
-- Zauber-Materialkomponenten teils Englisch (SRD-Original).
-- /ultracode in dieser Umgebung nicht verfügbar.
+- a11y e2e: Spec enthält `/auth/worlds/terra/characters/neu` hell+dunkel + Touch; voller Lauf über CI/`pnpm test:e2e:a11y` (Windows kann an `.next` EBUSY scheitern).
+- Open5e wotc-srd ist klassischer SRD-Korpus (nicht 1:1 5.2.1-Wortlaut) — für UWE-Stufe-1 ausreichend.
+- NPC-Spezies-Struktur: bewusst zurückgestellt (0 NPCs im Demo-Seed).
