@@ -1,5 +1,6 @@
 import { cookies, headers } from "next/headers";
 import { authorize, SESSION_COOKIE_NAME, type AuthorizeDenied } from "@uwe/auth";
+import { getCurrentUser } from "./auth";
 
 export class PortalActionAuthError extends Error {
   readonly status: number;
@@ -33,5 +34,12 @@ export async function requirePortalActionAuth(): Promise<void> {
 
   if (denied) {
     throw new PortalActionAuthError(denied);
+  }
+
+  if (!(await getCurrentUser())) {
+    throw new PortalActionAuthError({
+      status: 403,
+      error: "Dieses Konto ist nicht für das Portal freigeschaltet.",
+    });
   }
 }

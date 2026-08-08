@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { authorize, isCrossSiteBrowserRequest, SESSION_COOKIE_NAME } from "@uwe/auth";
+import {
+  authorize,
+  isCrossSiteBrowserRequest,
+  requiresPortalSession,
+  SESSION_COOKIE_NAME,
+} from "@uwe/auth";
+import { getCurrentUser } from "./auth";
 
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
@@ -19,16 +25,24 @@ export async function requirePortalApiAuth(request: Request): Promise<NextRespon
   const cookieStore = await cookies();
   const hasSession = Boolean(cookieStore.get(SESSION_COOKIE_NAME)?.value);
 
+  const pathname = new URL(request.url).pathname;
   const denied = authorize({
     scope: "portal-api",
     request,
-    pathname: new URL(request.url).pathname,
+    pathname,
     hasSession,
   });
 
-  if (!denied) {
-    return null;
+  if (denied) {
+    return NextResponse.json({ error: denied.error }, { status: denied.status });
   }
 
-  return NextResponse.json({ error: denied.error }, { status: denied.status });
+  if (requiresPortalSession(pathname) && !(await getCurrentUser())) {
+    return NextResponse.json(
+      { error: "Dieses Konto ist nicht für das Portal freigeschaltet." },
+      { status: 403 },
+    );
+  }
+
+  return null;
 }

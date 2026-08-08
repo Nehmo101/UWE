@@ -13,6 +13,13 @@ The Portal Next.js routes are thin; never trust the client.
 Anonymous access is gone: there is no guest mode, no `/worlds/*` public tree and
 no share links. Every Portal route needs a session.
 
+Eine vorhandene Session ersetzt das Portal-Häkchen nicht. `getCurrentSession`
+liest den aktuellen Benutzerstand aus der Datenbank und verwirft die Session für
+das Portal, sobald `canAccessPortal` nicht mehr erfüllt ist. Dieselbe Prüfung
+sitzt zusätzlich vor dem vollständigen `/auth/**`-Seitenbaum, im gemeinsamen
+Weltlesepfad sowie in Portal-API- und Server-Action-Guards. Dadurch wirkt das
+Entfernen der Portal-Freigabe ohne erneute Anmeldung oder Session-Ablauf.
+
 ## The one content rule
 
 `canViewWorldContent` in `packages/auth/src/permissions.ts`:
