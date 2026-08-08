@@ -8,12 +8,50 @@ import { GraphEngine, isGraphPositionCacheValid } from "./graph-engine";
  * und die Pointer-Handler laufen ohne `window`/2D-Kontext, sodass wir Auswahl-
  * Logik deterministisch prüfen können (kein `start()` → kein RAF/Zeichnen).
  */
+// Minimaler aufzeichnender Canvas-2D-Mock (kein DOM nötig) — deckt genau die
+// Methoden ab, die graph-engine-render.ts während eines echten `frame()`
+// aufruft, damit `start()`/RAF-Tests (Idle-Sleep) ohne echtes Canvas laufen.
+function makeMockCtx(): CanvasRenderingContext2D {
+  const gradient = { addColorStop: () => {} };
+  return {
+    filter: "none",
+    fillStyle: "",
+    strokeStyle: "",
+    globalAlpha: 1,
+    lineWidth: 1,
+    lineCap: "butt",
+    font: "",
+    textAlign: "start",
+    textBaseline: "alphabetic",
+    setTransform: () => {},
+    save: () => {},
+    restore: () => {},
+    clearRect: () => {},
+    fillRect: () => {},
+    strokeRect: () => {},
+    beginPath: () => {},
+    closePath: () => {},
+    moveTo: () => {},
+    lineTo: () => {},
+    arc: () => {},
+    arcTo: () => {},
+    quadraticCurveTo: () => {},
+    fill: () => {},
+    stroke: () => {},
+    setLineDash: () => {},
+    measureText: (t: string) => ({ width: t.length * 6 }),
+    fillText: () => {},
+    createRadialGradient: () => gradient,
+    createLinearGradient: () => gradient,
+  } as unknown as CanvasRenderingContext2D;
+}
+
 function makeCanvas(): HTMLCanvasElement {
   const canvas = {
     style: {} as Record<string, string>,
     width: 800,
     height: 600,
-    getContext: () => ({}) as unknown as CanvasRenderingContext2D,
+    getContext: () => makeMockCtx(),
     getBoundingClientRect: () => ({
       left: 0,
       top: 0,
@@ -29,6 +67,43 @@ function makeCanvas(): HTMLCanvasElement {
     releasePointerCapture: () => {},
   };
   return canvas as unknown as HTMLCanvasElement;
+}
+
+/** Kontrollierbarer `requestAnimationFrame`/`cancelAnimationFrame`-Mock: statt
+ *  echter Timer landen Callbacks in einer Queue, die der Test per `flush()`
+ *  synchron abarbeitet — macht die RAF-Idle-Sleep-Schleife deterministisch
+ *  testbar, ohne auf echte Frames/Zeit zu warten. */
+function mockRaf() {
+  let nextId = 1;
+  const queue = new Map<number, FrameRequestCallback>();
+  const install = () => {
+    const original = {
+      raf: globalThis.requestAnimationFrame,
+      caf: globalThis.cancelAnimationFrame,
+    };
+    globalThis.requestAnimationFrame = ((cb: FrameRequestCallback): number => {
+      const id = nextId++;
+      queue.set(id, cb);
+      return id;
+    }) as typeof requestAnimationFrame;
+    globalThis.cancelAnimationFrame = ((id: number): void => {
+      queue.delete(id);
+    }) as typeof cancelAnimationFrame;
+    return () => {
+      globalThis.requestAnimationFrame = original.raf;
+      globalThis.cancelAnimationFrame = original.caf;
+    };
+  };
+  /** Alle aktuell wartenden Callbacks einmal ausführen (neu geplante landen in
+   *  der Queue für den nächsten `flush()`, laufen also nicht in derselben Runde). */
+  const flush = (): number => {
+    const entries = Array.from(queue.entries());
+    queue.clear();
+    entries.forEach(([, cb]) => cb(0));
+    return entries.length;
+  };
+  const pending = () => queue.size;
+  return { install, flush, pending };
 }
 
 function node(id: string, category: GraphNode["category"]): GraphNode {
@@ -317,4 +392,98 @@ test("Remount mit frühem Positionscache bleibt stabil", () => {
   second.applyPositions(cache);
   for (let i = 0; i < 80; i++) second["step"]();
   assert.ok(maxCoord(second) < 4000, `Remount explodierte (maxCoord=${maxCoord(second).toFixed(1)})`);
+});
+
+// --- RAF-Idle-Sleep -----------------------------------------------------------
+// Regression: die Schleife plante früher in jedem Frame bedingungslos den
+// nächsten RAF ein, BEVOR `frame()` `awake` auswerten konnte — ein ruhender
+// Graph verbrauchte damit für immer einen RAF-Callback pro Bildwiederholung.
+
+test("RAF-Schleife stoppt komplett, sobald der Graph zur Ruhe kommt (kein Frame läuft ewig weiter)", () => {
+  const mock = mockRaf();
+  const uninstall = mock.install();
+  try {
+    const { engine } = setup();
+    // Layout sperren: Physik kann sich nie bewegen, und ohne Fokus/Query bleibt
+    // jede Hervorhebung bereits beim Ziel (hl=1) → der allererste Frame ist ruhig.
+    engine.toggleLock();
+
+    engine.start(false);
+    assert.equal(mock.pending(), 1, "start() muss genau einen Frame anmelden");
+
+    const ran = mock.flush();
+    assert.equal(ran, 1, "genau ein Frame sollte gelaufen sein");
+
+    assert.equal(engine["raf"], null, "RAF-Handle muss nach dem Ruhe-Frame null sein");
+    assert.equal(mock.pending(), 0, "die Schleife darf nach dem Ruhe-Frame keinen weiteren RAF anmelden");
+  } finally {
+    uninstall();
+  }
+});
+
+test("wake() stößt die gestoppte RAF-Schleife wieder an", () => {
+  const mock = mockRaf();
+  const uninstall = mock.install();
+  try {
+    const { engine } = setup();
+    engine.toggleLock();
+    engine.start(false);
+    mock.flush();
+    assert.equal(engine["raf"], null, "Vorbedingung: Schleife muss stehen");
+
+    engine.wake();
+
+    assert.notEqual(engine["raf"], null, "wake() muss einen neuen RAF anmelden");
+    assert.equal(mock.pending(), 1);
+
+    mock.flush();
+    assert.equal(engine["raf"], null, "nach dem erneuten Ruhe-Frame stoppt die Schleife wieder");
+  } finally {
+    uninstall();
+  }
+});
+
+test("setHiddenCats()/setQuery() vor start() legen keinen RAF an (kein Loop ohne Mount)", () => {
+  const mock = mockRaf();
+  const uninstall = mock.install();
+  try {
+    const { engine } = setup();
+    engine.setHiddenCats(["npc"]);
+    engine.setQuery("foo");
+    assert.equal(mock.pending(), 0, "wake() vor dem ersten start() darf keine Schleife starten");
+  } finally {
+    uninstall();
+  }
+});
+
+test("Ein laufendes Kamera-Tween hält die RAF-Schleife wach, bis es fertig ist", () => {
+  const mock = mockRaf();
+  const uninstall = mock.install();
+  try {
+    const { engine } = setup();
+    engine.toggleLock();
+    engine.start(false);
+    mock.flush();
+    assert.equal(engine["raf"], null, "Vorbedingung: Schleife muss stehen");
+
+    // Kamera-Tween direkt anstoßen (unabhängig von echter Wanduhrzeit testbar)
+    // und die Schleife wecken — solange `cameraAnim.isAnimating()` wahr ist,
+    // darf `frame()` NICHT einschlafen, obwohl Physik/Highlights längst ruhen.
+    engine["cameraAnim"].start({ tx: 0, ty: 0, zoom: 1 }, { tx: 40, ty: 0, zoom: 1 });
+    engine.wake();
+
+    mock.flush();
+    assert.notEqual(
+      engine["raf"],
+      null,
+      "während eines aktiven Kamera-Tweens muss die Schleife weiterlaufen",
+    );
+
+    // Tween beenden (simuliert Ablauf) — der nächste Frame darf wieder einschlafen.
+    engine["cameraAnim"].cancel();
+    mock.flush();
+    assert.equal(engine["raf"], null, "nach Tween-Ende schläft die Schleife wieder ein");
+  } finally {
+    uninstall();
+  }
 });

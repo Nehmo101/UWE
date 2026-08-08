@@ -13,7 +13,7 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test src/shared-ui.test.tsx src/ResponsiveTable.test.tsx src/StateViews.test.tsx src/useFocusTrap.test.ts src/graph-engine.test.ts src/graph-communities.test.ts src/auth/auth-links.test.ts src/auth/auth-form-utils.test.ts src/auth/password-strength.test.ts src/theme/theme.test.ts src/theme/resolveColorTokens.test.ts src/theme/sync.test.ts src/visual-theme.test.ts src/uwe-base-reset.test.ts src/uwe-native-select.test.ts src/design-v2/design-v2.test.ts src/scene/pickScene.test.ts src/scene/PaintedScene.test.tsx"
+    "test": "node --import tsx --test src/shared-ui.test.tsx src/ResponsiveTable.test.tsx src/StateViews.test.tsx src/useFocusTrap.test.ts src/graph-engine.test.ts src/graph-engine-physics.test.ts src/graph-engine-visuals.test.ts src/graph-engine-render.test.ts src/graph-engine-camera.test.ts src/graph-communities.test.ts src/graph-view-ego.test.tsx src/auth/auth-links.test.ts src/auth/auth-form-utils.test.ts src/auth/password-strength.test.ts src/theme/theme.test.ts src/theme/resolveColorTokens.test.ts src/theme/sync.test.ts src/visual-theme.test.ts src/uwe-base-reset.test.ts src/uwe-native-select.test.ts src/design-v2/design-v2.test.ts src/scene/pickScene.test.ts src/scene/PaintedScene.test.tsx"
   },
   "peerDependencies": {
     "react": "^19.0.0",

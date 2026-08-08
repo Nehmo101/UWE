@@ -1268,6 +1268,12 @@ html[data-theme="light"] {
   border-radius: var(--uwe-radius-lg, 0.75rem);
   background: var(--uwe-bg);
   font-family: var(--uwe-font-space-mono, ui-monospace, monospace);
+  /* Dezente "Vitrine"-Rahmung um den Canvas: hebt ihn vom Seiten-Hintergrund
+     ab, ohne die Pergament-Fläche selbst zu verändern (die zeichnet die
+     Engine). Ergänzt den weichen Wash/Vignette-Verlauf im Canvas. */
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--uwe-fg) 5%, transparent),
+    var(--uwe-shadow-sm, none);
 }
 
 .uwe-fdgraph-full {
@@ -1302,6 +1308,13 @@ html[data-theme="light"] {
   display: block;
   cursor: grab;
   touch-action: none;
+}
+
+/* Tastatur-Fokus (falls der Canvas je fokussierbar wird): sichtbarer Ring statt
+   der Browser-Vorgabe, konsistent mit den übrigen Fokus-Stilen im Handoff. */
+.uwe-fdgraph-canvas:focus-visible {
+  outline: 2px solid var(--uwe-accent);
+  outline-offset: -2px;
 }
 
 .uwe-fdgraph-chip.is-active {

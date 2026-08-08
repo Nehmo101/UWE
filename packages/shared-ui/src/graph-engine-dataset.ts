@@ -4,7 +4,19 @@
 // Aus `graph-engine.ts` herausgezogen (Modul-Disziplin: Monolith nicht anbauen).
 // Verhalten unverändert.
 
-import type { GraphEdge, GraphNode } from "@uwe/database/graph-types";
+import type { GraphEdge, GraphEdgeKind, GraphNode } from "@uwe/database/graph-types";
+
+/**
+ * Sicht-Gewicht je Kantenart (Linienbreite/Deckkraft-Multiplikator beim Rendern).
+ * `relation` sind explizit benannte Beziehungen und wiegen am schwersten,
+ * `hierarchy` ist strukturell und bewusst zurückhaltender (Strichelung trägt
+ * dort die Betonung), `wiki`-Erwähnungen bleiben die leiseste Kantenart.
+ */
+const EDGE_KIND_WEIGHT: Record<GraphEdgeKind, number> = {
+  wiki: 1,
+  relation: 1.4,
+  hierarchy: 0.75,
+};
 
 export interface SimNode extends GraphNode {
   x: number;
@@ -23,6 +35,13 @@ export interface SimNode extends GraphNode {
 
 export interface SimEdge extends GraphEdge {
   hl: number;
+  /**
+   * Vorab bestimmtes Sicht-Gewicht je Kantenart (s. `EDGE_KIND_WEIGHT`,
+   * Linienbreite/Deckkraft-Multiplikator beim Rendern). Optional, damit
+   * händisch gebaute Test-Fixtures ohne das Feld weiter kompilieren — die
+   * Engine füllt es beim regulären `buildDataset` immer.
+   */
+  weight?: number;
 }
 
 // Ego-Netz um focusId (Tiefe egoDepth) oder ganzer Graph.
@@ -74,7 +93,7 @@ export function buildDataset(
     }));
   const outEdges: SimEdge[] = edges
     .filter((e) => keep.has(e.sourceId) && keep.has(e.targetId))
-    .map((e) => ({ ...e, hl: 1 }));
+    .map((e) => ({ ...e, hl: 1, weight: EDGE_KIND_WEIGHT[e.kind] ?? 1 }));
   const adj: Record<string, Set<string>> = {};
   outEdges.forEach((e) => {
     (adj[e.sourceId] || (adj[e.sourceId] = new Set())).add(e.targetId);

@@ -108,3 +108,29 @@ export function withAlpha(color: string, a: number): string {
   if (!rgb) return color;
   return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${a})`;
 }
+
+/**
+ * Zwei Farben linear mischen (t=0 → colorA, t=1 → colorB). Grundlage für die
+ * "glasige" Knoten-Verlaufsfüllung und das Ausbleichen gedimmter Elemente
+ * Richtung Pergament-Grund — ohne Mischbarkeit fällt auf `colorA` zurück.
+ */
+export function mixColors(colorA: string, colorB: string, t: number): string {
+  const a = parseRgb(colorA);
+  const b = parseRgb(colorB);
+  if (!a || !b) return colorA;
+  const k = clamp(t, 0, 1);
+  const r = Math.round(a[0] + (b[0] - a[0]) * k);
+  const g = Math.round(a[1] + (b[1] - a[1]) * k);
+  const bl = Math.round(a[2] + (b[2] - a[2]) * k);
+  return `rgb(${r},${g},${bl})`;
+}
+
+/** Farbe Richtung Weiß aufhellen (glasiger Glanzpunkt auf Knoten-Bubbles). */
+export function lighten(color: string, amount: number): string {
+  return mixColors(color, "#ffffff", amount);
+}
+
+/** Farbe Richtung Schwarz abdunkeln (Tiefen-Kante am unteren Bubble-Rand). */
+export function darken(color: string, amount: number): string {
+  return mixColors(color, "#000000", amount);
+}

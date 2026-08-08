@@ -1,0 +1,12 @@
+# Generated / captured — recreate via harness scripts
+shots/
+refs/
+*-bundle.mjs
+*.generated.html
+loop.pid
+loop.out.log
+loop.err.log
+loop.ps1
+after-*-raf.json
+after-motion-*.json
+react-chrome-tw.css
