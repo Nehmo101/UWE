@@ -76,6 +76,14 @@ describe("UWE auth and permissions", () => {
       ],
     });
 
+    await repo.createPage({
+      worldId: world.id,
+      title: "Unreleased Target",
+      slug: "unreleased-target",
+      type: "lore",
+      portalReleased: false,
+    });
+
     await db.$disconnect();
   });
 
@@ -106,7 +114,7 @@ describe("UWE auth and permissions", () => {
     await db.$disconnect();
   });
 
-  it("shows an assigned player every page of the world", async () => {
+  it("shows an assigned player only portal-released pages", async () => {
     const db = createPrismaClient(databaseUrl);
     const auth = createAuthService(db);
 
@@ -122,10 +130,12 @@ describe("UWE auth and permissions", () => {
     assert.ok(slugs.includes("player-lore"));
     assert.ok(slugs.includes("amans-geheimnis"));
     assert.ok(slugs.includes("archivierte-notiz"));
+    assert.ok(!slugs.includes("unreleased-target"));
 
     const playerLore = await auth.getPageForViewer(worldSlug, "player-lore", ctx);
     assert.ok(playerLore);
     assert.ok(playerLore.contentBlocks.length >= 1);
+    assert.equal(await auth.getPageForViewer(worldSlug, "unreleased-target", ctx), null);
 
     await db.$disconnect();
   });
@@ -144,6 +154,26 @@ describe("UWE auth and permissions", () => {
       pages.map((page) => page.slug),
       [],
     );
+
+    await db.$disconnect();
+  });
+
+  it("does not resolve links to unreleased pages for players", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const auth = createAuthService(db);
+
+    const playerCtx = await auth.buildAccessContextForWorld(worldSlug, { userId: amanUserId });
+    const dmCtx = await auth.buildAccessContextForWorld(worldSlug, { userId: dmUserId });
+    assert.ok(playerCtx);
+    assert.ok(dmCtx);
+
+    const raw = "See [[Unreleased Target]].";
+    const playerHtml = await auth.renderBlockContentForViewer(worldSlug, raw, playerCtx);
+    assert.match(playerHtml, /wiki-link-broken/);
+    assert.doesNotMatch(playerHtml, /unreleased-target/);
+
+    const dmHtml = await auth.renderBlockContentForViewer(worldSlug, raw, dmCtx);
+    assert.match(dmHtml, /\/auth\/worlds\/auth-test\/unreleased-target/);
 
     await db.$disconnect();
   });
@@ -296,11 +326,19 @@ describe("UWE auth and permissions", () => {
     });
 
     const events = createWorldEventService(db);
+    const releasedPage = await repo.getPageBySlug(worldSlug, "public-notice");
+    const unreleasedPage = await repo.getPageBySlug(worldSlug, "unreleased-target");
+    assert.ok(releasedPage);
+    assert.ok(unreleasedPage);
     await events.create({
       worldId: world.id,
       inGameDate: { year: 1, month: 1, day: 1 },
       title: "GM Geheimnis",
       summaryPlayer: "Nur GM",
+      linkedPages: [
+        { pageId: releasedPage.id },
+        { pageId: unreleasedPage.id },
+      ],
     });
 
     const ctx = await auth.buildAccessContextForWorld(worldSlug, { userId: amanUserId });
@@ -312,7 +350,12 @@ describe("UWE auth and permissions", () => {
     assert.ok(slugs.includes("geheimes-handout"));
 
     const timeline = await auth.listWorldEventsForViewer(worldSlug, ctx);
-    assert.ok(timeline.some((event) => event.title === "GM Geheimnis"));
+    const timelineEvent = timeline.find((event) => event.title === "GM Geheimnis");
+    assert.ok(timelineEvent);
+    assert.deepEqual(
+      timelineEvent.linkedPages.map((page) => page.slug),
+      ["public-notice"],
+    );
 
     await db.$disconnect();
   });

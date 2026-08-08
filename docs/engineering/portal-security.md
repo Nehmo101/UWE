@@ -20,17 +20,22 @@ sitzt zusätzlich vor dem vollständigen `/auth/**`-Seitenbaum, im gemeinsamen
 Weltlesepfad sowie in Portal-API- und Server-Action-Guards. Dadurch wirkt das
 Entfernen der Portal-Freigabe ohne erneute Anmeldung oder Session-Ablauf.
 
-## The one content rule
+## Content gates
 
-`canViewWorldContent` in `packages/auth/src/permissions.ts`:
+Portal content is gated in two stages:
 
-> Whoever is assigned to a world sees everything in it.
+1. `canViewWorldContent` opens the world for an assigned user (or Studio/Owner).
+2. `filterPagesForViewer` exposes only pages with `portalReleased === true` to
+   players. Studio/Owner may also inspect unreleased pages; preview-as-player
+   deliberately receives the player result.
 
-No `dm_only`, no `player_visible`, no publish status, no per-page grant, no
-session unlock. The Studio checkbox reaches every world without an assignment —
-that is how DM preview works.
+The second gate is server-side and fail-closed: a page projection that forgets
+to load `portalReleased` is treated as unreleased. Lists, direct page requests,
+dashboard, quests, NPCs, handouts, search, graph, timeline links and wikilink
+resolution must all use this same rule. A blocked page must not leak via title,
+slug, search snippet or a resolved link.
 
-**The world boundary is the whole gate.** `scopeFromAccessContext` only carries
+**The world boundary remains mandatory.** `scopeFromAccessContext` only carries
 a membership over when it belongs to that world; without it a member of world A
 could read world B.
 
@@ -42,7 +47,7 @@ could read world B.
 - Player recap fields are included only when `recapPublished === true`.
 - Linked pages in recaps are filtered with the same rules as wiki pages.
 
-Linked pages need no unlocking — a world member already reads every page.
+Linked pages use the same `portalReleased` gate as the Wiki.
 
 ## Player notes
 

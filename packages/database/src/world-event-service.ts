@@ -1,4 +1,5 @@
 import type { Prisma, PrismaClient, WorldEventSourceType, WorldEventEntityRole } from "./generated/prisma/client";
+import { PORTAL_PAGE_SELECT } from "./portal-page-select";
 import type { InGameDate } from "./world-calendar-service";
 import { parseInGameDate } from "./world-calendar-service";
 
@@ -25,7 +26,7 @@ export type WorldEventWithLinks = Prisma.WorldEventGetPayload<{
   include: {
     entityLinks: {
       include: {
-        page: { select: { id: true; title: true; slug: true; type: true } };
+        page: { select: typeof PORTAL_PAGE_SELECT };
       };
     };
   };
@@ -54,14 +55,7 @@ export class WorldEventService {
       include: {
         entityLinks: {
           include: {
-            page: {
-              select: {
-                id: true,
-                title: true,
-                slug: true,
-                type: true,
-              },
-            },
+            page: { select: PORTAL_PAGE_SELECT },
           },
         },
       },
@@ -76,14 +70,7 @@ export class WorldEventService {
       include: {
         entityLinks: {
           include: {
-            page: {
-              select: {
-                id: true,
-                title: true,
-                slug: true,
-                type: true,
-              },
-            },
+            page: { select: PORTAL_PAGE_SELECT },
           },
         },
       },
@@ -97,14 +84,7 @@ export class WorldEventService {
       include: {
         entityLinks: {
           include: {
-            page: {
-              select: {
-                id: true,
-                title: true,
-                slug: true,
-                type: true,
-              },
-            },
+            page: { select: PORTAL_PAGE_SELECT },
           },
         },
       },
@@ -178,14 +158,7 @@ export class WorldEventService {
       include: {
         entityLinks: {
           include: {
-            page: {
-              select: {
-                id: true,
-                title: true,
-                slug: true,
-                type: true,
-              },
-            },
+            page: { select: PORTAL_PAGE_SELECT },
           },
         },
       },

@@ -3,6 +3,7 @@ import {
   canReadDmSections,
   canViewWorldContent,
   filterBlocksForViewer,
+  filterPagesForViewer,
   redactDmSectionsForViewer,
 } from "@uwe/auth";
 import type { PrismaClient } from "./client";
@@ -123,6 +124,8 @@ type IndexedPage = {
   canonicalStatus: CanonicalStatus;
   questStatus?: QuestLifecycleStatus | null;
   campaignId: string | null;
+  /** Required because `filterPagesForViewer` deliberately fails closed. */
+  portalReleased: boolean;
   contentBlocks: SearchIndexContentBlock[];
   world: { slug: string; name: string };
   campaign: { name: string } | null;
@@ -438,6 +441,9 @@ async function loadPagesForSearchUncached(
       canonicalStatus: true,
       questStatus: true,
       campaignId: true,
+      // Keep the release bit in the cached, context-free index. Viewer-specific
+      // filtering happens after the cache lookup in `searchForAuthContext`.
+      portalReleased: true,
       world: { select: { slug: true, name: true } },
       campaign: { select: { name: true } },
     },
@@ -616,7 +622,11 @@ export async function searchForAuthContext(
     return [];
   }
 
-  const pages = await loadPagesForSearch(db, options);
+  // A search hit leaks more than a link: title, slug and matching content. Use
+  // the same whole-page release gate as lists and direct page requests before
+  // building snippets. This stays outside the shared cache because the viewer
+  // context must never become part of cached search data.
+  const pages = filterPagesForViewer(context, await loadPagesForSearch(db, options));
   return searchIndex(buildIndex(redactDmSectionsInPages(context, pages)), options);
 }
 

@@ -8,18 +8,15 @@ type PageExpectation = "visible" | "hidden";
 type BlockExpectation = "all" | "none";
 
 /**
- * The access matrix after visibility was removed (Notiz Lasse, 2026-07-26).
+ * Access matrix after page-level Portal release was introduced.
  *
- * There is exactly one content rule left: whoever is assigned to a world sees
- * everything in it. So the matrix distinguishes three things — whether the
- * viewer is signed in at all, whether they belong to the world, and whether
- * they hold the Studio checkbox. An anonymous visitor gets nothing even in a
- * guest-mode world; a player gets the full public world but nothing from the
- * private world they are not in.
+ * World assignment opens the world. `portalReleased` then controls which whole
+ * pages a player may discover, while the Studio checkbox also permits
+ * unreleased pages. Anonymous visitors receive no world content.
  *
- * Das Studio-Häkchen entscheidet nur noch über eine einzige Sache am Inhalt:
- * den DM-Bereich mitten im Wikitext (`:::dm … :::`). Ganze Seiten, Blöcke und
- * Bilder kennen keine Abstufung mehr.
+ * The Studio checkbox additionally preserves `:::dm` sections inside released
+ * page text. These two gates must agree across lists, direct views, search and
+ * wikilink resolution.
  */
 interface RoleExpectations {
   publicPage: PageExpectation;
@@ -202,6 +199,37 @@ describe("security role matrix", () => {
 
         assertAsset(fixture.content.assetIds.publicMedia, expectations.publicMedia);
         assertAsset(fixture.content.assetIds.privateMedia, expectations.privateMedia);
+      });
+
+      it("applies the page release gate to search and wikilink resolution", async () => {
+        const userId = userIdForRole(fixture, role);
+        const ctx = await fixture.auth.buildAccessContextForWorld(
+          fixture.content.publicWorldSlug,
+          { userId },
+        );
+        assert.ok(ctx);
+
+        const searchResults = await fixture.auth.searchForViewer(
+          fixture.content.publicWorldSlug,
+          ctx!,
+          { query: SECURITY_MARKERS.DM_ONLY },
+        );
+        const findsUnreleasedPage = searchResults.some(
+          (result) => result.slug === fixture.content.slugs.dmOnlyPage,
+        );
+
+        const html = await fixture.auth.renderBlockContentForViewer(
+          fixture.content.publicWorldSlug,
+          "[[Nur DM]]",
+          ctx!,
+        );
+        const resolvesUnreleasedPage = html.includes(
+          `/auth/worlds/${fixture.content.publicWorldSlug}/${fixture.content.slugs.dmOnlyPage}`,
+        );
+
+        const expected = expectations.dmOnlyPage === "visible";
+        assert.equal(findsUnreleasedPage, expected);
+        assert.equal(resolvesUnreleasedPage, expected);
       });
 
       it("scopes private world content by role", async () => {

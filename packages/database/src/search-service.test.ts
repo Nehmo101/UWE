@@ -78,6 +78,7 @@ describe("UWE global search", () => {
       title: "Öffentlicher Marktplatz",
       slug: "marktplatz",
       type: "location",
+      portalReleased: true,
       summary: "Ein belebter Platz in der Stadt.",
       tags: ["stadt", "markt"],
       aliases: ["Markt"],
@@ -95,6 +96,7 @@ describe("UWE global search", () => {
       title: "Geheime Verschwörung",
       slug: "geheime-verschwoerung",
       type: "lore",
+      portalReleased: true,
       summary: "Nur für den GM.",
       tags: ["geheim", "plot"],
       aliases: ["Verschwörer"],
@@ -112,6 +114,7 @@ describe("UWE global search", () => {
       title: "Die verlorene Reliquie",
       slug: "verlorene-reliquie",
       type: "quest",
+      portalReleased: true,
       summary: "Die Gruppe muss das Artefakt finden.",
       questStatus: "open",
       tags: ["quest", "artefakt"],
@@ -129,6 +132,7 @@ describe("UWE global search", () => {
       title: "Der gefallene Turm",
       slug: "gefallener-turm",
       type: "quest",
+      portalReleased: true,
       summary: "Diese Quest wurde bereits abgeschlossen.",
       questStatus: "completed",
       tags: ["quest"],
@@ -146,6 +150,7 @@ describe("UWE global search", () => {
       title: "Spieler-NPC Elara",
       slug: "elara",
       type: "npc",
+      portalReleased: true,
       summary: "Eine bekannte Magierin.",
       tags: ["magier", "verbündet"],
       aliases: ["Elara die Weise"],
@@ -316,7 +321,7 @@ describe("UWE global search", () => {
     await db.$disconnect();
   });
 
-  it("gives an assigned player the whole world in search", async () => {
+  it("shows an assigned player only portal-released pages in search", async () => {
     const db = createPrismaClient(databaseUrl);
     const auth = createAuthService(db);
 
@@ -351,6 +356,20 @@ describe("UWE global search", () => {
     });
     assert.ok(playerNpc.some((result) => result.slug === "elara"));
     assert.ok(playerNpc[0]?.snippet?.includes("Magierin"));
+
+    const unreleasedTitle = await searchForAuthContext(db, ctx!, {
+      query: "Unveröffentlicht",
+      worldSlug,
+      urlMode: "auth-portal",
+    });
+    assert.deepEqual(unreleasedTitle, []);
+
+    const unreleasedContent = await searchForAuthContext(db, ctx!, {
+      query: "darf nicht erscheinen",
+      worldSlug,
+      urlMode: "auth-portal",
+    });
+    assert.deepEqual(unreleasedContent, []);
 
     await db.$disconnect();
   });
@@ -443,6 +462,7 @@ describe("search index memoization", () => {
       title: "Drachenhort",
       slug: "drachenhort",
       type: "location",
+      portalReleased: true,
       summary: "Ein Hort voller Gold.",
       tags: ["drache"],
       contentBlocks: [

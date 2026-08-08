@@ -132,7 +132,13 @@ export async function buildPageViewForViewer(
   const { pages: indexedPages, pageIndex: allPages, blockTargets } =
     await getWorldWikiGraph(repo, worldSlug);
   const combinedContent = combineBlockContent(page.contentBlocks);
-  const links = resolveViewerLinks(combinedContent, worldSlug, allPages);
+  // A resolved link confirms the target and exposes its route. Apply the same
+  // page release gate as the body renderer before resolving viewer links.
+  const links = resolveViewerLinks(
+    combinedContent,
+    worldSlug,
+    filterPagesForViewer(ctx, allPages),
+  );
 
   const viewerPages: PageWithBlocks[] = filterPagesForViewer(ctx, indexedPages).map((candidate) => ({
     ...candidate,

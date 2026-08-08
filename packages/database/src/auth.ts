@@ -890,11 +890,17 @@ export class AuthService {
         title: true,
         slug: true,
         aliases: true,
+        // Required because `filterPagesForViewer` deliberately fails closed.
+        portalReleased: true,
       },
     });
 
+    // Resolving a link exposes that its target exists and reveals its slug.
+    // Keep unreleased pages out of the lookup so players receive the same
+    // non-navigable result as for an unknown or deleted target.
+    const visiblePages = filterPagesForViewer(ctx, allPages);
     const lookup = new Map<string, (typeof allPages)[number]>();
-    for (const page of allPages) {
+    for (const page of visiblePages) {
       const keys = [
         normalizeLookupKey(page.title),
         normalizeLookupKey(page.slug),

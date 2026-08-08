@@ -53,19 +53,23 @@ es eine Entscheidung im Command Center.
 
 ## Inhaltsregel
 
-**Wer einer Welt zugeordnet ist, sieht alles darin.** Es gibt keine
-Sichtbarkeit pro Seite, keinen Entwurfsstatus, keine Freigabe-Links und keinen
-Gastmodus. Das Studio-Häkchen erreicht jede Welt, auch ohne Zuordnung — so
-funktioniert die DM-Sicht.
+Der Portalzugriff hat zwei Tore. Die **Weltzuordnung** entscheidet zuerst, ob
+ein Spieler die Welt überhaupt lesen darf. Innerhalb dieser Welt entscheidet
+`Page.portalReleased` dann für jede ganze Wiki-Seite, ob sie im Portal erscheint.
+Studio-Nutzer und Owner sehen auch nicht freigegebene Seiten; die Vorschau als
+Spieler sieht sie bewusst nicht.
 
-Konsequenz, die bewusst so gewollt ist: Sobald eine Seite in einer Welt
-existiert, sehen sie alle Zugeordneten. Vorbereitung, die niemand sehen soll,
-passiert außerhalb von UWE — oder in einer Welt, der noch niemand zugeordnet ist.
+Die Seitenfreigabe wird serverseitig und fail-closed ausgewertet. Sie gilt nicht
+nur für die Wiki-Liste und den Direktaufruf, sondern ebenso für Dashboard,
+Questlog, NPCs, Handouts, Suche und Suchausschnitte, Graph, Timeline-Verknüpfungen
+und Wikilinks. Eine gesperrte Seite darf weder Titel noch Slug oder Text verraten.
+Fehlt `portalReleased` in einer Datenbankprojektion, behandelt
+`filterPagesForViewer` die Seite deshalb als nicht freigegeben.
 
-### Die eine Ausnahme: der DM-Bereich im Wikitext
+### Zusätzlich: der DM-Bereich im Wikitext
 
-Ganze Seiten und Blöcke sind nicht mehr abstufbar, ein paar Zeilen mitten im
-Text schon. Wer im Wikitext eine Marke setzt, macht daraus einen DM-Bereich:
+Zusätzlich zur Freigabe der ganzen Seite lassen sich einzelne Zeilen mitten im
+Text als DM-Bereich markieren:
 
 ```
 Der Hauptmann empfängt euch freundlich.
