@@ -68,10 +68,22 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
       portalReleased: true,
       aliases: ["Zieldorf"],
       contentBlocks: [
-        { type: "rich_text", sortOrder: 0, content: "Der Zielort." },
+        {
+          type: "rich_text",
+          sortOrder: 0,
+          content: "Der Zielort. Hinweis auf [[Verbotenes Ziel]].",
+        },
       ],
     });
     focusPageId = focus.id;
+
+    await repo.createPage({
+      worldId,
+      title: "Verbotenes Ziel",
+      slug: "verbotenes-ziel",
+      type: "location",
+      portalReleased: false,
+    });
 
     // A: player-visible block links to the focus by title → backlink for everyone.
     await repo.createPage({
@@ -188,6 +200,25 @@ describe("page-viewer-service backlinks + neighbour graph (H2 cache)", () => {
         assert.ok(nodeIds.has(edge.sourceId) && nodeIds.has(edge.targetId));
         assert.ok(edge.sourceId === focusPageId || edge.targetId === focusPageId);
       }
+    } finally {
+      await db.$disconnect();
+    }
+  });
+
+  it("keeps links to unreleased targets unresolved for players", async () => {
+    const db = createPrismaClient(databaseUrl);
+    try {
+      const auth = createAuthService(db);
+      const repo = createUweRepository(databaseUrl);
+      const playerCtx = await auth.buildAccessContextForWorld(worldSlug, { userId: playerUserId });
+      const dmCtx = await auth.buildAccessContextForWorld(worldSlug, { userId: dmUserId });
+      assert.ok(playerCtx);
+      assert.ok(dmCtx);
+
+      const playerView = await buildPageViewForViewer(auth, repo, worldSlug, "zielort", playerCtx);
+      const dmView = await buildPageViewForViewer(auth, repo, worldSlug, "zielort", dmCtx);
+      assert.equal(playerView?.links.find((link) => link.displayText === "Verbotenes Ziel")?.status, "broken");
+      assert.equal(dmView?.links.find((link) => link.displayText === "Verbotenes Ziel")?.status, "resolved");
     } finally {
       await db.$disconnect();
     }

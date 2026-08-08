@@ -236,7 +236,9 @@ describe("integration smoke — minimal app access paths", () => {
 
   it("keeps the access model covered by the role matrix", () => {
     const roleMatrix = read("packages/security-tests/src/role-matrix.test.ts");
-    assert.match(roleMatrix, /whoever is assigned to a world sees/);
+    assert.match(roleMatrix, /portalReleased/);
+    assert.match(roleMatrix, /dmOnlyPage/);
+    assert.match(roleMatrix, /WORLD_MEMBER/);
     assert.match(roleMatrix, /anonymous/);
   });
 });
