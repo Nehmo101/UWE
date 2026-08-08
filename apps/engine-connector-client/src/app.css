@@ -874,6 +874,18 @@
   display: block;
 }
 
+.command-center-user-worlds {
+  flex-basis: 100%;
+  display: grid;
+  gap: 0.45rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--uwe-border);
+}
+
+.command-center-user-worlds > strong {
+  font-size: 0.85rem;
+}
+
 .command-center-user-pw {
   flex-basis: 100%;
   display: flex;

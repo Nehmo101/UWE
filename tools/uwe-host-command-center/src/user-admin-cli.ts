@@ -27,11 +27,12 @@ import { readStdin } from "./cli-env";
  * getrennt gelesen und nicht in die Häkchen-Schleife gemischt.
  *
  * Actions:
- *   list                      → { ok, users: [...] }
+ *   list                      → { ok, users: [...], worlds: [...] }
  *   create   (stdin JSON)     → { ok, user }      body: { displayName, email, password,
  *                                                          portal, studio, brain, family, ai, isOwner }
  *   update   (stdin JSON)     → { ok, user }      body: { id, displayName, email, status,
- *                                                          portal, studio, brain, family, ai, isOwner }
+ *                                                          portal, studio, brain, family, ai, isOwner,
+ *                                                          worldIds? }
  *   set-password (stdin JSON) → { ok }            body: { id, password }
  *   delete <id>               → { ok, deletedId }
  */
@@ -67,6 +68,14 @@ function readAreas(input: AreaInput): Partial<Record<`${Area}Access` | "aiAccess
   return out;
 }
 
+function readWorldIds(value: unknown): string[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.some((id) => typeof id !== "string")) {
+    throw new Error("worldIds muss eine Liste von Welt-IDs sein.");
+  }
+  return [...new Set(value.map((id) => id.trim()).filter(Boolean))];
+}
+
 async function main(): Promise<void> {
   const action = process.argv[2] ?? "list";
   const db = createPrismaClient();
@@ -77,7 +86,14 @@ async function main(): Promise<void> {
   try {
     switch (action) {
       case "list": {
-        result = { ok: true, users: await users.listUsers() };
+        const [listedUsers, worlds] = await Promise.all([
+          users.listUsersForAdmin(),
+          db.world.findMany({
+            orderBy: [{ name: "asc" }],
+            select: { id: true, name: true, slug: true },
+          }),
+        ]);
+        result = { ok: true, users: listedUsers, worlds };
         break;
       }
       case "create": {
@@ -113,6 +129,7 @@ async function main(): Promise<void> {
           email?: string;
           isOwner?: boolean;
           status?: "invited" | "active" | "disabled";
+          worldIds?: unknown;
         };
         if (!input.id) throw new Error("Benutzer-ID ist erforderlich.");
         const current = await db.user.findUnique({
@@ -130,6 +147,7 @@ async function main(): Promise<void> {
           const clash = await db.user.findFirst({ where: { email, NOT: { id: input.id } } });
           if (clash) throw new Error(`Es existiert bereits ein Benutzer mit ${email}.`);
         }
+        const worldIds = readWorldIds(input.worldIds);
         const updated = await users.updateUser(input.id, {
           displayName: input.displayName?.trim() || undefined,
           email: input.email?.trim().toLowerCase(),
@@ -138,7 +156,10 @@ async function main(): Promise<void> {
           ...readAreas(input),
         });
         if (!updated) throw new Error("Benutzer konnte nicht aktualisiert werden.");
-        result = { ok: true, user: updated };
+        const user = worldIds
+          ? await users.setWorldMemberships(input.id, worldIds)
+          : await users.getUserForAdmin(input.id);
+        result = { ok: true, user };
         break;
       }
       case "set-password": {

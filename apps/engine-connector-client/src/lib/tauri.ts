@@ -295,10 +295,27 @@ export interface CommandCenterUser {
   status: string;
   hasPassword: boolean;
   createdAt: string;
+  worldMemberships: Array<{
+    id: string;
+    worldId: string;
+    characterName: string | null;
+    world: CommandCenterWorld;
+  }>;
+}
+
+export interface CommandCenterWorld {
+  id: string;
+  name: string;
+  slug: string;
 }
 
 export async function listUsers() {
-  return invokeCommand<{ ok: boolean; users: CommandCenterUser[]; message?: string }>("list_users");
+  return invokeCommand<{
+    ok: boolean;
+    users: CommandCenterUser[];
+    worlds: CommandCenterWorld[];
+    message?: string;
+  }>("list_users");
 }
 
 export async function createUser(user: {
@@ -328,6 +345,8 @@ export async function updateUser(user: {
   family?: boolean;
   /** Weglassen heisst „unverändert" — nicht „abschalten". */
   ai?: boolean;
+  /** Vollständige Auswahl; `[]` entfernt alle Weltfreigaben, weglassen ändert nichts. */
+  worldIds?: string[];
   status?: "invited" | "active" | "disabled";
 }) {
   return invokeCommand<{ ok: boolean; user?: CommandCenterUser; message?: string }>("update_user", {

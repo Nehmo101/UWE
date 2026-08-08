@@ -14,7 +14,9 @@ describe("user management and login hardening", () => {
   let databaseUrl: string;
   let auth: ReturnType<typeof createAuthService>;
   let repo: ReturnType<typeof createUweRepository>;
+  let worldAId: string;
   let worldASlug: string;
+  let worldBId: string;
   let worldBSlug: string;
   let adminUserId: string;
   let playerUserId: string;
@@ -36,7 +38,9 @@ describe("user management and login hardening", () => {
       slug: "user-mgmt-b",
       description: "Secondary test world",
     });
+    worldAId = worldA.id;
     worldASlug = worldA.slug;
+    worldBId = worldB.id;
     worldBSlug = worldB.slug;
 
 
@@ -172,6 +176,55 @@ describe("user management and login hardening", () => {
 
     const disabled = await auth.findUserById(created.id);
     assert.equal(disabled?.status, "disabled");
+    await db.$disconnect();
+  });
+
+  it("atomically replaces a user's world memberships and preserves retained character names", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const service = createUserService(db);
+    const auth = createAuthService(db);
+    const created = await auth.createUser({
+      displayName: "Multi World Player",
+      email: "multi-world@uwe.local",
+      password: TEST_PASSWORD,
+      portalAccess: true,
+    });
+    await service.upsertWorldMembership({
+      userId: created.id,
+      worldId: worldAId,
+      characterName: "Bestehender Held",
+    });
+
+    const both = await service.setWorldMemberships(created.id, [worldBId, worldAId, worldAId], adminUserId);
+    assert.deepEqual(both.worldMemberships.map((membership) => membership.worldId).sort(), [worldAId, worldBId].sort());
+    assert.equal(
+      both.worldMemberships.find((membership) => membership.worldId === worldAId)?.characterName,
+      "Bestehender Held",
+    );
+
+    const onlyB = await service.setWorldMemberships(created.id, [worldBId], adminUserId);
+    assert.deepEqual(onlyB.worldMemberships.map((membership) => membership.worldId), [worldBId]);
+    await db.$disconnect();
+  });
+
+  it("rejects unknown worlds without changing existing memberships", async () => {
+    const db = createPrismaClient(databaseUrl);
+    const service = createUserService(db);
+    const auth = createAuthService(db);
+    const created = await auth.createUser({
+      displayName: "Validated World Player",
+      email: "validated-world@uwe.local",
+      password: TEST_PASSWORD,
+      portalAccess: true,
+    });
+    await service.upsertWorldMembership({ userId: created.id, worldId: worldAId });
+
+    await assert.rejects(
+      () => service.setWorldMemberships(created.id, [worldBId, "missing-world"], adminUserId),
+      /WORLD_NOT_FOUND/,
+    );
+    const unchanged = await service.getUserForAdmin(created.id);
+    assert.deepEqual(unchanged?.worldMemberships.map((membership) => membership.worldId), [worldAId]);
     await db.$disconnect();
   });
 
