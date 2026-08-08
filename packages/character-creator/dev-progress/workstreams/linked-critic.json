@@ -1,0 +1,44 @@
+{
+  "workstreamId": "linked",
+  "verdict": "APPROVED",
+  "criticModel": "composer-2.5-fast",
+  "defects": [
+    {
+      "id": "L-01",
+      "severity": "major",
+      "status": "open",
+      "summary": "Grad 2–9 spells absent from catalog (~320 SRD entries) — documented in linked-sources.json spellsBlockedByLevel and missing-data.md §3; engineering follow-up, not a defect in URL inventory."
+    },
+    {
+      "id": "L-02",
+      "severity": "major",
+      "status": "open",
+      "summary": "No ADVENTURING_GEAR / tools pickable table — pack strings and background equipment only; documented for equipment:adventuring-gear URL; SRD import path when structured inventory is wired."
+    }
+  ],
+  "acceptanceConditions": [
+    "DONE — All seven wikidot URLs from the source list appear in linked-sources.json with an explicit outcome field.",
+    "DONE — summaryCounts and linked.json outcomesByUrl reconcile: 2 already-in-catalog, 2 blocked-needs-fetch, 3 excluded (7 total).",
+    "DONE — source-entities.json links[] mirrors the same seven URLs with outcomes — no silent skips.",
+    "DONE — Policy states do-not-scrape wikidot; legalNote on every URL marks wikidot as blocked-copyright scrape source; importedEntries remains 0.",
+    "DONE — already-in-catalog claims cross-check equipment.ts WEAPONS (38) / ARMOR (13) and spells L0–1 (84 = 27 + 57).",
+    "DONE — blocked-needs-fetch URLs document SRD 5.2.1 (CC-BY-4.0) as the only legal import path.",
+    "Downstream — L-01 SRD spell import levels 2–9; L-02 optional ADVENTURING_GEAR table (never from wikidot)."
+  ],
+  "urlReview": {
+    "http://dnd2024.wikidot.com/magic-item:all": "PASS — outcome excluded; L1 creator scope; magic items not cataloged",
+    "http://dnd2024.wikidot.com/equipment:armor": "PASS — outcome already-in-catalog; ARMOR 13 entries",
+    "http://dnd2024.wikidot.com/equipment:weapon": "PASS — outcome already-in-catalog; WEAPONS 38 entries",
+    "http://dnd2024.wikidot.com/equipment:adventuring-gear": "PASS — outcome blocked-needs-fetch; partial pack/background strings only",
+    "http://dnd2024.wikidot.com/equipment:mounts-and-vehicles": "PASS — outcome excluded; not referenced by L1 creator",
+    "http://dnd2024.wikidot.com/equipment:poison": "PASS — outcome excluded; not referenced by L1 creator",
+    "http://dnd2024.wikidot.com/spell:all": "PASS — outcome blocked-needs-fetch; L0–1 present, L2–9 absent with spellsBlockedByLevel detail"
+  },
+  "legalReview": {
+    "wikidotScrape": "PASS — no repo content sourced from wikidot; compare-names-only inventory",
+    "srdImportPath": "PASS — blocked gaps explicitly route to SRD 5.2.1 pipeline",
+    "phbOnlyWarning": "PASS — spellsBlockedByLevel.phbOnlyOnWikidot warns against non-SRD PHB spells"
+  },
+  "reviewedAt": "2026-08-08T15:38:00+02:00",
+  "notes": "Linked workstream deliverable is inventory and outcome classification, not catalog import. Every URL accounted for; counts consistent across linked-sources.json, linked.json, and source-entities.json. L-01/L-02 are expected open catalog gaps tracked for future SRD engineering — they do not invalidate the inventory workstream."
+}

@@ -33,9 +33,11 @@ import {
   ABILITY_SHORT,
   findAlignment,
   findFeat,
+  findInvention,
   findLanguage,
   findSpell,
   formatModifier,
+  resolveSpeciesSize,
   stepMeta,
   type AbilityKey,
   type CharacterDetails,
@@ -328,7 +330,14 @@ export function ReviewStep({
             {species?.lineages?.length ? (
               <Row label={species.lineageLabel ?? "Abstammung"} value={lineage?.name ?? "—"} />
             ) : null}
-            <Row label="Größe" value={species ? SIZE_LABELS[species.size] : "—"} />
+            <Row
+              label="Größe"
+              value={
+                species
+                  ? (SIZE_LABELS[resolveSpeciesSize(species, lineage, draft.sizeKey) ?? species.size] ?? "—")
+                  : "—"
+              }
+            />
             <Row
               label="Dunkelsicht"
               value={preview.darkvision ? `${preview.darkvision} Fuß` : "keine"}
@@ -347,6 +356,12 @@ export function ReviewStep({
             <Row label="Klasse" value={dndClass ? `${dndClass.name} · Stufe 1` : "—"} />
             {subclass ? (
               <Row label={dndClass?.subclassLabel ?? "Spezialisierung"} value={subclass.name} />
+            ) : null}
+            {draft.inventionKey ? (
+              <Row
+                label="Invention"
+                value={findInvention(draft.inventionKey)?.name ?? draft.inventionKey}
+              />
             ) : null}
             <Row label="Rüstung" value={dndClass?.armorProficiencies.join(", ") || "keine"} />
             <Row label="Waffen" value={dndClass?.weaponProficiencies.join(", ") || "keine"} />

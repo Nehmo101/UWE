@@ -206,6 +206,14 @@ export function CharacterWizard({ worldSlug, createAction }: CharacterWizardProp
                   : validation.complete
                     ? "done"
                     : "todo";
+            const stateLabel =
+              state === "current"
+                ? "aktueller Schritt"
+                : state === "done"
+                  ? "abgeschlossen"
+                  : state === "skipped"
+                    ? "übersprungen"
+                    : "offen";
             return (
               <button
                 key={entry.key}
@@ -214,6 +222,7 @@ export function CharacterWizard({ worldSlug, createAction }: CharacterWizardProp
                 data-step={entry.key}
                 data-state={state}
                 aria-current={entry.key === step ? "step" : undefined}
+                aria-label={`${entry.label}, Schritt ${index + 1} von ${CREATOR_STEPS.length}, ${stateLabel}`}
                 onClick={() => goTo(entry.key)}
               >
                 <span className="cw-step__index" aria-hidden="true">
@@ -273,7 +282,7 @@ export function CharacterWizard({ worldSlug, createAction }: CharacterWizardProp
         <div className="cw-footer">
           {previousStep ? (
             <Button variant="outline" onClick={() => goTo(previousStep)}>
-              <NavIcon name="arrow-left" width={16} height={16} />
+              <NavIcon name="arrow-left" width={16} height={16} aria-hidden="true" />
               {STEP_META[currentIndex - 1].label}
             </Button>
           ) : null}
@@ -281,7 +290,7 @@ export function CharacterWizard({ worldSlug, createAction }: CharacterWizardProp
           <span className="cw-footer__spacer" />
 
           {currentValidation.issues.length > 0 ? (
-            <span className="cw-footer__hint" data-tone="blocked">
+            <span className="cw-footer__hint" data-tone="blocked" role="status">
               {currentValidation.issues[0]}
             </span>
           ) : null}
@@ -289,7 +298,7 @@ export function CharacterWizard({ worldSlug, createAction }: CharacterWizardProp
           {nextStep ? (
             <Button onClick={() => goTo(nextStep)}>
               {STEP_META[currentIndex + 1].label}
-              <NavIcon name="arrow-right" width={16} height={16} />
+              <NavIcon name="arrow-right" width={16} height={16} aria-hidden="true" />
             </Button>
           ) : null}
         </div>

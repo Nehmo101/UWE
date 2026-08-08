@@ -1,0 +1,37 @@
+﻿{
+  "workstreamId": "existing-impl",
+  "title": "Existing Character Creator + species/NPC reference inventory",
+  "status": "completed",
+  "criticVerdict": "APPROVED",
+  "model": "composer-2.5-fast",
+  "deliverables": [
+    "packages/character-creator/dev-progress/legacy-species-inventory.md",
+    "packages/character-creator/dev-progress/legacy-species-inventory.json",
+    "packages/character-creator/dev-progress/workstreams/existing-impl.json"
+  ],
+  "counts": {
+    "catalogSpecies": 9,
+    "catalogLineages": 24,
+    "charactersTotal": 0,
+    "charactersWithSpeciesJson": 0,
+    "charactersWithoutSpeciesJson": 0
+  },
+  "findings": {
+    "implementationComplete": true,
+    "catalogPackage": "@uwe/character-creator",
+    "portalWizardRoute": "/auth/worlds/[worldSlug]/characters/neu",
+    "persistencePath": "Portal createFullCharacterAction -> PlayerCharacterService.createFullCharacter -> Character.species JSON",
+    "separateSpeciesTable": false,
+    "separateNpcTable": false,
+    "npcSpeciesMigrationNeeded": false,
+    "localDbEmpty": true,
+    "sizeChoiceWizardGap": "mensch/tiefling expose sizeChoice in catalog; draft/buildSpeciesJson persist default species.size only"
+  },
+  "nextWorkstreams": [
+    "species-key-migration-mapping",
+    "catalog-import-or-removal",
+    "production-db-species-audit"
+  ],
+  "blockers": [],
+  "criticReviewedAt": "2026-08-08T15:16:00+02:00"
+}

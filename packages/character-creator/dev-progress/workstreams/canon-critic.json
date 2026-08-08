@@ -1,0 +1,15 @@
+{
+  "workstreamId": "canon",
+  "verdict": "APPROVED",
+  "defects": [],
+  "acceptanceConditions": [
+    "Add a binding 'Rewrite default until Owner resolves C-01/C-02' section: Arbor = northern forest region (terra-seed) only; Nepurga = political realm only; forbid goddess/fairy-queen Arbor/Nepurga unless Owner explicitly selects Legacy; world-tree / zerrissener-Planet tone only when the text is explicitly cosmological and must not equate tree-Arbor with region-Arbor or goddess-Arbor. — MET (§1.1)",
+    "Rewrite canon.json nextAction so it does not instruct agents to blend terra-seed places with Terra map cosmology as a default; state priority (CC player flavour → terra-seed; map mythos opt-in). — MET",
+    "In §8 tone rules, add an explicit exception: Ability score display names stay English (Strength, Dexterity, Constitution, Intelligence, Wisdom, Charisma); keys stay lowercase English — never Stärke/Geschicklichkeit in rewritten CC copy. — MET (§8.3)",
+    "In §10, remove ASSUMPTION/offen for lore-rewrite Ability names; state mandatory EN names for flavour/mechanics text; keep UI package ABILITY_LABELS DE→EN as a separate tracked product defect (C-05) if needed. — MET",
+    "Keep Tegora/FR/Kanka as Nicht-Kanon (already OK); keep invented lore marked ASSUMPTION (already mostly OK); do not present Legacy seed as usable default flavour. — MET",
+    "Optional but recommended: one short before/after rewrite example (Tegora/Sword Coast → Validori/Nepurga/Arbor-Saum) demonstrating the defaults. — MET (§11)"
+  ],
+  "reviewedAt": "2026-08-08T15:11:00+02:00",
+  "notes": "Re-review after fixes. §1.1 is a single binding rewrite contract (region-Arbor, Reich-Nepurga; map cosmology opt-in; Legacy only on Owner choice). canon.json nextAction no longer invites default blend. Ability EN is hard in §8.3 and §10; C-05 is correctly scoped as UI product defect, not lore softening. Tegora/FR ban and ASSUMPTION hygiene intact; §11 worked example demonstrates defaults. Owner-blocked C-01–C-04 and UI C-05 remain documented open defects but do not block this workstream artifact. Verdict: APPROVED."
+}

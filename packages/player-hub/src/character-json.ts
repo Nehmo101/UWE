@@ -26,6 +26,7 @@
  *      Zugriffsregeln — es übersetzt Katalog in Spaltenform, sonst nichts.
  */
 
+import { resolveSpeciesSize, findInvention } from "@uwe/character-creator";
 import type {
   AbilityKey,
   Alignment,
@@ -156,13 +157,14 @@ export interface ResolvedCharacterCatalog {
 export function buildSpeciesJson(
   species: Species,
   lineage: SpeciesLineage | null,
+  sizeKey?: CreatureSize | null,
 ): CharacterSpeciesJson {
   return {
     schemaVersion: CHARACTER_JSON_SCHEMA_VERSION,
     key: species.key,
     name: species.name,
     nameEn: species.nameEn,
-    size: species.size,
+    size: resolveSpeciesSize(species, lineage, sizeKey) ?? species.size,
     speed: lineage?.speed ?? species.speed,
     // `lineage.darkvision` darf ausdrücklich `null` sein („diese Abstammung
     // sieht im Dunkeln nichts"), deshalb `undefined`-Prüfung statt `??`.
@@ -194,7 +196,10 @@ export function buildBackgroundJson(
   };
 }
 
-export function buildFeaturesJson(catalog: ResolvedCharacterCatalog): CharacterFeaturesJson {
+export function buildFeaturesJson(
+  catalog: ResolvedCharacterCatalog,
+  inventionKey?: string | null,
+): CharacterFeaturesJson {
   const entries: CharacterFeatureEntry[] = [];
 
   const push = (
@@ -218,6 +223,16 @@ export function buildFeaturesJson(catalog: ResolvedCharacterCatalog): CharacterF
     push("lineage", catalog.lineage.name, catalog.lineage.traits);
   }
   push("class", catalog.dndClass.name, catalog.dndClass.features);
+  const invention = inventionKey ? findInvention(inventionKey) : null;
+  if (invention) {
+    entries.push({
+      name: invention.name,
+      description: invention.description,
+      level: 1,
+      origin: "class",
+      originName: catalog.dndClass.name,
+    });
+  }
   if (catalog.subclass) {
     push("subclass", catalog.subclass.name, catalog.subclass.features);
   }
@@ -280,11 +295,12 @@ export function buildCharacterJsonColumns(
   catalog: ResolvedCharacterCatalog,
   details: CharacterDetails,
   abilityBonus: Partial<Record<AbilityKey, number>>,
+  options?: { sizeKey?: CreatureSize | null; inventionKey?: string | null },
 ): CharacterJsonColumns {
   return {
-    species: buildSpeciesJson(catalog.species, catalog.lineage),
+    species: buildSpeciesJson(catalog.species, catalog.lineage, options?.sizeKey),
     background: buildBackgroundJson(catalog.background, catalog.originFeat, abilityBonus),
-    features: buildFeaturesJson(catalog),
+    features: buildFeaturesJson(catalog, options?.inventionKey),
     bio: buildBioJson(details, catalog.alignment),
   };
 }

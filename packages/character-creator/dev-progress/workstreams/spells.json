@@ -1,0 +1,83 @@
+{
+  "id": "spells",
+  "name": "SRD spells L2–9 (Open5e wotc-srd import)",
+  "agent": "composer-2.5-fast",
+  "status": "completed",
+  "criticVerdict": "APPROVED",
+  "criticModel": "composer-2.5-fast",
+  "criticReviewedAt": "2026-08-08T18:22:00+02:00",
+  "criticFile": "packages/character-creator/dev-progress/workstreams/spells-critic.json",
+  "discoveredEntries": 246,
+  "importedEntries": 246,
+  "blockedEntries": 0,
+  "openDefects": ["S-04", "S-06", "S-07", "S-08"],
+  "fixedDefects": ["S-01", "S-02", "S-03", "S-05", "S-09"],
+  "partialDefects": ["S-06"],
+  "openDefectNotes": {
+    "S-01": "FIXED — structural German hooks on all 246 entries",
+    "S-02": "FIXED — word-salad EN/DE hybrid eliminated; Kernwirkung labeled English lead",
+    "S-03": "FIXED — 0/246 English display names (was 121); all German names",
+    "S-04": "English snake_case keys (acid_arrow); not L0–L1 German keys — non-blocking",
+    "S-05": "FIXED — no dexterity-Rettungswurf / wisdom saving throw hybrids",
+    "S-06": "PARTIAL — range meters OK; Until dispelled / miles / English castingTime remain — non-blocking",
+    "S-07": "Material components left in English — non-blocking",
+    "S-08": "Open5e 2014 text tagged SRD 5.2.1 — attribution generation mismatch — non-blocking",
+    "S-09": "FIXED — headers match structure; German names on all 246 entries"
+  },
+  "keysAdded": "246 L2–9 spell keys (English snake_case — see S-04)",
+  "alreadyPresent": [
+    "spells-cantrips.ts (27)",
+    "spells-level1-a-f.ts + spells-level1-g-z.ts (57)"
+  ],
+  "source": "Open5e v1 spells document__slug=wotc-srd (CC-BY-4.0); 2014-era SRD text — see dev-progress/spells-l2-l9-import.json",
+  "files": [
+    "packages/character-creator/dev-progress/spells-l2-l9-import.json",
+    "packages/character-creator/src/content/index.ts",
+    "packages/character-creator/src/content/spells-level2-a.ts",
+    "packages/character-creator/src/content/spells-level2-b.ts",
+    "packages/character-creator/src/content/spells-level2.ts",
+    "packages/character-creator/src/content/spells-level3-a.ts",
+    "packages/character-creator/src/content/spells-level3-b.ts",
+    "packages/character-creator/src/content/spells-level3.ts",
+    "packages/character-creator/src/content/spells-level4-a.ts",
+    "packages/character-creator/src/content/spells-level4-b.ts",
+    "packages/character-creator/src/content/spells-level4.ts",
+    "packages/character-creator/src/content/spells-level5-a.ts",
+    "packages/character-creator/src/content/spells-level5-b.ts",
+    "packages/character-creator/src/content/spells-level5.ts",
+    "packages/character-creator/src/content/spells-level6-a.ts",
+    "packages/character-creator/src/content/spells-level6-b.ts",
+    "packages/character-creator/src/content/spells-level6.ts",
+    "packages/character-creator/src/content/spells-level7.ts",
+    "packages/character-creator/src/content/spells-level8.ts",
+    "packages/character-creator/src/content/spells-level9.ts"
+  ],
+  "countsByLevel": {
+    "0": 27,
+    "1": 57,
+    "2": 54,
+    "3": 42,
+    "4": 31,
+    "5": 37,
+    "6": 31,
+    "7": 20,
+    "8": 16,
+    "9": 15,
+    "total": 330
+  },
+  "optionBCompliance": {
+    "germanHook": "246/246",
+    "germanStructuralPreamble": "246/246",
+    "labeledKernwirkung": "246/246",
+    "germanDisplayName": "246/246",
+    "wordSaladHybrid": "0/246"
+  },
+  "nextAction": "Optional follow-ups: localize duration/castingTime/material strings (S-06/S-07); decide key convention or bilingual map (S-04); reconcile S-08 import metadata.",
+  "lastUpdate": "2026-08-08T18:22:00+02:00",
+  "testSummary": {
+    "command": "pnpm --filter @uwe/character-creator test",
+    "pass": 61,
+    "fail": 0,
+    "suites": 13
+  }
+}

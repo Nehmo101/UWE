@@ -1,0 +1,51 @@
+{
+  "workstreamId": "feats",
+  "verdict": "APPROVED",
+  "defects": [
+    {
+      "id": "F-01",
+      "severity": "major",
+      "status": "fixed",
+      "summary": "Heiler benefit „Heilungswurf neu“ truncated verb „wiederherst“ — now „wiederherstellst“."
+    },
+    {
+      "id": "F-02",
+      "severity": "minor",
+      "status": "open",
+      "summary": "No catalog test asserts that the seven extended origin feats use OWNER_NOTES_SOURCE (not SRD_SOURCE); integrity relies on manual review only."
+    },
+    {
+      "id": "F-03",
+      "severity": "minor",
+      "status": "open",
+      "summary": "PHB backgrounds in dev-progress/backgrounds-parsed.json still reference Crafter/Healer/Lucky/… by English name; backgrounds.ts does not yet wire originFeat to handwerker/heiler/glueckspilz/musiker/wirtshausraufbold/zaeh/kampfeinweihung (feats.json nextAction remains open)."
+    }
+  ],
+  "acceptanceConditions": [
+    "DONE — Heiler „Heilungswurf neu“ uses complete verb „wiederherstellst“; sentence reads naturally.",
+    "Keep all seven keys stable and ASCII-lowercase: handwerker, kampfeinweihung, heiler, glueckspilz, musiker, wirtshausraufbold, zaeh.",
+    "Keep source: OWNER_NOTES_SOURCE on every entry in feats-origin-extended.ts; do not label these as SRD 5.2.1.",
+    "Keep ability score display names English in user-facing feat copy (Strength in Wirtshausraufbold; no Stärke/Geschicklichkeit in benefit text).",
+    "Keep player-facing lore free of Tegora/Kanka/FR references (code comment may mention exclusion; content must not).",
+    "Add a catalog-integrity assertion (or focused test) that ORIGIN_FEATS_EXTENDED entries all carry OWNER_NOTES_SOURCE and category origin. (F-02, non-blocking)",
+    "Wire PHB background originFeat keys to the new feat keys when the backgrounds workstream lands; catalog-integrity „jedes Ursprungstalent eines Hintergrunds existiert“ must stay green. (F-03, non-blocking)",
+    "Mechanics spot-check: Crafter 3 tools + 20% discount + long-rest fast craft table; Fighting Initiate style pick/swap on level-up; Healer kit Utilize + HP-die reroll on 1; Lucky points = PB, Advantage on D20 Test / Disadvantage on attacks vs you; Musician 3 instruments + Heroic Inspiration after short/long rest; Tavern Brawler 1d4+Strength unarmed, damage reroll 1, improvised proficiency, 5 ft push once/turn; Tough 2× level HP then +2/level."
+  ],
+  "mechanicsReview": {
+    "handwerker": "PASS — matches Crafter (Tool Proficiency, Discount, Fast Crafting table)",
+    "kampfeinweihung": "PASS — matches Fighting Initiate (style pick, swap on new level)",
+    "heiler": "PASS — matches Healer (Battle Medic, Healing Rerolls); F-01 copy fixed (wiederherstellst)",
+    "glueckspilz": "PASS — matches Lucky (Luck Points, Advantage, Disadvantage)",
+    "musiker": "PASS — matches Musician (Instrument Training, Encouraging Song)",
+    "wirtshausraufbold": "PASS — matches Tavern Brawler (Enhanced Unarmed, reroll 1, Improvised, Push)",
+    "zaeh": "PASS — matches Tough (2× level at gain, +2 per level thereafter)"
+  },
+  "wiringReview": {
+    "featsTsSpread": "PASS — ORIGIN_FEATS_EXTENDED spread into FEATS after SRD origin block",
+    "duplicateKeys": "PASS — no overlap with existing FEATS keys",
+    "findFeat": "PASS — all seven keys resolvable via findFeat",
+    "tests": "PASS — pnpm --filter @uwe/character-creator test (58/58)"
+  },
+  "reviewedAt": "2026-08-08T15:16:00+02:00",
+  "notes": "Re-review after F-01 fix. Heiler „Heilungswurf neu“ now reads „…dieses Talents wiederherstellst, darfst du…“. No new blockers. F-02/F-03 remain minor follow-ups (catalog test; background wiring) and do not block approval."
+}

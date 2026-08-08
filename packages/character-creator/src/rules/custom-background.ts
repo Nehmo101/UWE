@@ -1,25 +1,13 @@
 /**
  * Der Eigenbau-Hintergrund.
  *
- * Das SRD 5.2.1 liefert vier Hintergründe. Seit der Fassung 2024 hängt am
- * Hintergrund aber die **Attributsverteilung** — und die vier decken nur die
- * Tripel INT/WEI/CHA, GES/KON/INT, KON/INT/WEI und STÄ/GES/KON ab. Drei
- * Klassen finden darunter keinen Hintergrund, der beide Primärattribute
- * anhebt:
+ * Historisch deckten die vier SRD-Hintergründe nicht jede Primärattribut-
+ * Paarung ab (Paladin, Mönch, Waldläufer). Seit dem Import der zwölf
+ * Owner-Notizen-Hintergründe (`backgrounds-extended.ts`) findet jede
+ * Standardklasse im Katalog eine passende Verteilung — der Eigenbau bleibt
+ * trotzdem: für Kampagnen-Sonderfälle und Spieler, die bewusst abweichen.
  *
- *   Paladin (STÄ+CHA) · Mönch (GES+WEI) · Waldläufer (GES+WEI)
- *
- * Betroffen sind nur Klassen mit ZWEI Primärattributen; wer eines hat, findet
- * immer einen passenden. Die verlässliche Fassung dieser Rechnung ist
- * `classesWithoutMatchingBackground()` weiter unten — nicht dieser Absatz.
- *
- * Diese Spieler müssten ihren wichtigsten Wert ungeboostet lassen. Die
- * fehlenden zwölf Hintergründe aus dem Spielerhandbuch nachzuschreiben ist
- * keine Option — sie stehen nicht unter CC-BY.
- *
- * Der Ausweg steht im SRD selbst: Es beschreibt, **wie man einen Hintergrund
- * baut**. Dieser Bauplan ist lizenziert, und er macht aus der Lücke ein
- * Werkzeug. Genau ihn setzt diese Datei um:
+ * Der Bauplan steht im SRD selbst und ist lizenziert:
  *
  *   1. Drei Attribute wählen; darauf +2/+1 oder +1/+1/+1 verteilen.
  *   2. Zwei Fertigkeiten wählen.

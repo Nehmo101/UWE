@@ -1,0 +1,912 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-08T15:05:34",
+  "sourceKind": "Kanka HTML-export PDFs from app.kanka.io/w/tegora",
+  "summary": {
+    "classFiles": 14,
+    "backgroundsDiscovered": 16,
+    "featsDiscovered": 13,
+    "speciesDiscovered": 17,
+    "linkedSources": 7,
+    "subclassHints": 85
+  },
+  "classes": [
+    {
+      "nameEn": "Artificer",
+      "sourceFile": "Klassen__Artificer - Notizen.pdf.txt",
+      "chars": 80735,
+      "outcome": "discovered",
+      "subclasses": [
+        {
+          "nameEn": "Creating an Artificer",
+          "parentClass": "Artificer",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Experimental Elixir Table Artificer",
+          "parentClass": "Artificer",
+          "outcome": "discovered"
+        }
+      ],
+      "tegoraRefs": 34,
+      "eberronRefs": 4
+    },
+    {
+      "nameEn": "Barbarian",
+      "sourceFile": "Klassen__Barbarian - Notizen.pdf.txt",
+      "chars": 41207,
+      "outcome": "discovered",
+      "subclasses": [
+        {
+          "nameEn": "Path of the Ancestral Guardian",
+          "parentClass": "Barbarian",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Path of the Battlerager",
+          "parentClass": "Barbarian",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Path of the Beast",
+          "parentClass": "Barbarian",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Path of the Berserker",
+          "parentClass": "Barbarian",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Path of the Giant",
+          "parentClass": "Barbarian",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Path of the Storm Herald",
+          "parentClass": "Barbarian",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Path of the Wild Heart",
+          "parentClass": "Barbarian",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Path of Wild Magic",
+          "parentClass": "Barbarian",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Path of the World Tree",
+          "parentClass": "Barbarian",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Path of the Zealot",
+          "parentClass": "Barbarian",
+          "outcome": "discovered"
+        }
+      ],
+      "tegoraRefs": 16,
+      "eberronRefs": 0
+    },
+    {
+      "nameEn": "Bard",
+      "sourceFile": "Klassen__Bard - Notizen.pdf.txt",
+      "chars": 53191,
+      "outcome": "discovered",
+      "subclasses": [
+        {
+          "nameEn": "College of Creation",
+          "parentClass": "Bard",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "College of Dance",
+          "parentClass": "Bard",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "College of Eloquence",
+          "parentClass": "Bard",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "College of Glamour",
+          "parentClass": "Bard",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "College of Lore",
+          "parentClass": "Bard",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "College of Spirits",
+          "parentClass": "Bard",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "College of Swords",
+          "parentClass": "Bard",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "College of Valor",
+          "parentClass": "Bard",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "College of Whispers",
+          "parentClass": "Bard",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "College of the Moon",
+          "parentClass": "Bard",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "As a Multiclass Bard",
+          "parentClass": "Bard",
+          "outcome": "discovered"
+        }
+      ],
+      "tegoraRefs": 23,
+      "eberronRefs": 0
+    },
+    {
+      "nameEn": "Bloodhunter",
+      "sourceFile": "Klassen__Bloodhunter - Notizen.pdf.txt",
+      "chars": 62763,
+      "outcome": "discovered",
+      "subclasses": [
+        {
+          "nameEn": "hunters have mastered the secretive",
+          "parentClass": "Bloodhunter",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Hunter’s Bane that starts them on this path.",
+          "parentClass": "Bloodhunter",
+          "outcome": "discovered"
+        }
+      ],
+      "tegoraRefs": 22,
+      "eberronRefs": 0
+    },
+    {
+      "nameEn": "Cleric",
+      "sourceFile": "Klassen__Cleric - Notizen.pdf.txt",
+      "chars": 58814,
+      "outcome": "discovered",
+      "subclasses": [
+        {
+          "nameEn": "Circle of Power Abjuration C",
+          "parentClass": "Cleric",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Domain.",
+          "parentClass": "Cleric",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "As a Multiclass Cleric",
+          "parentClass": "Cleric",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "War Domain Spells Cleric",
+          "parentClass": "Cleric",
+          "outcome": "discovered"
+        }
+      ],
+      "tegoraRefs": 25,
+      "eberronRefs": 0
+    },
+    {
+      "nameEn": "Druid",
+      "sourceFile": "Klassen__Druid - Notizen.pdf.txt",
+      "chars": 50412,
+      "outcome": "discovered",
+      "subclasses": [
+        {
+          "nameEn": "Circle of Dreams",
+          "parentClass": "Druid",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Circle of Dreams Spells",
+          "parentClass": "Druid",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Circle of the Land",
+          "parentClass": "Druid",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Circle of the Moon",
+          "parentClass": "Druid",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Circle of the Moon Spells",
+          "parentClass": "Druid",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Circle of the Sea",
+          "parentClass": "Druid",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Circle of the Sea Spells",
+          "parentClass": "Druid",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Circle of the Shepherd",
+          "parentClass": "Druid",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Circle of Spores",
+          "parentClass": "Druid",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Circle of Spores Spells",
+          "parentClass": "Druid",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Circle of the Stars",
+          "parentClass": "Druid",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Circle of Wildfire",
+          "parentClass": "Druid",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Circle of Wildfire Spells",
+          "parentClass": "Druid",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "As a Multiclass Druid",
+          "parentClass": "Druid",
+          "outcome": "discovered"
+        }
+      ],
+      "tegoraRefs": 23,
+      "eberronRefs": 0
+    },
+    {
+      "nameEn": "Fighter",
+      "sourceFile": "Klassen__Fighter - Notizen.pdf.txt",
+      "chars": 56293,
+      "outcome": "discovered",
+      "subclasses": [
+        {
+          "nameEn": "As a Multiclass Fighter",
+          "parentClass": "Fighter",
+          "outcome": "discovered"
+        }
+      ],
+      "tegoraRefs": 21,
+      "eberronRefs": 0
+    },
+    {
+      "nameEn": "Monk",
+      "sourceFile": "Klassen__Monk - Notizen.pdf.txt",
+      "chars": 43394,
+      "outcome": "discovered",
+      "subclasses": [
+        {
+          "nameEn": "Warrior of the Ascendant Dragon",
+          "parentClass": "Monk",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Warrior of the Astral Self",
+          "parentClass": "Monk",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Warrior of the Aeon Verity",
+          "parentClass": "Monk",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Warrior of the Elements",
+          "parentClass": "Monk",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Warrior of the Long Death",
+          "parentClass": "Monk",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Warrior of Mercy",
+          "parentClass": "Monk",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Warrior of the Open Hand",
+          "parentClass": "Monk",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Warrior of Shadow",
+          "parentClass": "Monk",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Warrior of the Sun Soul",
+          "parentClass": "Monk",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "As a Multiclass Monk",
+          "parentClass": "Monk",
+          "outcome": "discovered"
+        }
+      ],
+      "tegoraRefs": 17,
+      "eberronRefs": 0
+    },
+    {
+      "nameEn": "Paladin",
+      "sourceFile": "Klassen__Paladin - Notizen.pdf.txt",
+      "chars": 52251,
+      "outcome": "discovered",
+      "subclasses": [
+        {
+          "nameEn": "Circle of Power Abjuration C",
+          "parentClass": "Paladin",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Oath of the Ancients",
+          "parentClass": "Paladin",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Oath of the Ancients Spells",
+          "parentClass": "Paladin",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Oath of Conquest",
+          "parentClass": "Paladin",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Oath of Conquest Spells",
+          "parentClass": "Paladin",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Oath of the Crown",
+          "parentClass": "Paladin",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Oath of the Crown Spells",
+          "parentClass": "Paladin",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Oath of Devotion",
+          "parentClass": "Paladin",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Oath of Devotion Spells",
+          "parentClass": "Paladin",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Oath of Glory",
+          "parentClass": "Paladin",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Oath of Glory Spells",
+          "parentClass": "Paladin",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Oath of the Open Sea",
+          "parentClass": "Paladin",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Oath of the Open Sea Spells",
+          "parentClass": "Paladin",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Oath of Redemption",
+          "parentClass": "Paladin",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Oath of Redemption Spells",
+          "parentClass": "Paladin",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Oath of Vengeance",
+          "parentClass": "Paladin",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Oath of Vengeance Spells",
+          "parentClass": "Paladin",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Oath of the Watchers",
+          "parentClass": "Paladin",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Oath of the Watchers Spells",
+          "parentClass": "Paladin",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Oath of Treachery",
+          "parentClass": "Paladin",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Oath of the Noble Genies",
+          "parentClass": "Paladin",
+          "outcome": "discovered"
+        }
+      ],
+      "tegoraRefs": 22,
+      "eberronRefs": 0
+    },
+    {
+      "nameEn": "Ranger",
+      "sourceFile": "Klassen__Ranger - Notizen.pdf.txt",
+      "chars": 45834,
+      "outcome": "discovered",
+      "subclasses": [
+        {
+          "nameEn": "Hunter",
+          "parentClass": "Ranger",
+          "outcome": "discovered"
+        }
+      ],
+      "tegoraRefs": 21,
+      "eberronRefs": 0
+    },
+    {
+      "nameEn": "Rogue",
+      "sourceFile": "Klassen__Rogue - Notizen.pdf.txt",
+      "chars": 41421,
+      "outcome": "discovered",
+      "subclasses": [],
+      "tegoraRefs": 17,
+      "eberronRefs": 1
+    },
+    {
+      "nameEn": "Sorcerer",
+      "sourceFile": "Klassen__Sorcerer - Notizen.pdf.txt",
+      "chars": 58427,
+      "outcome": "discovered",
+      "subclasses": [
+        {
+          "nameEn": "Circle of Death Necromancy M",
+          "parentClass": "Sorcerer",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Psionic Spells Sorcerer",
+          "parentClass": "Sorcerer",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Clockwork Spells Sorcerer",
+          "parentClass": "Sorcerer",
+          "outcome": "discovered"
+        }
+      ],
+      "tegoraRefs": 26,
+      "eberronRefs": 1
+    },
+    {
+      "nameEn": "Warlock",
+      "sourceFile": "Klassen__Warlock - Notizen.pdf.txt",
+      "chars": 58964,
+      "outcome": "discovered",
+      "subclasses": [
+        {
+          "nameEn": "Origin feat.",
+          "parentClass": "Warlock",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Circle of Death Necromancy M",
+          "parentClass": "Warlock",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Archfey Spells Warlock",
+          "parentClass": "Warlock",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Celestial Spells Warlock",
+          "parentClass": "Warlock",
+          "outcome": "discovered"
+        }
+      ],
+      "tegoraRefs": 25,
+      "eberronRefs": 0
+    },
+    {
+      "nameEn": "Wizard",
+      "sourceFile": "Klassen__Wizard - Notizen.pdf.txt",
+      "chars": 63619,
+      "outcome": "discovered",
+      "subclasses": [
+        {
+          "nameEn": "Circle of Power Abjuration C",
+          "parentClass": "Wizard",
+          "outcome": "discovered"
+        },
+        {
+          "nameEn": "Circle of Death Necromancy M",
+          "parentClass": "Wizard",
+          "outcome": "discovered"
+        }
+      ],
+      "tegoraRefs": 27,
+      "eberronRefs": 0
+    }
+  ],
+  "backgrounds": [
+    {
+      "nameEn": "Acolyte",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Artisan",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Charlatan",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Criminal",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Entertainer",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Farmer",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Guard",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Guide",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Hermit",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Merchant",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Noble",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Sage",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Sailor",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Scribe",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Soldier",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Wayfarer",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    }
+  ],
+  "feats": [
+    {
+      "nameEn": "Alert",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Crafter",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Fighting Initiate",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Healer",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Lucky",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Magic Initiate",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Musician",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Savage Attacker",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Skilled",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Tavern Brawler",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Tough",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Profil",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Owner-supplied Tegora notes"
+    },
+    {
+      "nameEn": "Verlauf",
+      "occurrence": "section",
+      "outcome": "discovered",
+      "licenseNote": "Owner-supplied Tegora notes"
+    }
+  ],
+  "species": [
+    {
+      "nameEn": "Dwarf",
+      "occurrence": "mention",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Elf",
+      "occurrence": "mention",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Goliath",
+      "occurrence": "mention",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Halfling",
+      "occurrence": "mention",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Human",
+      "occurrence": "mention",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Orc",
+      "occurrence": "mention",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Goblin",
+      "occurrence": "mention",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Hobgoblin",
+      "occurrence": "mention",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Bugbear",
+      "occurrence": "mention",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Kenku",
+      "occurrence": "mention",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Firbolg",
+      "occurrence": "mention",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Lizardfolk",
+      "occurrence": "mention",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Minotaur",
+      "occurrence": "mention",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Centaur",
+      "occurrence": "mention",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Satyr",
+      "occurrence": "mention",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "Wood Elf",
+      "occurrence": "mention",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    },
+    {
+      "nameEn": "High Elf",
+      "occurrence": "mention",
+      "outcome": "discovered",
+      "licenseNote": "Source is Tegora Kanka export; rewrite for UWE/Terra; non-SRD mechanics are owner-supplied notes"
+    }
+  ],
+  "links": [
+    {
+      "url": "http://dnd2024.wikidot.com/magic-item:all",
+      "type": "linked-dependency",
+      "outcome": "excluded",
+      "reason": "Magic items out of L1 creator scope; see linked-sources.json"
+    },
+    {
+      "url": "http://dnd2024.wikidot.com/equipment:armor",
+      "type": "linked-dependency",
+      "outcome": "already-in-catalog",
+      "catalogRef": "equipment.ts ARMOR (13)"
+    },
+    {
+      "url": "http://dnd2024.wikidot.com/equipment:weapon",
+      "type": "linked-dependency",
+      "outcome": "already-in-catalog",
+      "catalogRef": "equipment.ts WEAPONS (38)"
+    },
+    {
+      "url": "http://dnd2024.wikidot.com/equipment:adventuring-gear",
+      "type": "linked-dependency",
+      "outcome": "blocked-needs-fetch",
+      "reason": "No ADVENTURING_GEAR table; SRD import path only"
+    },
+    {
+      "url": "http://dnd2024.wikidot.com/equipment:mounts-and-vehicles",
+      "type": "linked-dependency",
+      "outcome": "excluded",
+      "reason": "Not used in L1 creator"
+    },
+    {
+      "url": "http://dnd2024.wikidot.com/equipment:poison",
+      "type": "linked-dependency",
+      "outcome": "excluded",
+      "reason": "Not used in L1 creator"
+    },
+    {
+      "url": "http://dnd2024.wikidot.com/spell:all",
+      "type": "linked-dependency",
+      "outcome": "blocked-needs-fetch",
+      "reason": "L0–1 in catalog (84); L2–9 missing (~320 SRD spells)"
+    }
+  ],
+  "existingUweSrd": {
+    "species": 9,
+    "classes": 12,
+    "backgrounds": 4,
+    "feats": 19,
+    "note": "Artificer and Bloodhunter are NEW vs current UWE catalog; 12 backgrounds exist in source vs 4 SRD"
+  }
+}

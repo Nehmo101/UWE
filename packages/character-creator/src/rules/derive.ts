@@ -18,6 +18,7 @@ import {
   type AbilityScoreMap,
   type Background,
   type CharacterDraft,
+  type CreatureSize,
   type DndClass,
   type SkillKey,
   type Species,
@@ -53,6 +54,17 @@ export interface DerivedPreview {
   spellSaveDc: number | null;
   spellAttackBonus: number | null;
   spellcastingAbility: AbilityKey | null;
+}
+
+/** Effektive Größe: explizite Wahl schlägt Abstammung, sonst Eltern-Volk. */
+export function resolveSpeciesSize(
+  species: Species | null,
+  lineage: SpeciesLineage | null,
+  sizeKey?: CreatureSize | null,
+): CreatureSize | null {
+  if (!species) return null;
+  if (sizeKey && species.sizeChoice?.includes(sizeKey)) return sizeKey;
+  return lineage?.size ?? species.size;
 }
 
 /** Auf Stufe 1 immer +2. Steht trotzdem hier, damit die Formel eine Heimat hat. */

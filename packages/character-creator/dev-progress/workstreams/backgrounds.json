@@ -1,0 +1,44 @@
+{
+  "id": "backgrounds",
+  "name": "Backgrounds",
+  "agent": "composer-2.5-fast",
+  "critic": "composer-2.5-fast",
+  "status": "completed",
+  "discoveredEntries": 16,
+  "importedEntries": 16,
+  "migratedEntries": 0,
+  "duplicates": 0,
+  "blockedEntries": 0,
+  "openDefects": ["B-04", "B-05", "B-06"],
+  "keysAdded": [
+    "handwerker",
+    "scharlatan",
+    "unterhalter",
+    "bauer",
+    "wache",
+    "kundschafter",
+    "einsiedler",
+    "kaufmann",
+    "adliger",
+    "matrose",
+    "schreiber",
+    "wanderer"
+  ],
+  "alreadyPresent": ["akolyth", "krimineller", "weiser", "soldat"],
+  "source": "OWNER_NOTES_SOURCE for extended twelve; SRD 5.2.1 for Akolyth/Krimineller/Weiser/Soldat; mechanics cross-checked against dev-progress/backgrounds-parsed.json and backgrounds-equipment.json",
+  "files": [
+    "packages/character-creator/src/content/backgrounds-extended.ts",
+    "packages/character-creator/src/content/backgrounds.ts"
+  ],
+  "nextAction": "Optional follow-ups: OWNER_NOTES_SOURCE integrity test (B-04); unify „Attribute:“ labelling (B-05); Magisterhof canon note (B-06)",
+  "lastUpdate": "2026-08-08T15:22:00",
+  "testSummary": {
+    "command": "pnpm --filter @uwe/character-creator test",
+    "pass": 59,
+    "fail": 0,
+    "suites": 12,
+    "failingTest": null
+  },
+  "criticVerdict": "APPROVED",
+  "criticReviewedAt": "2026-08-08T15:22:00+02:00"
+}

@@ -1,0 +1,34 @@
+{
+  "id": "size-choice",
+  "name": "Species sizeChoice persistence",
+  "agent": "composer-2.5-fast",
+  "status": "completed",
+  "speciesWithSizeChoice": [
+    "mensch",
+    "tiefling",
+    "fukuro",
+    "felin",
+    "lepoling",
+    "iso-tera",
+    "godling",
+    "embeku",
+    "lamia",
+    "automaton",
+    "mucosi"
+  ],
+  "openDefects": [],
+  "files": [
+    "packages/character-creator/src/types.ts",
+    "packages/character-creator/src/rules/derive.ts",
+    "packages/character-creator/src/rules/species-size.test.ts",
+    "packages/character-creator/src/rules/steps.ts",
+    "apps/portal/src/components/character-wizard/steps/SpeciesStep.tsx",
+    "apps/portal/src/components/character-wizard/steps/ReviewStep.tsx",
+    "packages/player-hub/src/character-json.ts",
+    "packages/player-hub/src/character-draft-validation.ts",
+    "packages/player-hub/src/character-draft-validation.test.ts"
+  ],
+  "draftFields": ["sizeKey"],
+  "resolveOrder": "sizeKey (if in sizeChoice) > lineage.size > species.size",
+  "lastUpdate": "2026-08-08T16:30:00"
+}

@@ -197,7 +197,7 @@ export function DetailsStep({ draft, set, validation }: StepProps) {
           wieder auf.
         </p>
 
-        <div className="cw-grid" data-density="compact">
+        <div className="cw-grid" data-density="compact" role="group" aria-label="Gesinnung wählen">
           {ALIGNMENT_OPTIONS.map((alignment) => {
             const selected = draft.alignmentKey === alignment.key;
             return (

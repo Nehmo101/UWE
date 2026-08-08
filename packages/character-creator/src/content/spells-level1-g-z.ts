@@ -203,7 +203,7 @@ export const LEVEL1_SPELLS_G_Z: Spell[] = [
     duration: "Augenblicklich",
     concentration: false,
     ritual: true,
-    lists: ["barde", "zauberer"],
+    lists: ["barde", "zauberer", "erfinder"],
   },
   {
     key: "illusionaere_schrift",
@@ -254,7 +254,7 @@ export const LEVEL1_SPELLS_G_Z: Spell[] = [
     duration: "1 Minute",
     concentration: false,
     ritual: false,
-    lists: ["druide", "waldlaeufer", "hexenmeister", "zauberer"],
+    lists: ["druide", "waldlaeufer", "hexenmeister", "zauberer", "erfinder"],
   },
   {
     key: "weitschritt",
@@ -407,7 +407,7 @@ export const LEVEL1_SPELLS_G_Z: Spell[] = [
     duration: "1 Runde",
     concentration: false,
     ritual: false,
-    lists: ["hexenmeister", "zauberer"],
+    lists: ["hexenmeister", "zauberer", "erfinder"],
   },
   {
     key: "schild_des_glaubens",

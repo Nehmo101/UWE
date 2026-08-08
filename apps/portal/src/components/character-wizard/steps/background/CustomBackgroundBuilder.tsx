@@ -3,12 +3,9 @@
 /**
  * Der Eigenbau-Hintergrund — der Bauplan aus dem Regelwerk zum Anklicken.
  *
- * Warum es ihn gibt, steht in `rules/custom-background.ts`: Das SRD 5.2.1
- * liefert vier Hintergründe, und seit 2024 hängt an ihnen die
- * Attributsverteilung. Paladin, Mönch und Waldläufer finden darunter keinen,
- * der beide Primärattribute anhebt. Die fehlenden Hintergründe des
- * Spielerhandbuchs nachzuschreiben ist keine Option — der Bauplan dafür steht
- * aber selbst im SRD, und genau den bedient dieses Formular.
+ * Er folgt `rules/custom-background.ts`: drei Attribute, zwei Fertigkeiten,
+ * Werkzeug, Ursprungstalent, 50 GM statt Ausrüstung. Mit dem vollen Katalog
+ * braucht keine Klasse den Eigenbau mehr — er bleibt für eigene Geschichten.
  *
  * Er läuft **an Ort und Stelle**, nicht als zehnter Schritt: wie die
  * Abstammung beim Volk klappt er unter den Kacheln auf, sobald die Kachel
@@ -306,7 +303,7 @@ export function CustomBackgroundBuilder({
           <p className="cw-fieldset__hint">
             Ein Handwerkszeug, mit dem du geübt umgehst. Die Liste ist die der
             Handwerkszeuge aus dem Ausrüstungskapitel, ergänzt um die beiden
-            Werkzeuge, die die vier Katalog-Hintergründe vergeben — ein Eigenbau
+            Werkzeuge, die die vier SRD-Hintergründe vergeben — ein Eigenbau
             soll nicht weniger dürfen als ein Katalogeintrag.
           </p>
           <div className="cw-fields">

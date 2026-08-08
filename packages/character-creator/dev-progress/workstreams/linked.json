@@ -1,0 +1,49 @@
+{
+  "id": "linked",
+  "name": "Linked equipment & spells (wikidot URLs)",
+  "agent": "composer-2.5-fast",
+  "status": "completed",
+  "discoveredEntries": 7,
+  "importedEntries": 0,
+  "alreadyInCatalogUrls": 2,
+  "blockedNeedsFetchUrls": 2,
+  "excludedUrls": 3,
+  "blockedEntries": 320,
+  "blockedEntriesNote": "~320 SRD spells (levels 2–9) plus unstructured adventuring gear — not imported from wikidot",
+  "openDefects": ["L-01", "L-02"],
+  "openDefectNotes": {
+    "L-01": "Grad 2–9 spells missing — see linked-sources.json spellsBlockedByLevel; cross-ref missing-data.md §3",
+    "L-02": "No ADVENTURING_GEAR / tools catalog — pack strings only; cross-ref missing-data.md §1"
+  },
+  "keysAdded": [],
+  "alreadyPresent": [
+    "equipment.ts WEAPONS (38)",
+    "equipment.ts ARMOR (13)",
+    "equipment.ts EQUIPMENT_PACKS (7)",
+    "spells-cantrips.ts (27)",
+    "spells-level1-*.ts (57)"
+  ],
+  "source": "E:\\Downloads\\UWE Character Creator\\Items,Spells,Armor Links to scalp.txt → dnd2024.wikidot.com (reference only; no scrape)",
+  "files": [
+    "packages/character-creator/dev-progress/linked-sources.json",
+    "packages/character-creator/dev-progress/workstreams/linked.json",
+    "packages/character-creator/src/content/equipment.ts",
+    "packages/character-creator/src/content/spells-cantrips.ts",
+    "packages/character-creator/src/content/spells-level1-a-f.ts",
+    "packages/character-creator/src/content/spells-level1-g-z.ts"
+  ],
+  "nextAction": "When ready: import SRD 5.2.1 spells levels 2–9 via same pipeline as level-1 files; optional ADVENTURING_GEAR table from SRD. Never import from wikidot.",
+  "lastUpdate": "2026-08-08T15:38:00+02:00",
+  "criticVerdict": "APPROVED",
+  "criticReviewedAt": "2026-08-08T15:38:00+02:00",
+  "criticFile": "packages/character-creator/dev-progress/workstreams/linked-critic.json",
+  "outcomesByUrl": {
+    "http://dnd2024.wikidot.com/magic-item:all": "excluded",
+    "http://dnd2024.wikidot.com/equipment:armor": "already-in-catalog",
+    "http://dnd2024.wikidot.com/equipment:weapon": "already-in-catalog",
+    "http://dnd2024.wikidot.com/equipment:adventuring-gear": "blocked-needs-fetch",
+    "http://dnd2024.wikidot.com/equipment:mounts-and-vehicles": "excluded",
+    "http://dnd2024.wikidot.com/equipment:poison": "excluded",
+    "http://dnd2024.wikidot.com/spell:all": "blocked-needs-fetch"
+  }
+}

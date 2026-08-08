@@ -16,8 +16,6 @@
 
 import {
   ABILITIES,
-  ABILITY_LABELS,
-  ABILITY_SHORT,
   abilityModifier,
   formatModifier,
   isBackgroundBonusValid,
@@ -28,6 +26,7 @@ import {
 
 import { Button } from "@/src/components/ui/button";
 import { NavIcon } from "@/src/components/ui/icon";
+import { ABILITY_DISPLAY_NAMES, ABILITY_DISPLAY_SHORT } from "./ability-display";
 
 export interface BackgroundBonusProps {
   background: Background | null;
@@ -86,7 +85,7 @@ export function BackgroundBonus({
     );
   }
 
-  const named = options.map((ability) => ABILITY_LABELS[ability]).join(", ");
+  const named = options.map((ability) => ABILITY_DISPLAY_NAMES[ability]).join(", ");
 
   return (
     <section aria-labelledby="cw-ab-bonus" className="grid gap-3">
@@ -143,7 +142,7 @@ export function BackgroundBonus({
                 >
                   {options.map((ability) => (
                     <option key={ability} value={ability}>
-                      {ABILITY_LABELS[ability]}
+                      {ABILITY_DISPLAY_NAMES[ability]}
                     </option>
                   ))}
                 </select>
@@ -164,7 +163,7 @@ export function BackgroundBonus({
                 >
                   {options.map((ability) => (
                     <option key={ability} value={ability}>
-                      {ABILITY_LABELS[ability]}
+                      {ABILITY_DISPLAY_NAMES[ability]}
                     </option>
                   ))}
                 </select>
@@ -178,7 +177,7 @@ export function BackgroundBonus({
               const total = Math.min(20, (base?.[ability] ?? 0) + extra);
               return (
                 <span key={ability} className="cw-ability" data-boosted={extra > 0}>
-                  <span className="cw-ability__short">{ABILITY_SHORT[ability]}</span>
+                  <span className="cw-ability__short">{ABILITY_DISPLAY_SHORT[ability]}</span>
                   <span className="cw-ability__mod">{formatModifier(abilityModifier(total))}</span>
                   <span className="cw-ability__score">
                     {total}

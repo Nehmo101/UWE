@@ -1,0 +1,37 @@
+{
+  "id": "feats",
+  "name": "Feats & prerequisites",
+  "agent": "cursor-grok-4.5-high",
+  "status": "completed",
+  "discoveredEntries": 13,
+  "importedEntries": 26,
+  "blockedEntries": 0,
+  "openDefects": [],
+  "keysAdded": [
+    "handwerker",
+    "kampfeinweihung",
+    "heiler",
+    "glueckspilz",
+    "musiker",
+    "wirtshausraufbold",
+    "zaeh"
+  ],
+  "alreadyPresent": [
+    "eingeweihter-der-magie-druide"
+  ],
+  "source": "OWNER_NOTES_SOURCE from types.ts; mechanics from Feats__Feats - Notizen.pdf.txt",
+  "files": [
+    "packages/character-creator/src/types.ts",
+    "packages/character-creator/src/content/feats-origin-extended.ts",
+    "packages/character-creator/src/content/feats.ts"
+  ],
+  "nextAction": "Wire PHB backgrounds to these originFeat keys; optional catalog test for OWNER_NOTES_SOURCE on ORIGIN_FEATS_EXTENDED (F-02/F-03 minor)",
+  "lastUpdate": "2026-08-08T15:16:00",
+  "testSummary": {
+    "command": "pnpm --filter @uwe/character-creator test",
+    "pass": 58,
+    "fail": 0,
+    "suites": 12
+  },
+  "criticVerdict": "APPROVED"
+}

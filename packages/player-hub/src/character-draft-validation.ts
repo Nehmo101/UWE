@@ -26,6 +26,7 @@ import {
   type CustomBackgroundInput,
   findClass,
   findFeat,
+  findInvention,
   findLanguage,
   findLineage,
   findSpecies,
@@ -42,6 +43,7 @@ import {
   type Background,
   type CharacterDetails,
   type CharacterDraft,
+  type CreatureSize,
   type DndClass,
   type EquipmentLine,
   type Language,
@@ -71,8 +73,10 @@ export interface CharacterDraftInput {
   name: string;
   speciesKey: string | null;
   lineageKey: string | null;
+  sizeKey?: string | null;
   classKey: string | null;
   subclassKey: string | null;
+  inventionKey?: string | null;
   backgroundKey: string | null;
   /** Der selbst gebaute Hintergrund, falls `backgroundKey` darauf zeigt. */
   customBackground: CustomBackgroundInput | null;
@@ -102,6 +106,7 @@ const BASE_SCORE_MIN = 3;
 const BASE_SCORE_MAX = 18;
 
 const SKILL_KEYS = new Set<string>(SKILLS);
+const CREATURE_SIZES = new Set<string>(["tiny", "small", "medium", "large"]);
 
 /** Der geprüfte Entwurf mitsamt allem, was das Anlegen daraus braucht. */
 export interface ValidatedDraft {
@@ -194,6 +199,25 @@ export function validateFullDraft(
     } else if (input.lineageKey) {
       issues.push("Dieses Volk kennt keine Abstammungen.");
     }
+
+    if (species.sizeChoice?.length) {
+      if (!input.sizeKey || !CREATURE_SIZES.has(input.sizeKey)) {
+        issues.push("Wähle die Größe deines Charakters.");
+      } else if (!species.sizeChoice.includes(input.sizeKey as CreatureSize)) {
+        issues.push("Die gewählte Größe passt nicht zu diesem Volk.");
+      }
+    } else if (input.sizeKey) {
+      issues.push("Dieses Volk erlaubt keine Größenwahl.");
+    }
+  }
+
+  let sizeKey: CreatureSize | null = null;
+  if (
+    species?.sizeChoice?.length &&
+    input.sizeKey &&
+    species.sizeChoice.includes(input.sizeKey as CreatureSize)
+  ) {
+    sizeKey = input.sizeKey as CreatureSize;
   }
 
   const dndClass: DndClass | null = input.classKey ? (findClass(input.classKey) ?? null) : null;
@@ -210,6 +234,27 @@ export function validateFullDraft(
       }
     } else if (input.subclassKey) {
       issues.push(`${dndClass.subclassLabel} wird erst auf Stufe ${dndClass.subclassLevel} gewählt.`);
+    }
+
+    if (dndClass.key === "erfinder") {
+      if (!input.inventionKey) {
+        issues.push("Wähle deine erste Invention.");
+      } else {
+        const invention = findInvention(input.inventionKey);
+        if (!invention || invention.prerequisiteLevel > 1) {
+          issues.push("Unbekannte oder auf Stufe 1 nicht verfügbare Invention.");
+        }
+      }
+    } else if (input.inventionKey) {
+      issues.push("Nur Erfinder wählen eine Invention.");
+    }
+  }
+
+  let inventionKey: string | null = null;
+  if (dndClass?.key === "erfinder" && input.inventionKey) {
+    const invention = findInvention(input.inventionKey);
+    if (invention && invention.prerequisiteLevel <= 1) {
+      inventionKey = invention.key;
     }
   }
 
@@ -331,8 +376,10 @@ export function validateFullDraft(
     name,
     speciesKey: species.key,
     lineageKey: lineage?.key ?? null,
+    sizeKey,
     classKey: dndClass.key,
     subclassKey: subclass?.key ?? null,
+    inventionKey,
     backgroundKey: background.key,
     /*
      * Nicht die Eingabe durchreichen, sondern das, was der Server daraus
@@ -401,7 +448,10 @@ export function validateFullDraft(
     value: {
       draft,
       catalog,
-      json: buildCharacterJsonColumns(catalog, draft.details, input.abilities.backgroundBonus),
+      json: buildCharacterJsonColumns(catalog, draft.details, input.abilities.backgroundBonus, {
+        sizeKey: draft.sizeKey,
+        inventionKey: draft.inventionKey,
+      }),
       skillProficiencies: collectSkillProficiencies(chosenSkills, background),
       cantrips,
       spells,

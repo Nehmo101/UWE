@@ -21,9 +21,14 @@
  *
  * Die Abstammungslisten stehen in `species-lineages.ts` (Zeilenbudget, siehe
  * CLAUDE.md § Modul-Disziplin) und werden hier erneut exportiert.
+ *
+ * **Zusätzlich** liegen Owner-Notizen-Spezies in `species-extended.ts`
+ * (`OWNER_NOTES_SOURCE`, inkl. Phase 2 aus `species-extended-phase2.ts`) —
+ * Import aus Kanka-Export, Flavour Terra.
  */
 
 import { SRD_SOURCE, type Species } from "../types";
+import { SPECIES_EXTENDED } from "./species-extended";
 import {
   DRACONIC_ANCESTRIES,
   ELVEN_LINEAGES,
@@ -40,8 +45,8 @@ export {
   GNOMISH_LINEAGES,
 };
 
-/** Alle Spezies des SRD 5.2.1, in der Reihenfolge des Regelwerks. */
-export const SPECIES: Species[] = [
+/** Die neun SRD-5.2.1-Spezies, in der Reihenfolge des Regelwerks. */
+const SPECIES_SRD: Species[] = [
   {
     key: "drachenblutige",
     name: "Drachenblütige",
@@ -382,6 +387,9 @@ export const SPECIES: Species[] = [
     ],
   },
 ];
+
+/** SRD-Neuner plus Owner-Notizen-Erweiterungen (Legacy-SRD-Einträge bleiben erhalten). */
+export const SPECIES: Species[] = [...SPECIES_SRD, ...SPECIES_EXTENDED];
 
 /** Nachschlag über den technischen Schlüssel — `undefined`, wenn es ihn nicht gibt. */
 export function findSpecies(key: string): Species | undefined {

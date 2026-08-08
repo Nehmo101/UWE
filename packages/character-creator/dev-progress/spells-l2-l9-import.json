@@ -1,0 +1,16 @@
+{
+  "total": 246,
+  "style": "German structural summary + first-sentence SRD cue",
+  "source": "Open5e v1 wotc-srd CC-BY-4.0",
+  "note": "2014-era SRD spell corpus; meters in range/duration; DE polish of Kernwirkung still incremental",
+  "levels": {
+    "2": 54,
+    "3": 42,
+    "4": 31,
+    "5": 37,
+    "6": 31,
+    "7": 20,
+    "8": 16,
+    "9": 15
+  }
+}

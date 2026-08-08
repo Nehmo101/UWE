@@ -98,13 +98,13 @@ export function CharacterRail({
         <Vital
           label="TP"
           value={preview.hitPoints}
-          title="Trefferpunkte auf Stufe 1: Trefferwürfel + Konstitutionsmodifikator"
+          title="Trefferpunkte auf Stufe 1: Trefferwürfel + Constitution-Modifikator"
         />
-        <Vital label="RK" value={preview.armorClass} title="Rüstungsklasse ohne Rüstung: 10 + Geschicklichkeit" />
+        <Vital label="RK" value={preview.armorClass} title="Rüstungsklasse ohne Rüstung: 10 + Dexterity" />
         <Vital
           label="Init"
           value={preview.initiative}
-          title="Initiative: Geschicklichkeitsmodifikator"
+          title="Initiative: Dexterity-Modifikator"
           signed
         />
       </div>
@@ -113,7 +113,12 @@ export function CharacterRail({
         <p className="cw-rail__section-title">Attribute</p>
         <div className="cw-abilities">
           {ABILITIES.map((ability) => (
-            <div key={ability} className="cw-ability" data-boosted={boosted.has(ability)}>
+            <div
+              key={ability}
+              className="cw-ability"
+              data-boosted={boosted.has(ability)}
+              title={boosted.has(ability) ? "Hintergrund-Bonus auf dieses Attribut" : undefined}
+            >
               <span className="cw-ability__short">{ABILITY_SHORT[ability]}</span>
               <span className="cw-ability__mod">
                 {abilitiesChosen ? formatModifier(preview.modifiers[ability]) : "—"}

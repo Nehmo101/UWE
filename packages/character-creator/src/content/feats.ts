@@ -12,12 +12,11 @@
  * - Kampfstil:    Archery, Defense, Great Weapon Fighting, Two-Weapon Fighting
  * - Epische Gabe: sieben „Boon of …“
  *
- * // TODO(unverified): Crafter, Healer, Lucky, Musician, Tavern Brawler,
- * // Tough sind Ursprungstalente des PHB 2024, stehen aber **nicht** im
- * // SRD 5.2.1 — ebenso wenig die Kampfstile Blind Fighting, Dueling,
- * // Interception, Protection, Thrown Weapon Fighting und Unarmed Fighting
- * // oder die allgemeinen Talente jenseits von Grappler. Nicht aus dem
- * // Gedächtnis ergänzen; sie sind weder nachprüfbar noch CC-BY-4.0.
+ * Crafter, Fighting Initiate, Healer, Lucky, Musician, Tavern Brawler und
+ * Tough stehen **nicht** im SRD — sie liegen in `feats-origin-extended.ts`
+ * (Owner-Notizen). Weiterhin nicht im Bestand: Kampfstile Blind Fighting,
+ * Dueling, Interception, Protection, Thrown Weapon Fighting und Unarmed
+ * Fighting sowie allgemeine Talente jenseits von Grappler.
  *
  * **Eine bewusste Auffächerung:** Das SRD druckt *ein* Talent „Magic
  * Initiate“, dessen Zauberliste beim Erwerb gewählt wird (und das genau
@@ -31,6 +30,7 @@
  */
 
 import { SRD_SOURCE, type Feat } from "../types";
+import { ORIGIN_FEATS_EXTENDED } from "./feats-origin-extended";
 
 /** Alle sechs Attribute — für Talente, die „ein Attribut deiner Wahl“ sagen. */
 const ANY_ABILITY = [
@@ -203,6 +203,9 @@ export const FEATS: Feat[] = [
     abilityIncrease: null,
     source: SRD_SOURCE,
   },
+
+  // PHB-Ursprungstalente außerhalb des SRD (Owner-Notizen).
+  ...ORIGIN_FEATS_EXTENDED,
 
   // ───────────────────────── Allgemeine Talente ─────────────────────────
   {

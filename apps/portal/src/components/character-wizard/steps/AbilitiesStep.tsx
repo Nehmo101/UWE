@@ -29,7 +29,6 @@
 import { useState } from "react";
 import {
   ABILITIES,
-  ABILITY_LABELS,
   POINT_BUY_BUDGET,
   STANDARD_ARRAY,
   applyPool,
@@ -48,6 +47,7 @@ import {
 
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
+import { ABILITY_DISPLAY_NAMES } from "./abilities/ability-display";
 import { NavIcon } from "@/src/components/ui/icon";
 import type { StepProps } from "../types";
 import { AbilityLead, AbilityResult, BonusCell } from "./abilities/AbilityRow";
@@ -285,7 +285,7 @@ export function AbilitiesStep({ draft, set, resolved, validation, goTo }: StepPr
                         <Button
                           variant="outline"
                           size="icon"
-                          aria-label={`${ABILITY_LABELS[ability]} senken`}
+                          aria-label={`${ABILITY_DISPLAY_NAMES[ability]} senken`}
                           disabled={!canLower(base, ability)}
                           onClick={() => stepPointBuy(ability, -1)}
                         >
@@ -309,7 +309,7 @@ export function AbilitiesStep({ draft, set, resolved, validation, goTo }: StepPr
                         <Button
                           variant="outline"
                           size="icon"
-                          aria-label={`${ABILITY_LABELS[ability]} erhöhen`}
+                          aria-label={`${ABILITY_DISPLAY_NAMES[ability]} erhöhen`}
                           disabled={!canRaise(base, ability)}
                           onClick={() => stepPointBuy(ability, 1)}
                         >

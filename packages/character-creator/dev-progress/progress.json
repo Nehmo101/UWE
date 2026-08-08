@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "title": "UWE Character Creator — Entwicklungsfortschritt",
+  "updatedAt": "2026-08-08T16:48:43+02:00",
+  "modelsPolicy": "Nur cursor-grok-4.5-high und composer-2.5-fast.",
+  "summary": {
+    "catalog": {
+      "species": 31,
+      "classes": 14,
+      "backgrounds": 16,
+      "feats": 26,
+      "spells": 330,
+      "inventions": 38
+    },
+    "migratedEntries": 0,
+    "npcPages": 0,
+    "charactersWithSpecies": 0
+  },
+  "criticVerdicts": [
+    {
+      "workstreamId": "backgrounds",
+      "verdict": "APPROVED"
+    },
+    {
+      "workstreamId": "builder-ux",
+      "verdict": "APPROVED"
+    },
+    {
+      "workstreamId": "canon",
+      "verdict": "APPROVED"
+    },
+    {
+      "workstreamId": "classes",
+      "verdict": "APPROVED"
+    },
+    {
+      "workstreamId": "existing-impl",
+      "verdict": "APPROVED"
+    },
+    {
+      "workstreamId": "feats",
+      "verdict": "APPROVED"
+    },
+    {
+      "workstreamId": "inventions",
+      "verdict": "APPROVED"
+    },
+    {
+      "workstreamId": "linked",
+      "verdict": "APPROVED"
+    },
+    {
+      "workstreamId": "size-choice",
+      "verdict": "APPROVED"
+    },
+    {
+      "workstreamId": "species",
+      "verdict": "APPROVED"
+    },
+    {
+      "workstreamId": "species-phase2",
+      "verdict": "APPROVED"
+    },
+    {
+      "workstreamId": "spells",
+      "verdict": "APPROVED"
+    }
+  ],
+  "openDefects": [
+    "a11y e2e result pending (spec wired; Windows EBUSY previously)",
+    "Spell materials still English (non-blocking)"
+  ],
+  "nextActions": [],
+  "completionNotes": [
+    "Kernwirkung L2-9 German polish done (0 English openings)",
+    "Inventions + sizeChoice implemented and critic-approved",
+    "Phase-2 species imported",
+    "DB seeded; NPC/species migration N/A (0 rows)"
+  ]
+}

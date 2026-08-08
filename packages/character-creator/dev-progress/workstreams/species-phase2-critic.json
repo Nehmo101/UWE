@@ -1,0 +1,125 @@
+{
+  "workstreamId": "species-phase2",
+  "verdict": "APPROVED",
+  "criticModel": "composer-2.5-fast",
+  "scope": {
+    "speciesKeys": [
+      "ifrit",
+      "kathai",
+      "ipotan",
+      "automaton",
+      "lupull",
+      "ganeshi",
+      "oodoon",
+      "mucosi"
+    ],
+    "lineageKeys": ["dynamics", "statics", "synergetics"],
+    "filesReviewed": [
+      "packages/character-creator/src/content/species-extended-phase2.ts",
+      "packages/character-creator/src/content/species-extended-lineages.ts (KATHAI_*_LINEAGE)",
+      "packages/character-creator/src/content/species-extended.ts (SPECIES_EXTENDED spread)",
+      "packages/character-creator/src/content/species.ts",
+      "tmp/character-creator-source-extract/Spezies__Spezien 1.pdf.txt",
+      "tmp/character-creator-source-extract/Spezies__Spezies 2.pdf.txt"
+    ]
+  },
+  "defects": [
+    {
+      "id": "S-P2-01",
+      "severity": "minor",
+      "status": "open",
+      "summary": "automaton and mucosi expose sizeChoice (Medium/Small) but wizard/draft still defaults to catalog size — inherits open S-06 from Phase-1 species-critic; no Phase-2 regression test."
+    },
+    {
+      "id": "S-P2-02",
+      "severity": "minor",
+      "status": "open",
+      "summary": "No automated catalog-integrity guard that SPECIES_EXTENDED_PHASE2 (+ KATHAI lineages) use OWNER_NOTES_SOURCE — inherits open S-05."
+    },
+    {
+      "id": "S-P2-03",
+      "severity": "minor",
+      "status": "open",
+      "summary": "Kathai hook uses Int-/Wis-/Cha abbreviations; trait prose correctly spells Intelligence/Wisdom/Charisma — polish hook to full English ability names per uwe-canon-brief §8.3."
+    },
+    {
+      "id": "S-P2-04",
+      "severity": "minor",
+      "status": "open",
+      "summary": "Ipotan Brave trait localized as „Mutig“ while adjacent traits keep English extract names (Eyes in Back, Psychic Resistance, Ipotan Tactics) — inconsistent naming convention."
+    },
+    {
+      "id": "S-P2-05",
+      "severity": "minor",
+      "status": "open",
+      "summary": "Kathai College of Statics lineage compresses Prestidigitation clockwork rules (another creature may activate; ignite-extinguish single-effect choice example) — core AC/HP/3-device/8-hour mechanics present."
+    },
+    {
+      "id": "S-P2-06",
+      "severity": "minor",
+      "status": "open",
+      "summary": "Mucosi Natural Resilience and Ganeshi Serenity say „Vorteil gegen Poisoned/Charmed/Frightened“ without explicit „Rettungswürfe“ — meaning is clear in context but less precise than Automaton Construct Resilience prose."
+    },
+    {
+      "id": "S-P2-07",
+      "severity": "minor",
+      "status": "open",
+      "summary": "No Phase-2-specific regression tests (per-species trait smoke or sizeChoice wiring); catalog-integrity covers duplicate keys and lineage count only."
+    },
+    {
+      "id": "S-P2-08",
+      "severity": "minor",
+      "status": "open",
+      "summary": "Cross-ref drift: builder-ux-critic.json still documents 23 SPECIES; post Phase-2 catalog is 31 — update downstream UX critic snapshot when that workstream re-runs."
+    }
+  ],
+  "acceptanceConditions": [
+    "Eight Phase-2 keys present in SPECIES via SPECIES_EXTENDED spread — MET",
+    "Kathai colleges dynamics/statics/synergetics wired as lineages with OWNER_NOTES_SOURCE — MET",
+    "Mechanics aligned with Spezies__Spezien 1.pdf.txt (ifrit, kathai, ipotan, automaton, lupull, ganeshi) and Spezies__Spezies 2.pdf.txt (oodoon, mucosi) — MET",
+    "Player-facing copy free of Tegora/Sunamun/Kapura/Kanka/FR names; Terra defaults (Validori, Nepurga, Arbor-Saum, Inneres Meer, Precursor) — MET",
+    "Ability names in trait/hook mechanics prose English (Strength, Dexterity, Constitution, Intelligence, Wisdom, Charisma); skill/spell names English — MET with S-P2-03 hook note",
+    "Every Phase-2 species and Kathai lineage entry tagged source: OWNER_NOTES_SOURCE — MET (manual; S-P2-02 automated guard still open)",
+    "pnpm --filter @uwe/character-creator test green — MET (61/61, 13 suites)",
+    "SPECIES catalog count 31 (9 SRD + 22 extended top-level) — MET"
+  ],
+  "mechanicsReview": {
+    "ifrit": "PASS — Medium 30 ft, darkvision 60, Fire Resistance, Reach to the Blaze (Control Flame; Burning Hands L3; Flame Blade L5; Int/Wis/Cha; long-rest once per spell + slots)",
+    "kathai": "PASS — Small 25 ft, darkvision 60, Kathai Cunning (Int/Wis/Cha saves), Kathai College placeholder + three lineages",
+    "kathai_dynamics": "PASS — Minor Illusion; Disguise Self always prepared 1/long rest; Invisibility L5 same pattern; spellcasting ability choice",
+    "kathai_statics": "PASS with S-P2-05 — Mending + Prestidigitation; Tiny device AC 5 / 1 HP / max 3 / 8 h; spellcasting ability choice",
+    "kathai_synergetics": "PASS — Alarm + Mage Armor 1/long rest each; Arcane Lock L5; spellcasting ability choice",
+    "ipotan": "PASS — Monstrosity Medium 30 ft, Brave (Frightened saves), Eyes in Back (no surprise / no unseen advantage), Psychic Resistance, Ipotan Tactics (Cause Fear L3, Fear L7, no components, spell slots OK)",
+    "automaton": "PASS — Construct Medium|Small sizeChoice, Construct Resilience, Integrated Protection +1 AC, Sentry's Rest 6 h, Specialized Design skill+tool, Tireless, immune magical aging",
+    "lupull": "PASS — Humanoid Medium 35 ft, Bite 1d6+Str piercing, Keen Senses (Perception/Survival hearing or smell), Daunting Howl (PB uses, Con-based DC), Canine Instincts two skills",
+    "ganeshi": "PASS — Humanoid Medium 30 ft, Powerful Build (Grappled + carry), Ganeshi Serenity, Natural Armour 12+Con, Trunk 5 ft / 5×Str lb / limitations, Keen Smell (Perception/Survival/Investigation smell or hearing)",
+    "oodoon": "PASS — Humanoid Medium 30 ft walk + 30 ft swim, breathe air/water, darkvision 60, Natural Armor 12+Dex, Leviathan Will (charmed/frightened/paralyzed/poisoned/stunned/sleep saves), Observant and Athletic (Athletics or Perception — one choice)",
+    "mucosi": "PASS — Ooze Medium|Small sizeChoice, Amorphous 1-inch squeeze + grapple advantage, Natural Resilience acid/poison + poisoned advantage, Change Shape humanoid/beast + pseudopod, Delightful Imitator Deception+Performance"
+  },
+  "loreReview": {
+    "tegoraLeaks": "PASS — no Tegora/Sunamun/Kapura/Kanka in player copy; module headers may name Tegora as exclusion note (OK)",
+    "canonPlaces": "PASS — Validori, Nepurga-Grenzland, Arbor-Saum, Inneres Meer, Precursor-Metall, Gildenalleen align uwe-canon-brief §1.1",
+    "forbiddenLeaks": "PASS — no Shagottar, Weltbaum cosmology, or Legacy goddess/fairy Nepurga in Phase-2 copy",
+    "abilityNamesEn": "PASS with S-P2-03 — trait prose uses English abilities; Kathai hook abbreviates Int/Wis/Cha",
+    "germanQuality": "PASS with notes — hooks/descriptions read naturally; mixed EN trait names (Eyes in Back vs Mutig) per S-P2-04"
+  },
+  "wiringReview": {
+    "speciesExtendedSpread": "PASS — SPECIES_EXTENDED = PHASE1 + SPECIES_EXTENDED_PHASE2; SPECIES = SRD + EXTENDED",
+    "duplicateKeys": "PASS — eight Phase-2 keys disjoint from nine SRD and fourteen Phase-1 extended keys",
+    "kathaiLineages": "PASS — lineageLabel Kathai-College; KATHAI_LINEAGES imported from species-extended-lineages.ts",
+    "ownerNotesSource": "PASS manual — all eight species + three college lineages tagged OWNER_NOTES_SOURCE",
+    "speciesDiscoveredIndex": "PASS — all eight marked imported with catalogKey in species-discovered.json",
+    "tests": "PASS — pnpm --filter @uwe/character-creator test 61/61; catalog-integrity lineage count green for kathai and goblinkin",
+    "speciesCount": "PASS — SPECIES.length = 31 (9 SRD + 22 extended top-level entries)"
+  },
+  "testRun": {
+    "command": "pnpm --filter @uwe/character-creator test",
+    "pass": 61,
+    "fail": 0,
+    "suites": 13,
+    "speciesCount": 31,
+    "speciesCountBreakdown": "9 SPECIES_SRD + 14 SPECIES_EXTENDED_PHASE1 + 8 SPECIES_EXTENDED_PHASE2"
+  },
+  "reviewedAt": "2026-08-08T16:12:00+02:00",
+  "notes": "Phase-2 import substantively complete: eight species and three Kathai college lineages match Owner-Notizen extracts; Terra flavour rewrite clean; wiring and duplicate-key tests green at 31 catalog species. Approved; S-P2-01–S-P2-08 are non-blocking follow-ups (mostly inherited S-05/S-06 scope plus naming polish)."
+}

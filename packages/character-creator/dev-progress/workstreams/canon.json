@@ -1,0 +1,19 @@
+﻿{
+  "id": "canon",
+  "name": "UWE canon & world context",
+  "agent": "cursor-grok-4.5-high",
+  "status": "completed",
+  "discoveredEntries": 53,
+  "importedEntries": 0,
+  "blockedEntries": 5,
+  "openDefects": [
+    "C-01 Arbor identity conflict (region vs world-tree vs goddess)",
+    "C-02 Nepurga identity conflict (realm vs fairy queen)",
+    "C-03 Valendor continent only in legacy seed.ts",
+    "C-04 Weltschildkroete vs Arbor mythos unresolved",
+    "C-05 Ability score EN display vs existing DE ABILITY_LABELS"
+  ],
+  "nextAction": "Lore rewrite agents: default to terra-seed (Arbor = northern forest region; Nepurga = political realm); Terra map cosmology (world-tree, zerrissener Planet) opt-in only when text is explicitly cosmological; strip all Tegora/FR names",
+  "lastUpdate": "2026-08-08",
+  "criticVerdict": "APPROVED"
+}

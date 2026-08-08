@@ -28,30 +28,23 @@ function complete(overrides: Partial<CustomBackgroundDraft> = {}): CustomBackgro
   };
 }
 
-describe("Der Engpass, den der Eigenbau löst", () => {
-  it("die vier SRD-Hintergründe decken nicht jede Klasse ab", () => {
+describe("Katalog-Abdeckung der Klassen-Primärattribute", () => {
+  it("mit SRD+Owner-Hintergründen findet jede Klasse eine passende Verteilung", () => {
     const stranded = classesWithoutMatchingBackground(CLASSES, BACKGROUNDS);
-
-    // Das ist kein Wunsch, sondern der Befund: Für diese Klassen hebt kein
-    // einziger SRD-Hintergrund beide Primärattribute an.
-    assert.ok(
-      stranded.length > 0,
-      "Wenn das hier leer ist, deckt der Katalog plötzlich alles ab — " +
-        "dann gehört dieser Test überprüft, nicht gelöscht.",
+    assert.deepEqual(
+      stranded.map((entry) => entry.key).sort(),
+      [],
+      "Erwartet: leere Lücke nach Import der Owner-Notizen-Hintergründe",
     );
+  });
 
-    const names = stranded.map((entry) => entry.key).sort();
-
-    /*
-     * Genau drei — und die Zahl ist wichtiger, als sie aussieht.
-     *
-     * Eine erste Sichtprüfung behauptete fünf und zählte Barde und
-     * Hexenpakt-Magier mit. Beide führen im SRD 2024 aber nur EIN
-     * Primärattribut (Charisma), und das deckt der Akolyth ab. Betroffen sind
-     * nur Klassen mit zwei Primärattributen, deren Paarung in keinem der vier
-     * Hintergründe zusammen vorkommt.
-     */
-    assert.deepEqual(names, ["moench", "paladin", "waldlaeufer"]);
+  it("nur die vier SRD-Hintergründe lassen Paladin/Mönch/Waldläufer übrig", () => {
+    const srdOnly = BACKGROUNDS.filter((entry) => entry.source.license === "CC-BY-4.0");
+    const stranded = classesWithoutMatchingBackground(CLASSES, srdOnly);
+    assert.deepEqual(
+      stranded.map((entry) => entry.key).sort(),
+      ["moench", "paladin", "waldlaeufer"],
+    );
   });
 
   it("mit Eigenbau findet jede Klasse eine passende Verteilung", () => {

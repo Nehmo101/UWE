@@ -1,0 +1,98 @@
+{
+  "workstreamId": "spells",
+  "verdict": "APPROVED",
+  "criticModel": "composer-2.5-fast",
+  "defects": [
+    {
+      "id": "S-01",
+      "severity": "blocker",
+      "status": "fixed",
+      "summary": "All 246 L2–9 hooks replaced: structural German „{Name}: Grad N, {Schule} — {Zeit}, {Reichweite}.“ (e.g. Säurepfeil: Grad 2, Hervorrufung — Aktion, 27 Meter.). No „SRD-Zauber Grad N“ placeholders remain. Not yet L0–L1 flavor hooks, but satisfies option B hook slot."
+    },
+    {
+      "id": "S-02",
+      "severity": "blocker",
+      "status": "fixed",
+      "summary": "EN/DE word-salad hybrid eliminated (0/246 hits for „You Berührung“, „against the Ziel“, „On a failed save“, „muss einen dexterity-Rettungswurf“, etc.). Descriptions use German structural preamble + labeled „Kernwirkung:“ English SRD lead sentence — acceptable per option B waiver."
+    },
+    {
+      "id": "S-03",
+      "severity": "major",
+      "status": "fixed",
+      "summary": "0/246 L2–9 entries with name === nameEn (was 121). All display names German (e.g. Eingebung, Prismawand, Wahre Auferstehung). Final re-review verified programmatically."
+    },
+    {
+      "id": "S-04",
+      "severity": "major",
+      "status": "open",
+      "summary": "Keys migrated to English snake_case (acid_arrow, warding_bond) — kebab-case resolved, 0 kebab keys. Still diverge from L0–L1 German snake_case convention (schmierfett, heilendes_wort); no documented bilingual key map. Non-blocking for option B approval."
+    },
+    {
+      "id": "S-05",
+      "severity": "major",
+      "status": "fixed",
+      "summary": "Lowercase ability hybrids gone from descriptions. Kernwirkung English uses standard SRD phrasing (e.g. „dexterity saving throw“) where abilities appear; no „dexterity-Rettungswurf“ / „wisdom-Rettungswurf“ mixes."
+    },
+    {
+      "id": "S-06",
+      "severity": "major",
+      "status": "partial",
+      "summary": "`range` fields localized to meters/Selbst/Berührung on most entries; 8 duration fields still „Until dispelled“; castingTime retains English clauses (counterspell reaction text, commune); Kernwirkung/materials retain feet/miles/inches (Prismatic Wall „1 inch“, Meteorenschwarm „1 mile“ range) — Kernwirkung imperial deferred per option B waiver; metadata fields still need DE pass."
+    },
+    {
+      "id": "S-07",
+      "severity": "minor",
+      "status": "open",
+      "summary": "Material component strings left in raw English (e.g. „Powdered rhubarb leaf and an adder's stomach.“) — L0–L1 localize materials to German."
+    },
+    {
+      "id": "S-08",
+      "severity": "minor",
+      "status": "open",
+      "summary": "Attribution mismatch: import note and dev-progress/spells-l2-l9-import.json cite Open5e wotc-srd (2014-era text) but every entry tags `SRD_SOURCE` whose `book` is „SRD 5.2.1“. Mechanics prose may differ from 2024 SRD; document actual source generation or re-import from 5.2.1 when available."
+    },
+    {
+      "id": "S-09",
+      "severity": "minor",
+      "status": "fixed",
+      "summary": "Shard headers now state structural DE + Kernwirkung pattern; German display names on all 246 L2–9 entries (S-03 closed)."
+    }
+  ],
+  "passingCriteria": {
+    "catalogIntegrityTests": "PASS — pnpm --filter @uwe/character-creator test (61/61): unique keys, valid class list refs, no orphans, spellcasting classes still satisfy L0–L1 minimums.",
+    "classListKeys": "PASS — lists use UWE keys (zauberer, hexenmeister, hexenpakt_magier, kleriker, druide, barde, waldlaeufer, paladin, erfinder); no wizard/sorcerer/warlock English keys.",
+    "tegoraLeaks": "PASS — no Tegora/Kanka/FR references in L2–9 spell copy.",
+    "srdSourcePresent": "PASS — all 246 L2–9 entries include source: SRD_SOURCE (see S-08 for version accuracy).",
+    "spellCount": "PASS — SPELLS total 330 (27 cantrips + 57 L1 + 246 L2–9); matches dev-progress/spells-l2-l9-import.json countsByLevel.",
+    "indexWiring": "PASS — content/index.ts spreads LEVEL2_SPELLS … LEVEL9_SPELLS into SPELLS and re-exports.",
+    "optionBStructuralPattern": "PASS — 246/246: German hook + DE structural preamble (Grad/Schule/Zeit/Reichweite/Dauer/Komponenten/Listen) + labeled Kernwirkung cue; majority DE in description body.",
+    "optionBFullCompliance": "PASS — 246/246 German display names (S-03 fixed); option B met."
+  },
+  "acceptanceConditions": [
+    "DONE — Replace all 246 placeholder hooks with German hooks (structural pattern accepted for option B).",
+    "DONE — Option B: German hook + DE mechanical summary + German display name on 246/246.",
+    "DONE — English ability names in Kernwirkung; no lowercase EN/DE ability hybrids (S-05).",
+    "PARTIAL — Meters in `range` fields; localize duration/castingTime/material strings and Kernwirkung imperial remnants (S-06, S-07) — non-blocking.",
+    "OPEN — Align catalog keys with L0–L1 German snake_case OR document bilingual key map (S-04) — non-blocking.",
+    "Keep lists on UWE class keys; keep source: SRD_SOURCE on every entry; reconcile S-08 in import metadata.",
+    "DONE — pnpm --filter @uwe/character-creator test green 61/61 on final re-review."
+  ],
+  "germanQualitySamples": {
+    "acid_arrow": "PASS (option B pattern) — hook „Säurepfeil: Grad 2, Hervorrufung — Aktion, 27 Meter.“; range 27 Meter; DE preamble + „Kernwirkung: A shimmering green arrow…“ (English lead, labeled).",
+    "aid": "PASS (option B pattern) — „Unterstützung: Grad 2, Abwehr — Aktion, 9 Meter.“; DE structure; Kernwirkung English lead.",
+    "suggestion": "PASS (option B pattern) — display name „Eingebung“; hook „Eingebung: Grad 2, Verzauberung — Aktion, 9 Meter.“; DE structure; Kernwirkung English lead.",
+    "simulacrum": "PASS (option B pattern) — display name „Trugbild“; hook „Trugbild: Grad 7, Illusion — 12 Stunden, Berührung.“; DE preamble; Kernwirkung English lead.",
+    "warding_bond": "PASS (option B pattern) — „Schutzbund: Grad 2, …“; no „You Berührung“ hybrid; Kernwirkung English.",
+    "storm_of_vengeance": "PASS (option B pattern) — „Sturm der Rache: Grad 9, …“; no Round/hybrid salad; Kernwirkung English with meters in preamble.",
+    "antimagic_field": "PASS (option B pattern) — „Antimagiefeld: Grad 8, …“; DE preamble; Kernwirkung „3 Meter-radius“ lead.",
+    "prismatic_wall": "PASS (option B pattern) — display name „Prismawand“; DE preamble; Kernwirkung mixes meters with „1 inch thick“ (imperial deferred per waiver)."
+  },
+  "wiringReview": {
+    "indexTs": "PASS — LEVEL2…LEVEL9 imported and spread into SPELLS",
+    "shardFiles": "PASS — level 2–6 split into -a/-b shards under file-size budget",
+    "importManifest": "PASS — dev-progress/spells-l2-l9-import.json documents counts and exports",
+    "tests": "PASS — catalog-integrity green (61/61); integrity tests do not assert German prose quality"
+  },
+  "reviewedAt": "2026-08-08T18:22:00+02:00",
+  "notes": "Final re-review: S-03 closed — 0/246 entries with name === nameEn (was 121). Option B fully met: German names, structural hooks, DE mechanical summaries on all 246 L2–9 entries. Kernwirkung English first-sentence cue accepted as documented minor. Remaining open items S-04/S-06/S-07/S-08 are non-blocking follow-ups."
+}

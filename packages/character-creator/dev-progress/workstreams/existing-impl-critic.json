@@ -1,0 +1,13 @@
+{
+  "workstreamId": "existing-impl",
+  "verdict": "APPROVED",
+  "defects": [],
+  "acceptanceConditions": [
+    "Align workstream deliverable paths and MD references with packages/character-creator/dev-progress/ (or move files to the documented location). — MET (existing-impl.json deliverables; legacy-species-inventory.md query block)",
+    "Fix _query-species.ts and _query-species.mjs so pnpm exec tsx from repo root reproduces the DB counts documented in legacy-species-inventory.json. — MET (both scripts exit 0; counts 0/0/0 match JSON summary)",
+    "Document mensch/tiefling sizeChoice consistently in MD and JSON, including whether wizard persistence captures chosen size or defaults to species.size. — MET (MD §size choice table; JSON sizeChoicePersistence; buildSpeciesJson uses species.size only)",
+    "Keep catalog species keys (9) and lineage keys (24) unchanged—they match packages/character-creator/src/content/species*.ts. — MET"
+  ],
+  "reviewedAt": "2026-08-08T15:16:00+02:00",
+  "notes": "Re-review after path/script/sizeChoice fixes. Prior defects (deliverable-path-drift, audit-script-unreproducible, md-query-path-wrong, size-choice-doc-gap) all resolved. Independent verification: pnpm exec tsx on both audit scripts from repo root; 9 SPECIES keys and 24 lineage keys unchanged in species.ts/species-lineages.ts; CharacterDraft has speciesKey/lineageKey only; buildSpeciesJson persists catalog default size. Core inventory claims (no Species/Npc tables, NPC via Page.type=npc, CharacterSpeciesJson contract, migration outline) remain accurate from prior review. Verdict: APPROVED."
+}

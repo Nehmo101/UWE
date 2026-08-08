@@ -1,0 +1,85 @@
+{
+  "workstreamId": "backgrounds",
+  "verdict": "APPROVED",
+  "defects": [
+    {
+      "id": "B-01",
+      "severity": "major",
+      "status": "fixed",
+      "summary": "custom-background.test.ts now splits full-catalog vs SRD-only assertions: merged BACKGROUNDS leave no stranded classes; SRD-only still yields [moench, paladin, waldlaeufer]. Suite green (59/59)."
+    },
+    {
+      "id": "B-02",
+      "severity": "major",
+      "status": "fixed",
+      "summary": "backgrounds.ts module comment documents SRD four-set plus twelve OWNER_NOTES_SOURCE entries; stale TODO forbidding PHB 2024 backgrounds removed."
+    },
+    {
+      "id": "B-03",
+      "severity": "major",
+      "status": "fixed",
+      "summary": "custom-background.ts intro states catalog now covers former Paladin/Mönch/Waldläufer gaps; Eigenbau remains SRD-licensed fallback for Sonderfälle."
+    },
+    {
+      "id": "B-04",
+      "severity": "minor",
+      "status": "open",
+      "summary": "No catalog-integrity assertion that all BACKGROUNDS_EXTENDED entries use OWNER_NOTES_SOURCE (and not SRD_SOURCE); feats workstream added the same guard — backgrounds should mirror it."
+    },
+    {
+      "id": "B-05",
+      "severity": "minor",
+      "status": "open",
+      "summary": "Mechanics prose label inconsistency: scharlatan uses „Regeltechnisch:“ while the other eleven extended entries use „Attribute:“ before English ability names — polish for uniform German UX copy."
+    },
+    {
+      "id": "B-06",
+      "severity": "minor",
+      "status": "open",
+      "summary": "Hook „Magisterhof“ (scharlatan) is not listed in uwe-canon-brief.md place table (Magister-Turm / Rat der Magister are); acceptable ASSUMPTION-level compound but should not proliferate as new canon without brief update."
+    }
+  ],
+  "acceptanceConditions": [
+    "DONE — pnpm --filter @uwe/character-creator test green (59/59): custom-background.test.ts explicit SRD-four-vs-sixteen story; merged catalog leaves no stranded classes.",
+    "DONE — backgrounds.ts module comment: SRD four-set unchanged; twelve owner-note entries documented as OWNER_NOTES_SOURCE — stale TODO removed.",
+    "DONE — custom-background.ts intro matches post-import reality (catalog covers former gaps; Eigenbau remains SRD fallback).",
+    "Keep all twelve keys stable and ASCII-lowercase: handwerker, scharlatan, unterhalter, bauer, wache, kundschafter, einsiedler, kaufmann, adliger, matrose, schreiber, wanderer.",
+    "Keep source: OWNER_NOTES_SOURCE on every BACKGROUNDS_EXTENDED entry; do not label these as SRD 5.2.1.",
+    "Mechanics must stay aligned with dev-progress/backgrounds-parsed.json and backgrounds-equipment.json for all twelve (abilities, skills, tool, equipment list, startingGold, feat mapping).",
+    "Keep player-facing lore free of Tegora/Kanka/FR/Shagottar; use terra-seed defaults (Validori, Nepurga as Reich, Arbor-Saum / region-Arbor, Inneres Meer).",
+    "Keep ability display names English in extended flavour/mechanics prose (Strength, Dexterity, …); never Stärke/Geschicklichkeit in new copy.",
+    "All originFeat keys must resolve via findFeat (handwerker, begabt, musiker, zaeh, wachsam, eingeweihter-der-magie-druide, heiler, glueckspilz, wirtshausraufbold).",
+    "Add catalog-integrity test (or extend existing) asserting BACKGROUNDS_EXTENDED entries carry OWNER_NOTES_SOURCE. (B-04, non-blocking)",
+    "Optional polish: unify „Attribute:“ labelling across all twelve extended descriptions. (B-05, non-blocking)"
+  ],
+  "mechanicsReview": {
+    "handwerker": "PASS — Artisan: ST/DX/INT, Investigation+Persuasion, artisan tool, Crafter→handwerker, 32 GP kit",
+    "scharlatan": "PASS — Charlatan: DX/CO/CH, Deception+Sleight, Forgery Kit, Skilled→begabt, 15 GP",
+    "unterhalter": "PASS — Entertainer: ST/DX/CH, Acrobatics+Performance, instrument, Musician→musiker, 11 GP",
+    "bauer": "PASS — Farmer: ST/CO/WE, Animal Handling+Nature, carpenter tools, Tough→zaeh, 30 GP",
+    "wache": "PASS — Guard: ST/IN/WE, Athletics+Perception, gaming set, Alert→wachsam, 12 GP",
+    "kundschafter": "PASS — Guide: DX/CO/WE, Stealth+Survival, cartographer, Magic Initiate (Druid)→eingeweihter-der-magie-druide, 3 GP",
+    "einsiedler": "PASS — Hermit: CO/WE/CH, Medicine+Religion, herbalism kit, Healer→heiler, 16 GP",
+    "kaufmann": "PASS — Merchant: CO/IN/CH, Animal Handling+Persuasion, navigator tools, Lucky→glueckspilz, 22 GP",
+    "adliger": "PASS — Noble: ST/IN/CH, History+Persuasion, gaming set, Skilled→begabt, 29 GP",
+    "matrose": "PASS — Sailor: ST/DX/WE, Acrobatics+Perception, navigator tools, Tavern Brawler→wirtshausraufbold, 20 GP",
+    "schreiber": "PASS — Scribe: DX/IN/WE, Investigation+Perception, calligrapher, Skilled→begabt, 23 GP",
+    "wanderer": "PASS — Wayfarer: DX/WE/CH, Insight+Stealth, thieves tools, Lucky→glueckspilz, 16 GP"
+  },
+  "loreReview": {
+    "tegoraLeaks": "PASS — no Tegora/Kanka/FR names in player-facing extended copy (comment-only exclusion note OK)",
+    "canonPlaces": "PASS — Validori, Nepurga (Reich), Arbor-Saum, Inneres Meer, Magister-Turm reference, terra calendar months",
+    "forbiddenLeaks": "PASS — no Shagottar, Weltbaum cosmology, or Legacy goddess/fairy Nepurga",
+    "abilityNamesEn": "PASS — extended descriptions use English ability names in prose",
+    "germanQuality": "PASS with minor notes — hooks/descriptions read naturally; B-05 label inconsistency; B-06 Magisterhof ASSUMPTION"
+  },
+  "wiringReview": {
+    "backgroundsTsSpread": "PASS — BACKGROUNDS = BACKGROUNDS_SRD + BACKGROUNDS_EXTENDED",
+    "duplicateKeys": "PASS — twelve new keys disjoint from SRD four-set",
+    "findFeat": "PASS — catalog-integrity „jedes Ursprungstalent eines Hintergrunds existiert“ green",
+    "ownerNotesSource": "PASS manual — all twelve entries tagged OWNER_NOTES_SOURCE; add automated test (B-04)",
+    "tests": "PASS — pnpm --filter @uwe/character-creator test (59/59)"
+  },
+  "reviewedAt": "2026-08-08T15:22:00+02:00",
+  "notes": "Re-review after B-01–B-03 fixes. custom-background.test.ts now guards both full-catalog coverage and the SRD-only gap story; module comments match the sixteen-background catalog. No new blockers. B-04/B-05/B-06 remain minor follow-ups (OWNER_NOTES_SOURCE test, copy label polish, Magisterhof canon note) and do not block approval."
+}
