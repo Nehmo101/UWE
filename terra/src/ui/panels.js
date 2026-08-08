@@ -1,8 +1,8 @@
 // Rechtes Panel, Werkzeugleiste, Hinweiszeile, Toast, Statusanzeige und das
 // HTML-Overlay der Markerbeschriftungen.
 import { Vector3 } from 'three';
-import { S, hydrate, KARTE, VW, mkElement, nextSeed,
-  speicherLesen, speicherSchreiben } from '../core/store.js';
+import { S, hydrate, hydrateMarker, KARTE, VW, mkElement, nextSeed,
+  speicherLesen, speicherSchreiben, zufallsWeltSeed } from '../core/store.js';
 import { clamp } from '../core/rng.js';
 import { instanceTotal, schattenAnzahl } from '../core/pools.js';
 import { ed, TOOLS, VARIANTS, PARAMS, KARTE_PARAMS, karteParams, aktiveSprachfamilie,
@@ -20,7 +20,7 @@ import { starteErosion, brichErosionAb, erosionLaeuft, setzeErosionAnzeige }
 import { zielPruefen, anPfadPruefen } from './beschriftung.js';
 // I2: Biom-Ableitung. biomfeld.js haengt nur an core/ — zyklusfrei.
 import { biomeVorschlagen } from '../world/biomfeld.js';
-import { base, abfluss } from '../world/terrain.js';
+import { base, abfluss, genBase } from '../world/terrain.js';
 import { commit, isHeavy, deleteElement, regenElement, rebuildAll } from '../core/dirty.js';
 import { pushUndo } from '../editor/history.js';
 import { rebuildHandles, clearPreview, getMarkerAuswahl, rebuildMarker,
@@ -47,6 +47,7 @@ var panelEl = null;
 export function initPanels() {
   panelEl = document.getElementById("panel");
   baueWeltKnopf();
+  baueNeueWeltKnopf();
   setzeErosionAnzeige(zeigeErosionFortschritt);
 }
 
@@ -71,6 +72,66 @@ function baueWeltKnopf() {
   var vor = document.getElementById("saveBtn");
   if (vor && vor.parentNode === bar) bar.insertBefore(b, vor);
   else bar.appendChild(b);
+}
+
+/* ==========================================================================
+   „Neue Welt" (Bedienungsrunde)
+
+   Terra startete bisher immer mit derselben Demo-Startkarte und bot keinen
+   Weg, wieder bei Null anzufangen. Dieser Knopf loescht alles Gesetzte
+   (Elemente UND Marker), wuerfelt einen frischen Weltseed und baut nur das
+   Terrain neu — keine Bauten. Die Demo bleibt ueber ?schau=demo erreichbar.
+   Wie „Welt wuerfeln" wird der Knopf zur Laufzeit erzeugt (terra/index.html
+   bleibt unangetastet) und steht direkt hinter dem Wuerfel-Knopf.
+   ========================================================================== */
+function baueNeueWeltKnopf() {
+  var bar = document.getElementById("bar");
+  if (!bar || document.getElementById("neuBtn")) return;
+  var b = el("button", null, "🌱 Neue Welt");
+  b.id = "neuBtn";
+  b.title = "Löscht alle Elemente und Marker, würfelt einen neuen Weltseed "
+    + "und baut nur das Terrain neu. Rückgängig (Strg+Z) stellt den alten "
+    + "Stand wieder her.";
+  b.addEventListener("click", neueWelt);
+  var welt = document.getElementById("weltBtn");
+  if (welt && welt.parentNode === bar) {
+    if (welt.nextSibling) bar.insertBefore(b, welt.nextSibling);
+    else bar.appendChild(b);
+  } else {
+    var vor = document.getElementById("saveBtn");
+    if (vor && vor.parentNode === bar) bar.insertBefore(b, vor);
+    else bar.appendChild(b);
+  }
+}
+
+/**
+ * Frische leere Welt: alles Gesetzte weg, neuer Zufallsseed, nur Terrain.
+ * Der Undo-Schnappschuss nimmt das Terrain mit (mitTerrain = true), damit
+ * Strg+Z auch die alte Hoehenkarte zurueckholt — Elemente und Marker haelt
+ * jeder Schnappschuss ohnehin. Der neue Seed selbst ist bewusst NICHT Teil
+ * von Undo (Konvention wie beim Seed-Feld in io.js).
+ */
+function neueWelt() {
+  if (S.elements.length || S.marker.length) {
+    if (!window.confirm("Neue Welt beginnen? Alle gesetzten Elemente und "
+      + "Marker werden gelöscht (Strg+Z macht es rückgängig).")) return;
+  }
+  pushUndo(true);
+  ed.selected = null;
+  ed.auswahl.length = 0;
+  ed.draw = null;
+  clearPreview();            // eine angefangene Zeichnung darf nicht stehenbleiben
+  hydrate([]);               // leert S.elements
+  hydrateMarker([]);         // leert S.marker
+  rebuildMarker();
+  S.worldSeed = zufallsWeltSeed();
+  var seedFeld = document.getElementById("seed");
+  if (seedFeld) seedFeld.value = String(S.worldSeed);
+  genBase(S.worldSeed);
+  rebuildAll();
+  rebuildHandles();
+  buildPanel();
+  toast("Neue Welt · Seed " + S.worldSeed);
 }
 
 /**
@@ -1005,12 +1066,23 @@ function buildPanel() {
       (function (v) {
         var b = el("button", v[0] === variant ? "on" : "", v[1]);
         b.addEventListener("click", function () {
-          if (target) {
+          if (target && ed.tool === "auswahl") {
+            /* Nur das Auswahl-Werkzeug darf ein markiertes Element
+               umschreiben. Nach dem Platzieren bleibt das frische Element
+               markiert — ein Variantenklick in einem Setz-Werkzeug soll das
+               NAECHSTE Element betreffen, nicht das gerade gesetzte
+               ueberschreiben (Bedienungsrunde: „alte werden ueberschrieben"). */
             pushUndo();
             target.variant = v[0];
             var nd = defaultsFor(target.kind, v[0]);
             for (var k in nd) if (target.params[k] === undefined) target.params[k] = nd[k];
             commit(target, true);
+          } else if (target) {
+            // Platzierungswerkzeug: Markierung loesen, damit weitere
+            // Variantenklicks nicht versehentlich das Gesetzte umbauen.
+            ed.selected = null;
+            ed.auswahl.length = 0;
+            rebuildHandles();
           }
           /* Werkzeug-Variante IMMER mitziehen (Bedienungsrunde): nach dem
              Platzieren ist das frische Element ausgewaehlt, und der

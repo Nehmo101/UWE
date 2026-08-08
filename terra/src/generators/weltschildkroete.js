@@ -10,6 +10,7 @@ import { terraMat, tintedMats } from '../render/materials.js';
 import { M, mergeGeos, part, prismGeo } from '../assets/geometrie-hilfen.js';
 import { baueWeltschildkroetenKopf } from './weltschildkroete-kopf.js';
 import { landmarkenBereich, landmarkenSkala } from './landmarken-bereich.js';
+import { landmarkenLicht, landmarkenLichtFrei } from './landmarken-licht.js';
 import { externesAsset } from '../assets/external-assets.js';
 
 const BX = THREE.BoxGeometry;
@@ -436,6 +437,10 @@ function genWeltschildkroete(el) {
   var amplitude = clamp(Number(p.kopfbewegung), 0, 1);
   if (!Number.isFinite(amplitude)) amplitude = 0.65;
   var gruppe = groupOf(el);
+  // Der Schein kommt aus dem festen Lichtpool (landmarken-licht.js) — ein
+  // Neuaufbau beginnt mit der Freigabe der alten Zuteilung, damit die
+  // Lichtzahl in der Szene niemals schwankt (sonst Compile-Stillstand).
+  landmarkenLichtFrei(el);
 
   for (var i = 0; i < el.points.length; i++) {
     var pt = el.points[i];
@@ -475,11 +480,17 @@ function genWeltschildkroete(el) {
     akzente.userData.terraWeltschildkroetenAkzente = true;
     gruppe.add(akzente);
 
-    var schein = new THREE.PointLight(LICHT, 8.5 * groesse, 24 * groesse, 2);
-    var lx = pt.x, lz = pt.z;
-    schein.position.set(lx, boden + 18.2 * groesse, lz);
-    schein.userData.el = el;
-    gruppe.add(schein);
+    // Pool-Licht statt eigenem PointLight: kein Hinzufuegen/Entfernen von
+    // Lichtern zur Laufzeit. null = Pool erschoepft, die Schildkroete steht
+    // dann ohne Schein da statt die Lichtzahl umzuwerfen.
+    var schein = landmarkenLicht(el);
+    if (schein) {
+      schein.color.setHex(LICHT);
+      schein.distance = 24 * groesse;
+      schein.decay = 2;
+      schein.position.set(pt.x, boden + 18.2 * groesse, pt.z);
+      schein.intensity = 8.5 * groesse;
+    }
 
     kopf.userData.terraAnimation = {
       yaw: yaw,

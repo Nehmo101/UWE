@@ -76,7 +76,7 @@ const browser = await chromium.launch({
 
 /* ---------------------------------------------------------------- Bearbeiten */
 {
-  const { page, fehler } = await baueSeite(browser, '');
+  const { page, fehler } = await baueSeite(browser, '?schau=demo');
   const rahmen = page.frameLocator('#rahmen');
   void rahmen;
 
@@ -169,7 +169,7 @@ const browser = await chromium.launch({
 
 /* -------------------------------------------------------------------- Lesen */
 {
-  const { page, fehler } = await baueSeite(browser, '?modus=lesen');
+  const { page, fehler } = await baueSeite(browser, '?schau=demo&modus=lesen');
   const gestartet = await page
     .waitForFunction(() => {
       const f = document.getElementById('rahmen');
@@ -222,7 +222,7 @@ const browser = await chromium.launch({
   const page = await browser.newPage({ viewport: { width: 1100, height: 720 } });
   const fehler = [];
   page.on('pageerror', (e) => fehler.push(String(e)));
-  await page.goto(BASIS + '/index.html', { waitUntil: 'load', timeout: 90000 });
+  await page.goto(BASIS + '/index.html?schau=demo', { waitUntil: 'load', timeout: 90000 });
   const gestartet = await page.waitForFunction(() => window.__terraOk === true, { timeout: 90000 })
     .then(() => true).catch(() => false);
   melde('Terra startet auch ohne Rahmen', gestartet);

@@ -1,6 +1,6 @@
 // Einstieg: verdrahtet Module, baut die Startkarte, treibt die Renderschleife.
 import { DEG, hashi } from './core/rng.js';
-import { S, HALF, VW, setScene, mkElement, nextSeed } from './core/store.js';
+import { S, HALF, VW, setScene, mkElement, nextSeed, zufallsWeltSeed } from './core/store.js';
 import { scene, initPipeline, resizePipeline, renderFrame, getRenderInfo, tickLeistung, setPalette, setMultiplane, PALETTE_STANDARD } from './render/pipeline.js';
 import { camera, cam, initKeys, updateCamera, moveFocus } from './editor/camera.js';
 import { base, genBase, initTerrain, heightAt, slopeAt, refreshTerrainFull, basisGeaendert } from './world/terrain.js';
@@ -32,6 +32,7 @@ var letzterBeschriftungsAbgleich = -1e9;
 import { tickWind } from './world/wind.js';
 import { tickWeltschildkroeten } from './generators/weltschildkroete.js';
 import { tickWeltschloesser } from './generators/weltschloss.js';
+import { initLandmarkenLichter } from './generators/landmarken-licht.js';
 import { ladeExterneAssets } from './assets/external-assets.js';
 import { ARCHITEKTUR_STILE, architekturAssetId } from './assets/architektur-katalog.js';
 import { erstelleLuftschauPlan } from './generators/luftschau.js';
@@ -48,7 +49,9 @@ var SCHAU_FOKUS = SCHAU_PARAM.get("terraFocus") ||
   (SCHAU_BLICK === "baum" ? "baum" : null);
 
 /* ==========================================================================
-   Startkarte (unveraendert portiert — gleiche Seed, gleiche Karte)
+   Startkarte. Ohne schau-Param: frische, leere Welt mit Zufalls-Seed (nur
+   Terrain). `?schau=demo` oeffnet die deterministische Beispielkarte
+   (Seed 1337, gleiche Karte) — daran haengen Shots und Browser-Tests.
    ========================================================================== */
 /** Sucht in der Nähe einen brauchbaren Bauplatz (Land, flach genug). */
 function findLand(cx, cz, minH, maxH) {
@@ -113,7 +116,6 @@ function architekturSchauMap() {
   return { x: -8, z: 12, dist: 160, pitch: 48 * DEG, yaw: 0 };
 }
 
-/** Kleine Beispielkarte, damit beim Öffnen sofort etwas zu sehen ist. */
 /**
  * Die Vollkatalogkarte braucht ruhigen, trockenen Boden: auf dem normalen
  * Seed-Terrain verschwanden sonst ausgerechnet kleine Requisiten im Wasser.
@@ -245,6 +247,7 @@ function luftSchauMap() {
   return plan.kamera;
 }
 
+/** Beispielkarte fuer `?schau=demo` — und Start-Kameraziel fuer alle Modi. */
 function demoMap() {
   // Blickrichtung der Startkamera, damit die Komposition sofort sitzt
   if (SCHAU_MODUS === "assets") return assetSchauMap();
@@ -252,6 +255,9 @@ function demoMap() {
   if (SCHAU_MODUS === "architektur") {
     return architekturSchauMap();
   }
+  // Normaler Start: keine Bauten, nur das frische Terrain. Wer die
+  // Beispielkarte will, oeffnet ?schau=demo.
+  if (SCHAU_MODUS !== "demo") return { x: 0, z: 0, dist: 150 };
   var vx = -Math.sin(0.85), vz = -Math.cos(0.85);      // vom Fokus weg
   var px = -vz, pz = vx;                                // quer dazu
 
@@ -340,6 +346,11 @@ initAtmosphere(scene);
 // VFX nach der Atmosphaere: initAtmosphere verdrahtet #wetterSel, setWetter()
 // weiter unten schreibt dann bereits in ein fertig aufgebautes Partikelsystem.
 initVfx(scene);
+// Der Landmarken-Lichtpool muss VOR dem ersten gerenderten Bild in der
+// Szene haengen: nur so ist die Lichtzahl von Anfang an konstant und kein
+// spaeteres Setzen einer Schildkroete oder eines Schlosses wirft den
+// Programmbestand um (generators/landmarken-licht.js).
+initLandmarkenLichter(scene);
 initSelection(scene);
 initPanels();
 setRauchSammler(setRauchQuellen);
@@ -362,6 +373,14 @@ palettePassend();
 // Manifest oder Fehler bleibt die prozedurale Geometrie unveraendert aktiv.
 await ladeExterneAssets();
 
+// Ohne schau-Param startet Terra mit einem frischen Zufalls-Seed: jede
+// neue Sitzung bekommt eine andere, leere Welt. Alle schau-Modi bleiben
+// auf dem festen Seed 1337 (Determinismus fuer Shots/Tests).
+if (!SCHAU_MODUS) {
+  S.worldSeed = zufallsWeltSeed();
+  var seedFeld = document.getElementById("seed");
+  if (seedFeld) seedFeld.value = String(S.worldSeed);
+}
 genBase(S.worldSeed);
 if (SCHAU_MODUS === "assets") assetSchauGelaende();
 refreshTerrainFull();

@@ -183,7 +183,7 @@ async function main() {
 
     const eintrag = { id: shot.id, bereich: shot.bereich, titel: shot.titel, frage: shot.frage };
     try {
-      await seite.goto(basis + (shot.url || ""), { waitUntil: "load", timeout: 60000 });
+      await seite.goto(basis + (shot.url || "?schau=demo"), { waitUntil: "load", timeout: 60000 });
       await seite.waitForFunction("window.__terraOk === true", null, { timeout: 90000 });
       await warteBilder(seite, 10);
 

@@ -20,6 +20,11 @@ import { strukturKorridore, istStruktur, KORRIDOR_R, KLOSTER_MAX_GROESSE,
   WERFT_QUERSUCHE } from '../generators/strukturen.js';
 import { genObjekt, OBJEKT_ZEICHEN, POOL_ZEICHEN, punkteBox, streuWeite } from '../generators/objects.js';
 import { genRanke } from '../generators/vines.js';
+// Landmarken-Schein: Lichter freigeben, deren Element von der Karte
+// verschwunden ist — der Pool (generators/landmarken-licht.js) haelt die
+// Lichtzahl konstant, ein verwaister Eintrag braeete sonst Intensitaet an
+// einer Stelle weiter, an der laengst keine Landmarke mehr steht.
+import { landmarkenLichtSweep } from '../generators/landmarken-licht.js';
 // Runde J: die vier neuen Reliefformen (Klippe, Schlucht, Pass, Krater).
 // Der Aufruf steht HIER und nicht in objects.js, damit dessen bestehende
 // Grat-/Gipfelkette (reliefZeichen) unangetastet bleibt — reliefFormZeichen
@@ -446,6 +451,7 @@ function refreshTerrainBereich(el) {
 
 /** Vollständiger Neuaufbau (Laden, Undo, Seed-Wechsel). */
 function rebuildAll() {
+  landmarkenLichtSweep();
   rebuildRivers();
   // Reihenfolge ist Pflicht, nicht Geschmack: rebuildCorridors() ruft fuer
   // Viertel und Werften districtStreets()/werftAchse(), und die lesen
@@ -725,6 +731,7 @@ function refreshArborQuellen() {
 function deleteElement(el) {
   markDirty(Object.keys(el.inst));
   dropElement(el);
+  landmarkenLichtSweep();   // Landmarken-Schein des Elements sofort aus
   refreshArborQuellen();
 }
 

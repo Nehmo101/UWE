@@ -28,7 +28,7 @@ function melde(name, ok, zusatz) {
   console.log((ok ? 'OK  ' : 'FEHL') + '  ' + name + (zusatz === undefined ? '' : '  — ' + zusatz));
 }
 
-await page.goto('http://localhost:8123/index.html', { waitUntil: 'load', timeout: 90000 });
+await page.goto('http://localhost:8123/index.html?schau=demo', { waitUntil: 'load', timeout: 90000 });
 const gestartet = await page.waitForFunction(() => window.__terraOk === true, { timeout: 90000 })
   .then(() => true).catch(() => false);
 melde('Editor startet (window.__terraOk)', gestartet);

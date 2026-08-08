@@ -184,8 +184,15 @@ test('Weltschildkroete - direkte Meshes, bewegter Kopf und endliche Transforms',
   const direkteLichter = el.group.children.filter((kind) => kind.type === 'PointLight');
   assert.equal(direkteMeshes.length, 4,
     'Koerper, Kopf, Fensterlicht und Stoffakzente muessen direkte Mesh-Kinder sein');
-  assert.equal(direkteLichter.length, 1);
-  assert.equal(el.group.children.length, 5,
+  /* Der Schein kommt aus dem Landmarken-Lichtpool (generators/landmarken-licht.js)
+     und haengt an der SZENE, nicht an der Elementgruppe: eine sich aendernde
+     Lichtzahl zwang three.js zum Komplett-Compile aller Programme (rund acht
+     Sekunden Stillstand beim Setzen einer Schildkroete). Ohne initialisierten
+     Pool — wie hier im Knoten-Test — gibt es kein Licht, und das ist der
+     ausdruecklich gewollte Erschoepfungsfall statt eines Recompiles. */
+  assert.equal(direkteLichter.length, 0,
+    'Der Schein gehoert zum Szenen-Pool, nicht zur Elementgruppe');
+  assert.equal(el.group.children.length, 4,
     'Die Landmarke darf keine versteckten Pivot-Gruppen anlegen');
   assert.ok(direkteMeshes.every((mesh) => mesh.parent === el.group));
   assert.ok(direkteMeshes.every((mesh) =>
@@ -373,7 +380,6 @@ test('Weltschildkroete - direkte Meshes, bewegter Kopf und endliche Transforms',
   SCHILDKROETE.tickWeltschildkroeten(0);
   const start = [kopf.rotation.x, kopf.rotation.y, kopf.rotation.z];
   const stoffStart = [akzente.rotation.y, akzente.rotation.z, akzente.position.y];
-  const lichtStart = direkteLichter[0].intensity;
   let bewegt = false;
   let belebt = false;
   for (const zeit of [11, 37, 83]) {
@@ -383,8 +389,7 @@ test('Weltschildkroete - direkte Meshes, bewegter Kopf und endliche Transforms',
       || Math.abs(kopf.rotation.z - start[2]) > 1e-6;
     belebt ||= Math.abs(akzente.rotation.y - stoffStart[0]) > 1e-6
       || Math.abs(akzente.rotation.z - stoffStart[1]) > 1e-6
-      || Math.abs(akzente.position.y - stoffStart[2]) > 1e-6
-      || Math.abs(direkteLichter[0].intensity - lichtStart) > 1e-6;
+      || Math.abs(akzente.position.y - stoffStart[2]) > 1e-6;
   }
   assert.ok(bewegt, 'Der Kopf bewegt sich im Animationstakt nicht');
   assert.ok(belebt, 'Fahnen und Schlosslicht reagieren nicht auf den Animationstakt');

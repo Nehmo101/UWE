@@ -977,6 +977,21 @@ export function nextSeed() {
   return S.elementSeedCounter;
 }
 
+/* Zufaelliger Welt-Seed fuer eine neue Startwelt. Einzige bewusst nicht-
+   deterministische Stelle in Terra: eine frische Welt soll nicht immer
+   dieselbe Karte sein. Alles NACH dem Seed bleibt voll deterministisch
+   (gleicher Seed -> gleiche Welt). */
+export function zufallsWeltSeed() {
+  try {
+    if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+      var buf = new Uint32Array(1);
+      crypto.getRandomValues(buf);
+      return buf[0] | 0;
+    }
+  } catch (e) { /* Fallback unten */ }
+  return (Date.now() & 0x7fffffff) | 0;
+}
+
 export function mkElement(kind, variant, points, params, seed) {
   return {
     id: S.nextId++,

@@ -8,6 +8,7 @@ import { heightAt } from '../world/terrain.js';
 import { terraMat, tintedMats } from '../render/materials.js';
 import { M, mergeGeos, part, prismGeo } from '../assets/geometrie-hilfen.js';
 import { landmarkenBereich, landmarkenSkala } from './landmarken-bereich.js';
+import { landmarkenLicht, landmarkenLichtFrei } from './landmarken-licht.js';
 
 const BX = THREE.BoxGeometry;
 const CY = THREE.CylinderGeometry;
@@ -97,6 +98,9 @@ export function genWeltschloss(el) {
   var skala = landmarkenSkala(p, 0.55, 2.2);
   var yaw = (Number(p.drehung) || 0) * DEG;
   var gruppe = groupOf(el);
+  // Schein aus dem festen Lichtpool (landmarken-licht.js): die Lichtzahl in
+  // der Szene bleibt konstant — kein Compile-Stillstand beim Setzen.
+  landmarkenLichtFrei(el);
   for (var i = 0; i < el.points.length; i++) {
     var pt = el.points[i], boden = heightAt(pt.x, pt.z);
     var haupt = new THREE.Mesh(GEOMETRIEN[bereich.ausbau].clone(), schlossMat);
@@ -109,8 +113,16 @@ export function genWeltschloss(el) {
     var banner = new THREE.Mesh(BANNER[bereich.ausbau].clone(), akzentMat);
     banner.position.copy(haupt.position); banner.rotation.y = yaw; banner.scale.setScalar(skala);
     banner.userData.el = el; gruppe.add(banner);
-    var schein = new THREE.PointLight(LICHT, 6 * skala, 26 * skala, 2);
-    schein.position.set(pt.x, boden + 8 * skala, pt.z); schein.userData.el = el; gruppe.add(schein);
+    // Pool-Licht statt eigenem PointLight (siehe landmarken-licht.js).
+    // null = Pool erschoepft — das Schloss steht dann ohne Schein da.
+    var schein = landmarkenLicht(el);
+    if (schein) {
+      schein.color.setHex(LICHT);
+      schein.distance = 26 * skala;
+      schein.decay = 2;
+      schein.position.set(pt.x, boden + 8 * skala, pt.z);
+      schein.intensity = 6 * skala;
+    }
     banner.userData.terraAnimation = { yaw: yaw, skala: skala,
       phase: hashi(el.seed, i, 9917) * Math.PI * 2, schein: schein };
     belebt.push(banner);
@@ -125,7 +137,7 @@ export function tickWeltschloesser(zeit) {
     var wind = Math.sin(zeit * 0.75 + a.phase) * 0.012;
     banner.rotation.y = a.yaw + wind;
     banner.rotation.z = wind * 0.7;
-    a.schein.intensity = 6 * a.skala * (1 + Math.sin(zeit * 1.4 + a.phase) * 0.04);
+    if (a.schein) a.schein.intensity = 6 * a.skala * (1 + Math.sin(zeit * 1.4 + a.phase) * 0.04);
   }
 }
 

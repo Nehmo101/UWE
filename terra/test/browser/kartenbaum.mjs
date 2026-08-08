@@ -10,7 +10,7 @@ page.on('pageerror', e => fehler.push(String(e)));
 const schritte = [];
 function melde(n, ok, z) { schritte.push(ok); console.log((ok?'OK  ':'FEHL')+'  '+n+(z===undefined?'':'  — '+z)); }
 
-await page.goto('http://localhost:8123/index.html', { waitUntil: 'load', timeout: 90000 });
+await page.goto('http://localhost:8123/index.html?schau=demo', { waitUntil: 'load', timeout: 90000 });
 const start = await page.waitForFunction(() => window.__terraOk === true, { timeout: 90000 }).then(()=>true).catch(()=>false);
 melde('Editor startet', start);
 if (!start) { fehler.slice(0,5).forEach(f=>console.log(f)); await browser.close(); process.exit(1); }
