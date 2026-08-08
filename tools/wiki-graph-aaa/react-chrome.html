@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="de" data-uwe-theme="uwe-parchment-os" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wiki-Graph AAA — real GraphView chrome</title>
+    <!-- Production GraphView geometry tokens (minimap, canvas, full layout). -->
+    <link rel="stylesheet" href="/uwe.css" />
+    <!-- Tailwind utilities scanned from GraphView*.tsx (built by capture script). -->
+    <link rel="stylesheet" href="./react-chrome-tw.css" />
+    <style>
+      /* Parchment OS tokens — match the AAA harness / Studio light theme so the
+         real GraphView chrome reads like production, not the dark :root fallback
+         in uwe.css. */
+      :root,
+      html[data-uwe-theme="uwe-parchment-os"] {
+        --uwe-bg: #f4ecda;
+        --uwe-bg-elevated: #ebe1cb;
+        --uwe-surface: #ebe1cb;
+        --uwe-fg: #1c1814;
+        --uwe-fg-muted: #5c5346;
+        --uwe-accent: #c2622b;
+        --uwe-on-accent: #fff8f0;
+        --uwe-border: rgba(28, 24, 20, 0.14);
+        --uwe-border-muted: rgba(28, 24, 20, 0.1);
+        --uwe-card: #ebe1cb;
+        --uwe-card-bg: #ebe1cb;
+        --uwe-input-bg: #f7f0e2;
+        --uwe-shadow-sm: 0 1px 2px rgba(28, 24, 20, 0.06);
+        --uwe-shadow-md: 0 8px 24px rgba(28, 24, 20, 0.1);
+        --uwe-shadow-lg: 0 16px 40px rgba(28, 24, 20, 0.14);
+        --uwe-radius-md: 0.625rem;
+        --uwe-radius-lg: 0.85rem;
+        --uwe-text-2xs: 0.68rem;
+        --uwe-font-newsreader: "Newsreader", "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+        --uwe-font-space-mono: "Segoe UI", "IBM Plex Sans", system-ui, sans-serif;
+        --uwe-graph-npc: #c2622b;
+        --uwe-graph-location: #2f7d6e;
+        --uwe-graph-faction: #6b4c9a;
+        --uwe-graph-session: #b8860b;
+        --uwe-graph-dungeon: #7a4a3a;
+        --uwe-graph-item: #3d6b9a;
+        --uwe-graph-lore: #5a6b4a;
+        --uwe-graph-quest: #a85a3a;
+        --uwe-graph-handout: #6a6a6a;
+        color-scheme: light;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        height: 100%;
+        background: var(--uwe-bg);
+        color: var(--uwe-fg);
+        font-family: "Segoe UI", "IBM Plex Sans", system-ui, sans-serif;
+      }
+      #frame {
+        position: relative;
+        width: 1280px;
+        height: 800px;
+        overflow: hidden;
+        background: var(--uwe-bg);
+      }
+      #react-chrome-root {
+        width: 100%;
+        height: 100%;
+      }
+      /* GraphView's full layout defaults to min(78vh, 820px); force the capture
+         frame height so Playwright's 1280×800 viewport is filled. */
+      #react-chrome-root .uwe-fdgraph-full {
+        height: 800px;
+        border: 0;
+        border-radius: 0;
+      }
+      /* Capture-only: keep the filter panel + minimap clear of the 312px detail
+         drawer so the critic can see search/chips/counts/Nachbarschaft/minimap
+         and the detail panel in one frame (production stacks them on the right). */
+      #react-chrome-root .uwe-fdgraph-full > div.absolute.right-6 {
+        right: 332px;
+        z-index: 6;
+      }
+      #react-chrome-root .uwe-fdgraph-minimap {
+        right: 332px;
+        z-index: 5;
+      }
+      #harness-badge {
+        position: absolute;
+        left: 14px;
+        top: 10px;
+        z-index: 40;
+        pointer-events: none;
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--uwe-fg-muted);
+        background: color-mix(in srgb, var(--uwe-bg-elevated) 88%, transparent);
+        border: 1px solid var(--uwe-border);
+        border-radius: 999px;
+        padding: 3px 10px;
+        backdrop-filter: blur(8px);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="frame">
+      <div id="harness-badge">after · chrome (real GraphView)</div>
+      <div id="react-chrome-root"></div>
+    </div>
+    <script type="module" src="./graphview-bundle.mjs"></script>
+  </body>
+</html>

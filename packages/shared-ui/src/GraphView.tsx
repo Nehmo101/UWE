@@ -1,21 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  ArrowRight,
-  Lock,
-  LockOpen,
-  Maximize,
-  Maximize2,
-  Minimize2,
-  Minus,
-  Plus,
-  Search,
-  X,
-} from "lucide-react";
+import { ArrowRight, Lock, LockOpen, Maximize, Maximize2, Minimize2, Minus, Plus, X } from "lucide-react";
 import type { GraphEdge, GraphNode, GraphNodeCategory } from "@uwe/database/graph-types";
 import { GRAPH_NODE_CATEGORY_LABELS } from "@uwe/database/graph-types";
-import { GraphEngine, GRAPH_CATEGORY_COLORS, isGraphPositionCacheValid } from "./graph-engine";
+import { GraphEngine, isGraphPositionCacheValid } from "./graph-engine";
+import { GraphViewControls, type GraphViewStats } from "./GraphViewControls";
+import { DOT_BASE, catCssColor } from "./graph-view-chrome";
+import { resolveNeighborhoodFocus, stepNeighborhoodDepth } from "./graph-view-ego";
 import { PageTypeBadge } from "./StatusBadges";
 
 export interface GraphViewProps {
@@ -33,6 +25,14 @@ export interface GraphViewProps {
   showMinimap?: boolean;
 }
 
+/** Grenzen der Ego-Tiefe im Nachbarschafts-Modus (Chrome: Fokus-Radius um einen Knoten). */
+const MIN_EGO_DEPTH = 1;
+const MAX_EGO_DEPTH = 4;
+const DEFAULT_EGO_DEPTH = 2;
+/** Halbe Breite des Detail-Panels (`w-[312px]`) — verschiebt das Kamera-Zentrum beim
+ *  sanften Heranschwenken, damit der fokussierte Knoten nicht dahinter verschwindet. */
+const DETAIL_PANEL_OFFSET_X = 156;
+
 /** Anzeigereihenfolge der Kategorie-Chips/Legende (Session zuerst, wie im Handoff). */
 const CATEGORY_ORDER: GraphNodeCategory[] = [
   "session",
@@ -46,34 +46,15 @@ const CATEGORY_ORDER: GraphNodeCategory[] = [
   "handout",
 ];
 
-/** Kategorie-Farbe als CSS-Variable mit Hex-Fallback (zieht über Themes mit). */
-function catCssColor(category: GraphNodeCategory): string {
-  return `var(--uwe-graph-${category}, ${GRAPH_CATEGORY_COLORS[category]})`;
-}
-
 function graphNodeAccessibleName(node: GraphNode): string {
   const category = GRAPH_NODE_CATEGORY_LABELS[node.category];
   return node.isFocus ? `${node.title}, ${category} (Fokus)` : `${node.title}, ${category}`;
 }
 
 // --- Tailwind-Klassenbausteine für die Graph-Chrome -------------------------
-// (Kategorie-Punkt, Filter-Chips und Zoom-/Fit-/Lock-/Schließen-Buttons teilen
-// Basis-Styles, die je nach Kompakt-/Aktiv-Zustand kombiniert werden.)
-const DOT_BASE = "inline-block h-2.5 w-2.5 flex-none rounded-full";
-
-function dotClass(ring: boolean): string {
-  return ring ? `${DOT_BASE} border border-current bg-transparent` : DOT_BASE;
-}
-
-const CHIP_BASE =
-  "inline-flex items-center gap-[0.45rem] rounded-full border py-[0.32rem] pl-[0.55rem] pr-[0.7rem] text-[12px] transition-colors motion-reduce:transition-none hover:border-primary hover:text-foreground ";
-const CHIP_ACTIVE = "border-border bg-[var(--uwe-bg-elevated,var(--uwe-surface))] text-foreground opacity-100";
-const CHIP_INACTIVE = "border-border text-muted-foreground opacity-60";
-
-function chipClass(active: boolean): string {
-  return `${CHIP_BASE}${active ? CHIP_ACTIVE : CHIP_INACTIVE}`;
-}
-
+// (Kategorie-Punkt/Chip-Bausteine leben in `graph-view-chrome.ts`, geteilt mit
+// `GraphViewControls.tsx`. Der Zoom-/Fit-/Lock-/Vollbild-Icon-Rail bleibt hier,
+// da er nur von dieser Datei gerendert wird.)
 const ICON_BTN_BASE =
   "flex items-center justify-center text-foreground transition-colors motion-reduce:transition-none hover:bg-[color-mix(in_srgb,var(--uwe-accent)_12%,transparent)] hover:text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary active:translate-y-px";
 
@@ -112,14 +93,32 @@ export function GraphView({
 
   const [selected, setSelected] = useState<GraphNode | null>(null);
   const [hidden, setHidden] = useState<Set<GraphNodeCategory>>(new Set());
+  const [hideOrphans, setHideOrphans] = useState(false);
+  const [orphanCount, setOrphanCount] = useState(0);
   const [query, setQuery] = useState("");
   const [locked, setLocked] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  // Ego-Netz-Modus ("Nachbarschaft"): Anker ist die aktuelle Auswahl (oder der
+  // initiale Fokus), Tiefe steuert den Radius. `localMode` ist die Nutzer-Absicht;
+  // `effectiveFocusId` bleibt null, solange kein gültiger Anker existiert (z. B.
+  // nach Schließen des Panels), sodass der Graph dann automatisch zur Gesamtansicht
+  // zurückkehrt, ohne die Umschaltung selbst zurückzusetzen.
+  const [localMode, setLocalMode] = useState(false);
+  const [localDepth, setLocalDepth] = useState(DEFAULT_EGO_DEPTH);
+  // Live-Zähler fürs Filter-Panel: Knoten/Kanten der aktuellen Ansicht (ganzer
+  // Graph oder Nachbarschaft) vor/nach den Kategorie-Chips, plus Knoten je
+  // Kategorie für die Zähl-Badges auf den Chips. Beides kommt aus der Engine
+  // (die kennt die tatsächliche, ggf. auf ein Ego-Netz reduzierte Ansicht),
+  // nicht aus den vollen `nodes`/`edges`-Props.
+  const [viewStats, setViewStats] = useState<GraphViewStats | null>(null);
+  const [categoryCounts, setCategoryCounts] = useState<Partial<Record<GraphNodeCategory, number>>>({});
 
   // Spiegel des Chrome-States, damit ein Rebuild (neue Daten) den aktuellen Filter
   // übernimmt, ohne die Engine bei jedem Tastendruck neu zu erzeugen.
   const hiddenRef = useRef(hidden);
   hiddenRef.current = hidden;
+  const hideOrphansRef = useRef(hideOrphans);
+  hideOrphansRef.current = hideOrphans;
   const queryRef = useRef(query);
   queryRef.current = query;
   const lockedRef = useRef(locked);
@@ -135,15 +134,48 @@ export function GraphView({
   const hasNodes = nodes.length > 0;
   const withMinimap = !compact && showMinimap;
 
-  // Engine-Lebenszyklus: instanziieren beim Mount, neu aufbauen bei Datenwechsel.
+  // Ego-Netz-Anker: Auswahl → Fokus — null wenn kompakt/aus/Anker fehlt
+  // (Engine baut dann den ganzen Graphen). Logik in graph-view-ego.ts.
+  const { canGoLocal, effectiveFocusId } = resolveNeighborhoodFocus({
+    compact: Boolean(compact),
+    localMode,
+    selectedId: selected?.id,
+    focusPageId,
+    nodeIds: nodes.map((node) => node.id),
+  });
+
+  // Zähler aus der Engine übernehmen (aktuelle Ansicht, nicht die vollen Props) —
+  // nach jedem Engine-Rebuild und nach jeder Kategorie-Umschaltung aufrufen.
+  const refreshCounts = useCallback(() => {
+    const engine = engineRef.current;
+    if (!engine) {
+      setViewStats(null);
+      setCategoryCounts({});
+      return;
+    }
+    setViewStats({
+      totalNodes: engine.nodeCount,
+      totalEdges: engine.edgeCount,
+      visibleNodes: engine.visibleNodeCount(),
+      visibleEdges: engine.visibleEdgeCount(),
+    });
+    setCategoryCounts(engine.categoryCounts());
+    setOrphanCount(engine.orphanCount());
+  }, []);
+
+  // Engine-Lebenszyklus: instanziieren beim Mount, neu aufbauen bei Datenwechsel
+  // (inkl. Nachbarschafts-Anker/-Tiefe — das baut das Ego-Netz neu auf).
   useEffect(() => {
     const canvas = canvasElRef.current;
     if (!canvas || nodes.length === 0) return;
 
+    const initialSelectId = effectiveFocusId ?? focusPageId ?? null;
     const engine = new GraphEngine(canvas, {
       nodes,
       edges,
-      selectId: focusPageId ?? null,
+      focusId: effectiveFocusId,
+      egoDepth: effectiveFocusId ? localDepth : undefined,
+      selectId: initialSelectId,
       compact,
       dotGrid: true,
       mini: withMinimap ? miniElRef.current : null,
@@ -157,19 +189,24 @@ export function GraphView({
         setSelected(node);
       },
     });
+    // Vollbild-Panel schiebt sich über den rechten Rand — Fokussieren zentriert
+    // den Knoten in der sichtbaren Restfläche statt dahinter.
+    engine.setFocusOffsetX(compact ? 0 : DETAIL_PANEL_OFFSET_X);
     const cachedPositions = isGraphPositionCacheValid(posCacheRef.current, nodes.map((node) => node.id))
       ? posCacheRef.current
       : {};
     engine.applyPositions(cachedPositions);
     engine.setHiddenCats(hiddenRef.current);
+    engine.setHideOrphans(hideOrphansRef.current);
     engine.setQuery(queryRef.current);
     engineRef.current = engine;
     engine.start();
     // Sperr-Zustand nach einem Datenwechsel-Rebuild wiederherstellen.
     if (lockedRef.current && !engine.locked) engine.toggleLock();
+    refreshCounts();
 
-    if (focusPageId) {
-      setSelected(nodes.find((node) => node.id === focusPageId) ?? null);
+    if (initialSelectId) {
+      setSelected(nodes.find((node) => node.id === initialSelectId) ?? null);
     } else {
       setSelected(null);
     }
@@ -192,7 +229,7 @@ export function GraphView({
       engine.destroy();
       engineRef.current = null;
     };
-  }, [nodes, edges, compact, focusPageId, withMinimap]);
+  }, [nodes, edges, compact, focusPageId, withMinimap, effectiveFocusId, localDepth, refreshCounts]);
 
   const onSearch = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
@@ -200,19 +237,41 @@ export function GraphView({
     engineRef.current?.setQuery(value);
   }, []);
 
-  const toggleCat = useCallback((cat: GraphNodeCategory) => {
-    setHidden((prev) => {
-      const next = new Set(prev);
-      if (next.has(cat)) next.delete(cat);
-      else next.add(cat);
+  const toggleCat = useCallback(
+    (cat: GraphNodeCategory) => {
+      setHidden((prev) => {
+        const next = new Set(prev);
+        if (next.has(cat)) next.delete(cat);
+        else next.add(cat);
+        return next;
+      });
+      engineRef.current?.toggleCat(cat);
+      refreshCounts();
+    },
+    [refreshCounts],
+  );
+
+  const toggleOrphans = useCallback(() => {
+    setHideOrphans((prev) => {
+      const next = !prev;
+      engineRef.current?.setHideOrphans(next);
       return next;
     });
-    engineRef.current?.toggleCat(cat);
-  }, []);
+    refreshCounts();
+  }, [refreshCounts]);
 
   const zoomIn = useCallback(() => engineRef.current?.zoomBy(1.2), []);
   const zoomOut = useCallback(() => engineRef.current?.zoomBy(0.83), []);
   const fit = useCallback(() => engineRef.current?.fit(), []);
+  const toggleLocalMode = useCallback(() => {
+    setLocalMode((prev) => {
+      if (!prev && !canGoLocal) return prev; // ohne Anker nichts umzuschalten
+      return !prev;
+    });
+  }, [canGoLocal]);
+  const changeLocalDepth = useCallback((delta: number) => {
+    setLocalDepth((prev) => stepNeighborhoodDepth(prev, delta, MIN_EGO_DEPTH, MAX_EGO_DEPTH));
+  }, []);
   const toggleLock = useCallback(() => {
     const value = engineRef.current?.toggleLock() ?? false;
     setLocked(value);
@@ -376,6 +435,10 @@ export function GraphView({
         </div>
       )}
 
+      {/* Der Header oben nennt die Gesamtgröße der Welt; das Filter-Panel rechts
+          zeigt die LIVE-Zahl der aktuellen Ansicht (Nachbarschaft/Kategorie-Chips) —
+          bewusst getrennt, damit "Welt" und "gerade sichtbar" nicht verschmelzen. */}
+
       {compact && (
         <div
           className="pointer-events-none absolute left-3 top-3 flex max-w-[70%] flex-wrap gap-x-3 gap-y-[5px]"
@@ -391,39 +454,26 @@ export function GraphView({
       )}
 
       {!compact && (
-        <div className="absolute right-6 top-[22px] w-[340px] max-w-[calc(100%-48px)] rounded-[14px] border border-border bg-[color-mix(in_srgb,var(--uwe-bg-elevated,var(--uwe-surface))_80%,transparent)] p-3 shadow-[var(--uwe-shadow-md)] backdrop-blur-md backdrop-saturate-[1.05]">
-          <div className="flex h-[38px] items-center gap-2 rounded-[var(--radius)] border border-border bg-[var(--uwe-input-bg,var(--uwe-bg-elevated))] px-2.5 text-muted-foreground">
-            <Search size={15} aria-hidden />
-            <input
-              type="search"
-              value={query}
-              onChange={onSearch}
-              placeholder="Knoten suchen…"
-              aria-label="Knoten suchen"
-              className="min-w-0 flex-1 border-0 bg-transparent text-[13px] text-foreground outline-none"
-            />
-          </div>
-          <div className="mt-[11px] flex flex-wrap gap-[7px]">
-            {presentCategories.map((cat) => {
-              const active = !hidden.has(cat);
-              return (
-                <button
-                  key={cat}
-                  type="button"
-                  className={chipClass(active)}
-                  aria-pressed={active}
-                  onClick={() => toggleCat(cat)}
-                >
-                  <span
-                    className={dotClass(!active)}
-                    style={active ? { background: catCssColor(cat) } : { borderColor: catCssColor(cat) }}
-                  />
-                  <span>{GRAPH_NODE_CATEGORY_LABELS[cat]}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <GraphViewControls
+          query={query}
+          onSearch={onSearch}
+          categories={presentCategories}
+          categoryCounts={categoryCounts}
+          hidden={hidden}
+          onToggleCategory={toggleCat}
+          stats={viewStats}
+          neighborhoodActive={!!effectiveFocusId}
+          canGoNeighborhood={canGoLocal}
+          onToggleNeighborhood={toggleLocalMode}
+          neighborhoodAnchorTitle={effectiveFocusId ? (nodeById.get(effectiveFocusId)?.title ?? null) : null}
+          depth={localDepth}
+          minDepth={MIN_EGO_DEPTH}
+          maxDepth={MAX_EGO_DEPTH}
+          onChangeDepth={changeLocalDepth}
+          hideOrphans={hideOrphans}
+          orphanCount={orphanCount}
+          onToggleOrphans={toggleOrphans}
+        />
       )}
 
       <div

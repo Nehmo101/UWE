@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wiki-Graph AAA Harness</title>
+    <style>
+      :root {
+        --uwe-bg: #f4ecda;
+        --uwe-bg-elevated: #ebe1cb;
+        --uwe-fg: #1c1814;
+        --uwe-fg-muted: #5c5346;
+        --uwe-accent: #c2622b;
+        --uwe-dm-only: #8a3a2a;
+        --uwe-graph-npc: #c2622b;
+        --uwe-graph-location: #2f7d6e;
+        --uwe-graph-faction: #6b4c9a;
+        --uwe-graph-session: #b8860b;
+        --uwe-graph-dungeon: #7a4a3a;
+        --uwe-graph-item: #3d6b9a;
+        --uwe-graph-lore: #5a6b4a;
+        --uwe-graph-quest: #a85a3a;
+        --uwe-graph-handout: #6a6a6a;
+        --line: rgba(28, 24, 20, 0.14);
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        height: 100%;
+        background: var(--uwe-bg);
+        color: var(--uwe-fg);
+        font-family: "Segoe UI", "IBM Plex Sans", system-ui, sans-serif;
+      }
+      #harness-root {
+        position: relative;
+        width: 1280px;
+        height: 800px;
+        overflow: hidden;
+        background: var(--uwe-bg);
+      }
+      #graph-canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        cursor: grab;
+      }
+      #graph-chrome {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+      .chrome-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        /* Extra Top-Padding hält den Titel klar vom absolut positionierten
+           #harness-badge (oben links) getrennt — beide teilten sich vorher
+           dieselbe Ecke und überlappten in Screenshots. */
+        padding: 40px 14px 12px;
+        background: linear-gradient(180deg, rgba(244, 236, 218, 0.92), transparent);
+      }
+      .chrome-title {
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        font-size: 0.95rem;
+      }
+      .chrome-sub {
+        color: var(--uwe-fg-muted);
+        font-size: 0.78rem;
+        margin-top: 2px;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        justify-content: flex-end;
+        max-width: 58%;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 4px 10px 4px 8px;
+        background: rgba(255, 253, 247, 0.88);
+        font-size: 11px;
+      }
+      .chip.chip-inactive {
+        opacity: 0.6;
+      }
+      .chip .count {
+        border-radius: 999px;
+        background: rgba(28, 24, 20, 0.1);
+        color: var(--uwe-fg-muted);
+        font-size: 10px;
+        padding: 1px 6px;
+        font-variant-numeric: tabular-nums;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--c, #888);
+      }
+      .chip-inactive .dot {
+        background: transparent;
+        border: 1px solid var(--c, #888);
+      }
+      .toolbar {
+        position: absolute;
+        right: 14px;
+        bottom: 14px;
+        display: flex;
+        gap: 6px;
+      }
+      .btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: rgba(255, 253, 247, 0.92);
+        display: grid;
+        place-items: center;
+        font-size: 16px;
+        font-weight: 700;
+      }
+      #mini-wrap {
+        position: absolute;
+        left: 14px;
+        bottom: 14px;
+        width: 148px;
+        height: 108px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        overflow: hidden;
+        background: rgba(255, 253, 247, 0.9);
+        box-shadow: 0 6px 18px rgba(28, 24, 20, 0.08);
+      }
+      #mini-canvas { width: 100%; height: 100%; display: block; }
+      #harness-badge {
+        position: absolute;
+        left: 14px;
+        top: 12px;
+        z-index: 3;
+        font-size: 11px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--uwe-fg-muted);
+        background: rgba(255, 253, 247, 0.9);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 4px 10px;
+      }
+      .search {
+        position: absolute;
+        left: 50%;
+        top: 14px;
+        transform: translateX(-50%);
+        width: min(320px, 40%);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 8px 14px;
+        background: rgba(255, 253, 247, 0.92);
+        color: var(--uwe-fg-muted);
+        font-size: 12px;
+      }
+      .panel {
+        position: absolute;
+        right: 14px;
+        top: 300px;
+        width: 240px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(255, 253, 247, 0.94);
+        padding: 12px 14px;
+        box-shadow: 0 10px 28px rgba(28, 24, 20, 0.1);
+      }
+      .panel h3 { margin: 0 0 4px; font-size: 0.95rem; }
+      .panel p { margin: 0; color: var(--uwe-fg-muted); font-size: 0.8rem; line-height: 1.35; }
+
+      /* Filter-Panel (Chips, Live-Zähler, Nachbarschaft) — Obsidian-Filters-artige
+         Ecke rechts oben, GraphViewControls.tsx-Layout in HTML/CSS nachgebaut. */
+      .filters {
+        position: absolute;
+        right: 14px;
+        top: 60px;
+        width: 250px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(255, 253, 247, 0.9);
+        padding: 10px 12px;
+        box-shadow: 0 10px 28px rgba(28, 24, 20, 0.1);
+      }
+      .filters .chips {
+        justify-content: flex-start;
+        max-width: none;
+        margin-top: 10px;
+      }
+      .filters .counts {
+        margin: 9px 2px 0;
+        color: var(--uwe-fg-muted);
+        font-size: 10.5px;
+        font-variant-numeric: tabular-nums;
+      }
+      .neighborhood {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-top: 11px;
+        padding-top: 11px;
+        border-top: 1px solid var(--line);
+      }
+      .neighborhood .depth {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        color: var(--uwe-fg-muted);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .depth-btn {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        border: 1px solid var(--line);
+        background: rgba(255, 253, 247, 0.95);
+        display: grid;
+        place-items: center;
+        font-size: 11px;
+        color: var(--uwe-fg);
+      }
+      .depth-value {
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+        color: var(--uwe-fg);
+        width: 12px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="harness-root">
+      <canvas id="graph-canvas" width="1280" height="800" aria-label="Wiki graph harness"></canvas>
+      <div id="harness-badge">baseline · real GraphEngine</div>
+      <div id="graph-chrome">
+        <div class="chrome-top">
+          <div>
+            <div class="chrome-title">Terra · Wiki-Graph</div>
+            <div class="chrome-sub">100 Knoten · 165 Kanten · Ziehen · scrollen zum Zoomen · Knoten antippen</div>
+          </div>
+        </div>
+        <aside class="filters" aria-hidden="true">
+          <div class="search" style="position: static; transform: none; width: auto;">Knoten suchen…</div>
+          <div class="chips">
+            <span class="chip"><span class="dot" style="--c:var(--uwe-graph-session)"></span>Session<span class="count">11</span></span>
+            <span class="chip"><span class="dot" style="--c:var(--uwe-graph-npc)"></span>NPC<span class="count">12</span></span>
+            <span class="chip"><span class="dot" style="--c:var(--uwe-graph-location)"></span>Ort<span class="count">11</span></span>
+            <span class="chip chip-inactive"><span class="dot" style="--c:var(--uwe-graph-faction)"></span>Fraktion<span class="count">11</span></span>
+            <span class="chip"><span class="dot" style="--c:var(--uwe-graph-quest)"></span>Quest<span class="count">11</span></span>
+          </div>
+          <div class="counts">89 von 100 Knoten · 148 von 165 Kanten</div>
+          <div class="neighborhood">
+            <span class="chip"><span style="font-size: 12px;">◎</span>Nachbarschaft: Hub 1.0</span>
+            <span class="depth">
+              Tiefe
+              <span class="depth-btn">−</span>
+              <span class="depth-value">2</span>
+              <span class="depth-btn">+</span>
+            </span>
+          </div>
+        </aside>
+        <aside class="panel">
+          <h3>Hub 1.0</h3>
+          <p>Ausgewählter Fokus-Knoten · Detailpanel-Chrome für die after-chrome-Aufnahme.</p>
+        </aside>
+        <div id="mini-wrap"><canvas id="mini-canvas" width="148" height="108"></canvas></div>
+        <div class="toolbar" aria-hidden="true">
+          <div class="btn">+</div>
+          <div class="btn">−</div>
+          <div class="btn">⤢</div>
+          <div class="btn">🔒</div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="./harness-bundle.mjs"></script>
+  </body>
+</html>
