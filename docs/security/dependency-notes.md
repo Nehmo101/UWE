@@ -91,6 +91,14 @@ Override-Boden `>=3.1.4` hätte 3.1.4 weiterhin erlaubt — gleiche Logik wie be
 Major-Deckel `<4` bleibt aus demselben Grund wie oben bestehen. Verifiziert mit
 `pnpm why -r fast-uri`: überall 3.1.5.
 
+**Nachtrag (2026-08-08):** `nanoid` als transitiven Override
+`>=3.3.17 <4` ergänzt. `GHSA-2v37-7h3g-55p8` betrifft benutzerdefinierte
+Generatoren in Versionen vor 3.3.17, die bei einer Größe von null endlos laufen
+können. UWE zieht `nanoid` ausschließlich über `postcss`, unter anderem aus
+Next.js, Tailwind CSS und Vite. Der Major-Deckel bewahrt die von diesen
+Konsumenten erwartete 3.x-Schnittstelle. Verifiziert wird mit
+`pnpm why -r nanoid` und `pnpm audit:prod`.
+
 ## `onlyBuiltDependencies` — eine Quelle: `pnpm-workspace.yaml`
 
 pnpm 10 liest `onlyBuiltDependencies` aus `pnpm-workspace.yaml`; diese Quelle
