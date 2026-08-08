@@ -10,8 +10,8 @@
   "discoveredEntries": 246,
   "importedEntries": 246,
   "blockedEntries": 0,
-  "openDefects": ["S-04", "S-06", "S-07", "S-08"],
-  "fixedDefects": ["S-01", "S-02", "S-03", "S-05", "S-09"],
+  "openDefects": ["S-04", "S-06", "S-08"],
+  "fixedDefects": ["S-01", "S-02", "S-03", "S-05", "S-07", "S-09"],
   "partialDefects": ["S-06"],
   "openDefectNotes": {
     "S-01": "FIXED — structural German hooks on all 246 entries",
@@ -20,7 +20,7 @@
     "S-04": "English snake_case keys (acid_arrow); not L0–L1 German keys — non-blocking",
     "S-05": "FIXED — no dexterity-Rettungswurf / wisdom saving throw hybrids",
     "S-06": "PARTIAL — range meters OK; Until dispelled / miles / English castingTime remain — non-blocking",
-    "S-07": "Material components left in English — non-blocking",
+    "S-07": "FIXED — Materialkomponenten DE via scripts/spell-materials-de-map.json",
     "S-08": "Open5e 2014 text tagged SRD 5.2.1 — attribution generation mismatch — non-blocking",
     "S-09": "FIXED — headers match structure; German names on all 246 entries"
   },
