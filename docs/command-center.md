@@ -142,6 +142,19 @@ node tools/uwe-host-command-center/src/desktop-host-cli.ts setup --root /pfad/zu
    unter „Verbindung“ (`hybrid`/`queue`; eine dort gewählte reine
    Direktverbindung bleibt erhalten).
 
+### Zugänge und Weltfreigaben
+
+Unter **Zugänge** verwaltet das Command Center zwei getrennte Ebenen:
+
+- Die App-Häkchen Portal, Studio, Brain und Family bestimmen, welche Bereiche
+  ein Konto betreten darf.
+- Die Welt-Häkchen bestimmen, welche Spielwelten im Portal sichtbar sind. Ein
+  Spieler kann keiner, einer oder mehreren Welten zugeordnet werden.
+
+Eine Änderung der Welt-Häkchen ersetzt die Auswahl atomar. Beibehaltene
+Mitgliedschaften behalten ihren hinterlegten Charakternamen; unbekannte Welten
+werden abgelehnt, ohne die bisherige Auswahl zu verändern.
+
 ### Inhalte importieren
 
 Der Reiter **Import** legt Markdown-Dateien von diesem Rechner als Wiki-Seiten an —

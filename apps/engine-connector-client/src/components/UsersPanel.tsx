@@ -13,8 +13,10 @@ import {
   type CommandCenterArea,
   type CommandCenterAreaAccess,
   type CommandCenterUser,
+  type CommandCenterWorld,
 } from "../lib/tauri";
 import { toMessage } from "../lib/connector-runtime-labels";
+import { nextWorldSelection } from "../lib/world-access-selection";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
 
@@ -44,6 +46,7 @@ function summarize(user: CommandCenterUser): string {
 
 export function UsersPanel() {
   const [users, setUsers] = useState<CommandCenterUser[]>([]);
+  const [worlds, setWorlds] = useState<CommandCenterWorld[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +73,7 @@ export function UsersPanel() {
       if (!result.ok) throw new Error(result.message ?? "Zugänge konnten nicht geladen werden.");
       const nextUsers = result.users ?? [];
       setUsers(nextUsers);
+      setWorlds(result.worlds ?? []);
       if (!nextUsers.some((user) => user.isOwner)) {
         setIsOwner(true);
         setAccess({ ...ALL_ACCESS });
@@ -179,6 +183,29 @@ export function UsersPanel() {
     }
   }
 
+  async function toggleWorld(user: CommandCenterUser, world: CommandCenterWorld, enabled: boolean) {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    const worldIds = nextWorldSelection(
+      (user.worldMemberships ?? []).map((membership) => membership.worldId),
+      world.id,
+      enabled,
+    );
+    try {
+      const result = await updateUser({ id: user.id, worldIds });
+      if (!result.ok) throw new Error(result.message ?? "Weltzugang konnte nicht geändert werden.");
+      setMessage(
+        `„${user.displayName}“ ${enabled ? "hat jetzt Zugang zu" : "hat keinen Zugang mehr zu"} ${world.name}.`,
+      );
+      await refresh();
+    } catch (nextError) {
+      setError(toMessage(nextError));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function removeUser(user: CommandCenterUser) {
     if (!window.confirm(`„${user.displayName}" (${user.email ?? "ohne E-Mail"}) endgültig löschen?`)) return;
     setBusy(true);
@@ -208,7 +235,8 @@ export function UsersPanel() {
           <p>
             Pro E-Mail-Adresse entscheiden vier Häkchen, welche App sie betreten darf. Das fünfte,
             „Maschinenraum-KI&quot;, entscheidet etwas anderes: ob diese Adresse den Maschinenraum-Host beschäftigen darf —
-            Generatoren, Bildstudio, Assistent. Der Owner darf es immer. Es gibt keine
+            Generatoren, Bildstudio, Assistent. Unter „Welten&quot; legst du zusätzlich fest, welche
+            Spielwelten im Portal sichtbar sind; mehrere Welten sind möglich. Der Owner darf die KI immer. Es gibt keine
             Selbstregistrierung — Konten legst nur du hier an.
           </p>
         </div>
@@ -299,6 +327,9 @@ export function UsersPanel() {
                     <div>
                       <strong>{user.displayName}</strong>
                       <p className="connector-muted">{user.email ?? "—"}</p>
+                      <p className="connector-muted">
+                        Welten: {(user.worldMemberships ?? []).map((membership) => membership.world.name).join(" · ") || "keine"}
+                      </p>
                     </div>
                   </div>
                   <div className="connector-checkbox-row">
@@ -337,6 +368,29 @@ export function UsersPanel() {
                       />
                       Owner
                     </label>
+                  </div>
+                  <div className="command-center-user-worlds">
+                    <strong>Welten</strong>
+                    {worlds.length === 0 ? (
+                      <span className="connector-muted">Noch keine Welt angelegt.</span>
+                    ) : (
+                      <div className="connector-checkbox-row">
+                        {worlds.map((world) => (
+                          <label key={world.id} className="connector-checkbox">
+                            <input
+                              type="checkbox"
+                              checked={(user.worldMemberships ?? []).some(
+                                (membership) => membership.worldId === world.id,
+                              )}
+                              disabled={busy}
+                              onChange={(event) => void toggleWorld(user, world, event.target.checked)}
+                              aria-label={`${world.name} für ${user.displayName}`}
+                            />
+                            {world.name}
+                          </label>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="connector-actions">
                     <Button variant="ghost" onClick={() => { setPwUserId(pwUserId === user.id ? null : user.id); setPwValue(""); }} disabled={busy}>

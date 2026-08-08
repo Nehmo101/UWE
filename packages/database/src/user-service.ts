@@ -431,6 +431,68 @@ export class UserService {
     });
   }
 
+  /**
+   * Ersetzt die Weltfreigaben eines Kontos atomar. Bestehende Mitgliedschaften,
+   * die in der Auswahl bleiben, werden per Upsert erhalten – insbesondere der
+   * dort hinterlegte Charaktername.
+   */
+  async setWorldMemberships(
+    userId: string,
+    worldIds: readonly string[],
+    actorUserId?: string | null,
+  ): Promise<AdminUserView> {
+    const uniqueWorldIds = [...new Set(worldIds.map((id) => id.trim()).filter(Boolean))];
+    const [user, existing, worlds] = await Promise.all([
+      this.db.user.findUnique({ where: { id: userId }, select: { id: true } }),
+      this.db.worldMembership.findMany({
+        where: { userId },
+        select: { worldId: true },
+        orderBy: { worldId: "asc" },
+      }),
+      this.db.world.findMany({
+        where: { id: { in: uniqueWorldIds } },
+        select: { id: true },
+      }),
+    ]);
+    if (!user) throw new Error("USER_NOT_FOUND");
+    if (worlds.length !== uniqueWorldIds.length) throw new Error("WORLD_NOT_FOUND");
+
+    const before = existing.map((membership) => membership.worldId).sort();
+    const after = [...uniqueWorldIds].sort();
+    if (before.join("\u0000") === after.join("\u0000")) {
+      const unchanged = await this.getUserForAdmin(userId);
+      if (!unchanged) throw new Error("USER_NOT_FOUND");
+      return unchanged;
+    }
+
+    await this.db.$transaction([
+      this.db.worldMembership.deleteMany({
+        where: uniqueWorldIds.length > 0
+          ? { userId, worldId: { notIn: uniqueWorldIds } }
+          : { userId },
+      }),
+      ...uniqueWorldIds.map((worldId) =>
+        this.db.worldMembership.upsert({
+          where: { userId_worldId: { userId, worldId } },
+          create: { userId, worldId },
+          update: {},
+        }),
+      ),
+    ]);
+
+    await logAuditEvent(this.db, {
+      actorUserId: actorUserId ?? undefined,
+      action: "user_access_changed",
+      targetType: "user",
+      targetId: userId,
+      metadata: { worldIds: { from: before, to: after } },
+    });
+
+    const updated = await this.getUserForAdmin(userId);
+    if (!updated) throw new Error("USER_NOT_FOUND");
+    return updated;
+  }
+
   async resetPassword(input: ResetPasswordInput): Promise<boolean> {
     const existing = await this.db.user.findUnique({ where: { id: input.userId } });
     if (!existing) {
