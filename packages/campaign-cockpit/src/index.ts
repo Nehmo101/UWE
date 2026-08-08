@@ -6,6 +6,15 @@ export {
   type ChapterProgress,
 } from "./chapter-helpers";
 export {
+  buildChapterTree,
+  descendantChapterIds,
+  rollupChapterQuestCounts,
+  rootChapters,
+  type ChapterQuestCounts,
+  type ChapterTreeNode,
+  type HierarchicalChapter,
+} from "./chapter-hierarchy";
+export {
   deriveQuestBacklinks,
   deriveQuestRelations,
   mergeQuestRelations,

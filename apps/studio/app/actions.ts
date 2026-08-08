@@ -21,6 +21,7 @@ import { revalidatePath } from "next/cache";
 import { revalidateWorldRootAndWiki } from "@/src/lib/world-revalidate";
 import { redirect } from "next/navigation";
 import { requireStudioContentEdit, requireStudioWorldEdit } from "@/src/lib/authz";
+import { decideContentBlockDelete } from "@/src/lib/content-block-delete";
 
 function repo() {
   return getAppRepository();
@@ -288,12 +289,17 @@ export async function deleteContentBlockAction(formData: FormData) {
     include: { page: { select: { worldId: true, title: true } } },
   });
 
-  if (!block) {
+  const world = await repo().getWorldBySlug(worldSlug);
+  if (!world) {
     throw new Error("Block nicht gefunden");
   }
 
-  const world = await repo().getWorldBySlug(worldSlug);
-  if (!world || block.page.worldId !== world.id) {
+  const decision = decideContentBlockDelete(block?.page.worldId ?? null, world.id);
+  if (decision === "already_deleted") {
+    revalidatePath(`/worlds/${worldSlug}/${category}/${pageSlug}/edit`);
+    redirect(`/worlds/${worldSlug}/${category}/${pageSlug}/edit?deleted=already`);
+  }
+  if (decision === "not_found" || !block) {
     throw new Error("Block nicht gefunden");
   }
 
@@ -319,6 +325,6 @@ export async function deleteContentBlockAction(formData: FormData) {
     });
 
   revalidatePath(`/worlds/${worldSlug}/${category}/${pageSlug}/edit`);
-  redirect(`/worlds/${worldSlug}/${category}/${pageSlug}/edit?saved=1`);
+  redirect(`/worlds/${worldSlug}/${category}/${pageSlug}/edit?deleted=1`);
 }
 

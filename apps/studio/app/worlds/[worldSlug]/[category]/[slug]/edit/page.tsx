@@ -59,14 +59,14 @@ import {
 
 interface Props {
   params: Promise<{ worldSlug: string; category: string; slug: string }>;
-  searchParams: Promise<{ saved?: string }>;
+  searchParams: Promise<{ saved?: string; deleted?: string }>;
 }
 
 const FIELD_CLASS = "flex flex-col gap-1.5";
 
 export default async function StudioPageEdit({ params, searchParams }: Props) {
   const { worldSlug, category, slug } = await params;
-  const { saved } = await searchParams;
+  const { saved, deleted } = await searchParams;
   const repo = getAppRepository();
 
   const world = await repo.getWorldBySlug(worldSlug);
@@ -132,6 +132,13 @@ export default async function StudioPageEdit({ params, searchParams }: Props) {
             </Link>
           </Alert>
         )}
+        {deleted ? (
+          <Alert tone="success" className="mb-4">
+            {deleted === "already"
+              ? "Der Block war bereits gelöscht. Die Seite ist wieder aktuell."
+              : "Block gelöscht. Die Löschung kann im Aktivitätsverlauf rückgängig gemacht werden."}
+          </Alert>
+        ) : null}
         <PageEditAutosave formId="world-page-edit-form" storageKey={`uwe:page-edit:${page.id}`} />
 
         <form id="world-page-edit-form" action={updatePageAction} className="flex flex-col gap-4">

@@ -156,9 +156,11 @@ export async function createStoryArcAction(formData: FormData) {
   await requireStudioWorldEdit(worldSlug);
 
   const campaign = await requireCampaign(worldSlug, campaignSlug);
+  const parentChapterId = String(formData.get("parentChapterId") || "") || null;
   const chapter = await createCampaignCockpitService(prisma).createChapter({
     worldId: campaign.worldId,
     campaignId: campaign.id,
+    parentChapterId,
     title: parseTitle(formData),
     summary: String(formData.get("summary") || "") || null,
     content: String(formData.get("content") || "") || undefined,

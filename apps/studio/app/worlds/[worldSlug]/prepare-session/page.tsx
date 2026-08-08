@@ -15,6 +15,7 @@ import {
   type DmGameSessionView,
 } from "@uwe/database/server";
 import {
+  buildChapterTree,
   createCampaignCockpitService,
   findCurrentChapter,
   type CampaignOverview,
@@ -35,7 +36,7 @@ import { buttonVariants } from "@/src/components/ui";
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
-  searchParams: Promise<{ campaign?: string; sessionId?: string }>;
+  searchParams: Promise<{ campaign?: string; sessionId?: string; chapter?: string }>;
 }
 
 const PRE_CLASS =
@@ -69,7 +70,7 @@ function pickReferenceSession(sessions: DmGameSessionView[]): DmGameSessionView 
 
 export default async function PrepareSessionPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
-  const { campaign: campaignSlug, sessionId: sessionIdParam } = await searchParams;
+  const { campaign: campaignSlug, sessionId: sessionIdParam, chapter: chapterParam } = await searchParams;
   await requireStudioWorldRead(worldSlug);
   const repo = getAppRepository();
   const world = await repo.getWorldBySlug(worldSlug);
@@ -105,9 +106,15 @@ export default async function PrepareSessionPage({ params, searchParams }: Props
   await db.$disconnect();
 
   // findCurrentChapter ist generisch — liefert die volle ChapterSummary zurück.
-  const currentChapter = campaignOverview
-    ? findCurrentChapter(campaignOverview.chapters)
-    : null;
+  const actTree = campaignOverview ? buildChapterTree(campaignOverview.chapters) : [];
+  const acts = actTree.map((node) => node.chapter);
+  const requestedAct = chapterParam
+    ? acts.find((act) => act.id === chapterParam || act.slug === chapterParam)
+    : undefined;
+  const currentAct = requestedAct ?? findCurrentChapter(acts);
+  const currentActNode = currentAct
+    ? actTree.find((node) => node.chapter.id === currentAct.id)
+    : undefined;
 
   const upcomingSessions = sessions.filter(isUpcomingSession).sort(sortBySessionNumber);
   const referenceSession = pickReferenceSession(sessions);
@@ -184,26 +191,36 @@ export default async function PrepareSessionPage({ params, searchParams }: Props
           summary={campaignOverview.progress.label || "Blick ins Kampagnen-Cockpit"}
           defaultOpen
         >
-          {currentChapter ? (
+          {currentAct ? (
             <div className="flex flex-col gap-2 text-sm">
               <p className="flex flex-wrap items-center gap-2">
-                <span className="text-muted-foreground">Aktuelles Kapitel:</span>
-                <Link href={currentChapter.href} className="font-medium">
-                  {currentChapter.title}
+                <span className="text-muted-foreground">Aktueller Akt:</span>
+                <Link href={currentAct.href} className="font-medium">
+                  {currentAct.title}
                 </Link>
-                <DungeonPrepStatusBadge status={currentChapter.prepStatus} />
+                <DungeonPrepStatusBadge status={currentAct.prepStatus} />
                 <span className="text-muted-foreground">
-                  {currentChapter.questCounts.total > 0
-                    ? `${currentChapter.questCounts.open} offene Quest(s)`
+                  {currentAct.questCounts.total > 0
+                    ? `${currentAct.questCounts.open} offene Quest(s)`
                     : "keine Quests"}
                 </span>
               </p>
-              {currentChapter.summary ? (
-                <p className="text-muted-foreground">{currentChapter.summary}</p>
+              {currentAct.summary ? (
+                <p><span className="font-medium">DM-Auftrag:</span> {currentAct.summary}</p>
+              ) : null}
+              {currentActNode && currentActNode.children.length > 0 ? (
+                <ol className="ml-5 list-decimal space-y-1 text-muted-foreground">
+                  {currentActNode.children.map(({ chapter }) => (
+                    <li key={chapter.id}>
+                      <Link href={chapter.href}>{chapter.title}</Link>
+                      {chapter.summary ? ` — ${chapter.summary}` : ""}
+                    </li>
+                  ))}
+                </ol>
               ) : null}
               <p>
-                Die NSC-Tafel des Akts (NSCs, Orte, Fraktionen aus Kapitel- und Quest-Texten)
-                steht auf der <Link href={currentChapter.href}>Kapitel-Seite</Link>.
+                Die Akt-Tafel bündelt NSCs, Orte, Fraktionen, Quests und Dungeons aus allen
+                Unterkapiteln auf der <Link href={currentAct.href}>Akt-Seite</Link>.
               </p>
             </div>
           ) : (
@@ -275,7 +292,7 @@ export default async function PrepareSessionPage({ params, searchParams }: Props
             <p className="text-sm text-muted-foreground">
               Keine geplanten Sessions.{" "}
               <Link
-                href={`/worlds/${worldSlug}/sessions/new${selectedCampaign ? `?campaign=${selectedCampaign.slug}` : ""}`}
+                href={`/worlds/${worldSlug}/sessions/new${selectedCampaign ? `?campaign=${selectedCampaign.slug}${currentAct ? `&chapter=${currentAct.slug}` : ""}` : ""}`}
               >
                 Neue Session anlegen →
               </Link>

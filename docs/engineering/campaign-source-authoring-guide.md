@@ -65,7 +65,44 @@ Nicht zulässig:
 
 Überschriften sind keine Schmuckelemente. Jede Überschrift erzeugt potenziell eine Seite oder einen Container. Reine typografische Zwischenzeilen werden fett gesetzt, nicht als Überschrift.
 
-## 4. Story-Bögen und Quests
+## 4. Akte, Kapitel und Quests
+
+Eine spielbare Kampagne hat zwei dramaturgische Ebenen:
+
+1. **Akt** — wenige tragende Phasen mit einem klaren DM-Auftrag, Wendepunkt und Abschluss.
+2. **Kapitel / Questpool** — konkrete Abschnitte innerhalb dieses Akts.
+
+Die empfohlene Quellenform ist deshalb ausdrücklich hierarchisch:
+
+```markdown
+## Akt I — Neue Wege
+
+**DM-Auftrag:** Die Gruppe braucht am Ende ein eigenes Schiff, eine loyale Besatzung
+und belastbare Beweise, dass Ferlor kein Unglück war.
+
+**Aktfinale:** Die Spur führt eindeutig zur Weißen Feder.
+
+### Kapitel 1 — Der Zaunkönig fliegt
+
+**Kapitelziel:** Schiff und emotionale Bindung etablieren.
+
+### Nebenquests des ersten Akts
+
+#### Quest: Das blinde Paket
+```
+
+Ein Akt braucht mindestens:
+
+- einen handlungsleitenden DM-Auftrag;
+- einen Startzustand und einen sichtbar anderen Endzustand;
+- drei bis sechs Kapitel, Meilensteine oder Questpools;
+- einen Wendepunkt oder ein Finale;
+- einen klaren Anschluss an den nächsten Akt;
+- eine ungefähre Stufen- und Sitzungsbandbreite, wenn das System sie verwendet.
+
+UWE behandelt nur Story-Arcs ohne Story-Arc-Eltern als Kampagnen-Akte. Darunter
+verschachtelte Story-Arcs bleiben vollständig erhalten, zählen aber nicht als eigene
+Kampagnenphase und werden nicht einzeln als Standard für neue Sessions vorausgewählt.
 
 Eine Quest braucht zwei fachliche Angaben:
 

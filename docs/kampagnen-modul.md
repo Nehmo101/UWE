@@ -127,9 +127,10 @@ wird dabei echt: Vorbereitung einer konkreten Session statt „irgendeiner".
   Bedarf zu (oder eine Einmal-Heuristik: Session dem Kapitel zuordnen, das
   zum Session-Zeitpunkt `prepStatus=played` wurde — nur als Angebot).
 
-Bewusst **kein** neues Kapitel-Modell und keine neue Akt-Ebene: die
-Page-Hierarchie trägt das bereits, und „Akt II — Der Sturm zieht auf" als
-Kapiteltitel funktioniert (siehe Frage F2).
+Bewusst **kein** neues Akt- oder Kapitel-Modell: Die vorhandene Page-Hierarchie
+trägt jetzt beide Ebenen. Ein oberer `story_arc` ist der spielbare Akt; darunter
+liegen weitere `story_arc`-Seiten als Kapitel oder Questpools. Sessions hängen am
+oberen Akt und erhalten dessen vollständigen Unterbaum in der Akt-Tafel.
 
 ---
 
@@ -238,6 +239,7 @@ und Service-Arbeit, kein Datenumzug.
 | **3 — Portal-Notizen** ✅ | Session-Auswahl im Notizen-Panel (Default: aktive Session, „Ohne Session" explizit), Kampagne folgt der Session (zentral in `createPlayerNoteForViewer`, deckt Formular UND Offline-Sync), Tischmodus hängt neue Notizen an die aktive Session des Abzugs | nein |
 | **4 — Dungeon-Flow** ✅ | Dungeon↔Kapitel-Zuordnung (parentPageId, Kampagne wandert mit), Kapitel-Seite + Akt-Tafel zeigen Kapitel-Dungeons, Dungeon-Seite verlinkt zurück ins Kapitel | nein |
 | **Rest** ✅ | Raum-Cockpit-Schnell-Protokoll (Notiz ins Live-Protokoll der laufenden Session, `logRoomToSessionAction`), zweite Nav-Quelle abgebaut (tote Legacy-Symbole entfernt, Shim nur noch `campaignNavItems`), One-Shot mit Kampagnen-Auswahl, doc-import erzeugt `story_arc` („Akt II — …"/„Kapitel 2: …" als Fallback nach den Inhaltsregeln; `typ: kapitel` im Frontmatter). Die geplante `PlayerQuestion`-FK entfiel im Merge: der Portal-Umbau auf main hat Spielerfragen samt Modell entfernt (im Notiz-Logbuch aufgegangen) | nein |
+| **5 — echte Akt-Hierarchie** ✅ | Obere Story-Arcs sind Kampagnen-Akte; verschachtelte Story-Arcs sind Kapitel/Questpools. Überblick, Fortschritt und Session-Auswahl arbeiten mit Akten, während Akt-Seite und Live-Tafel den vollständigen Unterbaum aggregieren. | nein |
 | Bewusst gelassen | `/campaigns`- und `/radar`-Redirect-Stubs bleiben (Alt-Bookmarks brechen sonst) | nein |
 
 Jede Etappe zieht die Bereichs-Skills nach (`pnpm skills:sync` +
@@ -301,7 +303,7 @@ Offen (in den Etappen verplant):
 
 ## Offene Fragen (bitte entscheiden)
 
-Entschieden am 2026-08-05: **F1 ja** (Dashboard + Redirect) · **F2 flach** ·
+Entschieden am 2026-08-05 und korrigiert am 2026-08-08: **F1 ja** (Dashboard + Redirect) · **F2 hierarchisch** ·
 **F3 ja** (Kapitel-Vorschlag beim Anlegen) · **F4 beides** (Ableitung + Pinnen) ·
 **F5 frei wählbar, ohne Auswahl automatisch** · **F6 eigenes Werkzeug, aber
 bessere Verbindung** · **F7 Reihenfolge wie geplant**. Der Wortlaut der Fragen
@@ -315,12 +317,11 @@ Alternative: Radar bleibt als reine Welt-Lage-Seite bestehen (dann aber
 ohne die Kampagnen-Karten). **Empfehlung: Dashboard + Redirect.**
 
 **F2 — Braucht es eine echte Akt-Ebene über den Kapiteln?**
-Heute: Kampagne → Kapitel (flach), „Akt" ist Namenskonvention im Titel.
-Eine echte Ebene (Akt → Kapitel) ginge über `parentPageId` ohne neues
-Modell, macht aber jede Liste und den Import komplexer. **Empfehlung:
-flach lassen; der Spielabend zeigt ein Kapitel = einen Akt.** Wenn deine
-Kampagnen typischerweise „Akt II, Kapitel 3" haben, sag es — dann planen
-wir die Ebene gleich in Etappe 2 ein.
+Die flache Entscheidung war für große Kampagnen falsch: Sie stellte zwölf Kapitel
+und drei Nebenquest-Sammlungen als fünfzehn gleichrangige Akte dar und ließ die
+Session-Vorauswahl bei einem Questpool beginnen. **Entscheidung: hierarchisch.**
+Obere Story-Arcs sind wenige spielbare Akte; `parentPageId` hängt Kapitel und
+Questpools darunter. Der Akt aggregiert deren Quests, Dungeons und Beziehungen.
 
 **F3 — Session↔Kapitel: automatisch oder manuell?**
 Empfehlung: beim Anlegen wird das aktuelle Kapitel (erstes nicht gespielte)

@@ -8,7 +8,7 @@ import {
   getAppRepository,
   prisma,
 } from "@uwe/database/server";
-import { compareChapterOrder, findCurrentChapter, STORY_ARC_TYPE } from "@uwe/campaign-cockpit";
+import { findCurrentChapter, rootChapters, STORY_ARC_TYPE } from "@uwe/campaign-cockpit";
 import { createPlayerGroupService } from "@uwe/player-hub";
 import { PageHeader, ShellBreadcrumb } from "@/src/components/shell";
 import { worldDetailBreadcrumb } from "@/src/lib/world-breadcrumbs";
@@ -17,12 +17,12 @@ import { Button, buttonVariants, Input, Label, Textarea } from "@/src/components
 
 interface Props {
   params: Promise<{ worldSlug: string }>;
-  searchParams: Promise<{ campaign?: string }>;
+  searchParams: Promise<{ campaign?: string; chapter?: string }>;
 }
 
 export default async function StudioNewSessionPage({ params, searchParams }: Props) {
   const { worldSlug } = await params;
-  const { campaign: campaignSlug } = await searchParams;
+  const { campaign: campaignSlug, chapter: chapterParam } = await searchParams;
   const repo = getAppRepository();
 
   const world = await repo.getWorldBySlug(worldSlug);
@@ -41,11 +41,23 @@ export default async function StudioNewSessionPage({ params, searchParams }: Pro
     ? (
         await prisma.page.findMany({
           where: { worldId: world.id, campaignId: selectedCampaign.id, type: STORY_ARC_TYPE },
-          select: { id: true, title: true, sortIndex: true, prepStatus: true },
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            summary: true,
+            parentPageId: true,
+            sortIndex: true,
+            prepStatus: true,
+          },
         })
-      ).sort(compareChapterOrder)
+      ).map((chapter) => ({ ...chapter, parentChapterId: chapter.parentPageId }))
     : [];
-  const currentChapter = findCurrentChapter(chapters);
+  const acts = rootChapters(chapters);
+  const requestedAct = chapterParam
+    ? acts.find((act) => act.id === chapterParam || act.slug === chapterParam)
+    : undefined;
+  const currentAct = requestedAct ?? findCurrentChapter(acts);
 
   // Tischrunden der Welt. Gibt es keine, bleibt das Feld weg — dann ist jede
   // Session ohnehin welt-weit.
@@ -91,26 +103,30 @@ export default async function StudioNewSessionPage({ params, searchParams }: Pro
           </select>
         </div>
 
-        {chapters.length > 0 ? (
+        {acts.length > 0 ? (
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="session-story-arc">Kapitel / Akt</Label>
+            <Label htmlFor="session-story-arc">Kampagnen-Akt</Label>
             {/* TODO(design-kit): natives Select — Leerwert „Kein Kapitel" nötig. */}
             <select
               id="session-story-arc"
               name="storyArcPageId"
-              defaultValue={currentChapter?.id ?? ""}
+              defaultValue={currentAct?.id ?? ""}
               className="flex h-9 w-full rounded-[var(--radius)] border border-input bg-transparent px-3 py-1 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <option value="">Kein Kapitel</option>
-              {chapters.map((chapter) => (
-                <option key={chapter.id} value={chapter.id}>
-                  {chapter.title}
+              <option value="">Kein Akt</option>
+              {acts.map((act) => (
+                <option key={act.id} value={act.id}>
+                  {act.title}
                 </option>
               ))}
             </select>
             <p className="text-sm text-muted-foreground">
-              Vorausgewählt ist das aktuelle Kapitel der Kampagne.
+              Vorausgewählt ist der aktuelle tragende Akt; Unterkapitel und Questpools werden
+              in der Akt-Tafel automatisch mitgeführt.
             </p>
+            {currentAct?.summary ? (
+              <p className="text-sm"><span className="font-medium">DM-Auftrag:</span> {currentAct.summary}</p>
+            ) : null}
           </div>
         ) : null}
 

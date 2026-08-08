@@ -308,6 +308,50 @@ describe("campaign cockpit (integration)", () => {
       [npc.id],
     );
   });
+
+  it("rolls nested chapters and quest pools into the playable act", async () => {
+    const service = createCampaignCockpitService(db);
+    const act = await service.createChapter({
+      worldId,
+      campaignId,
+      title: "Akt mit Unterbau",
+      summary: "Der DM führt die Gruppe bis zum Wendepunkt.",
+    });
+    const child = await service.createChapter({
+      worldId,
+      campaignId,
+      parentChapterId: act.id,
+      title: "Kapitel im Akt",
+      summary: "Hier fällt die erste Entscheidung.",
+    });
+    await db.page.create({
+      data: {
+        worldId,
+        campaignId,
+        parentPageId: child.id,
+        questStoryArcId: child.id,
+        title: "Quest im Unterkapitel",
+        slug: "quest-im-unterkapitel",
+        type: "quest",
+        questStatus: "open",
+      },
+    });
+
+    const overview = await service.getCampaignOverview(worldSlug, "himmelsrouten");
+    assert.ok(overview);
+    const actSummary = overview.chapters.find((chapter) => chapter.id === act.id);
+    const childSummary = overview.chapters.find((chapter) => chapter.id === child.id);
+    assert.equal(actSummary?.questCounts.open, 1);
+    assert.equal(childSummary?.parentChapterId, act.id);
+
+    const view = await service.getChapterView(worldSlug, "himmelsrouten", act.slug, {
+      wikiIndex: [],
+      graph: null,
+    });
+    assert.ok(view);
+    assert.equal(view.subchapters[0]?.id, child.id);
+    assert.equal(view.quests[0]?.title, "Quest im Unterkapitel");
+  });
 });
 
 describe("session wrap-up privacy (integration)", () => {
