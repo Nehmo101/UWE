@@ -10,7 +10,7 @@ ist nur die gefilterte Leseseite derselben Daten. Wer eine Portal-Inhaltsfrage
 stellt, landet fast immer trotzdem in Studio, weil Portal-Inhalte ausschließlich
 hier gepflegt werden.
 
-Größter Bereich im Repo: 89 Seiten, 146 API-Routen, 30 Server-Action-Dateien,
+Größter Bereich im Repo: 99 Seiten, 147 API-Routen, 30 Server-Action-Dateien,
 30 `@uwe/*`-Pakete. Vollständige Karte: `references/karte.md`.
 
 ## MCP-Tools
