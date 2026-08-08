@@ -10,6 +10,7 @@ import type { SafeUser } from "@uwe/auth";
 import {
   PREVIEW_COOKIE_NAME,
   SESSION_COOKIE_NAME,
+  canAccessPortal,
   canPreviewAsPlayer,
   canReadWorld,
   readSessionTokensFromCookieHeader,
@@ -40,7 +41,7 @@ export const getCurrentSession = cache(async () => {
   const auth = createAuthService(db);
   try {
     const session = await auth.getSessionByToken(token);
-    if (!session) {
+    if (!session || !canAccessPortal(session.user)) {
       return null;
     }
     return {
@@ -66,7 +67,7 @@ export async function getUserFromRequestCookieHeader(
     // LAST-first, matching what `cookies()` resolves on the page path.
     for (const token of readSessionTokensFromCookieHeader(cookieHeader)) {
       const session = await auth.getSessionByToken(token);
-      if (session) {
+      if (session && canAccessPortal(session.user)) {
         return session.user;
       }
     }
@@ -107,26 +108,22 @@ export const getPortalWorld = cache(async (worldSlug: string) => {
 export const getAccessContextForWorld = cache(async (
   worldSlug: string,
 ): Promise<AccessContext | null> => {
-  const token = await getSessionToken();
+  const session = await getCurrentSession();
   const previewAsUserId = await getPreviewUserId();
 
   const db = getDb();
   const auth = createAuthService(db);
 
-  let userId: string | null = null;
-  if (token) {
-    const session = await auth.getSessionByToken(token);
-    userId = session?.user.id ?? null;
-  }
+  const userId = session?.user.id ?? null;
 
   const ctx = await auth.buildAccessContextForWorld(worldSlug, {
     userId,
-    preview: previewAsUserId ? { previewAsUserId } : undefined,
+    preview: session && previewAsUserId ? { previewAsUserId } : undefined,
   });
 
   await disconnectPrismaClientIfOwned(db);
 
-  if (!ctx) {
+  if (!ctx || !ctx.user || !canAccessPortal(ctx.user)) {
     return null;
   }
 
